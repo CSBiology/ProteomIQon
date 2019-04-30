@@ -1,0 +1,29 @@
+type file
+id ProteomIQon
+title
+    ProteomIQon
+owners
+    David Zimmer, Timo Mühlhaus, Lukas Weil
+authors 
+    David Zimmer, Timo Mühlhaus, Lukas Weil
+projectUrl
+    https://github.com/CSBiology/ProteomIQon
+iconUrl
+    https://raw.githubusercontent.com/CSBiology/ProteomIQon/master/docs/files/img/logo.png
+licenseUrl
+    https://github.com/CSBiology/ProteomIQon/blob/master/LICENSE.txt
+requireLicenseAcceptance
+    false
+language
+    F#
+copyright
+    Copyright 2017
+tags
+    proteomics computational modular quantification labeled lablefree fsharp
+summary
+    Summary not set
+description
+    Description not set
+
+files
+	../../bin/ProteomIQon ==> lib
