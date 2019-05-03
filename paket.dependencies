@@ -9,6 +9,26 @@ nuget Expecto
 nuget Expecto.BenchmarkDotNet
 nuget Expecto.FsCheck
 nuget Expecto.VisualStudio.TestAdapter version_in_path: true
+nuget Newtonsoft.Json
+nuget Logary
+
+git https://github.com/CSBiology/FSharpAux.git nuget Packages: /
+
+nuget FSharpAux
+nuget FSharpAux.IO
+
+git https://github.com/CSBiology/FSharp.Stats.git nuget Packages: /
+
+nuget FSharp.Stats
+
+git https://github.com/CSBiology/BioFSharp.git nuget Packages: /
+
+nuget BioFSharp
+nuget BioFSharp.IO
+
+git https://github.com/CSBiology/BioFSharp.Mz.git nuget Packages: /
+
+nuget BioFSharp.Mz
 
 clitool dotnet-fake
 
