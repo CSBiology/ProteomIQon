@@ -116,3 +116,8 @@ module Domain =
             XicExtraction                : XicExtraction
             BaseLineCorrection           : BaseLineCorrection option
         }
+
+    // Add by HLWeil
+    //type ProteinInferenceParams = 
+    //      ...
+   
