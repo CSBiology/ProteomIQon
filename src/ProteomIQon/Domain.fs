@@ -4,6 +4,7 @@ open BioFSharp
 open BioFSharp.Mz
 
 module Domain = 
+    open BioFSharp.Mz
             
     type MS1CentroidizationParams = 
         {
@@ -91,4 +92,27 @@ module Domain =
             QValueThreshold             : float
             PepValueThreshold           : float
             ParseProteinID              : string -> string
+        }
+
+    type XicExtraction = 
+        {
+            ScanTimeWindow               : float 
+            MzWindow_Da                  : float 
+            MinSNR                       : float  
+            PolynomOrder                 : int
+            WindowSize                   : int
+        }
+       
+    type BaseLineCorrection = 
+        {
+            MaxIterations                : int 
+            Lambda                       : float 
+            P                            : float 
+        }
+
+    type QuantificationParams = 
+        {
+            PerformLabeledQuantification : bool
+            XicExtraction                : XicExtraction
+            BaseLineCorrection           : BaseLineCorrection option
         }

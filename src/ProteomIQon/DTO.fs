@@ -250,18 +250,29 @@ module Dto =
                 ParseProteinID                  = parseProteinIdUsing dtoPepeParams.ParseProteinIDRegexPattern    
             }
 
-    type ProteinInferenceParams = 
+    type QuantificationParams = 
         {
-            QValueThreshold             : float
-            PepValueThreshold           : float
-            ProteinIDRegex              : string
+            PerformLabeledQuantification : bool
+            XicExtraction                : XicExtraction
+            BaseLineCorrection           : BaseLineCorrection option
         }
-   
-    module ProteinInferenceParams = 
-        
-        let toDomain (dtoProteinInferenceParams : ProteinInferenceParams) = 
+    
+    module QuantificationParams = 
+
+        let toDomain (dtoQuantificationParams: QuantificationParams ) = 
             {
-                QValueThreshold                 = dtoProteinInferenceParams.QValueThreshold    
-                PepValueThreshold               = dtoProteinInferenceParams.PepValueThreshold  
-                ProteinIDRegex                  = dtoProteinInferenceParams.ProteinIDRegex    
+                PerformLabeledQuantification = dtoQuantificationParams.PerformLabeledQuantification
+                XicExtraction                = dtoQuantificationParams.XicExtraction
+                BaseLineCorrection           = dtoQuantificationParams.BaseLineCorrection
             }
+        
+
+
+    // Add by HLWeil
+    //type ProteinInferenceParams = 
+    //      ...
+    
+    //module ProteinInferenceParams = 
+        
+    //    let toDomain (dtoProteinInferenceParams : ProteinInferenceParams) = 
+    //      ...
