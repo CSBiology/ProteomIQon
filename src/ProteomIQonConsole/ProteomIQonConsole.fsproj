@@ -9,8 +9,8 @@
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="CommandLine.fsi" />
-    <Compile Include="CommandLine.fs" />
+    <Compile Include="Library.fs" />
+    <Compile Include="CLIArgumentParsing.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
   <ItemGroup>
