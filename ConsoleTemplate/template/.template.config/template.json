@@ -1,0 +1,12 @@
+{
+  "author": "David Zimmer",
+  "classifications": [ "proteomiqon console", "proteomiqon", "template" ], 
+  "name": "prototypical proteomiqon console project",
+  "identity": "ProteomIQonConsole",
+  "shortName": "pct",
+  "tags": {
+    "language": "F#"
+  },
+  "sourceName": "ProteomIQonConsole",
+  "preferNameDirectory" : "true"
+}
