@@ -1,6 +1,7 @@
 FSharp.Core
 Newtonsoft.Json
 Logary
+Argu
 BioFSharp
 BioFSharp.IO
 FSharpAux
