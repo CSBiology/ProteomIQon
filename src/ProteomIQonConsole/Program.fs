@@ -13,6 +13,10 @@ module console1 =
         let usage  = parser.PrintUsage()
         printfn "%s" usage
         let results = parser.Parse argv
+        let input = 
+            if results.Contains InstrumentOutput then 
+                results.GetResults InstrumentOutput
+            else [""]
         Library.printParams (results.GetAllResults())
         printfn "Hit any key to exit."
         System.Console.ReadKey() |> ignore
