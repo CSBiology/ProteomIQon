@@ -17,10 +17,67 @@
     <Compile Include="Domain.fs" />
     <Compile Include="DTO.fs" />
     <Compile Include="Json.fs" />
+    <Compile Include="Core.fs" />
     <None Include="Scripts\createPepeParams.fsx" />
     <None Include="Scripts\createCentroidizationParams.fsx" />
     <None Include="paket.references" />
     <None Include="paket.template" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="Clearcore2.Compression">
+      <HintPath>..\..\lib\FsMzLite\Clearcore2.Compression.dll</HintPath>
+    </Reference>
+    <Reference Include="Clearcore2.Data">
+      <HintPath>..\..\lib\FsMzLite\Clearcore2.Data.dll</HintPath>
+    </Reference>
+    <Reference Include="Clearcore2.Data.AnalystDataProvider">
+      <HintPath>..\..\lib\FsMzLite\Clearcore2.Data.AnalystDataProvider.dll</HintPath>
+    </Reference>
+    <Reference Include="Clearcore2.Data.CommonInterfaces">
+      <HintPath>..\..\lib\FsMzLite\Clearcore2.Data.CommonInterfaces.dll</HintPath>
+    </Reference>
+    <Reference Include="Clearcore2.Data.WiffReader">
+      <HintPath>..\..\lib\FsMzLite\Clearcore2.Data.WiffReader.dll</HintPath>
+    </Reference>
+    <Reference Include="Clearcore2.InternalRawXYProcessing">
+      <HintPath>..\..\lib\FsMzLite\Clearcore2.InternalRawXYProcessing.dll</HintPath>
+    </Reference>
+    <Reference Include="Clearcore2.Muni">
+      <HintPath>..\..\lib\FsMzLite\Clearcore2.Muni.dll</HintPath>
+    </Reference>
+    <Reference Include="Clearcore2.ProjectUtilities">
+      <HintPath>..\..\lib\FsMzLite\Clearcore2.ProjectUtilities.dll</HintPath>
+    </Reference>
+    <Reference Include="Clearcore2.RawXYProcessing">
+      <HintPath>..\..\lib\FsMzLite\Clearcore2.RawXYProcessing.dll</HintPath>
+    </Reference>
+    <Reference Include="Clearcore2.StructuredStorage">
+      <HintPath>..\..\lib\FsMzLite\Clearcore2.StructuredStorage.dll</HintPath>
+    </Reference>
+    <Reference Include="Clearcore2.Utility">
+      <HintPath>..\..\lib\FsMzLite\Clearcore2.Utility.dll</HintPath>
+    </Reference>
+    <Reference Include="FsMzLite">
+      <HintPath>..\..\lib\FsMzLite\FsMzLite.dll</HintPath>
+    </Reference>
+    <Reference Include="MzLite">
+      <HintPath>..\..\lib\FsMzLite\MzLite.dll</HintPath>
+    </Reference>
+    <Reference Include="MzLite.Bruker">
+      <HintPath>..\..\lib\FsMzLite\MzLite.Bruker.dll</HintPath>
+    </Reference>
+    <Reference Include="MzLite.Processing">
+      <HintPath>..\..\lib\FsMzLite\MzLite.Processing.dll</HintPath>
+    </Reference>
+    <Reference Include="MzLite.SQL">
+      <HintPath>..\..\lib\FsMzLite\MzLite.SQL.dll</HintPath>
+    </Reference>
+    <Reference Include="MzLite.Thermo">
+      <HintPath>..\..\lib\FsMzLite\MzLite.Thermo.dll</HintPath>
+    </Reference>
+    <Reference Include="MzLite.Wiff">
+      <HintPath>..\..\lib\FsMzLite\MzLite.Wiff.dll</HintPath>
+    </Reference>
   </ItemGroup>
   <Import Project="..\..\.paket\Paket.Restore.targets" />
 </Project>
