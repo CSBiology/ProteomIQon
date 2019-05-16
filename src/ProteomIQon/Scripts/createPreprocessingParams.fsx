@@ -8,7 +8,6 @@
 open ProteomIQon
 open ProteomIQon.Dto
 open ProteomIQon.Domain
-System.IO.Path.GetExtension "C:\Users\david\Source\Repos\netCoreRepos\ProteomIQon\src\ProteomIQon\defaultParams\20190208_TT_FS_SA_MS1041_SFbdgGel001.wiff"
 
 let defaultPreprocessingParams = 
 
