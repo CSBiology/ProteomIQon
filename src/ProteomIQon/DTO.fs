@@ -102,27 +102,25 @@ module Common =
 ///
 module Dto = 
 
-    type CentroidizationParams =
+    type PreprocessingParams =
         {
-            Centroid                    : bool
-            UseManufacturerCentroids    : bool
-            StartRetentionTime          : float
-            EndRetentionTime            : float
-            MS1Centroidization          : Domain.MS1CentroidizationParams
-            MS2CentroidizationParams    : Domain.MS2CentroidizationParams
+            Compress                    : bool
+            StartRetentionTime          : float option
+            EndRetentionTime            : float option 
+            MS1PeakPicking              : PeakPicking
+            MS2PeakPicking              : PeakPicking
         }
 
 
-    module CentroidizationParams = 
+    module PreprocessingParams = 
 
-        let toDomain (dtoCentroidizationParams: CentroidizationParams ) = 
+        let toDomain (dtoCentroidizationParams: PreprocessingParams ) : Domain.PreprocessingParams = 
                 {
-                    Centroid                    = dtoCentroidizationParams.Centroid                
-                    UseManufacturerCentroids    = dtoCentroidizationParams.UseManufacturerCentroids
+                    Compress                    = dtoCentroidizationParams.Compress
                     StartRetentionTime          = dtoCentroidizationParams.StartRetentionTime      
                     EndRetentionTime            = dtoCentroidizationParams.EndRetentionTime        
-                    MS1Centroidization          = dtoCentroidizationParams.MS1Centroidization      
-                    MS2CentroidizationParams    = dtoCentroidizationParams.MS2CentroidizationParams
+                    MS1PeakPicking              = dtoCentroidizationParams.MS1PeakPicking      
+                    MS2PeakPicking              = dtoCentroidizationParams.MS2PeakPicking
                 }
 
     type SearchDbParams = 
