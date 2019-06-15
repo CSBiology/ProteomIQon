@@ -10,19 +10,22 @@ open MzLite.Model
 open MzLite.Binary
 open Core.MzLite.Reader
 open Core.MzLite.Peaks
+open MzLite.Bruker
 
 module Preprocessing = 
+    open MzLite.IO
+    open MzLite.SQL
 
     /// 
-    let private initPeakPicking (reader:MzDataReader) (peakPickingParams:PeakPicking) = 
+    let private initPeakPicking (reader:IMzLiteDataReader) (peakPickingParams:PeakPicking) = 
         match reader, peakPickingParams with
-        | MzDataReader.Baf r, PeakPicking.Centroid CentroidizationMode.Manufacturer -> 
+        | :? BafFileReader as r, PeakPicking.Centroid CentroidizationMode.Manufacturer -> 
             fun (massSpec:MassSpectrum) -> 
                 r.ReadSpectrumPeaks(massSpec.ID,true).Peaks
                 |> unzipIMzliteArray
         | _ as r , PeakPicking.ProfilePeaks ->
             fun (massSpec:MassSpectrum) -> 
-                (MzDataReader.toIMzliteDataReader r).ReadSpectrumPeaks(massSpec.ID).Peaks
+                r.ReadSpectrumPeaks(massSpec.ID).Peaks
                 |> unzipIMzliteArray
         | _ as r , PeakPicking.Centroid (CentroidizationMode.Wavelet waveletParams) -> 
             match waveletParams.PaddingParams with 
@@ -47,16 +50,15 @@ module Preprocessing =
                     let waveletParameters = initwaveletParameters yThreshold
                     fun (massSpec:MassSpectrum) -> 
                         let mzData, intensityData = 
-                            (MzDataReader.toIMzliteDataReader r).ReadSpectrumPeaks(massSpec.ID).Peaks
+                            r.ReadSpectrumPeaks(massSpec.ID).Peaks
                             |> unzipIMzliteArray
                         let paddedMz,paddedIntensity = 
-                            let paddingParams = initPaddingParameters yThreshold
                             SignalDetection.Padding.paddDataBy paddingParams mzData intensityData
                         BioFSharp.Mz.SignalDetection.Wavelet.toCentroidWithRicker2D waveletParameters paddedMz paddedIntensity
                 | YThreshold.MinSpectrumIntensity -> 
                     fun (massSpec:MassSpectrum) -> 
                         let mzData, intensityData = 
-                            (MzDataReader.toIMzliteDataReader r).ReadSpectrumPeaks(massSpec.ID).Peaks
+                            r.ReadSpectrumPeaks(massSpec.ID).Peaks
                             |> unzipIMzliteArray
                         let yThreshold = Array.min intensityData 
                         let paddedMz,paddedIntensity = 
@@ -77,13 +79,13 @@ module Preprocessing =
                     let waveletParameters = initwaveletParameters yThreshold
                     fun (massSpec:MassSpectrum) -> 
                         let mzData, intensityData = 
-                            (MzDataReader.toIMzliteDataReader r).ReadSpectrumPeaks(massSpec.ID).Peaks
+                            r.ReadSpectrumPeaks(massSpec.ID).Peaks
                             |> unzipIMzliteArray
                         BioFSharp.Mz.SignalDetection.Wavelet.toCentroidWithRicker2D waveletParameters mzData intensityData
                 | YThreshold.MinSpectrumIntensity -> 
                     fun (massSpec:MassSpectrum) -> 
                         let mzData, intensityData = 
-                            (MzDataReader.toIMzliteDataReader r).ReadSpectrumPeaks(massSpec.ID).Peaks
+                            r.ReadSpectrumPeaks(massSpec.ID).Peaks
                             |> unzipIMzliteArray
                         let yThreshold = Array.min intensityData 
                         let waveletParameters = initwaveletParameters yThreshold
@@ -110,60 +112,36 @@ module Preprocessing =
             failwith "Only mass spectra of level 1 and 2 are supported."
 
     let processFile (processParams:PreprocessingParams) (outputDir:string) (instrumentOutput:string) =
-        printfn "Hallo"
-        let logger = Log.create()
-        Message.event Info (sprintf "Now preprocessing: %s /nResults will be written to: %s" instrumentOutput outputDir) |> logger.logSimple
-        printfn "Hallo2"
+        printfn "Now preprocessing: %s /nResults will be written to: %s" instrumentOutput outputDir
+        
+        printfn "Init connection to input data base." 
         // initialize Reader and Transaction
-        let inReader = 
-            match Core.MzLite.Reader.getReader instrumentOutput with 
-            | Result.Ok reader -> 
-                Message.event Info ("Reader initialized successfully") |> logger.logSimple                
-                reader
-            | Result.Error ex -> 
-                failwith ex
+        let inReader = Core.MzLite.Reader.getReader instrumentOutput  
+        let inRunID  = Core.MzLite.Reader.getDefaultRunID inReader
+        let inTr = inReader.BeginTransaction()                    
 
-        let inRunID = Core.MzLite.Reader.getDefaultRunID inReader
-
-        let inTr = 
-            let tmp = Core.MzLite.Reader.beginTransaction inReader                    
-            Message.event Info ("Transaction Scope initialized") |> logger.logSimple
-            tmp 
-        printfn "Hallo3"
-
+        
+        printfn "Creating mzlite file." 
         // initialize Reader and Transaction
         let outFilePath = 
-            let fileName = Path.GetFileName instrumentOutput
+            let fileName = (Path.GetFileNameWithoutExtension instrumentOutput) + ".mzlite"
             Path.Combine [|outputDir;fileName|]
             
-        let outReader = 
-            match Core.MzLite.Reader.createMzLiteSQLDB outFilePath with 
-            | Result.Ok reader -> 
-                Message.event Info ("Output database initialized successfully") |> logger.logSimple                
-                reader
-            | Result.Error ex -> 
-                failwith ex
-        printfn "Hallo4"
-        // TODO: Factor this out.
+        let outReader = new MzLiteSQL(outFilePath) 
         /// All files created by this application will have a unified runID.
-        let outRunID = "sample=0"
+        let outRunID  = Core.MzLite.Reader.getDefaultRunID outReader    
+        let outTr = outReader.BeginTransaction()                    
 
-        let outTr = 
-            let tmp = outReader.BeginTransaction()                    
-            Message.event Info ("Transaction Scope initialized") |> logger.logSimple
-            tmp 
-        printfn "Hallo5"
+        printfn "Initiating peak picking functions."
         // Initialize PeakPickingFunctions
         let ms1PeakPicking = initPeakPicking inReader processParams.MS1PeakPicking
         let ms2PeakPicking = initPeakPicking inReader processParams.MS2PeakPicking
-
-        Message.event Info ("Getting all mass spectra") |> logger.logSimple
+ 
+        printfn "Getting mass spectra."
         // Get all mass spectra 
-        let massSpectra = 
-            getMassSpectra inReader inRunID
+        let massSpectra = inReader.ReadMassSpectra(inRunID)
 
-        printfn "Hallo6"
-        Message.event Info ("Filtering mass spectra by scan time.") |> logger.logSimple
+        printfn "Filtering mass spectra according to retention time."
         // Filter mass spectra by minimum or maximum scan time time.            
         let massSpectraF = 
             match processParams.StartRetentionTime, processParams.EndRetentionTime with
@@ -188,11 +166,17 @@ module Preprocessing =
             | None, None ->
                 massSpectra
         
-        printfn "Hallo7"
-        Message.event Info ("processing and copying mass spectra into output data base.") |> logger.logSimple
+
+        printfn "Copying mass spectra to output data base."
         ///  
         massSpectraF
-        |> Seq.iter (insertSprectrum processParams.Compress outReader outRunID ms1PeakPicking ms2PeakPicking)
-        
-        Message.event Info ("Done") |> logger.logSimple
-        
+        |> Seq.iter (fun ms -> 
+                        try
+                            insertSprectrum processParams.Compress outReader outRunID ms1PeakPicking ms2PeakPicking ms
+                        
+                        with 
+                        | ex -> 
+                            printfn "ID: %s could not be inserted. Exeption:%A" ms.ID ex
+                    )
+                    
+        printfn "Done."

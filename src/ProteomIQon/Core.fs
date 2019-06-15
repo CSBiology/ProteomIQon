@@ -6,6 +6,10 @@ open MzLite
 open MzLite.IO
 open MzLite.Commons.Arrays
 open MzLite.Binary
+open MzLite.Bruker
+open MzLite.Wiff
+open MzLite.Thermo
+open MzLite.SQL
 
 module Core =
     
@@ -13,81 +17,34 @@ module Core =
 
         module Reader = 
     
-            type MzDataReader =
-                | Wiff of Wiff.WiffFileReader 
-                | Baf  of Bruker.BafFileReader
-                | Raw  of Thermo.ThermoRawFileReader
-                | MzLite of SQL.MzLiteSQL
-
-            module MzDataReader =
-
-                let toIMzliteDataReader reader =
-                    match reader with 
-                    | Wiff   r -> r :> IMzLiteDataReader 
-                    | Baf    r -> r :> IMzLiteDataReader
-                    | Raw    r -> r :> IMzLiteDataReader
-                    | MzLite r -> r :> IMzLiteDataReader
-
-            /// Initializes a transaction scope.
-            let beginTransaction mzReader =
-                mzReader 
-                |> MzDataReader.toIMzliteDataReader
-                |> fun x -> x.BeginTransaction()
-
-            /// Returns the default runID used by manufacturers
-            let getDefaultRunID mzReader = 
-                match mzReader with
-                | Wiff r -> "sample=0" 
-                | Baf  r -> "run_1" 
-                | Raw  r -> "run_1"
-                | MzLite r -> "sample=0"
-        
-            let getReader (instrumentOutput:string) : Result<MzDataReader,string> = 
+            let getReader (instrumentOutput:string) = 
                 match System.IO.Path.GetExtension instrumentOutput with 
                 | ".wiff" -> 
-                    try
-                    printfn "hallo 2.1"
                     let wiffReader = new Wiff.WiffFileReader(instrumentOutput) 
-                    Ok (Wiff wiffReader)
-                    with ex ->
-                    printfn "hallo 2.2"
-                    raise ex
-                    Error ex.Message 
+                    wiffReader :> IMzLiteDataReader
                 | ".d"    -> 
-                    try
                     let bafReader = new Bruker.BafFileReader(instrumentOutput)
-                    Ok (Baf bafReader)
-                    with ex ->
-                    Error ex.Message
+                    bafReader :> IMzLiteDataReader
                 | ".mzlite" -> 
-                    try
                     let mzLiteReader = new SQL.MzLiteSQL(instrumentOutput)
-                    Ok (MzLite mzLiteReader)
-                    with ex ->
-                    Error ex.Message
+                    mzLiteReader :> IMzLiteDataReader
                 | ".RAW" -> 
                     let rawReader = new Thermo.ThermoRawFileReader(instrumentOutput)
-                    Ok (Raw rawReader)
-                | _       -> Error "Reader could not be opened. Only the formats .wiff (ABSciex), baf (Bruker), Raw (Thermo) or .mzlite (CSBiology) are supported." 
+                    rawReader :> IMzLiteDataReader
+                | _       ->  
+                    failwith "Reader could not be opened. Only the formats .wiff (ABSciex), baf (Bruker), Raw (Thermo) or .mzlite (CSBiology) are supported." 
             
-            let createMzLiteSQLDB (filePath:string)= 
-                try
-                let mzLiteReader = new SQL.MzLiteSQL(filePath)
-                Ok mzLiteReader
-                with ex ->
-                Error ex.Message
-
             /// Returns the default runID used by manufacturers
-            let getMassSpectrum mzReader specID = 
-                mzReader
-                |> MzDataReader.toIMzliteDataReader
-                |> fun x -> x.ReadMassSpectrum(specID)
-
-            /// Returns the default runID used by manufacturers
-            let getMassSpectra mzReader runID = 
-                mzReader
-                |> MzDataReader.toIMzliteDataReader
-                |> fun x -> x.ReadMassSpectra(runID)
+            let getDefaultRunID (mzReader:IMzLiteDataReader) = 
+                match mzReader with
+                | :? WiffFileReader as r        -> "sample=0" 
+                | :? BafFileReader as r         -> "run_1" 
+                | :? ThermoRawFileReader as r   -> "run_1"
+                | :? MzLiteSQL as r             -> "sample=0"
+                | _                             -> failwith "There is no known default RunID for the given Reader"
+            /// Initializes a transaction scope.
+            let beginTransaction (mzReader:IMzLiteDataReader) =
+                mzReader.BeginTransaction()
 
         module MassSpectrum = 
             open MzLite.Model

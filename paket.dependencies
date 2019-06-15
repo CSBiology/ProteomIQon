@@ -28,7 +28,7 @@ nuget BioFSharp.IO
 
 git https://github.com/CSBiology/BioFSharp.Mz.git nuget Packages: /
 
-nuget BioFSharp.Mz
+nuget BioFSharp.Mz ~> 0.0.112
 
 clitool dotnet-fake
 
