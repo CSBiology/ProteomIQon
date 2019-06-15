@@ -9,7 +9,7 @@ open ProteomIQon
 open ProteomIQon.Dto
 open ProteomIQon.Domain
 
-let defaultPreprocessingParams = 
+let defaultPreprocessingParams :Dto.PreprocessingParams = 
 
     let ms1PeakPickingParams  = 
         {

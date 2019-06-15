@@ -123,12 +123,10 @@ module Dto =
                     MS2PeakPicking              = dtoCentroidizationParams.MS2PeakPicking
                 }
 
-    type SearchDbParams = 
+    type PeptideDBParams = 
         {
         // name of database i.e. Creinhardtii_236_protein_full_labeled
         Name                        : string
-        // path of db storage folder
-        DbFolder                    : string
         FastaPath                   : string
         ParseProteinIDRegexPattern  : string 
         Protease                    : Protease
@@ -145,12 +143,11 @@ module Dto =
         VarModThreshold             : int
         }
 
-    module SearchDbParams =
+    module PeptideDBParams =
 
-        let toDomain (dtoSearchDbParams: SearchDbParams ) = 
+        let toDomain (dtoSearchDbParams: PeptideDBParams ) = 
             {
             Name                = dtoSearchDbParams.Name
-            DbFolder            = dtoSearchDbParams.DbFolder
             FastaPath           = dtoSearchDbParams.FastaPath
             FastaHeaderToName   = parseProteinIdUsing dtoSearchDbParams.ParseProteinIDRegexPattern
             Protease            = Protease.toDomain dtoSearchDbParams.Protease

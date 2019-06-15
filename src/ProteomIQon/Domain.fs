@@ -7,11 +7,12 @@ module Domain =
 
     open BioFSharp.Mz
     open System.Linq
+    open BioFSharp.Digestion
     open BioFSharp.Mz.SignalDetection
-                
+    open BioFSharp.Mz.SearchDB
+
     type PaddingParams =
          {
-            /// Padding
             MaximumPaddingPoints    : int option
             Padding_MzTolerance     : float
             WindowSize              : int
@@ -50,9 +51,27 @@ module Domain =
             MS2PeakPicking              : PeakPicking
         }
 
-    type SearchDbParams = BioFSharp.Mz.SearchDB.SearchDbParams
+    type PeptideDBParams = 
+        {
+        Name                : string
+        FastaPath           : string
+        FastaHeaderToName   : string -> string
+        Protease            : Digestion.Protease
+        MinMissedCleavages  : int
+        MaxMissedCleavages  : int
+        MaxMass             : float
+        MinPepLength        : int
+        MaxPepLength        : int
+        IsotopicMod         : SearchInfoIsotopic list 
+        MassMode            : MassMode
+        MassFunction        : IBioItem -> float  
+        FixedMods           : SearchModification list            
+        VariableMods        : SearchModification list
+        VarModThreshold     : int
+        }
 
     type NTerminalSeries = ((IBioItem -> float) -> AminoAcids.AminoAcid list -> PeakFamily<TaggedMass.TaggedMass> list)
+    
     type CTerminalSeries = ((IBioItem -> float) -> AminoAcids.AminoAcid list -> PeakFamily<TaggedMass.TaggedMass> list)
 
     type AndromedaParams = {
@@ -82,11 +101,11 @@ module Domain =
             MinPepLength            : int
             MaxPepLength            : int
             // valid symbol name of isotopic label in label table i.e. #N15
-            IsotopicMod             : SearchDB.SearchInfoIsotopic list 
-            MassMode                : SearchDB.MassMode
+            IsotopicMod             : SearchInfoIsotopic list 
+            MassMode                : MassMode
             MassFunction            : IBioItem -> float  
-            FixedMods               : SearchDB.SearchModification list            
-            VariableMods            : SearchDB.SearchModification list
+            FixedMods               : SearchModification list            
+            VariableMods            : SearchModification list
             VarModThreshold         : int  
             // +/- ppm of ion m/z to obtain target peptides from SearchDB. 
             LookUpPPM               : float

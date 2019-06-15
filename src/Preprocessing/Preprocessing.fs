@@ -178,5 +178,7 @@ module Preprocessing =
                         | ex -> 
                             printfn "ID: %s could not be inserted. Exeption:%A" ms.ID ex
                     )
-                    
+        outTr.Commit()
+        outTr.Dispose()
+        outReader.Dispose()
         printfn "Done."

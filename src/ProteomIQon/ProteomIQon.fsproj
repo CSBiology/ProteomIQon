@@ -18,6 +18,8 @@
     <Compile Include="DTO.fs" />
     <Compile Include="Json.fs" />
     <Compile Include="Core.fs" />
+    <None Include="Scripts\createPeptideDBParams.fsx" />
+    <None Include="Scripts\Testing.fsx" />
     <None Include="Scripts\createPepeParams.fsx" />
     <None Include="Scripts\createPreprocessingParams.fsx" />
     <None Include="paket.references" />
