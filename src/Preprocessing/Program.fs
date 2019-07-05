@@ -1,10 +1,9 @@
 namespace ProteomIQon
 
-open System
+open System.IO
 open CLIArgumentParsing
 open Argu
-open Logary
-open Domain
+
 module console1 =
 
     [<EntryPoint>]
@@ -23,6 +22,7 @@ module console1 =
             printfn "InputFilePath -i = %s" i
             printfn "InputFilePath -o = %s" o
             printfn "InputFilePath -p = %s" p
+            Directory.CreateDirectory(o) |> ignore
             let processParams = 
                 Json.ReadAndDeserialize<Dto.PreprocessingParams> p
                 |> Dto.PreprocessingParams.toDomain

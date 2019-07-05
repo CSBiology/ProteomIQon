@@ -16,5 +16,17 @@
   <ItemGroup>
     <ProjectReference Include="..\ProteomIQon\ProteomIQon.fsproj"></ProjectReference>
   </ItemGroup>
+  <ItemGroup>
+    <Reference Include="MzLite">
+      <HintPath>..\..\lib\FsMzLite\MzLite.dll</HintPath>
+    </Reference>
+    <Reference Include="MzLite.Processing">
+      <HintPath>..\..\lib\FsMzLite\MzLite.Processing.dll</HintPath>
+    </Reference>
+    <Reference Include="MzLite.SQL">
+      <HintPath>..\..\lib\FsMzLite\MzLite.SQL.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Transactions" />
+  </ItemGroup>
   <Import Project="..\..\.paket\Paket.Restore.targets" />
 </Project>

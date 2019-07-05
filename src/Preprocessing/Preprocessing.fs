@@ -56,6 +56,7 @@ module Preprocessing =
                             SignalDetection.Padding.paddDataBy paddingParams mzData intensityData
                         BioFSharp.Mz.SignalDetection.Wavelet.toCentroidWithRicker2D waveletParameters paddedMz paddedIntensity
                 | YThreshold.MinSpectrumIntensity -> 
+                    printfn "ms2Centroidization with: %A" waveletParams
                     fun (massSpec:MassSpectrum) -> 
                         let mzData, intensityData = 
                             r.ReadSpectrumPeaks(massSpec.ID).Peaks
@@ -76,6 +77,7 @@ module Preprocessing =
                         waveletParams.MinSNR 
                 match waveletParams.YThreshold with 
                 | YThreshold.Fixed yThreshold -> 
+                    printfn "ms1Centroidization with: %A" waveletParams
                     let waveletParameters = initwaveletParameters yThreshold
                     fun (massSpec:MassSpectrum) -> 
                         let mzData, intensityData = 
@@ -100,12 +102,18 @@ module Preprocessing =
         match MassSpectrum.getMsLevel spectrum with 
         | 1 -> 
             let mzData,intensityData = 
+                try
                 ms1PeakPicking spectrum
+                with 
+                | _ -> [||],[||]
             let peaks = createPeak1DArray compress BinaryDataType.Float64 BinaryDataType.Float64 mzData intensityData
             outReader.Insert(runID, spectrum, peaks)           
         | 2 -> 
             let mzData,intensityData = 
+                try
                 ms2PeakPicking spectrum
+                with 
+                | _ -> [||],[||]
             let peaks = createPeak1DArray compress BinaryDataType.Float64 BinaryDataType.Float64 mzData intensityData
             outReader.Insert(runID, spectrum, peaks)
         | _ -> 

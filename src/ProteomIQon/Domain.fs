@@ -5,10 +5,6 @@ open BioFSharp.Mz
 
 module Domain = 
 
-    open BioFSharp.Mz
-    open System.Linq
-    open BioFSharp.Digestion
-    open BioFSharp.Mz.SignalDetection
     open BioFSharp.Mz.SearchDB
 
     type PaddingParams =
@@ -83,37 +79,14 @@ module Domain =
     type PeptideSpectrumMatchingParams = 
         {
             // Charge Determination Params
-
-            ExpectedMinimalCharge   : int ///TODO: learn from Data
-            ExpectedMaximumCharge   : int ///TODO: learn from Data
-            Width                   : float
-            /// RelativeToStartPeak
-            MinIntensity            : float
-            /// RelativeToPriorPeak
-            DeltaMinIntensity       : float
-            NrOfRndSpectra          : int
-            
-            // SearchParams
-            Protease                : Digestion.Protease
-            MinMissedCleavages      : int
-            MaxMissedCleavages      : int
-            MaxMass                 : float
-            MinPepLength            : int
-            MaxPepLength            : int
-            // valid symbol name of isotopic label in label table i.e. #N15
-            IsotopicMod             : SearchInfoIsotopic list 
-            MassMode                : MassMode
-            MassFunction            : IBioItem -> float  
-            FixedMods               : SearchModification list            
-            VariableMods            : SearchModification list
-            VarModThreshold         : int  
+            ChargeStateDeterminationParams  : ChargeState.ChargeDetermParams             
             // +/- ppm of ion m/z to obtain target peptides from SearchDB. 
-            LookUpPPM               : float
+            LookUpPPM                       : float
             // lowest m/z, highest m/z
-            MS2ScanRange            : float*float
-            nTerminalSeries         : NTerminalSeries
-            cTerminalSeries         : CTerminalSeries
-            Andromeda               : AndromedaParams
+            MS2ScanRange                    : float*float
+            nTerminalSeries                 : NTerminalSeries
+            cTerminalSeries                 : CTerminalSeries
+            AndromedaParams                 : AndromedaParams
             ///
         }
 

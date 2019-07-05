@@ -4,6 +4,9 @@ open BioFSharp
 open BioFSharp.Mz
 open BioFSharp.Mz.SearchDB
 open Domain
+open FSharpAux.IO.SchemaReader
+open FSharpAux.IO.SchemaReader.Csv
+open FSharpAux.IO.SchemaReader.Attribute
 
 [<AutoOpen>]
 module Common =
@@ -102,6 +105,7 @@ module Common =
 ///
 module Dto = 
 
+
     type PreprocessingParams =
         {
             Compress                    : bool
@@ -165,69 +169,73 @@ module Dto =
             VarModThreshold     = dtoSearchDbParams.VarModThreshold
             } 
 
+
     type PeptideSpectrumMatchingParams = 
         {
-            // Charge Determination Params
-            ExpectedMinimalCharge   : int ///TODO: learn from Data
-            ExpectedMaximumCharge   : int ///TODO: learn from Data
-            Width                   : float
-            /// RelativeToStartPeak
-            MinIntensity            : float
-            /// RelativeToPriorPeak
-            DeltaMinIntensity       : float
-            NrOfRndSpectra          : int
-            
-            // SearchParams
-            Protease                : Protease
-            MinMissedCleavages      : int
-            MaxMissedCleavages      : int
-            MaxMass                 : float
-            MinPepLength            : int
-            MaxPepLength            : int
-            // valid symbol name of isotopic label in label table i.e. #N15
-            IsotopicMod             : IsotopicMod list 
-            MassMode                : SearchDB.MassMode
-            FixedMods               : Modification list            
-            VariableMods            : Modification list
-            VarModThreshold         : int  
-            // +/- ppm of ion m/z to obtain target peptides from SearchDB. 
-            LookUpPPM               : float
-            // lowest m/z, highest m/z
-            MS2ScanRange            : float*float
-            nTerminalSeries         : NTerminalSeries
-            cTerminalSeries         : CTerminalSeries
-            Andromeda               : AndromedaParams
+            ChargeStateDeterminationParams: ChargeState.ChargeDetermParams            
+            LookUpPPM                     : float
+            MS2ScanRange                  : float*float
+            nTerminalSeries               : NTerminalSeries
+            cTerminalSeries               : CTerminalSeries
+            Andromeda                     : AndromedaParams
         }
 
     module PeptideSpectrumMatchingParams = 
         
         let toDomain (dtoPeptideSpectrumMatchingParams: PeptideSpectrumMatchingParams ) :Domain.PeptideSpectrumMatchingParams = 
             {
-                ExpectedMinimalCharge  = dtoPeptideSpectrumMatchingParams.ExpectedMinimalCharge   
-                ExpectedMaximumCharge  = dtoPeptideSpectrumMatchingParams.ExpectedMaximumCharge   
-                Width                  = dtoPeptideSpectrumMatchingParams.Width                   
-                MinIntensity           = dtoPeptideSpectrumMatchingParams.MinIntensity            
-                DeltaMinIntensity      = dtoPeptideSpectrumMatchingParams.DeltaMinIntensity       
-                NrOfRndSpectra         = dtoPeptideSpectrumMatchingParams.NrOfRndSpectra          
-                Protease               = Protease.toDomain dtoPeptideSpectrumMatchingParams.Protease                
-                MinMissedCleavages     = dtoPeptideSpectrumMatchingParams.MinMissedCleavages      
-                MaxMissedCleavages     = dtoPeptideSpectrumMatchingParams.MaxMissedCleavages      
-                MaxMass                = dtoPeptideSpectrumMatchingParams.MaxMass                 
-                MinPepLength           = dtoPeptideSpectrumMatchingParams.MinPepLength            
-                MaxPepLength           = dtoPeptideSpectrumMatchingParams.MaxPepLength            
-                IsotopicMod            = List.map IsotopicMod.toDomain dtoPeptideSpectrumMatchingParams.IsotopicMod             
-                MassMode               = dtoPeptideSpectrumMatchingParams.MassMode                
-                MassFunction           = MassMode.toDomain dtoPeptideSpectrumMatchingParams.MassMode            
-                FixedMods              = List.map Modification.toDomain dtoPeptideSpectrumMatchingParams.FixedMods                   
-                VariableMods           = List.map Modification.toDomain dtoPeptideSpectrumMatchingParams.VariableMods            
-                VarModThreshold        = dtoPeptideSpectrumMatchingParams.VarModThreshold         
-                LookUpPPM              = dtoPeptideSpectrumMatchingParams.LookUpPPM               
-                MS2ScanRange           = dtoPeptideSpectrumMatchingParams.MS2ScanRange            
-                nTerminalSeries        = NTerminalSeries.toDomain dtoPeptideSpectrumMatchingParams.nTerminalSeries         
-                cTerminalSeries        = CTerminalSeries.toDomain dtoPeptideSpectrumMatchingParams.cTerminalSeries         
-                Andromeda              = dtoPeptideSpectrumMatchingParams.Andromeda               
+                ChargeStateDeterminationParams  = dtoPeptideSpectrumMatchingParams.ChargeStateDeterminationParams            
+                LookUpPPM                       = dtoPeptideSpectrumMatchingParams.LookUpPPM               
+                MS2ScanRange                    = dtoPeptideSpectrumMatchingParams.MS2ScanRange            
+                nTerminalSeries                 = NTerminalSeries.toDomain dtoPeptideSpectrumMatchingParams.nTerminalSeries         
+                cTerminalSeries                 = CTerminalSeries.toDomain dtoPeptideSpectrumMatchingParams.cTerminalSeries         
+                AndromedaParams                 = dtoPeptideSpectrumMatchingParams.Andromeda               
             }                                   
 
+    type PeptideSpectrumMatchingResult = 
+        {
+            // a combination of the spectrum ID in the rawFile, the ascending ms2 id and the chargeState in the search space seperated by '_'
+            [<FieldAttribute(0)>]
+            PSMId                        : string
+            [<FieldAttribute(1)>]
+            GlobalMod                    : int
+            [<FieldAttribute(2)>]
+            PepSequenceID                : int
+            [<FieldAttribute(3)>]
+            ModSequenceID                : int
+            [<FieldAttribute(4)>]
+            Label                        : int
+            // ascending ms2 id (file specific)
+            [<FieldAttribute(5)>]
+            ScanNr                       : int
+            [<FieldAttribute(6)>]
+            Charge                       : int
+            [<FieldAttribute(7)>]
+            PrecursorMZ                  : float
+            [<FieldAttribute(8)>]
+            TheoMass                     : float
+            [<FieldAttribute(9)>]
+            AbsDeltaMass                 : float
+            [<FieldAttribute(10)>]
+            PeptideLength                : int
+            [<FieldAttribute(11)>]
+            MissCleavages                : int
+            [<FieldAttribute(12)>]
+            SequestScore                 : float
+            [<FieldAttribute(13)>]
+            SequestNormDeltaBestToRest   : float
+            [<FieldAttribute(14)>]
+            SequestNormDeltaNext         : float
+            [<FieldAttribute(15)>]
+            AndroScore                   : float
+            [<FieldAttribute(16)>]
+            AndroNormDeltaBestToRest     : float
+            [<FieldAttribute(17)>]
+            AndroNormDeltaNext           : float
+            [<FieldAttribute(18)>]
+            StringSequence               : string
+        }
+        
 
     type PEPEParams = 
         {
@@ -244,6 +252,57 @@ module Dto =
                 PepValueThreshold               = dtoPepeParams.PepValueThreshold  
                 ParseProteinID                  = parseProteinIdUsing dtoPepeParams.ParseProteinIDRegexPattern    
             }
+
+    type  PEPEPResult = {
+        // a combination of the spectrum ID in the rawFile, the ascending ms2 id and the chargeState in the search space seperated by '_'
+        [<FieldAttribute(0)>]
+        PSMId                        : string;
+        [<FieldAttribute(1)>]
+        GlobalMod                    : int
+        [<FieldAttribute(2)>]
+        PepSequenceID                : int
+        [<FieldAttribute(3)>]
+        ModSequenceID                : int
+        [<FieldAttribute(4)>]
+        Label                        : int
+        // ascending ms2 id (file specific)
+        [<FieldAttribute(5)>]
+        ScanNr                       : int;
+        [<FieldAttribute(6)>]
+        Charge                       : int;
+        [<FieldAttribute(7)>]
+        PrecursorMZ                  : float
+        [<FieldAttribute(8)>]
+        TheoMass                     : float;
+        [<FieldAttribute(9)>]
+        AbsDeltaMass                 : float;
+        [<FieldAttribute(10)>]
+        PeptideLength                : int;
+        [<FieldAttribute(11)>]
+        MissCleavages                : int;
+        [<FieldAttribute(12)>]
+        SequestScore                 : float;
+        [<FieldAttribute(13)>]
+        SequestNormDeltaBestToRest   : float;
+        [<FieldAttribute(14)>]
+        SequestNormDeltaNext         : float;
+        [<FieldAttribute(15)>]
+        AndroScore                   : float;
+        [<FieldAttribute(16)>]
+        AndroNormDeltaBestToRest     : float;
+        [<FieldAttribute(17)>]
+        AndroNormDeltaNext           : float;
+        [<FieldAttribute(18)>]
+        PercolatorScore              : float;
+        [<FieldAttribute(19)>]
+        QValue                       : float;
+        [<FieldAttribute(20)>]
+        PEPValue                     : float;
+        [<FieldAttribute(21)>]
+        StringSequence               : string;
+        [<FieldAttribute(22)>]
+        ProteinNames                 : string;
+        }
 
     type QuantificationParams = 
         {

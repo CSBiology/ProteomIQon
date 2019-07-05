@@ -18,6 +18,7 @@
     <Compile Include="DTO.fs" />
     <Compile Include="Json.fs" />
     <Compile Include="Core.fs" />
+    <None Include="Scripts\createPeptideSpectrumMatchingParams.fsx" />
     <None Include="Scripts\createPeptideDBParams.fsx" />
     <None Include="Scripts\Testing.fsx" />
     <None Include="Scripts\createPepeParams.fsx" />
@@ -80,6 +81,7 @@
     <Reference Include="MzLite.Wiff">
       <HintPath>..\..\lib\FsMzLite\MzLite.Wiff.dll</HintPath>
     </Reference>
+    <Reference Include="System.Transactions" />
   </ItemGroup>
   <Import Project="..\..\.paket\Paket.Restore.targets" />
 </Project>

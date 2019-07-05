@@ -1,8 +1,9 @@
 namespace ProteomIQon
 
-open System
+open System.IO
 open CLIArgumentParsing
 open Argu
+
 module console1 =
 
     [<EntryPoint>]
@@ -19,6 +20,7 @@ module console1 =
         | Some o , Some p -> 
             printfn "Output directory -o = %s" o
             printfn "Parameter file path -p = %s" p
+            Directory.CreateDirectory(o) |> ignore
             let processParams = 
                 Json.ReadAndDeserialize<Dto.PeptideDBParams> p
                 |> Dto.PeptideDBParams.toDomain
