@@ -21,10 +21,10 @@ let serialized =
     defaultPepeParams
     |> Json.serialize
 
-System.IO.File.WriteAllText( @"C:\Users\david\Source\Repos\netCoreRepos\ProteomIQon\src\ProteomIQon\defaultParams\pepeParams.json",serialized)
+System.IO.File.WriteAllText(__SOURCE_DIRECTORY__ + @"/../defaultParams\pepeParams.json",serialized)
 
 let deserialized = 
-    System.IO.File.ReadAllText(@"C:\Users\david\Source\Repos\netCoreRepos\ProteomIQon\src\ProteomIQon\defaultParams\pepeParams.json")
+    System.IO.File.ReadAllText(__SOURCE_DIRECTORY__ + @"/../defaultParams\pepeParams.json")
     |> Json.deserialize<PEPEParams>
     |> PEPEParams.toDomain
 

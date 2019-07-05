@@ -53,9 +53,9 @@ let serialized =
     defaultPreprocessingParams
     |> Json.serialize
 
-System.IO.File.WriteAllText( @"C:\Users\david\Source\Repos\netCoreRepos\ProteomIQon\src\ProteomIQon\defaultParams\preprocessingParams.json",serialized)
+System.IO.File.WriteAllText(__SOURCE_DIRECTORY__ + @"/../defaultParams\preprocessingParams.json",serialized)
 
 let deserialized = 
-    System.IO.File.ReadAllText(@"C:\Users\david\Source\Repos\netCoreRepos\ProteomIQon\src\ProteomIQon\defaultParams\preprocessingParams.json")
+    System.IO.File.ReadAllText(__SOURCE_DIRECTORY__ + @"/../defaultParams\preprocessingParams.json")
     |> Json.deserialize<Dto.PreprocessingParams>
     |> PreprocessingParams.toDomain

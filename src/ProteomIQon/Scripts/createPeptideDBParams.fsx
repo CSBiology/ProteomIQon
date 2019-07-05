@@ -35,10 +35,10 @@ let serialized =
     defaultPepeParams
     |> Json.serialize
 
-System.IO.File.WriteAllText( @"C:\Users\david\Source\Repos\netCoreRepos\ProteomIQon\src\ProteomIQon\defaultParams\peptideDBParams.json",serialized)
+System.IO.File.WriteAllText(__SOURCE_DIRECTORY__ + @"/../defaultParams\peptideDBParams.json",serialized)
 
 let deserialized = 
-    System.IO.File.ReadAllText(@"C:\Users\david\Source\Repos\netCoreRepos\ProteomIQon\src\ProteomIQon\defaultParams\peptideDBParams.json")
+    System.IO.File.ReadAllText(__SOURCE_DIRECTORY__ + @"/../defaultParams\peptideDBParams.json")
     |> Json.deserialize<Dto.PeptideDBParams>
     |> PeptideDBParams.toDomain
 
