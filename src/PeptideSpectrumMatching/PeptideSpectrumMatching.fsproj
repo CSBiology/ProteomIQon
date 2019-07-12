@@ -9,10 +9,12 @@
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
   </PropertyGroup>
   <ItemGroup>
+    <None Include="App.config" />
     <Compile Include="PeptideSpectrumMatching.fs" />
     <Compile Include="CLIArgumentParsing.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
+  <ItemGroup />
   <ItemGroup>
     <ProjectReference Include="..\ProteomIQon\ProteomIQon.fsproj"></ProjectReference>
   </ItemGroup>

@@ -38,8 +38,7 @@ module console1 =
         elif Directory.Exists i then 
             printfn "multiple files"
             let files = 
-                Directory.GetFiles(i,("*.mzlite"))
-                
+                Directory.GetFiles(i,("*.mzlite"))                
             let c = 
                 match results.TryGetResult Parallelism_Level with 
                 | Some c    -> c

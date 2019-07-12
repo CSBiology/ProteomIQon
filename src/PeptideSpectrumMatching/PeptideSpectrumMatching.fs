@@ -195,9 +195,9 @@ module PeptideSpectrumMatching =
 
                                             let result = 
                                                 andromedaLikeScored
-                                                |> List.mapi (fun i androRes -> 
+                                                |> List.choose (fun androRes -> 
                                                                 // a combination of the spectrum ID in the rawFile, the ascending ms2 id and the chargeState in the search space seperated by '_'
-                                                                let pSMId = androRes.SpectrumID.Replace(' ', '-') + "_" + ascendingID.ToString() + "_" + ch.ToString() + "_" + i.ToString()
+                                                                //let pSMId = androRes.SpectrumID.Replace(' ', '-') + "_" + ascendingID.ToString() + "_" + ch.ToString() + "_" + i.ToString()
                                                                 let label = if androRes.IsTarget then 1 else -1
                                                                 let scanNr = ascendingID
                                                                 let absDeltaMass = (androRes.TheoMass-androRes.MeasuredMass) |> abs
@@ -205,14 +205,16 @@ module PeptideSpectrumMatching =
                                                                 | true ->
                                                                     match Map.tryFind (androRes.ModSequenceID,androRes.GlobalMod) bestTargetSequest with
                                                                     | Some sequestScore ->
-                                                                        let res : Dto.PeptideSpectrumMatchingResult = 
+                                                                        let res i : Dto.PeptideSpectrumMatchingResult = 
+                                                                            let pSMId i = androRes.SpectrumID.Replace(' ', '-') + "_" + ascendingID.ToString() + "_" + ch.ToString() + "_" + i.ToString()
                                                                             {                                                                        
-                                                                                PSMId                        = pSMId
+                                                                                PSMId                        = pSMId i
                                                                                 GlobalMod                    = androRes.GlobalMod
                                                                                 PepSequenceID                = androRes.PepSequenceID
                                                                                 ModSequenceID                = androRes.ModSequenceID
                                                                                 Label                        = label
                                                                                 ScanNr                       = scanNr
+                                                                                ScanTime                     = androRes.ScanTime
                                                                                 Charge                       = ch
                                                                                 PrecursorMZ                  = androRes.PrecursorMZ
                                                                                 TheoMass                     = androRes.TheoMass
@@ -227,19 +229,22 @@ module PeptideSpectrumMatching =
                                                                                 AndroNormDeltaNext           = androRes.NormDeltaNext
                                                                                 StringSequence               = androRes.StringSequence
                                                                             }
-                                                                        Some res
+                                                                        Some (label,res)
                                                                     | None -> None 
                                                                 | false ->
                                                                     match Map.tryFind (androRes.ModSequenceID,androRes.GlobalMod) bestDecoySequest with
                                                                     | Some sequestScore ->
-                                                                        let res : Dto.PeptideSpectrumMatchingResult = 
+                                                                        let res i : Dto.PeptideSpectrumMatchingResult = 
+                                                                            let pSMId i = androRes.SpectrumID.Replace(' ', '-') + "_" + ascendingID.ToString() + "_" + ch.ToString() + "_" + i.ToString()
+                                                                            
                                                                             {                                                                        
-                                                                                PSMId                        = pSMId
+                                                                                PSMId                        = pSMId i
                                                                                 GlobalMod                    = androRes.GlobalMod
                                                                                 PepSequenceID                = androRes.PepSequenceID
                                                                                 ModSequenceID                = androRes.ModSequenceID
                                                                                 Label                        = label
                                                                                 ScanNr                       = scanNr
+                                                                                ScanTime                     = androRes.ScanTime
                                                                                 Charge                       = ch
                                                                                 PrecursorMZ                  = androRes.PrecursorMZ
                                                                                 TheoMass                     = androRes.TheoMass
@@ -254,10 +259,16 @@ module PeptideSpectrumMatching =
                                                                                 AndroNormDeltaNext           = androRes.NormDeltaNext
                                                                                 StringSequence               = androRes.StringSequence
                                                                             }
-                                                                        Some res
+                                                                        Some (label,res)
                                                                     | None -> None 
                                                             )
-                                                |> List.choose id
+                                                |> List.groupBy (fun x -> fst x)
+                                                |> List.map (fun (x,y) -> 
+                                                                y 
+                                                                |> List.map snd 
+                                                                |> List.mapi (fun i x -> x i)
+                                                            )
+                                                |> List.concat
                 
                                             result
                                             |> SeqIO.Seq.toCSV "\t" false
@@ -273,7 +284,7 @@ module PeptideSpectrumMatching =
 
 
                         )
-    //    resultWriter.Dispose()
+        resultWriter.Dispose()
     //    Logger.printTimenWithPre pre "Finished PSM"
 
     let scoreSpectra (processParams:PeptideSpectrumMatchingParams) (outputDir:string) (cn:SQLiteConnection) (instrumentOutput:string) =
