@@ -14,20 +14,37 @@ module console1 =
         let usage  = parser.PrintUsage()
         printfn "%s" usage
         let results = parser.Parse argv
-        let manufacturerOutput = results.TryGetResult InstrumentOutput
-        let outputDir = results.TryGetResult OutputDirectory
-        let paramF = results.TryGetResult ParamFile
-        match manufacturerOutput, outputDir, paramF with 
-        | Some i, Some o , Some p -> 
-            printfn "InputFilePath -i = %s" i
-            printfn "InputFilePath -o = %s" o
-            printfn "InputFilePath -p = %s" p
-            Directory.CreateDirectory(o) |> ignore
-            let processParams = 
+        let i = results.GetResult InstrumentOutput
+        let o = results.GetResult OutputDirectory
+        let p = results.GetResult ParamFile     
+        printfn "InputFilePath -i = %s" i
+        printfn "InputFilePath -o = %s" o
+        printfn "InputFilePath -p = %s" p
+        Directory.CreateDirectory(o) |> ignore
+        let processParams = 
                 Json.ReadAndDeserialize<Dto.PreprocessingParams> p
-                |> Dto.PreprocessingParams.toDomain
+                |> Dto.PreprocessingParams.toDomain  
+        
+        if File.Exists i || (Directory.Exists i && i.EndsWith(".d"))  then
+            printfn "singleFile"
             Preprocessing.processFile processParams o i
-        | _ -> failwith "params are not guut"
+        elif Directory.Exists i then 
+            printfn "multiple files"
+            let files = 
+                Core.MzLite.Reader.getMSFilePaths i             
+            let c = 
+                match results.TryGetResult Parallelism_Level with 
+                | Some c    -> c
+                | None      -> 1
+            files 
+            |> FSharpAux.PSeq.map (Preprocessing.processFile processParams o) 
+            |> FSharpAux.PSeq.withDegreeOfParallelism c
+            |> Array.ofSeq
+            |> ignore
+        else 
+            failwith "The given path to the instrument output is neither a valid file path nor a valid directory path."
         System.Console.ReadKey() |> ignore
         printfn "Hit any key to exit."
         0
+        
+
