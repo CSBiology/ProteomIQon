@@ -16,6 +16,11 @@ open ProteomIQon.Core
 
 let mzliteReader = MzLite.Reader.getReader @"C:\Users\david\Source\Repos\netCoreRepos\ProteomiconTest\20171129 FW LW tot001.mzlite"
 let tr = mzliteReader.BeginTransaction()
+open System
+open System.IO
+Directory.Exists @"Z:\5_6BackUpHyperCSB2\SFB-core\Acclimation_3hm\181005_cold1_3h_GD1_01_8993.d"
+Directory.GetFiles( @"Z:\5_6BackUpHyperCSB2\SFB-core\Acclimation_3hm\181005_cold1_3h_GD1_01_8993.d",("*.d")) 
+Directory.GetDirectories(@"Z:\5_6BackUpHyperCSB2\SFB-core\Acclimation_3hm\",("*.d"))
 
 let spec = 
     mzliteReader.ReadMassSpectra("sample=0")

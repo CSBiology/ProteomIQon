@@ -209,51 +209,55 @@ module Dto =
             [<FieldAttribute(5)>]
             ScanNr                       : int
             [<FieldAttribute(6)>]
-            Charge                       : int
+            ScanTime                     : float
             [<FieldAttribute(7)>]
-            PrecursorMZ                  : float
+            Charge                       : int
             [<FieldAttribute(8)>]
-            TheoMass                     : float
+            PrecursorMZ                  : float
             [<FieldAttribute(9)>]
-            AbsDeltaMass                 : float
+            TheoMass                     : float
             [<FieldAttribute(10)>]
-            PeptideLength                : int
+            AbsDeltaMass                 : float
             [<FieldAttribute(11)>]
-            MissCleavages                : int
+            PeptideLength                : int
             [<FieldAttribute(12)>]
-            SequestScore                 : float
+            MissCleavages                : int
             [<FieldAttribute(13)>]
-            SequestNormDeltaBestToRest   : float
+            SequestScore                 : float
             [<FieldAttribute(14)>]
-            SequestNormDeltaNext         : float
+            SequestNormDeltaBestToRest   : float
             [<FieldAttribute(15)>]
-            AndroScore                   : float
+            SequestNormDeltaNext         : float
             [<FieldAttribute(16)>]
-            AndroNormDeltaBestToRest     : float
+            AndroScore                   : float
             [<FieldAttribute(17)>]
-            AndroNormDeltaNext           : float
+            AndroNormDeltaBestToRest     : float
             [<FieldAttribute(18)>]
+            AndroNormDeltaNext           : float
+            [<FieldAttribute(19)>]
             StringSequence               : string
         }
         
 
-    type PEPEParams = 
+    type PSMStatisticsParams = 
         {
             QValueThreshold             : float
             PepValueThreshold           : float
             ParseProteinIDRegexPattern  : string
+            KeepTemporaryFiles          : bool
         }
 
-    module PEPEParams = 
+    module PSMStatisticsParams = 
 
-        let toDomain (dtoPepeParams: PEPEParams ) = 
+        let toDomain (dtoPSMStatisticsParams: PSMStatisticsParams ) = 
             {
-                QValueThreshold                 = dtoPepeParams.QValueThreshold    
-                PepValueThreshold               = dtoPepeParams.PepValueThreshold  
-                ParseProteinID                  = parseProteinIdUsing dtoPepeParams.ParseProteinIDRegexPattern    
+                QValueThreshold                 = dtoPSMStatisticsParams.QValueThreshold    
+                PepValueThreshold               = dtoPSMStatisticsParams.PepValueThreshold  
+                ParseProteinID                  = parseProteinIdUsing dtoPSMStatisticsParams.ParseProteinIDRegexPattern
+                KeepTemporaryFiles              = dtoPSMStatisticsParams.KeepTemporaryFiles
             }
 
-    type  PEPEPResult = {
+    type PSMStatisticsResult = {
         // a combination of the spectrum ID in the rawFile, the ascending ms2 id and the chargeState in the search space seperated by '_'
         [<FieldAttribute(0)>]
         PSMId                        : string;
@@ -301,8 +305,9 @@ module Dto =
         [<FieldAttribute(21)>]
         StringSequence               : string;
         [<FieldAttribute(22)>]
-        ProteinNames                 : string;
+        ProteinNames                  : string;
         }
+
 
     type QuantificationParams = 
         {

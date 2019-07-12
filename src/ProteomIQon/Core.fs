@@ -2,6 +2,8 @@ namespace ProteomIQon
 
 open Domain
 open Dto
+open System
+open System.IO
 open MzLite
 open MzLite.IO
 open MzLite.Commons.Arrays
@@ -16,7 +18,26 @@ module Core =
     module MzLite = 
 
         module Reader = 
-    
+            let getMzLiteFiles directoryPath = 
+                Directory.GetFiles(directoryPath,("*.mzlite"))   
+
+            let getThermoRawFiles directoryPath = 
+                Directory.GetFiles(directoryPath,("*.raw"))   
+
+            let getWiffFiles directoryPath = 
+                Directory.GetFiles(directoryPath,("*.wiff"))   
+
+            let getBrukerFiles directoryPath = 
+                Directory.GetDirectories(directoryPath,("*.d"))   
+
+            let getMSFilePaths directoryPath =
+                [|
+                    getMzLiteFiles directoryPath
+                    getThermoRawFiles directoryPath
+                    getWiffFiles directoryPath
+                    getBrukerFiles directoryPath
+                |]
+                |> Array.concat
             let getReader (instrumentOutput:string) = 
                 match System.IO.Path.GetExtension instrumentOutput with 
                 | ".wiff" -> 
@@ -28,11 +49,11 @@ module Core =
                 | ".mzlite" -> 
                     let mzLiteReader = new SQL.MzLiteSQL(instrumentOutput)
                     mzLiteReader :> IMzLiteDataReader
-                | ".RAW" -> 
+                | ".raw" -> 
                     let rawReader = new Thermo.ThermoRawFileReader(instrumentOutput)
                     rawReader :> IMzLiteDataReader
                 | _       ->  
-                    failwith "Reader could not be opened. Only the formats .wiff (ABSciex), baf (Bruker), Raw (Thermo) or .mzlite (CSBiology) are supported." 
+                    failwith "Reader could not be opened. Only the formats .wiff (ABSciex), baf (Bruker), .raw (Thermo) or .mzlite (CSBiology) are supported." 
             
             /// Returns the default runID used by manufacturers
             let getDefaultRunID (mzReader:IMzLiteDataReader) = 

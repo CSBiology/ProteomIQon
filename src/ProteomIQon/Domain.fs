@@ -90,11 +90,12 @@ module Domain =
             ///
         }
 
-    type PEPEParams = 
+    type PSMStatisticsParams = 
         {
             QValueThreshold             : float
             PepValueThreshold           : float
             ParseProteinID              : string -> string
+            KeepTemporaryFiles          : bool
         }
 
     type XicExtraction = 
