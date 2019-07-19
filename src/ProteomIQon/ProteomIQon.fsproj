@@ -1,6 +1,6 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFrameworks>net47;netstandard2.0</TargetFrameworks>
+    <TargetFrameworks>net47;netcoreapp2.1</TargetFrameworks>
     <RootNamespace>ProteomIQon</RootNamespace>
     <AssemblyName>ProteomIQon</AssemblyName>
     <Name>ProteomIQon</Name>
@@ -18,6 +18,7 @@
     <Compile Include="DTO.fs" />
     <Compile Include="Json.fs" />
     <Compile Include="Core.fs" />
+    <None Include="Scripts\createPreprocessingParamsThermo.fsx" />
     <None Include="Scripts\createPeptideSpectrumMatchingParams.fsx" />
     <None Include="Scripts\createPeptideDBParams.fsx" />
     <None Include="Scripts\Testing.fsx" />
@@ -59,27 +60,6 @@
     </Reference>
     <Reference Include="Clearcore2.Utility">
       <HintPath>..\..\lib\FsMzLite\Clearcore2.Utility.dll</HintPath>
-    </Reference>
-    <Reference Include="FsMzLite">
-      <HintPath>..\..\lib\FsMzLite\FsMzLite.dll</HintPath>
-    </Reference>
-    <Reference Include="MzLite">
-      <HintPath>..\..\lib\FsMzLite\MzLite.dll</HintPath>
-    </Reference>
-    <Reference Include="MzLite.Bruker">
-      <HintPath>..\..\lib\FsMzLite\MzLite.Bruker.dll</HintPath>
-    </Reference>
-    <Reference Include="MzLite.Processing">
-      <HintPath>..\..\lib\FsMzLite\MzLite.Processing.dll</HintPath>
-    </Reference>
-    <Reference Include="MzLite.SQL">
-      <HintPath>..\..\lib\FsMzLite\MzLite.SQL.dll</HintPath>
-    </Reference>
-    <Reference Include="MzLite.Thermo">
-      <HintPath>..\..\lib\FsMzLite\MzLite.Thermo.dll</HintPath>
-    </Reference>
-    <Reference Include="MzLite.Wiff">
-      <HintPath>..\..\lib\FsMzLite\MzLite.Wiff.dll</HintPath>
     </Reference>
     <Reference Include="System.Transactions" />
   </ItemGroup>

@@ -11,6 +11,10 @@
   "IsotopicMod": [ { "Case": "N15" } ],
   "MassMode": { "Case": "Monoisotopic" },
   "FixedMods": [],
-  "VariableMods": [ { "Case": "Oxidation'Met'" } ],
-  "VarModThreshold": 3
+  "VariableMods": [
+    { "Case": "Oxidation'Met'" },
+    { "Case": "Acetylation'ProtNTerm'" },
+    { "Case": "Carbamidomethyl'Cys'" }
+  ],
+  "VarModThreshold": 4
 }

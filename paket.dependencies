@@ -30,6 +30,15 @@ git https://github.com/CSBiology/BioFSharp.Mz.git nuget Packages: /
 
 nuget BioFSharp.Mz ~> 0.0.112
 
+git https://github.com/CSBiology/MzLite.git nuget Packages: /
+
+nuget MzLite 
+nuget MzLite.Processing
+nuget MzLite.SQL 
+nuget MzLite.Bruker 
+nuget MzLite.Thermo
+nuget MzLite.Wiff
+
 clitool dotnet-fake
 
 group Formatting

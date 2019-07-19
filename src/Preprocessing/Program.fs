@@ -31,16 +31,37 @@ module console1 =
         elif Directory.Exists i then 
             printfn "multiple files"
             let files = 
-                Core.MzLite.Reader.getMSFilePaths i             
+                Core.MzLite.Reader.getMSFilePaths i
+                |> Array.sort
+            files 
+            |> Array.iter (printfn "%s")
             let c = 
                 match results.TryGetResult Parallelism_Level with 
                 | Some c    -> c
                 | None      -> 1
-            files 
-            |> FSharpAux.PSeq.map (Preprocessing.processFile processParams o) 
-            |> FSharpAux.PSeq.withDegreeOfParallelism c
-            |> Array.ofSeq
+            try  
+            let partitionedFiles = 
+                files
+                |> Array.splitInto c           
+            [for i in partitionedFiles do yield async { return i |> Array.map (Preprocessing.processFile processParams o)}]
+            |> Async.Parallel
+            |> Async.RunSynchronously
             |> ignore
+
+            //files 
+            //|> FSharpAux.PSeq.map (fun inp -> 
+            //                        try
+            //                            Preprocessing.processFile processParams o inp
+            //                        with
+            //                        | ex -> 
+            //                            printfn "%A" ex 
+                                        
+            //                      ) 
+            //|> FSharpAux.PSeq.withDegreeOfParallelism c
+            //|> Array.ofSeq
+            //|> ignore
+            with 
+            | ex -> printfn "%A" ex
         else 
             failwith "The given path to the instrument output is neither a valid file path nor a valid directory path."
         System.Console.ReadKey() |> ignore

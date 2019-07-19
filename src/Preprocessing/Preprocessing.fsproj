@@ -54,27 +54,6 @@
     <Reference Include="Clearcore2.Utility">
       <HintPath>..\..\lib\FsMzLite\Clearcore2.Utility.dll</HintPath>
     </Reference>
-    <Reference Include="FsMzLite">
-      <HintPath>..\..\lib\FsMzLite\FsMzLite.dll</HintPath>
-    </Reference>
-    <Reference Include="MzLite">
-      <HintPath>..\..\lib\FsMzLite\MzLite.dll</HintPath>
-    </Reference>
-    <Reference Include="MzLite.Bruker">
-      <HintPath>..\..\lib\FsMzLite\MzLite.Bruker.dll</HintPath>
-    </Reference>
-    <Reference Include="MzLite.Processing">
-      <HintPath>..\..\lib\FsMzLite\MzLite.Processing.dll</HintPath>
-    </Reference>
-    <Reference Include="MzLite.SQL">
-      <HintPath>..\..\lib\FsMzLite\MzLite.SQL.dll</HintPath>
-    </Reference>
-    <Reference Include="MzLite.Thermo">
-      <HintPath>..\..\lib\FsMzLite\MzLite.Thermo.dll</HintPath>
-    </Reference>
-    <Reference Include="MzLite.Wiff">
-      <HintPath>..\..\lib\FsMzLite\MzLite.Wiff.dll</HintPath>
-    </Reference>
   </ItemGroup>
   <Import Project="..\..\.paket\Paket.Restore.targets" />
 </Project>

@@ -1,0 +1,24 @@
+{
+  "ChargeStateDeterminationParams": {
+    "ExpectedMinimalCharge": 2,
+    "ExpectedMaximumCharge": 5,
+    "Width": 1.1,
+    "MinIntensity": 0.15,
+    "DeltaMinIntensity": 0.3,
+    "NrOfRndSpectra": 10000
+  },
+  "LookUpPPM": 30.0,
+  "MS2ScanRange": {
+    "Item1": 100.0,
+    "Item2": 2000.0
+  },
+  "nTerminalSeries": { "Case": "B" },
+  "cTerminalSeries": { "Case": "Y" },
+  "Andromeda": {
+    "PMinPMax": {
+      "Item1": 4,
+      "Item2": 10
+    },
+    "MatchingIonTolerancePPM": 1000.0
+  }
+}

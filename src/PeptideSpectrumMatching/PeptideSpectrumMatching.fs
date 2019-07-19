@@ -214,7 +214,7 @@ module PeptideSpectrumMatching =
                                                                                 ModSequenceID                = androRes.ModSequenceID
                                                                                 Label                        = label
                                                                                 ScanNr                       = scanNr
-                                                                                ScanTime                     = androRes.ScanTime
+                                                                                //ScanTime                     = androRes.ScanTime
                                                                                 Charge                       = ch
                                                                                 PrecursorMZ                  = androRes.PrecursorMZ
                                                                                 TheoMass                     = androRes.TheoMass
@@ -228,6 +228,7 @@ module PeptideSpectrumMatching =
                                                                                 AndroNormDeltaBestToRest     = androRes.NormDeltaBestToRest
                                                                                 AndroNormDeltaNext           = androRes.NormDeltaNext
                                                                                 StringSequence               = androRes.StringSequence
+                                                                                ProteinNames                 = "PlaceHolder"
                                                                             }
                                                                         Some (label,res)
                                                                     | None -> None 
@@ -244,7 +245,7 @@ module PeptideSpectrumMatching =
                                                                                 ModSequenceID                = androRes.ModSequenceID
                                                                                 Label                        = label
                                                                                 ScanNr                       = scanNr
-                                                                                ScanTime                     = androRes.ScanTime
+                                                                                //ScanTime                     = androRes.ScanTime
                                                                                 Charge                       = ch
                                                                                 PrecursorMZ                  = androRes.PrecursorMZ
                                                                                 TheoMass                     = androRes.TheoMass
@@ -258,6 +259,7 @@ module PeptideSpectrumMatching =
                                                                                 AndroNormDeltaBestToRest     = androRes.NormDeltaBestToRest
                                                                                 AndroNormDeltaNext           = androRes.NormDeltaNext
                                                                                 StringSequence               = androRes.StringSequence
+                                                                                ProteinNames                 = "PlaceHolder"
                                                                             }
                                                                         Some (label,res)
                                                                     | None -> None 

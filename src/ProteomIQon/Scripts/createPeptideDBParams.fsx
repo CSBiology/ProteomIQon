@@ -27,15 +27,15 @@ let defaultPepeParams: Dto.PeptideDBParams =
         IsotopicMod                 = [IsotopicMod.N15]
         MassMode                    = MassMode.Monoisotopic
         FixedMods                   = []
-        VariableMods                = [Modification.Oxidation'Met']
-        VarModThreshold             = 3
+        VariableMods                = [Modification.Oxidation'Met';Modification.Acetylation'ProtNTerm';Modification.Carbamidomethyl'Cys']
+        VarModThreshold             = 4
         }
   
 let serialized = 
     defaultPepeParams
     |> Json.serialize
 
-System.IO.File.WriteAllText(__SOURCE_DIRECTORY__ + @"/../defaultParams\peptideDBParams.json",serialized)
+System.IO.File.WriteAllText(__SOURCE_DIRECTORY__ + @"/../defaultParams\peptideDBParamsThermo.json",serialized)
 
 let deserialized = 
     System.IO.File.ReadAllText(__SOURCE_DIRECTORY__ + @"/../defaultParams\peptideDBParams.json")

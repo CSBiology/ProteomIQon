@@ -22,8 +22,8 @@ module Core =
                 Directory.GetFiles(directoryPath,("*.mzlite"))   
 
             let getThermoRawFiles directoryPath = 
-                Directory.GetFiles(directoryPath,("*.raw"))   
-
+                Array.append (Directory.GetFiles(directoryPath,("*.raw"))) (Directory.GetFiles(directoryPath,("*.RAW")))   
+                |> Array.distinct
             let getWiffFiles directoryPath = 
                 Directory.GetFiles(directoryPath,("*.wiff"))   
 
@@ -50,6 +50,9 @@ module Core =
                     let mzLiteReader = new SQL.MzLiteSQL(instrumentOutput)
                     mzLiteReader :> IMzLiteDataReader
                 | ".raw" -> 
+                    let rawReader = new Thermo.ThermoRawFileReader(instrumentOutput)
+                    rawReader :> IMzLiteDataReader
+                | ".RAW" -> 
                     let rawReader = new Thermo.ThermoRawFileReader(instrumentOutput)
                     rawReader :> IMzLiteDataReader
                 | _       ->  

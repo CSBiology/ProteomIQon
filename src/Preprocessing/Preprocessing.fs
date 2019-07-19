@@ -120,7 +120,7 @@ module Preprocessing =
             failwith "Only mass spectra of level 1 and 2 are supported."
 
     let processFile (processParams:PreprocessingParams) (outputDir:string) (instrumentOutput:string) =
-        printfn "Now preprocessing: %s /nResults will be written to: %s" instrumentOutput outputDir
+        printfn "Now preprocessing: %s Results will be written to: %s" instrumentOutput outputDir
         
         printfn "Init connection to input data base." 
         // initialize Reader and Transaction
@@ -128,7 +128,6 @@ module Preprocessing =
         let inRunID  = Core.MzLite.Reader.getDefaultRunID inReader
         let inTr = inReader.BeginTransaction()                    
 
-        
         printfn "Creating mzlite file." 
         // initialize Reader and Transaction
         let outFilePath = 
@@ -174,18 +173,24 @@ module Preprocessing =
             | None, None ->
                 massSpectra
         
-
-        printfn "Copying mass spectra to output data base."
+        printfn "Copying %i mass spectra to output data base." (Seq.length massSpectraF) 
         ///  
         massSpectraF
+        |> Seq.filter (fun ms -> 
+                            let level = Core.MzLite.MassSpectrum.getMsLevel ms 
+                            level = 1 || level = 2
+                      )
         |> Seq.iter (fun ms -> 
                         try
                             insertSprectrum processParams.Compress outReader outRunID ms1PeakPicking ms2PeakPicking ms
                         
                         with 
                         | ex -> 
-                            printfn "ID: %s could not be inserted. Exeption:%A" ms.ID ex
+                            printfn "File:%s ID: %s could not be inserted. Exeption:%A" instrumentOutput ms.ID ex
                     )
+        inTr.Commit()
+        inTr.Dispose()
+        inReader.Dispose()
         outTr.Commit()
         outTr.Dispose()
         outReader.Dispose()

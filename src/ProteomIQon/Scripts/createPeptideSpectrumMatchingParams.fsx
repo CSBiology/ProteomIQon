@@ -11,6 +11,7 @@ open ProteomIQon.Dto
 open ProteomIQon.Domain
 open BioFSharp.Mz
 
+BioFSharp.Mass.deltaMassByPpm 1000. 800.
 
 let defaultPreprocessingParams :Dto.PeptideSpectrumMatchingParams = 
 
@@ -27,7 +28,7 @@ let defaultPreprocessingParams :Dto.PeptideSpectrumMatchingParams =
     let andromedaParams = 
         {
         PMinPMax                = 4,10
-        MatchingIonTolerancePPM = 60.       
+        MatchingIonTolerancePPM = 1000.       
         }
     {
         ChargeStateDeterminationParams  = chargeDetermParams 
@@ -44,7 +45,7 @@ let serialized =
     |> Json.serialize
 
 
-System.IO.File.WriteAllText(__SOURCE_DIRECTORY__ + @"/../defaultParams\peptideSpectrumMatchingParams.json",serialized)
+System.IO.File.WriteAllText(__SOURCE_DIRECTORY__ + @"/../defaultParams\peptideSpectrumMatchingParamsThermo.json",serialized)
 
 let deserialized = 
     System.IO.File.ReadAllText(__SOURCE_DIRECTORY__ + @"/../defaultParams\peptideSpectrumMatchingParams.json")
