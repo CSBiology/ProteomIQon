@@ -1,0 +1,17 @@
+FSharp.Core
+Newtonsoft.Json
+Logary
+Argu
+BioFSharp
+BioFSharp.IO
+FSharpAux
+FSharpAux.IO
+FSharp.Stats
+BioFSharp.Mz
+MzLite 
+MzLite.Processing
+MzLite.SQL 
+MzLite.Bruker 
+MzLite.Thermo
+MzLite.Wiff
+FSharp.Plotly

@@ -21,10 +21,10 @@ module CLIArgumentParsing =
         interface IArgParserTemplate with
             member s.Usage =
                 match s with
-                | PSMs _                -> "Specify the peptide spectrum matches (psms), either specify a file directory containing the .psm files to be analyzed or specify the file path of a single .psm file."
+                | PSMs _                -> "Specify the peptide spectum matches (PSMs) to be scored, either specify a file directory containing the files to be analyzed or specify the file path of a single .psm file."
                 | PeptideDataBase  _    -> "Specify the file path of the peptide data base."
                 | OutputDirectory  _    -> "Specify the output directory."
-                | ParamFile _           -> "Specify peptide statistics parameter file."
+                | ParamFile _           -> "Specify parameter file for computation of psm statistics."
                 | Parallelism_Level _   -> "Set the number of cores the programm can use. Parallelization occurs on file level. This flag is only of effect if a input directory (-i) is specified."
                 | Log_Level _           -> "Set the log level."
                 | Verbosity_Level _     -> "Set the verbosity level."

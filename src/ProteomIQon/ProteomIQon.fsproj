@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFrameworks>net47;netcoreapp2.1</TargetFrameworks>
+    <TargetFrameworks>net47;netstandard2.0</TargetFrameworks>
     <RootNamespace>ProteomIQon</RootNamespace>
     <AssemblyName>ProteomIQon</AssemblyName>
     <Name>ProteomIQon</Name>
@@ -18,11 +18,12 @@
     <Compile Include="DTO.fs" />
     <Compile Include="Json.fs" />
     <Compile Include="Core.fs" />
+    <None Include="Scripts\createPSMBasedQuantificationParams.fsx" />
     <None Include="Scripts\createPreprocessingParamsThermo.fsx" />
     <None Include="Scripts\createPeptideSpectrumMatchingParams.fsx" />
     <None Include="Scripts\createPeptideDBParams.fsx" />
     <None Include="Scripts\Testing.fsx" />
-    <None Include="Scripts\createPepeParams.fsx" />
+    <None Include="Scripts\createPSMStatisticsParams.fsx" />
     <None Include="Scripts\createPreprocessingParams.fsx" />
     <None Include="paket.references" />
     <None Include="paket.template" />
