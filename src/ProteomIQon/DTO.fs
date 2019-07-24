@@ -292,11 +292,11 @@ module Dto =
 
     module PSMStatisticsParams = 
 
-        let toDomain (dtoPSMStatisticsParams: PSMStatisticsParams ) = 
+        let toDomain (dtoPSMStatisticsParams: PSMStatisticsParams ): Domain.PSMStatisticsParams = 
             {
                 QValueThreshold                 = dtoPSMStatisticsParams.QValueThreshold    
                 PepValueThreshold               = dtoPSMStatisticsParams.PepValueThreshold  
-                ParseProteinID                  = parseProteinIdUsing dtoPSMStatisticsParams.ParseProteinIDRegexPattern
+                FastaHeaderToName               = parseProteinIdUsing dtoPSMStatisticsParams.ParseProteinIDRegexPattern
                 KeepTemporaryFiles              = dtoPSMStatisticsParams.KeepTemporaryFiles
             }
 
@@ -356,12 +356,13 @@ module Dto =
         {
             PerformLabeledQuantification : bool
             XicExtraction                : XicExtraction
+            //10 6 0.05
             BaseLineCorrection           : BaseLineCorrection option
         }
     
     module QuantificationParams = 
 
-        let toDomain (dtoQuantificationParams: QuantificationParams ) = 
+        let toDomain (dtoQuantificationParams: QuantificationParams ): Domain.QuantificationParams = 
             {
                 PerformLabeledQuantification = dtoQuantificationParams.PerformLabeledQuantification
                 XicExtraction                = dtoQuantificationParams.XicExtraction

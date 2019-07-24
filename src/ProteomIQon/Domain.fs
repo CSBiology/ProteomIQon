@@ -94,9 +94,13 @@ module Domain =
         {
             QValueThreshold             : float
             PepValueThreshold           : float
-            ParseProteinID              : string -> string
+            FastaHeaderToName           : string -> string
             KeepTemporaryFiles          : bool
         }
+
+    type WindowSize = 
+        | Fixed of int
+        | Estimate 
 
     type XicExtraction = 
         {
@@ -104,13 +108,13 @@ module Domain =
             MzWindow_Da                  : float 
             MinSNR                       : float  
             PolynomOrder                 : int
-            WindowSize                   : int
+            WindowSize                   : WindowSize
         }
        
     type BaseLineCorrection = 
         {
             MaxIterations                : int 
-            Lambda                       : float 
+            Lambda                       : int 
             P                            : float 
         }
 
