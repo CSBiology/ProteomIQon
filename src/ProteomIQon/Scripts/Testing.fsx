@@ -3,6 +3,7 @@
 #r "netstandard"
 #r @"../../../bin\ProteomIQon\net47\System.Data.Sqlite.dll"
 #r @"../../../bin\ProteomIQon\net47\Newtonsoft.Json.dll"
+#r @"../../../bin\ProteomIQon\net47\FSharp.Stats.dll"
                               
 #r @"../../../bin\ProteomIQon\net47\MzLite.dll"
 #r @"../../../bin\ProteomIQon\net47\MzLite.SQL.dll"
@@ -36,33 +37,85 @@ length
 |> Array.filter (fun x -> x <> 0)
 |> Array.length
 
+let weightedMean (weights:seq<'T>) (items:seq<'T>) =
+    let sum,n = Seq.fold2 (fun (sum,n) w i -> w*i+sum,n + w ) (0.,0.) weights items 
+    sum / n 
+
+let x = [1.;2.;3.;3.;3.]
+weightedMean [1.;1.;1.;1.;0.001] x
+open FSharp.Stats
+FSharp.Stats.Correlation.Vector.autoCorrelation 1 ([|0.;0.|] |> vector)
+([1.;2.;3.;3.;3.] |> vector)
 
 mzliteReader.ReadMassSpectra("sample=0") 
 
+type dummy = 
+    {
+    Name : string
+    nr : int
+    nrf : float
+    nrf1 : float
+    nrf2 : float
+    nrf3 : float
+    nrf4 : float
+    nrf5 : float
+    nrf6 : float
+    testArr: int []
+    lul:string 
+    }
 
 
-let x = [|1. ..10000.|]
-let y = [|1. .. 0.1 .. 10000.|]
-y .Length
+let dat = 
+    [|
+        for i = 0 to 720000 do 
+             
+            yield {
+                Name    = (i.ToString())
+                nr      = i
+                nrf     = FSharp.Stats.Distributions.Continuous.Normal.Sample 10. 2.
+                nrf1    = FSharp.Stats.Distributions.Continuous.Normal.Sample 10. 2.
+                nrf2    = FSharp.Stats.Distributions.Continuous.Normal.Sample 10. 2.
+                nrf3    = FSharp.Stats.Distributions.Continuous.Normal.Sample 10. 2.
+                nrf4    = FSharp.Stats.Distributions.Continuous.Normal.Sample 10. 2.
+                nrf5    = FSharp.Stats.Distributions.Continuous.Normal.Sample 10. 2.
+                nrf6    = FSharp.Stats.Distributions.Continuous.Normal.Sample 10. 2.
+                testArr = [|1..10|]
+                lul     = "hallloooooo;hallloooooo;hallloooooo;hallloooooo;hallloooooo;hallloooooo;hallloooooo;hallloooooo;hallloooooo" 
+            }
+    |]
+                    
+#time
+
+let y = 
+    dat 
+    |> FSharpAux.IO.SeqIO.Seq.toCSV "\t" true
+    |> Array.ofSeq
+
 y
-|> Array.map (fun yy -> x |> Array.findBack (fun x -> x <= yy),yy)
-|> Array.groupBy fst
-|> Array.map (fun (ms1,ms1And2) -> ms1,ms1And2 |> Array.map snd)
+|> Seq.map (fun x -> FSharpAux.String.replace ";" "\t" x)
+|> Array.ofSeq
 
+|> FSharpAux.IO.FileIO.writeToFile false @"C:\Users\david\source\repos\test.txt"
 
-open ProteomIQon
-open ProteomIQon.Dto
+dat 
+|> Array.take 10
+|> FSharpAux.IO.SeqIO.Seq.toCSV "\t" true
+|> Seq.map (fun x -> FSharpAux.String.replace ";" "\t" x)
+|> FSharpAux.IO.FileIO.writeToFile false @"C:\Users\david\source\repos\test4.txt"
 
-open ProteomIQon.Json
-open ProteomIQon.Dto
+let restorePSMID psmID =
+    FSharpAux.String.split '_' psmID  
+    |> Array.item 0
+    |> FSharpAux.String.split '-'
+    |> String.concat " "
 
+restorePSMID "scan=104_87_2_4"
 
-let deserialized = 
-    System.IO.File.ReadAllText(@"C:\Users\david\Source\Repos\netCoreRepos\ProteomiconTest\preprocessingParams.json")
-    |> Json.deserialize<Dto.PreprocessingParams>
-    |> PreprocessingParams.toDomain
+restorePSMID "sample=0-experiment=1-scan=2780_1579_2_0"
 
+"Raid Area 51 plx"
+|> Seq.filter (System.Char.IsWhiteSpace >> not)
+|> Seq.sortBy (fun char -> System.Char.ToLower char)
+|> System.String.Concat
 
-
-
-
+//System.IO.FileInfo(assembly.Location).DirectoryName + @"\percolator-v3-01\bin\percolator.exe"

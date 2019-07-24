@@ -1,0 +1,20 @@
+{
+  "PerformLabeledQuantification": true,
+  "XicExtraction": {
+    "ScanTimeWindow": 2.0,
+    "MzWindow_Da": 0.07,
+    "MinSNR": 0.1,
+    "PolynomOrder": 2,
+    "WindowSize": { "Case": "Estimate" }
+  },
+  "BaseLineCorrection": {
+    "Case": "Some",
+    "Fields": [
+      {
+        "MaxIterations": 10,
+        "Lambda": 6,
+        "P": 0.05
+      }
+    ]
+  }
+}

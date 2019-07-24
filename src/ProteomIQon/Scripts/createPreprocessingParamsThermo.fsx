@@ -28,23 +28,6 @@ let defaultPreprocessingParams :Dto.PreprocessingParams =
             PaddingParams           = None
         }
 
-    //let ms2PaddingParams = 
-    //    {
-    //        MaximumPaddingPoints    = Some 7
-    //        Padding_MzTolerance     = 0.05
-    //        WindowSize              = 150
-    //        SpacingPerc             = 95.
-    //    }
-    //let ms2PeakPickingParams = 
-    //    {
-   
-    //        NumberOfScales          = 10
-    //        YThreshold              = YThreshold.MinSpectrumIntensity
-    //        Centroid_MzTolerance    = 0.1
-    //        SNRS_Percentile         = 95.
-    //        MinSNR                  = 1.
-    //        PaddingParams           = Some ms2PaddingParams
-    //    } 
          
     {
         Compress                    = true
