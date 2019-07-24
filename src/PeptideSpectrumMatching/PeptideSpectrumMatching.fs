@@ -62,8 +62,8 @@ module PeptideSpectrumMatching =
             |> Array.map (fun ms2 -> 
                             ms1SortedByScanTime 
                             |> Array.findBack (fun ms1 -> 
-                                                    let ms1ScanTime = MassSpectrum.getMsLevel ms1
-                                                    let ms2ScanTime = MassSpectrum.getMsLevel ms2 
+                                                    let ms1ScanTime = MassSpectrum.getScanTime ms1
+                                                    let ms2ScanTime = MassSpectrum.getScanTime ms2 
                                                     ms1ScanTime <= ms2ScanTime),ms2
                           )
             |> Array.groupBy fst
@@ -78,7 +78,16 @@ module PeptideSpectrumMatching =
                             |> Array.filter (fun ms2 -> inReader.ReadSpectrumPeaks(ms2.ID).Peaks |> Seq.isEmpty = false)
                             |> Array.map (fun ms2 ->
                                                 let assignedCharges = ChargeState.putativePrecursorChargeStatesBy chParams mzdata intensityData ms1.ID ms2.ID (MassSpectrum.getPrecursorMZ ms2)
-                                                assignedCharges
+                                                match assignedCharges with 
+                                                | [] -> 
+                                                    [
+                                                        for i = chParams.ExpectedMinimalCharge to chParams.ExpectedMaximumCharge do
+                                                            let precursorMz = (MassSpectrum.getPrecursorMZ ms2)
+                                                            let mass = Mass.ofMZ precursorMz (float i)
+                                                            let score = getScore 10 1 100.
+                                                            yield createAssignedCharge ms1.ID ms2.ID precursorMz i mass 100. score [0.] 0 0. (Set[]) (Some 1.)
+                                                    ]
+                                                | _ -> assignedCharges
                                             )
                             )
             |> Array.filter (fun x ->  Array.isEmpty x |> not)
@@ -88,6 +97,7 @@ module PeptideSpectrumMatching =
         /// Returns the standard deviation of the peak positions determined by using the best scored subsets of each attempt of mapping a ms2 to a chargestate
         let peakPosStdDev =
             ms2PossibleChargestates
+            |> List.filter (fun assignedCharges -> assignedCharges.Head.PositionMetricPValue.IsNone)
             |> List.map (fun (assignedCharges) -> assignedCharges.Head )
             |> ChargeState.peakPosStdDevBy
         /// Returns a function that generates a usergiven amount of rnd spectra and calculates their mzDeviation. The
@@ -103,20 +113,23 @@ module PeptideSpectrumMatching =
                                 let items =
                                     assignedCharges
                                     |> List.mapi (fun  i putativeCharge ->
-                                                let pValue = 
-                                                    ChargeState.empiricalPValueOfSim init (putativeCharge.SubSetLength,float putativeCharge.PrecCharge ) putativeCharge.MZChargeDev
-                                                {putativeCharge with PositionMetricPValue = Some pValue}
-                                                )
+                                                    match putativeCharge.PositionMetricPValue with 
+                                                    | Some x ->
+                                                        putativeCharge
+                                                    | None   ->
+                                                        let pValue = ChargeState.empiricalPValueOfSim init (putativeCharge.SubSetLength,float putativeCharge.PrecCharge ) putativeCharge.MZChargeDev
+                                                        {putativeCharge with PositionMetricPValue = Some pValue}
+                                                 )
                                     |> List.filter (fun testIt -> testIt.PositionMetricPValue.Value <= 0.05)
                                     |> ChargeState.removeSubSetsOfBestHit
                                     |> (fun charges -> 
                                             match charges with
                                             | [] -> [
                                                         for i = chParams.ExpectedMinimalCharge to chParams.ExpectedMaximumCharge do
-                                                        let precMz = MassSpectrum.getPrecursorMZ (inReader.ReadMassSpectrum ms2ID)
-                                                        let mass = Mass.ofMZ precMz (float i)
-                                                        let score = ChargeState.getScore 10 1 100.
-                                                        yield ChargeState.createAssignedCharge ms1ID ms2ID precMz i mass 100. score [0.] 0 0. (Set[]) None
+                                                            let precMz = MassSpectrum.getPrecursorMZ (inReader.ReadMassSpectrum ms2ID)
+                                                            let mass = Mass.ofMZ precMz (float i)
+                                                            let score = ChargeState.getScore 10 1 100.
+                                                            yield ChargeState.createAssignedCharge ms1ID ms2ID precMz i mass 100. score [0.] 0 0. (Set[]) None
                                                     ]
                                             | _  -> charges
                                         )
@@ -290,7 +303,13 @@ module PeptideSpectrumMatching =
     //    Logger.printTimenWithPre pre "Finished PSM"
 
     let scoreSpectra (processParams:PeptideSpectrumMatchingParams) (outputDir:string) (cn:SQLiteConnection) (instrumentOutput:string) =
-        printfn "Now performing peptide spectrum matching: %s /nResults will be written to: %s" instrumentOutput outputDir
+        printfn "Now performing peptide spectrum matching: %s Results will be written to: %s" instrumentOutput outputDir
+
+        // initialize Reader and Transaction
+        let outFilePath = 
+            let fileName = (Path.GetFileNameWithoutExtension instrumentOutput) + ".psm"
+            Path.Combine [|outputDir;fileName|]
+
         printfn "Copy peptide DB into Memory"
         let memoryDB = SearchDB.copyDBIntoMemory cn 
         printfn "Copy peptide DB into Memory: finished"
@@ -308,17 +327,12 @@ module PeptideSpectrumMatching =
         let dbLookUp = SearchDB.getThreadSafePeptideLookUpFromFileBy memoryDB dBParams
         printfn "Finished preparing processing functions."
                 
-
         // initialize Reader and Transaction
         printfn "Init connection to input data base." 
         let inReader = Core.MzLite.Reader.getReader instrumentOutput  
         let inRunID  = Core.MzLite.Reader.getDefaultRunID inReader
         let inTr = inReader.BeginTransaction()                    
      
-        // initialize Reader and Transaction
-        let outFilePath = 
-            let fileName = (Path.GetFileNameWithoutExtension instrumentOutput) + ".psm"
-            Path.Combine [|outputDir;fileName|]
             
         // Charge state determination 
         printfn "Starting charge state determination."
