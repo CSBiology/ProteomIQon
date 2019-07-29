@@ -18,6 +18,7 @@
     <Compile Include="DTO.fs" />
     <Compile Include="Json.fs" />
     <Compile Include="Core.fs" />
+    <None Include="Scripts\createPreprocessingParamsBruker.fsx" />
     <None Include="Scripts\createPSMBasedQuantificationParams.fsx" />
     <None Include="Scripts\createPreprocessingParamsThermo.fsx" />
     <None Include="Scripts\createPeptideSpectrumMatchingParams.fsx" />

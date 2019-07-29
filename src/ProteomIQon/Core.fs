@@ -44,7 +44,8 @@ module Core =
                     let wiffReader = new Wiff.WiffFileReader(instrumentOutput) 
                     wiffReader :> IMzLiteDataReader
                 | ".d"    -> 
-                    let bafReader = new Bruker.BafFileReader(instrumentOutput)
+                    let bafPath = Path.Combine[|instrumentOutput;"analysis.baf"|]
+                    let bafReader = new Bruker.BafFileReader(bafPath)
                     bafReader :> IMzLiteDataReader
                 | ".mzlite" -> 
                     let mzLiteReader = new SQL.MzLiteSQL(instrumentOutput)
