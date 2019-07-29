@@ -253,8 +253,8 @@ module PSMBasedQuantification_old =
                         peptides
                         |> Array.groupBy (fun x -> x.StringSequence,x.Charge,x.GlobalMod)
                     let n = 
-                        if gpeptides.Length < 160 then peptides.Length-1
-                        else 150
+                        if gpeptides.Length < 260 then peptides.Length-1
+                        else 250
                     gpeptides
                     |> Array.shuffleFisherYates
                     |> Array.take n
@@ -316,9 +316,9 @@ module PSMBasedQuantification_old =
                             else 
                                 quantP.EstimatedParams.[1] 
 
+                        let unlabledMass   = massLookUp sequence 0
+                        let labeledMass    = massLookUp sequence 1
                         if globMod = 0 then 
-                            let unlabledMass   = massLookUp sequence 0
-                            let labeledMass    = massLookUp sequence 1
                             let n15mz          = Mass.toMZ (labeledMass.Value) (ch|> float)
                             printfn "quantify inferred"
                             let n15Quant,rt,itz,rtP       = quantifyBy processParams.XicExtraction.MinSNR processParams.XicExtraction.PolynomOrder windowWidth  getXIC n15mz searchScanTime
@@ -356,8 +356,6 @@ module PSMBasedQuantification_old =
                             |> Option.Some
 
                         else
-                            let labledMass   = massLookUp sequence 1
-                            let unlabledMass = massLookUp sequence 0
                             let n14mz          = Mass.toMZ (unlabledMass.Value) (ch|> float)
                             printfn "quantify inferred"
                             let n14Quant,rt,itz,rtP      = quantifyBy processParams.XicExtraction.MinSNR processParams.XicExtraction.PolynomOrder windowWidth getXIC n14mz searchScanTime
@@ -373,8 +371,8 @@ module PSMBasedQuantification_old =
                             Charge                    = ch   
                             PrecursorMZ               = averagePSM.MeanPrecMz  
                             MeasuredMass              = avgMass
-                            TheoMass                  = labledMass.Value  
-                            AbsDeltaMass              = abs(avgMass-labledMass.Value)  
+                            TheoMass                  = labeledMass.Value  
+                            AbsDeltaMass              = abs(avgMass-labeledMass.Value)  
                             MeanPercolatorScore       = averagePSM.MeanScore  
                             QValue                    = bestQValue
                             PEPValue                  = bestPepValue
