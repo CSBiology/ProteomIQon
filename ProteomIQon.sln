@@ -71,7 +71,7 @@ Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "PSMStatistics", "src\PSMSta
 EndProject
 Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "PSMBasedQuantification", "src\PSMBasedQuantification\PSMBasedQuantification.fsproj", "{381152C1-F180-4589-9E1B-F9B63BE15FA4}"
 EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "ProteinInference", "src\ProteinInference\ProteinInference.fsproj", "{05F0A998-5079-4538-9E40-07DB279C1467}"
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "ProteinInference", "src\ProteinInference\ProteinInference.fsproj", "{05F0A998-5079-4538-9E40-07DB279C1467}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -119,7 +119,6 @@ Global
 		{83F16175-43B1-4C90-A1EE-8E351C33435D} = {A6A6AF7D-D6E3-442D-9B1E-58CC91879BE1}
 		{8E6D5255-776D-4B61-85F9-73C37AA1FB9A} = {A6A6AF7D-D6E3-442D-9B1E-58CC91879BE1}
 		{C35B3137-198B-4B94-92D4-F8FB25F2E3BC} = {ED8079DD-2B06-4030-9F0F-DC548F98E1C4}
-		{05F0A998-5079-4538-9E40-07DB279C1467} = {50F43FA1-4EF7-44AC-9621-34BF5E9D7135}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {D55EAFC0-7966-48AB-9DF6-8CFA23ABABB1}
