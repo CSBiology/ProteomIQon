@@ -125,7 +125,12 @@ module Domain =
             BaseLineCorrection           : BaseLineCorrection option
         }
 
-    // Add by HLWeil
-    //type ProteinInferenceParams = 
-    //      ...
+
+    type ProteinInferenceParams = 
+        {
+            ProteinIdentifierRegex : string
+            Protein                : ProteinInference.IntegrationStrictness
+            Peptide                : ProteinInference.PeptideUsageForQuantification
+            GroupFiles             : bool
+        }
    

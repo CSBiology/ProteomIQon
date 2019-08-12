@@ -10,50 +10,47 @@ open FSharpAux.IO.SchemaReader.Attribute
 
 [<AutoOpen>]
 module Common =
-       
+
     module MassMode =
-   
+
         let toDomain (massMode: MassMode) =
             match massMode with
             | MassMode.Monoisotopic -> BioItem.initMonoisoMassWithMemP
             | MassMode.Average      -> BioItem.initAverageMassWithMemP
 
-
     type Protease =
         | Trypsin
 
-    module Protease = 
+    module Protease =
 
-        let toDomain protease = 
+        let toDomain protease =
             match protease with
             | Trypsin -> Digestion.Table.getProteaseBy "Trypsin"
 
- 
     type Modification =
         | Acetylation'ProtNTerm'
         | Carbamidomethyl'Cys'
         | Oxidation'Met'
         | Phosphorylation'Ser'Thr'Tyr'
-    
+
     module Modification  =
 
-        let toDomain modification = 
+        let toDomain modification =
             match modification with
             | Acetylation'ProtNTerm'        -> SearchDB.Table.acetylation'ProtNTerm'
             | Carbamidomethyl'Cys'          -> SearchDB.Table.carbamidomethyl'Cys'
             | Oxidation'Met'                -> SearchDB.Table.oxidation'Met'
             | Phosphorylation'Ser'Thr'Tyr'  -> SearchDB.Table.phosphorylation'Ser'Thr'Tyr'
 
-
     type IsotopicMod =
         | N15
 
     module IsotopicMod =
-        let toDomain isoMod = 
+        let toDomain isoMod =
             match isoMod with
             | N15 -> (SearchDB.createSearchInfoIsotopic "N15" Elements.Table.N Elements.Table.Heavy.N15)
- 
-    type NTerminalSeries = 
+
+    type NTerminalSeries =
         | A
         | B
         | C
@@ -61,8 +58,8 @@ module Common =
         | AC
         | BC
         | ABC
-        
-    module NTerminalSeries = 
+
+    module NTerminalSeries =
         let toDomain nTermSeries =
             match nTermSeries with
             | A   -> Fragmentation.Series.aOfBioList
@@ -73,8 +70,7 @@ module Common =
             | BC  -> Fragmentation.Series.bcOfBioList
             | ABC -> Fragmentation.Series.abcOfBioList
 
-
-    type CTerminalSeries = 
+    type CTerminalSeries =
         | X
         | Y
         | Z
@@ -82,8 +78,8 @@ module Common =
         | XZ
         | YZ
         | XYZ
-        
-    module CTerminalSeries = 
+
+    module CTerminalSeries =
         let toDomain nTermSeries =
             match nTermSeries with
             | X   -> Fragmentation.Series.xOfBioList
@@ -96,43 +92,40 @@ module Common =
 
     let parseProteinIdUsing regex =
         match regex with
-        | "ID" | "id" | "Id" | "" -> 
+        | "ID" | "id" | "Id" | "" ->
             id
-        | pattern ->        
+        | pattern ->
             (fun (inp : string)  -> System.Text.RegularExpressions.Regex.Match(inp,pattern).Value)
 
-
 ///
-module Dto = 
-
+module Dto =
 
     type PreprocessingParams =
         {
             Compress                    : bool
             StartRetentionTime          : float option
-            EndRetentionTime            : float option 
+            EndRetentionTime            : float option
             MS1PeakPicking              : PeakPicking
             MS2PeakPicking              : PeakPicking
         }
 
+    module PreprocessingParams =
 
-    module PreprocessingParams = 
-
-        let toDomain (dtoCentroidizationParams: PreprocessingParams ) : Domain.PreprocessingParams = 
+        let toDomain (dtoCentroidizationParams: PreprocessingParams ) : Domain.PreprocessingParams =
                 {
                     Compress                    = dtoCentroidizationParams.Compress
-                    StartRetentionTime          = dtoCentroidizationParams.StartRetentionTime      
-                    EndRetentionTime            = dtoCentroidizationParams.EndRetentionTime        
-                    MS1PeakPicking              = dtoCentroidizationParams.MS1PeakPicking      
+                    StartRetentionTime          = dtoCentroidizationParams.StartRetentionTime
+                    EndRetentionTime            = dtoCentroidizationParams.EndRetentionTime
+                    MS1PeakPicking              = dtoCentroidizationParams.MS1PeakPicking
                     MS2PeakPicking              = dtoCentroidizationParams.MS2PeakPicking
                 }
 
-    type PeptideDBParams = 
+    type PeptideDBParams =
         {
         // name of database i.e. Creinhardtii_236_protein_full_labeled
         Name                        : string
         FastaPath                   : string
-        ParseProteinIDRegexPattern  : string 
+        ParseProteinIDRegexPattern  : string
         Protease                    : Protease
         MinMissedCleavages          : int
         MaxMissedCleavages          : int
@@ -140,16 +133,16 @@ module Dto =
         MinPepLength                : int
         MaxPepLength                : int
         // valid symbol name of isotopic label in label table i.e. #N15
-        IsotopicMod                 : IsotopicMod list 
+        IsotopicMod                 : IsotopicMod list
         MassMode                    : MassMode
-        FixedMods                   : Modification list            
+        FixedMods                   : Modification list
         VariableMods                : Modification list
         VarModThreshold             : int
         }
 
     module PeptideDBParams =
 
-        let toDomain (dtoSearchDbParams: PeptideDBParams ) = 
+        let toDomain (dtoSearchDbParams: PeptideDBParams ) =
             {
             Name                = dtoSearchDbParams.Name
             FastaPath           = dtoSearchDbParams.FastaPath
@@ -164,15 +157,14 @@ module Dto =
             IsotopicMod         =  List.map IsotopicMod.toDomain dtoSearchDbParams.IsotopicMod
             MassMode            = dtoSearchDbParams.MassMode
             MassFunction        = MassMode.toDomain dtoSearchDbParams.MassMode
-            FixedMods           = List.map Modification.toDomain dtoSearchDbParams.FixedMods            
+            FixedMods           = List.map Modification.toDomain dtoSearchDbParams.FixedMods
             VariableMods        = List.map Modification.toDomain dtoSearchDbParams.VariableMods
             VarModThreshold     = dtoSearchDbParams.VarModThreshold
-            } 
+            }
 
-
-    type PeptideSpectrumMatchingParams = 
+    type PeptideSpectrumMatchingParams =
         {
-            ChargeStateDeterminationParams: ChargeState.ChargeDetermParams            
+            ChargeStateDeterminationParams: ChargeState.ChargeDetermParams
             LookUpPPM                     : float
             MS2ScanRange                  : float*float
             nTerminalSeries               : NTerminalSeries
@@ -180,19 +172,19 @@ module Dto =
             Andromeda                     : AndromedaParams
         }
 
-    module PeptideSpectrumMatchingParams = 
-        
-        let toDomain (dtoPeptideSpectrumMatchingParams: PeptideSpectrumMatchingParams ) :Domain.PeptideSpectrumMatchingParams = 
-            {
-                ChargeStateDeterminationParams  = dtoPeptideSpectrumMatchingParams.ChargeStateDeterminationParams            
-                LookUpPPM                       = dtoPeptideSpectrumMatchingParams.LookUpPPM               
-                MS2ScanRange                    = dtoPeptideSpectrumMatchingParams.MS2ScanRange            
-                nTerminalSeries                 = NTerminalSeries.toDomain dtoPeptideSpectrumMatchingParams.nTerminalSeries         
-                cTerminalSeries                 = CTerminalSeries.toDomain dtoPeptideSpectrumMatchingParams.cTerminalSeries         
-                AndromedaParams                 = dtoPeptideSpectrumMatchingParams.Andromeda               
-            }                                   
+    module PeptideSpectrumMatchingParams =
 
-    type PeptideSpectrumMatchingResult = 
+        let toDomain (dtoPeptideSpectrumMatchingParams: PeptideSpectrumMatchingParams ) :Domain.PeptideSpectrumMatchingParams =
+            {
+                ChargeStateDeterminationParams  = dtoPeptideSpectrumMatchingParams.ChargeStateDeterminationParams
+                LookUpPPM                       = dtoPeptideSpectrumMatchingParams.LookUpPPM
+                MS2ScanRange                    = dtoPeptideSpectrumMatchingParams.MS2ScanRange
+                nTerminalSeries                 = NTerminalSeries.toDomain dtoPeptideSpectrumMatchingParams.nTerminalSeries
+                cTerminalSeries                 = CTerminalSeries.toDomain dtoPeptideSpectrumMatchingParams.cTerminalSeries
+                AndromedaParams                 = dtoPeptideSpectrumMatchingParams.Andromeda
+            }
+
+    type PeptideSpectrumMatchingResult =
         //{
         //    // a combination of the spectrum ID in the rawFile, the ascending ms2 id and the chargeState in the search space seperated by '_'
         //    [<FieldAttribute(0)>]
@@ -279,10 +271,10 @@ module Dto =
         [<FieldAttribute(18)>]
         StringSequence               : string;
         [<FieldAttribute(19)>]
-        ProteinNames                  : string
-        }        
+        ProteinNames                 : string
+        }
 
-    type PSMStatisticsParams = 
+    type PSMStatisticsParams =
         {
             QValueThreshold             : float
             PepValueThreshold           : float
@@ -290,12 +282,12 @@ module Dto =
             KeepTemporaryFiles          : bool
         }
 
-    module PSMStatisticsParams = 
+    module PSMStatisticsParams =
 
-        let toDomain (dtoPSMStatisticsParams: PSMStatisticsParams ): Domain.PSMStatisticsParams = 
+        let toDomain (dtoPSMStatisticsParams: PSMStatisticsParams ): Domain.PSMStatisticsParams =
             {
-                QValueThreshold                 = dtoPSMStatisticsParams.QValueThreshold    
-                PepValueThreshold               = dtoPSMStatisticsParams.PepValueThreshold  
+                QValueThreshold                 = dtoPSMStatisticsParams.QValueThreshold
+                PepValueThreshold               = dtoPSMStatisticsParams.PepValueThreshold
                 FastaHeaderToName               = parseProteinIdUsing dtoPSMStatisticsParams.ParseProteinIDRegexPattern
                 KeepTemporaryFiles              = dtoPSMStatisticsParams.KeepTemporaryFiles
             }
@@ -348,34 +340,40 @@ module Dto =
         [<FieldAttribute(21)>]
         StringSequence               : string;
         [<FieldAttribute(22)>]
-        ProteinNames                  : string;
+        ProteinNames                 : string;
         }
 
-
-    type QuantificationParams = 
+    type QuantificationParams =
         {
             PerformLabeledQuantification : bool
             XicExtraction                : XicExtraction
             //10 6 0.05
             BaseLineCorrection           : BaseLineCorrection option
         }
-    
-    module QuantificationParams = 
 
-        let toDomain (dtoQuantificationParams: QuantificationParams ): Domain.QuantificationParams = 
+    module QuantificationParams =
+
+        let toDomain (dtoQuantificationParams: QuantificationParams ): Domain.QuantificationParams =
             {
                 PerformLabeledQuantification = dtoQuantificationParams.PerformLabeledQuantification
                 XicExtraction                = dtoQuantificationParams.XicExtraction
                 BaseLineCorrection           = dtoQuantificationParams.BaseLineCorrection
             }
-        
 
+    type ProteinInferenceParams =
+          {
+              ProteinIdentifierRegex : string
+              Protein                : ProteinInference.IntegrationStrictness
+              Peptide                : ProteinInference.PeptideUsageForQuantification
+              GroupFiles             : bool
+          }
 
-    // Add by HLWeil
-    //type ProteinInferenceParams = 
-    //      ...
-    
-    //module ProteinInferenceParams = 
-        
-    //    let toDomain (dtoProteinInferenceParams : ProteinInferenceParams) = 
-    //      ...
+    module ProteinInferenceParams =
+
+        let toDomain (dtoProteinInferenceParams : ProteinInferenceParams): Domain.ProteinInferenceParams =
+            {
+                ProteinIdentifierRegex = dtoProteinInferenceParams.ProteinIdentifierRegex
+                Protein                = dtoProteinInferenceParams.Protein
+                Peptide                = dtoProteinInferenceParams.Peptide
+                GroupFiles             = dtoProteinInferenceParams.GroupFiles
+            }
