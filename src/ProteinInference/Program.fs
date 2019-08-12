@@ -1,6 +1,6 @@
 namespace ProteomIQon
 
-open System
+open System.IO
 open CLIArgumentParsing
 open Argu
 module console1 =
@@ -13,7 +13,21 @@ module console1 =
         let usage  = parser.PrintUsage()
         printfn "%s" usage
         let results = parser.Parse argv
-        Library.printParams (results.GetAllResults())
-        printfn "Hit any key to exit."
+        let i     = results.GetResult InputFolder
+        let fastA = results.GetResult FastA
+        let gff3  = results.GetResult GFF3
+        let o     = results.GetResult OutputDirectory
+        let p     = results.GetResult ParamFile
+        printfn "InputFilePath -i = %s" i
+        printfn "InputFilePath -f = %s" fastA
+        printfn "InputFilePath -g = %s" gff3
+        printfn "InputFilePath -o = %s" o
+        printfn "InputFilePath -p = %s" p
+        Directory.CreateDirectory(o) |> ignore
+        let proteinInferenceParams = 
+                Json.ReadAndDeserialize<Dto.ProteinInferenceParams> p
+                |> Dto.ProteinInferenceParams.toDomain
+        ProteinInference.inferProteins gff3 fastA proteinInferenceParams o i
         System.Console.ReadKey() |> ignore
+        printfn "Hit any key to exit."
         0
