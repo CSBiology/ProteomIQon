@@ -15,18 +15,6 @@ open Domain
 
 module ProteinInference =
 
-    type InferenceTask =
-        {
-            InputPath  : string
-            OutputPath : string
-        }
-
-        static member  createInferenceTask inp out =
-            {
-                InputPath  = inp
-                OutputPath = out
-            }
-
     /// This type represents one element of the final output. It's the protein, with all the peptides that were measured and are pointing to it.
     type OutputProtein =
         {
@@ -121,9 +109,7 @@ module ProteinInference =
     ///
     /// No experimental data
     let createClassItemCollection gff3Path fastAPath regexPattern =
-        printfn "\tregexPattern: %s" regexPattern
 
-        printfn "\tReading fastA Sequence"
         let fastASequences =
             try
                 //fileDir + "Chlamy_Cp.fastA"
@@ -137,7 +123,6 @@ module ProteinInference =
                 printfn "Could not read FastA file %s"fastAPath
                 failwithf "%s" err.Message
 
-        printfn "\tReading gff3 file"
         /// Create proteinModelInfos: Group all genevariants (RNA) for the gene loci (gene)
         ///
         /// The proteinModelInfos
@@ -147,9 +132,8 @@ module ProteinInference =
                 |> assignTranscriptsToGenes regexPattern
             with
             | err ->
-                printfn "\nERROR: Could not read gff3 file %s" gff3Path
-                failwithf "\t%s" err.Message
-        printfn "\tAssign FastaSeqs to ProteinModelInfo"
+                printfn "ERROR: Could not read gff3 file %s" gff3Path
+                failwithf "%s" err.Message
         //reads from file to an array of FastaItems.
 
         /// Assigned fasta sequences to model Infos
@@ -174,8 +158,6 @@ module ProteinInference =
             | err ->
                 printfn "Could not assign FastA sequences to RNAs"
                 failwithf "%s" err.Message
-        //printfn "\tcount fastaSeqs: %i, proteinModels: %i" (Seq.length fastASequences) (Seq.length proteinModels)
-        printfn "\tBuild Classification Map"
         try
             let ppRelationModel =
                 let digest sequence =
@@ -206,15 +188,6 @@ module ProteinInference =
             printfn "\nERROR: Could not build classification map"
             failwithf "\t%s" err.Message
 
-    // TO-DO: is this reversion still needed?
-    type SeqConverter() =
-        inherit ConverterAttribute()
-        override this.convertToObj =
-            Converter.Single(fun str ->
-                str
-                |> String.rev
-                |> fun x -> box x)
-
     type PSMInput =
         {
             //TO-DO: is this reversion still needed?
@@ -228,20 +201,19 @@ module ProteinInference =
     let proteinGroupToString (proteinGroup:string[]) =
         Array.reduce (fun x y ->  x + ";" + y) proteinGroup
 
-    let readAndInferFile classItemCollection protein peptide groupFiles (tasks:InferenceTask list) =
-        let timer = System.Diagnostics.Stopwatch()
-        printfn "\tMap peptide Sequences to Proteins"
+    let readAndInferFile classItemCollection protein peptide groupFiles outdirectory rawFolderPath=
+        let rawFilePaths = System.IO.Directory.GetFiles (rawFolderPath, "*.qpsm")
+                           |> Array.toList
         let classifiedProteins =
-            tasks
-            |> List.map (fun task ->
+            rawFilePaths
+            |> List.map (fun filePath ->
                 try
                     let out =
-                        task.OutputPath
-                    let inp = task.InputPath
+                        outdirectory + @"\" + (System.IO.Path.GetFileNameWithoutExtension filePath) + ".prot"
                     let psmInputs =
-                        Seq.fromFileWithCsvSchema<PSMInput>(inp, '\t', true,schemaMode = SchemaModes.Fill)
+                        Seq.fromFileWithCsvSchema<PSMInput>(filePath, '\t', true,schemaMode = SchemaModes.Fill)
                         |> Seq.toList
-                    inp,
+                    filePath,
                     psmInputs
                     |> List.map (fun s ->
                         let s =
@@ -255,21 +227,17 @@ module ProteinInference =
                         out
                 with
                 | err ->
-                    printfn "Could not map sequences of file %s to proteins:" task.InputPath
+                    printfn "Could not map sequences of file %s to proteins:" filePath
                     failwithf "%s" err.Message
                 )
 
         if groupFiles then
-            printfn "\tcreate Combined List"
             let combinedClasses =
                 List.collect (fun (_,pepSeq,_) -> pepSeq) classifiedProteins
                 |> BioFSharp.Mz.ProteinInference.inferSequences protein peptide
-            printfn "\finished Creating combined list"
             classifiedProteins
             |> List.iter (fun (inp,prots,out) ->
                 let pepSeqSet = prots |> List.map (fun x -> x.PeptideSequence) |> Set.ofList
-                printfn "start with %s" inp
-                timer.Start()
                 combinedClasses
                 |> Seq.choose (fun ic ->
                     let filteredPepSet =
@@ -283,9 +251,6 @@ module ProteinInference =
                 |> Seq.map (fun (c,prots,pep) -> OutputProtein.createOutputProtein prots c pep)
                 |> FSharpAux.IO.SeqIO.Seq.toCSV "\t" true
                 |> Seq.write out
-                printfn "wrote to %s" out
-                printfn "Elapsed Time: %A" timer.Elapsed
-                timer.Reset()
             )
         else
             classifiedProteins
@@ -295,68 +260,10 @@ module ProteinInference =
                 |> Seq.map (fun x -> OutputProtein.createOutputProtein x.GroupOfProteinIDs x.Class (proteinGroupToString x.PeptideSequence))
                 |> FSharpAux.IO.SeqIO.Seq.toCSV "\t" true
                 |> Seq.write out
-                printfn "\t\t finished inferring %s" inp)
-
-    let initInferenceFile outdirectory rawFilePath =
-        printfn "\t\tSearching for %s" rawFilePath
-        if System.IO.File.Exists rawFilePath then
-            if System.IO.FileInfo(rawFilePath).Extension = ".qpsm" then
-                printfn "\t\t\tIdentified Input as qpsm file"
-                let name = System.IO.Path.GetFileNameWithoutExtension rawFilePath
-                let outFileName =
-                    outdirectory + @"\" + name + ".prot"
-                printfn "\t\t\tWill be written to %s" outFileName
-                Some (InferenceTask.createInferenceTask rawFilePath outFileName)
-            else None
-        else
-            None
-            //failwith (sprintf "File %s could not be found" rawFilePath)
-
-    //let inferProteins gff3Location fastaLocation regexPattern protein peptide groupFiles outDirectory (files:System.IO.FileInfo list) =
-    let inferProteins gff3Location fastaLocation (proteinInferenceParams: ProteinInferenceParams) outDirectory (files:System.IO.FileInfo list) =
-        printfn "Gathering Tasks"
-        let inferenceTasks =
-            files
-            |> List.collect (fun fileInfo ->
-                match fileInfo.Name with
-                | "InputFile" ->
-                    match initInferenceFile outDirectory fileInfo.FullName with
-                    | Some task ->
-                        Some task |> List.singleton
-                    | None ->
-                        failwithf "file %s not found or it does not have the proper format" fileInfo.FullName
-                | "InputDirectory" ->
-                    printfn "\tBrowse directory %s" fileInfo.FullName
-                    let outDirectory =
-                        outDirectory + @"\" + (System.IO.FileInfo(fileInfo.FullName).Name)
-                    if System.IO.Directory.Exists outDirectory |> not then
-                        System.IO.Directory.CreateDirectory outDirectory |> ignore
-                    let files = (System.IO.Directory.GetFiles(fileInfo.FullName) |> Array.toList)
-                    let tasks =
-                        files
-                        |> List.map (initInferenceFile outDirectory)
-                    printfn "\t For directory %s, could find %i files with proper format" fileInfo.FullName (List.length tasks)
-                    tasks
-                | name -> failwithf "Input file name %s is not accepted. Either declare input as `InputFile` if it's a single file or `InputDirectory` if it's a directory" name)
-            |> List.choose id
-        printfn "Finished Gathering tasks"
-        printfn ""
-        inferenceTasks
-        |> List.iter (fun task ->
-            printfn "Tasks"
-            printfn "\tin: %s" task.InputPath
-            printfn "\tout: %s" task.OutputPath
             )
-        printfn ""
-        let timer = System.Diagnostics.Stopwatch()
-        timer.Start()
+
+    let inferProteins gff3Location fastaLocation (proteinInferenceParams: ProteinInferenceParams) outDirectory rawFolderPath =
         printfn "Start building ClassItemCollection"
         let classItemCollection = createClassItemCollection gff3Location fastaLocation proteinInferenceParams.ProteinIdentifierRegex
-        printfn "Finished building ClassItemCollection"
-        printfn "Time elapsed: %A" timer.Elapsed
-        printfn ""
-        timer.Stop();timer.Reset();timer.Start()
         printfn "Classify and Infer Proteins"
-        readAndInferFile classItemCollection proteinInferenceParams.Protein proteinInferenceParams.Peptide proteinInferenceParams.GroupFiles inferenceTasks
-        printfn "Finished Protein Inference"
-        printfn "Time elapsed: %A" timer.Elapsed
+        readAndInferFile classItemCollection proteinInferenceParams.Protein proteinInferenceParams.Peptide proteinInferenceParams.GroupFiles outDirectory rawFolderPath
