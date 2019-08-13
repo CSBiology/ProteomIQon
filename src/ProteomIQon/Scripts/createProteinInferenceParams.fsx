@@ -13,8 +13,8 @@ open BioFSharp.Mz
 
 let defaultProteinInferenceParams: Dto.ProteinInferenceParams =
     {
-        ProteinIdentifierRegex = ""
-        Protein                = ProteinInference.IntegrationStrictness.Minimal
+        ProteinIdentifierRegex = "Cre\\S+"
+        Protein                = ProteinInference.IntegrationStrictness.Maximal
         Peptide                = ProteinInference.PeptideUsageForQuantification.Minimal
         GroupFiles             = true
     }
@@ -27,5 +27,5 @@ System.IO.File.WriteAllText(__SOURCE_DIRECTORY__ + @"/../defaultParams\ProteinIn
 
 let deserialized = 
     System.IO.File.ReadAllText(__SOURCE_DIRECTORY__ + @"/../defaultParams\ProteinInferenceParams.json")
-    |> Json.deserialize<Dto.PeptideSpectrumMatchingParams>
-    |> PeptideSpectrumMatchingParams.toDomain
+    |> Json.deserialize<Dto.ProteinInferenceParams>
+    |> ProteinInferenceParams.toDomain
