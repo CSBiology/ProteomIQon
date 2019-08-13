@@ -209,7 +209,8 @@ module ProteinInference =
             |> List.map (fun filePath ->
                 try
                     let out =
-                        outdirectory + @"\" + (System.IO.Path.GetFileNameWithoutExtension filePath) + ".prot"
+                        let foldername = (rawFolderPath.Split ([|"\\"|], System.StringSplitOptions.None))
+                        outdirectory + @"\" + foldername.[foldername.Length - 1] + "\\" + (System.IO.Path.GetFileNameWithoutExtension filePath) + ".prot"
                     let psmInputs =
                         Seq.fromFileWithCsvSchema<PSMInput>(filePath, '\t', true,schemaMode = SchemaModes.Fill)
                         |> Seq.toList
