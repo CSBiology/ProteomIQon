@@ -24,10 +24,12 @@ module console1 =
         printfn "InputFilePath -o = %s" o
         printfn "InputFilePath -p = %s" p
         Directory.CreateDirectory(o) |> ignore
+        let subFolder = (i.Split ([|"\\"|], System.StringSplitOptions.None))
+        Directory.CreateDirectory(o + "\\" + subFolder.[subFolder.Length - 1]) |> ignore
         let proteinInferenceParams = 
                 Json.ReadAndDeserialize<Dto.ProteinInferenceParams> p
                 |> Dto.ProteinInferenceParams.toDomain
         ProteinInference.inferProteins gff3 fastA proteinInferenceParams o i
-        System.Console.ReadKey() |> ignore
         printfn "Hit any key to exit."
+        System.Console.ReadKey() |> ignore
         0
