@@ -1,4 +1,5 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFrameworks>net47;netcoreapp2.1</TargetFrameworks>
     <RootNamespace>Preprocessing</RootNamespace>
@@ -20,9 +21,9 @@
     <Compile Include="CLIArgumentParsing.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
-  <ItemGroup />
   <ItemGroup>
-    <ProjectReference Include="..\ProteomIQon\ProteomIQon.fsproj"></ProjectReference>
+    <ProjectReference Include="..\ProteomIQon\ProteomIQon.fsproj">
+    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <Reference Include="Clearcore2.Compression">

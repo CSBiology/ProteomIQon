@@ -12,6 +12,15 @@
 #r @"../../../packages\FSharpAux.IO\lib\netstandard2.0\FSharpAux.IO.dll"
 #r @"../../../packages\FSharpAux.IO\lib\netstandard2.0\FSharpAux.dll"
 
+#r @"../../../bin\ProteomIQon\net47\BioFSharp.dll"
+#r @"../../../bin\ProteomIQon\net47\BioFSharp.Mz.dll"
+
+
+open ProteomIQon
+open ProteomIQon.Domain
+open ProteomIQon.Dto
+//open ProteomIQon.Library
+open BioFSharp.Mz.SearchDB
 
 open ProteomIQon.Core
 
@@ -119,3 +128,40 @@ restorePSMID "sample=0-experiment=1-scan=2780_1579_2_0"
 |> System.String.Concat
 
 //System.IO.FileInfo(assembly.Location).DirectoryName + @"\percolator-v3-01\bin\percolator.exe"
+
+
+
+
+open BioFSharp.ModificationInfo
+open BioFSharp.AminoAcids
+
+let pyro_Glu'GluNterm' =
+    createSearchModification "Pyro_Glu'Gln'" "28" "	Pyro-glu from Q" true "H3N"
+        [Specific(Gln,ModLocation.Nterm);] SearchModType.Plus "pq"
+
+let modi = BioFSharp.Mz.SearchDB.ModCombinator.convertSearchModification []  pyro_Glu'GluNterm' 
+
+open BioFSharp.Formula
+open BioFSharp
+open BioFSharp.Mz
+let massF:(IBioItem->float) = BioItem.initMonoisoMassWithMem
+
+
+let BioSeq = "EGLDVHFVDEYEK" |> BioList.ofAminoAcidString
+let BioSeqH = "EGLDVHFVDEYEK" |> BioList.ofAminoAcidString |> List.map (fun x ->AminoAcids.setModifications [ModificationInfo.Table.N15] x)
+
+let res = Fragmentation.Series.yOfBioList massF BioSeq
+let res2 = Fragmentation.Series.yOfBioList massF BioSeqH
+
+#time
+for i = 1 to 100000000 do "EGLDVHFVDEYEK" |> BioList.ofAminoAcidString |> List.map (fun x ->AminoAcids.setModifications [ModificationInfo.Table.N15] x)
+
+let light = res.[0].MainPeak.Mass
+
+let heavy = res2.[0].MainPeak.Mass
+
+//let minus = (Formula.add (Formula.parseFormulaString "H3N")) Formula.emptyFormula  
+
+//let plus  = (Formula.substract (Formula.parseFormulaString "H3N")) Formula.emptyFormula   
+
+//let p     = (Formula.substract (Formula.parseFormulaString "H3N"))  (Formula.parseFormulaString "H1N") 

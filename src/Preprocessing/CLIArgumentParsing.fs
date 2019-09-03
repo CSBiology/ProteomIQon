@@ -15,7 +15,7 @@ module CLIArgumentParsing =
             member s.Usage =
                 match s with
                 | InstrumentOutput _ -> "Specify the mass spectrometry output, either specify a file directory containing the files to be analyzed or specify the file path of a single mzlite file."
-                | OutputDirectory  _ -> "specify output directory"
-                | ParamFile _        -> "specify param file For centroidization"
+                | OutputDirectory  _ -> "Specify output directory"
+                | ParamFile _        -> "Specify param file For centroidization"
                 | Parallelism_Level _   -> "Set the number of cores the programm can use. Parallelization occurs on file level. This flag is only of effect if a input directory (-i) is specified."
 
