@@ -13,10 +13,12 @@ open ProteomIQon.Dto
 //open ProteomIQon.Library
 open BioFSharp.Mz.SearchDB
 
-let defaultPepeParams: Dto.PeptideDBParams = 
+
+
+let defaultPeptideDBParams: Dto.PeptideDBParams = 
         {
-        Name                        = "ChlamyTest"
-        FastaPath                   = @"C:\Users\david\Source\Repos\netCoreRepos\ProteomiconTest\PeptideDB\Chlamy_JGI5_5(Cp_Mp).fasta"
+        Name                        = "AraTest"
+        FastaPath                   = @"D:\David\N15-test\db\Arabidopsis_thaliana.TAIR10.pep.all.fasta"
         ParseProteinIDRegexPattern  = "id"
         Protease                    = Protease.Trypsin
         MinMissedCleavages          = 0
@@ -27,15 +29,15 @@ let defaultPepeParams: Dto.PeptideDBParams =
         IsotopicMod                 = [IsotopicMod.N15]
         MassMode                    = MassMode.Monoisotopic
         FixedMods                   = []
-        VariableMods                = [Modification.Oxidation'Met';Modification.Acetylation'ProtNTerm';Modification.Carbamidomethyl'Cys']
+        VariableMods                = [Modification.Oxidation'Met';Modification.Acetylation'ProtNTerm';Modification.Carbamidomethyl'Cys';Modification.Pyro_Glu'GlnNterm';Modification.Pyro_Glu'GluNterm']
         VarModThreshold             = 4
         }
   
 let serialized = 
-    defaultPepeParams
+    defaultPeptideDBParams
     |> Json.serialize
 
-System.IO.File.WriteAllText(__SOURCE_DIRECTORY__ + @"/../defaultParams\peptideDBParamsThermo.json",serialized)
+System.IO.File.WriteAllText(__SOURCE_DIRECTORY__ + @"/../defaultParams\peptideDBParamsGiada.json",serialized)
 
 let deserialized = 
     System.IO.File.ReadAllText(__SOURCE_DIRECTORY__ + @"/../defaultParams\peptideDBParams.json")
