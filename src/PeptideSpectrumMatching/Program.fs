@@ -51,6 +51,6 @@ module console1 =
         else 
             failwith "The given path to the instrument output is neither a valid file path nor a valid directory path."
 
-        System.Console.ReadKey() |> ignore
         printfn "Hit any key to exit."
+        System.Console.ReadKey() |> ignore
         0

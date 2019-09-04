@@ -26,6 +26,6 @@ module console1 =
                 |> Dto.PeptideDBParams.toDomain
             PeptideDB.createPeptideDB processParams o 
         | _ -> failwith "params are not guut"
-        System.Console.ReadKey() |> ignore
         printfn "Hit any key to exit."
+        System.Console.ReadKey() |> ignore
         0

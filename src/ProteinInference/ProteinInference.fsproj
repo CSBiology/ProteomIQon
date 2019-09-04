@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>net47;netcoreapp2.1</TargetFrameworks>
+    <RootNamespace>ProteinInference</RootNamespace>
+    <AssemblyName>ProteinInference</AssemblyName>
+    <Name>ProteinInference</Name>
+    <OutputType>Exe</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="ProteinInference.fs" />
+    <Compile Include="CLIArgumentParsing.fs" />
+    <Compile Include="Program.fs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\ProteomIQon\ProteomIQon.fsproj"></ProjectReference>
+  </ItemGroup>
+  <Import Project="..\..\.paket\Paket.Restore.targets" />
+</Project>
