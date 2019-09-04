@@ -29,11 +29,15 @@ module console1 =
         let p = 
             Json.ReadAndDeserialize<Dto.QuantificationParams> p
             |> Dto.QuantificationParams.toDomain
+        
         let dbConnection = 
             if File.Exists d then
                 SearchDB.getDBConnection d
             else
                 failwith "The given path to the instrument output is neither a valid file path nor a valid directory path."
+        printfn "Set Index on data base if not present."
+        setIndexOnModSequenceAndGlobalMod dbConnection |> ignore
+        printfn "Set Index on data base if not present: finished"
 
         if File.Exists i then
             printfn "singleFile"

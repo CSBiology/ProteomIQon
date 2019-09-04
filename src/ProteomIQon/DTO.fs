@@ -32,15 +32,30 @@ module Common =
         | Carbamidomethyl'Cys'
         | Oxidation'Met'
         | Phosphorylation'Ser'Thr'Tyr'
+        | Pyro_Glu'GluNterm'
+        | Pyro_Glu'GlnNterm'
 
     module Modification  =
 
-        let toDomain modification =
+        open BioFSharp.AminoAcids
+        open BioFSharp.ModificationInfo
+
+        let pyro_Glu'GluNterm' =
+            createSearchModification "Pyro_Glu'Glu'" "27" "Pyro-glu from E" true "H2O"
+                [Specific(Glu,ModLocation.Nterm);] SearchModType.Minus "pe"
+
+        let pyro_Glu'GlnNterm' =
+            createSearchModification "Pyro_Glu'Gln'" "28" "	Pyro-glu from Q" true "H3N"
+                [Specific(Gln,ModLocation.Nterm);] SearchModType.Minus "pq"
+             
+        let toDomain modification = 
             match modification with
             | Acetylation'ProtNTerm'        -> SearchDB.Table.acetylation'ProtNTerm'
             | Carbamidomethyl'Cys'          -> SearchDB.Table.carbamidomethyl'Cys'
             | Oxidation'Met'                -> SearchDB.Table.oxidation'Met'
             | Phosphorylation'Ser'Thr'Tyr'  -> SearchDB.Table.phosphorylation'Ser'Thr'Tyr'
+            | Pyro_Glu'GluNterm'            -> pyro_Glu'GluNterm'
+            | Pyro_Glu'GlnNterm'            -> pyro_Glu'GlnNterm'
 
     type IsotopicMod =
         | N15
