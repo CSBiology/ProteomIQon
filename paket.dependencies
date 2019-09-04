@@ -1,8 +1,9 @@
+version 5.215.0
 framework: auto-detect
 
 source https://nuget.org/api/v2
 
-nuget FSharp.Core
+nuget FSharp.Core 
 nuget Argu
 
 nuget Expecto
