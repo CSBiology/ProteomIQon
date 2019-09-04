@@ -9,7 +9,6 @@
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="PSMBasedQuantification - Copy.fs" />
     <Compile Include="PSMBasedQuantification.fs" />
     <Compile Include="CLIArgumentParsing.fs" />
     <Compile Include="Program.fs" />

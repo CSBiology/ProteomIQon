@@ -15,8 +15,6 @@ open FSharp.Plotly
 open BioFSharp
 open BioFSharp.Mz.Quantification
 
-//open FSharp.pl
-
 module PSMBasedQuantification = 
     ///
     type Result = 
@@ -178,8 +176,8 @@ module PSMBasedQuantification =
                 yFitted                   = [||]
             }    
         else
-            let peakToQuantify = BioFSharp.Mz.Quantification.MyQuant.getPeakBy peaks targetScanTime
-            let quantP         = BioFSharp.Mz.Quantification.MyQuant.quantifyPeak peakToQuantify  
+            let peakToQuantify = BioFSharp.Mz.Quantification.HULQ.getPeakBy peaks targetScanTime
+            let quantP         = BioFSharp.Mz.Quantification.HULQ.quantifyPeak peakToQuantify  
             {
                 Area                      = quantP.Area 
                 StandardErrorOfPrediction = quantP.StandardErrorOfPrediction
@@ -342,8 +340,8 @@ module PSMBasedQuantification =
                         let peaks          = Signal.PeakDetection.SecondDerivative.getPeaks processParams.XicExtraction.MinSNR processParams.XicExtraction.PolynomOrder windowWidth averagePSM.X_Xic averagePSM.Y_Xic
                         if Array.isEmpty peaks then None 
                         else 
-                        let peakToQuantify = BioFSharp.Mz.Quantification.MyQuant.getPeakBy peaks averagePSM.WeightedAvgScanTime
-                        let quantP = BioFSharp.Mz.Quantification.MyQuant.quantifyPeak peakToQuantify 
+                        let peakToQuantify = BioFSharp.Mz.Quantification.HULQ.getPeakBy peaks averagePSM.WeightedAvgScanTime
+                        let quantP = BioFSharp.Mz.Quantification.HULQ.quantifyPeak peakToQuantify 
                         let searchScanTime = 
                             if quantP.EstimatedParams |> Array.isEmpty then
                                 averagePSM.WeightedAvgScanTime
