@@ -289,6 +289,58 @@ module Dto =
         ProteinNames                 : string
         }
 
+    type PeptideSpectrumMatchingXtandemResult =
+        {
+        // a combination of the spectrum ID in the rawFile, the ascending ms2 id and the chargeState in the search space seperated by '_'
+        [<FieldAttribute(0)>]
+        PSMId                        : string
+        [<FieldAttribute(1)>]
+        GlobalMod                    : int
+        [<FieldAttribute(2)>]
+        PepSequenceID                : int
+        [<FieldAttribute(3)>]
+        ModSequenceID                : int
+        [<FieldAttribute(4)>]
+        Label                        : int
+        // ascending ms2 id (file specific)
+        [<FieldAttribute(5)>]
+        ScanNr                       : int
+        [<FieldAttribute(6)>]
+        Charge                       : int
+        [<FieldAttribute(7)>]
+        PrecursorMZ                  : float
+        [<FieldAttribute(8)>]
+        TheoMass                     : float
+        [<FieldAttribute(9)>]
+        AbsDeltaMass                 : float
+        [<FieldAttribute(10)>]
+        PeptideLength                : int
+        [<FieldAttribute(11)>]
+        MissCleavages                : int
+        [<FieldAttribute(12)>]
+        SequestScore                 : float
+        [<FieldAttribute(13)>]
+        SequestNormDeltaBestToRest   : float
+        [<FieldAttribute(14)>]
+        SequestNormDeltaNext         : float
+        [<FieldAttribute(15)>]
+        AndroScore                   : float
+        [<FieldAttribute(16)>]
+        AndroNormDeltaBestToRest     : float
+        [<FieldAttribute(17)>]
+        AndroNormDeltaNext           : float
+        [<FieldAttribute(18)>]
+        XtandemScore                 : float
+        [<FieldAttribute(19)>]
+        XtandemNormDeltaBestToRest   : float
+        [<FieldAttribute(20)>]
+        XtandemNormDeltaNext         : float
+        [<FieldAttribute(21)>]
+        StringSequence               : string
+        [<FieldAttribute(22)>]
+        ProteinNames                 : string
+        }
+
     type PSMStatisticsParams =
         {
             QValueThreshold             : float
