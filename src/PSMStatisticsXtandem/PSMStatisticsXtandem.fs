@@ -21,7 +21,7 @@ open BioFSharp.Mz.PercolatorWrapper
 open BioFSharp.Mz.PercolatorWrapper.Parameters
 open System.Reflection
 
-module PSMStatistics = 
+module PSMStatisticsXtandem = 
     open System.IO
 
     type PercolatorIn = {
