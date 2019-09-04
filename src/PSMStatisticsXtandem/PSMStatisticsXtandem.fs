@@ -41,6 +41,9 @@ module PSMStatistics =
         AndroScore                   : float
         AndroNormDeltaBestToRest     : float
         AndroNormDeltaNext           : float
+        XtandemScore                 : float
+        XtandemNormDeltaBestToRest   : float
+        XtandemNormDeltaNext         : float
         Peptide                      : string
         Protein                      : string 
         }
@@ -82,7 +85,7 @@ module PSMStatistics =
         |> String.concat " "
 
     ///
-    let initToPercolatorIn maxCharge fastaHeaderToName proteinAndClvIdxLookUp (psm:Dto.PeptideSpectrumMatchingResult) =
+    let initToPercolatorIn maxCharge fastaHeaderToName proteinAndClvIdxLookUp (psm:Dto.PeptideSpectrumMatchingXtandemResult) =
         let charge =
             let ch = psm.Charge
             Array.init maxCharge (fun i -> if i = ch-1 then 1 else 0)
@@ -127,6 +130,9 @@ module PSMStatistics =
             AndroScore                   = psm.AndroScore
             AndroNormDeltaBestToRest     = psm.AndroNormDeltaBestToRest
             AndroNormDeltaNext           = psm. AndroNormDeltaNext
+            XtandemScore                 = psm.XtandemScore
+            XtandemNormDeltaBestToRest   = psm.XtandemNormDeltaBestToRest
+            XtandemNormDeltaNext         = psm.XtandemNormDeltaNext
             Peptide                      = flankedPepSequence
             Protein                      = proteinNames
         }
@@ -156,7 +162,7 @@ module PSMStatistics =
         
         printfn "Read scored PSMs."
         let psms =
-            FSharpAux.IO.SchemaReader.Csv.CsvReader<Dto.PeptideSpectrumMatchingResult>().ReadFile(psms,'\t',false,0)
+            FSharpAux.IO.SchemaReader.Csv.CsvReader<Dto.PeptideSpectrumMatchingXtandemResult>().ReadFile(psms,'\t',false,0)
             |> Array.ofSeq
         printfn "Read scored PSMs: finished"
 
