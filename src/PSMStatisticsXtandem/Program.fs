@@ -13,8 +13,6 @@ module console1 =
         printfn "%A" argv
 
         let parser = ArgumentParser.Create<CLIArguments>(programName =  (System.Reflection.Assembly.GetExecutingAssembly().GetName().Name)) 
-        let usage  = parser.PrintUsage()
-        printfn "%s" usage
         let results = parser.Parse argv
         let i = results.GetResult PSMs
         let o = results.GetResult OutputDirectory
