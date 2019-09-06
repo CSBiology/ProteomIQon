@@ -1,6 +1,6 @@
 {
-  "Name": "ChlamyTest",
-  "FastaPath": "C:\\Users\\david\\Source\\Repos\\netCoreRepos\\ProteomiconTest\\PeptideDB\\Chlamy_JGI5_5(Cp_Mp).fasta",
+  "Name": "AraTest",
+  "FastaPath": "D:\\David\\N15-test\\db\\Arabidopsis_thaliana.TAIR10.pep.all.fasta",
   "ParseProteinIDRegexPattern": "id",
   "Protease": { "Case": "Trypsin" },
   "MinMissedCleavages": 0,
@@ -11,6 +11,9 @@
   "IsotopicMod": [ { "Case": "N15" } ],
   "MassMode": { "Case": "Monoisotopic" },
   "FixedMods": [],
-  "VariableMods": [ { "Case": "Oxidation'Met'" } ],
-  "VarModThreshold": 3
+  "VariableMods": [
+    { "Case": "Oxidation'Met'" },
+    { "Case": "Acetylation'ProtNTerm'" }
+  ],
+  "VarModThreshold": 4
 }
