@@ -28,7 +28,7 @@ let defaultPreprocessingParams :Dto.PeptideSpectrumMatchingParams =
     let andromedaParams = 
         {
         PMinPMax                = 4,10
-        MatchingIonTolerancePPM = 1000.       
+        MatchingIonTolerancePPM = 100.       
         }
     {
         ChargeStateDeterminationParams  = chargeDetermParams 
@@ -45,7 +45,7 @@ let serialized =
     |> Json.serialize
 
 
-System.IO.File.WriteAllText(__SOURCE_DIRECTORY__ + @"/../defaultParams\peptideSpectrumMatchingParamsThermo.json",serialized)
+System.IO.File.WriteAllText(__SOURCE_DIRECTORY__ + @"/../defaultParams\peptideSpectrumMatchingParams.json",serialized)
 
 let deserialized = 
     System.IO.File.ReadAllText(__SOURCE_DIRECTORY__ + @"/../defaultParams\peptideSpectrumMatchingParams.json")

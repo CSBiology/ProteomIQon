@@ -216,18 +216,48 @@ module PSMStatisticsXtandem =
                 |> Seq.map (fun scoredPSM -> scoredPSM .PSMId,scoredPSM )
                 |> Map.ofSeq
 
-            let result: Dto.PSMStatisticsResult [] =
+            let result: Dto.PSMStatisticsXtandemResult [] =
                 psms
                 |> Array.choose (fun candidatePSM ->
                                     match candidatePSM.Label with
                                     | x when x = 1 ->
                                         match Map.tryFind candidatePSM.PSMId scoredPSMs with
                                         | Some validPSM ->
-                                                let psmID = restorePSMID validPSM.PSMId 
-                                                let proteins,missCleavages = pepSequenceIDToMissCleavagesAndProt.[validPSM.PSMId]
-                                                Some {PSMId=psmID;GlobalMod=candidatePSM.GlobalMod;PepSequenceID=candidatePSM.PepSequenceID;ModSequenceID=candidatePSM.ModSequenceID;Label=candidatePSM.Label;ScanNr=candidatePSM.ScanNr;Charge=candidatePSM.Charge;PrecursorMZ=candidatePSM.PrecursorMZ;TheoMass=candidatePSM.TheoMass;AbsDeltaMass=candidatePSM.AbsDeltaMass;PeptideLength=candidatePSM.PeptideLength;MissCleavages=missCleavages;SequestScore=candidatePSM.SequestScore;SequestNormDeltaBestToRest=candidatePSM.SequestNormDeltaBestToRest;SequestNormDeltaNext=candidatePSM.SequestNormDeltaNext;AndroScore=candidatePSM.AndroScore;AndroNormDeltaBestToRest=candidatePSM.AndroNormDeltaBestToRest;AndroNormDeltaNext=candidatePSM.AndroNormDeltaNext;PercolatorScore=validPSM.PercolatorScore;QValue=validPSM.QValue;PEPValue=validPSM.PosteriorErrorProbability;StringSequence=candidatePSM.StringSequence;ProteinNames= proteins }
-                                        | None          -> None
-                                    | _ -> None
+                                            let psmID = restorePSMID validPSM.PSMId 
+                                            let proteins,missCleavages = pepSequenceIDToMissCleavagesAndProt.[validPSM.PSMId]
+                                            Some {
+                                            PSMId                       = psmID
+                                            GlobalMod                   = candidatePSM.GlobalMod
+                                            PepSequenceID               = candidatePSM.PepSequenceID
+                                            ModSequenceID               = candidatePSM.ModSequenceID
+                                            Label                       = candidatePSM.Label
+                                            ScanNr                      = candidatePSM.ScanNr
+                                            ScanTime                    = candidatePSM.ScanTime
+                                            Charge                      = candidatePSM.Charge
+                                            PrecursorMZ                 = candidatePSM.PrecursorMZ
+                                            TheoMass                    = candidatePSM.TheoMass
+                                            AbsDeltaMass                = candidatePSM.AbsDeltaMass
+                                            PeptideLength               = candidatePSM.PeptideLength
+                                            MissCleavages               = missCleavages
+                                            SequestScore                = candidatePSM.SequestScore
+                                            SequestNormDeltaBestToRest  = candidatePSM.SequestNormDeltaBestToRest
+                                            SequestNormDeltaNext        = candidatePSM.SequestNormDeltaNext
+                                            AndroScore                  = candidatePSM.AndroScore
+                                            AndroNormDeltaBestToRest    = candidatePSM.AndroNormDeltaBestToRest
+                                            AndroNormDeltaNext          = candidatePSM.AndroNormDeltaNext
+                                            XtandemScore                = candidatePSM.XtandemScore
+                                            XtandemNormDeltaBestToRest  = candidatePSM.XtandemNormDeltaBestToRest
+                                            XtandemNormDeltaNext        = candidatePSM.XtandemNormDeltaNext
+                                            PercolatorScore             = validPSM.PercolatorScore
+                                            QValue                      = validPSM.QValue
+                                            PEPValue                    = validPSM.PosteriorErrorProbability
+                                            StringSequence              = candidatePSM.StringSequence
+                                            ProteinNames                = proteins 
+                                            }
+                                        | None  -> 
+                                            None
+                                    | _ -> 
+                                        None
                                 )
 
             result

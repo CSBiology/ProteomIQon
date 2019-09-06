@@ -29,7 +29,7 @@ let defaultPeptideDBParams: Dto.PeptideDBParams =
         IsotopicMod                 = [IsotopicMod.N15]
         MassMode                    = MassMode.Monoisotopic
         FixedMods                   = []
-        VariableMods                = [Modification.Oxidation'Met';Modification.Acetylation'ProtNTerm';Modification.Carbamidomethyl'Cys';Modification.Pyro_Glu'GlnNterm';Modification.Pyro_Glu'GluNterm']
+        VariableMods                = [Modification.Oxidation'Met';Modification.Acetylation'ProtNTerm']
         VarModThreshold             = 4
         }
   
@@ -37,7 +37,7 @@ let serialized =
     defaultPeptideDBParams
     |> Json.serialize
 
-System.IO.File.WriteAllText(__SOURCE_DIRECTORY__ + @"/../defaultParams\peptideDBParamsGiada.json",serialized)
+System.IO.File.WriteAllText(__SOURCE_DIRECTORY__ + @"/../defaultParams\peptideDBParams.json",serialized)
 
 let deserialized = 
     System.IO.File.ReadAllText(__SOURCE_DIRECTORY__ + @"/../defaultParams\peptideDBParams.json")

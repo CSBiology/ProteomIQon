@@ -200,54 +200,10 @@ module Dto =
             }
 
     type PeptideSpectrumMatchingResult =
-        //{
-        //    // a combination of the spectrum ID in the rawFile, the ascending ms2 id and the chargeState in the search space seperated by '_'
-        //    [<FieldAttribute(0)>]
-        //    PSMId                        : string
-        //    [<FieldAttribute(1)>]
-        //    GlobalMod                    : int
-        //    [<FieldAttribute(2)>]
-        //    PepSequenceID                : int
-        //    [<FieldAttribute(3)>]
-        //    ModSequenceID                : int
-        //    [<FieldAttribute(4)>]
-        //    Label                        : int
-        //    // ascending ms2 id (file specific)
-        //    [<FieldAttribute(5)>]
-        //    ScanNr                       : int
-        //    [<FieldAttribute(6)>]
-        //    ScanTime                     : float
-        //    [<FieldAttribute(7)>]
-        //    Charge                       : int
-        //    [<FieldAttribute(8)>]
-        //    PrecursorMZ                  : float
-        //    [<FieldAttribute(9)>]
-        //    TheoMass                     : float
-        //    [<FieldAttribute(10)>]
-        //    AbsDeltaMass                 : float
-        //    [<FieldAttribute(11)>]
-        //    PeptideLength                : int
-        //    [<FieldAttribute(12)>]
-        //    MissCleavages                : int
-        //    [<FieldAttribute(13)>]
-        //    SequestScore                 : float
-        //    [<FieldAttribute(14)>]
-        //    SequestNormDeltaBestToRest   : float
-        //    [<FieldAttribute(15)>]
-        //    SequestNormDeltaNext         : float
-        //    [<FieldAttribute(16)>]
-        //    AndroScore                   : float
-        //    [<FieldAttribute(17)>]
-        //    AndroNormDeltaBestToRest     : float
-        //    [<FieldAttribute(18)>]
-        //    AndroNormDeltaNext           : float
-        //    [<FieldAttribute(19)>]
-        //    StringSequence               : string
-        //}
         {
         // a combination of the spectrum ID in the rawFile, the ascending ms2 id and the chargeState in the search space seperated by '_'
         [<FieldAttribute(0)>]
-        PSMId                        : string;
+        PSMId                        : string
         [<FieldAttribute(1)>]
         GlobalMod                    : int
         [<FieldAttribute(2)>]
@@ -258,34 +214,36 @@ module Dto =
         Label                        : int
         // ascending ms2 id (file specific)
         [<FieldAttribute(5)>]
-        ScanNr                       : int;
+        ScanNr                       : int
         [<FieldAttribute(6)>]
-        Charge                       : int;
+        ScanTime                     : float
         [<FieldAttribute(7)>]
-        PrecursorMZ                  : float
+        Charge                       : int
         [<FieldAttribute(8)>]
-        TheoMass                     : float;
+        PrecursorMZ                  : float
         [<FieldAttribute(9)>]
-        AbsDeltaMass                 : float;
+        TheoMass                     : float
         [<FieldAttribute(10)>]
-        PeptideLength                : int;
+        AbsDeltaMass                 : float
         [<FieldAttribute(11)>]
-        MissCleavages                : int;
+        PeptideLength                : int
         [<FieldAttribute(12)>]
-        SequestScore                 : float;
+        MissCleavages                : int
         [<FieldAttribute(13)>]
-        SequestNormDeltaBestToRest   : float;
+        SequestScore                 : float
         [<FieldAttribute(14)>]
-        SequestNormDeltaNext         : float;
+        SequestNormDeltaBestToRest   : float
         [<FieldAttribute(15)>]
-        AndroScore                   : float;
+        SequestNormDeltaNext         : float
         [<FieldAttribute(16)>]
-        AndroNormDeltaBestToRest     : float;
+        AndroScore                   : float
         [<FieldAttribute(17)>]
-        AndroNormDeltaNext           : float;
+        AndroNormDeltaBestToRest     : float
         [<FieldAttribute(18)>]
-        StringSequence               : string;
+        AndroNormDeltaNext           : float
         [<FieldAttribute(19)>]
+        StringSequence               : string
+        [<FieldAttribute(20)>]
         ProteinNames                 : string
         }
 
@@ -306,38 +264,40 @@ module Dto =
         [<FieldAttribute(5)>]
         ScanNr                       : int
         [<FieldAttribute(6)>]
-        Charge                       : int
+        ScanTime                     : float
         [<FieldAttribute(7)>]
-        PrecursorMZ                  : float
+        Charge                       : int
         [<FieldAttribute(8)>]
-        TheoMass                     : float
+        PrecursorMZ                  : float
         [<FieldAttribute(9)>]
-        AbsDeltaMass                 : float
+        TheoMass                     : float
         [<FieldAttribute(10)>]
-        PeptideLength                : int
+        AbsDeltaMass                 : float
         [<FieldAttribute(11)>]
-        MissCleavages                : int
+        PeptideLength                : int
         [<FieldAttribute(12)>]
-        SequestScore                 : float
+        MissCleavages                : int
         [<FieldAttribute(13)>]
-        SequestNormDeltaBestToRest   : float
+        SequestScore                 : float
         [<FieldAttribute(14)>]
-        SequestNormDeltaNext         : float
+        SequestNormDeltaBestToRest   : float
         [<FieldAttribute(15)>]
-        AndroScore                   : float
+        SequestNormDeltaNext         : float
         [<FieldAttribute(16)>]
-        AndroNormDeltaBestToRest     : float
+        AndroScore                   : float
         [<FieldAttribute(17)>]
-        AndroNormDeltaNext           : float
+        AndroNormDeltaBestToRest     : float
         [<FieldAttribute(18)>]
-        XtandemScore                 : float
+        AndroNormDeltaNext           : float
         [<FieldAttribute(19)>]
-        XtandemNormDeltaBestToRest   : float
+        XtandemScore                 : float
         [<FieldAttribute(20)>]
-        XtandemNormDeltaNext         : float
+        XtandemNormDeltaBestToRest   : float
         [<FieldAttribute(21)>]
-        StringSequence               : string
+        XtandemNormDeltaNext         : float
         [<FieldAttribute(22)>]
+        StringSequence               : string
+        [<FieldAttribute(23)>]
         ProteinNames                 : string
         }
 
@@ -375,38 +335,40 @@ module Dto =
         [<FieldAttribute(5)>]
         ScanNr                       : int;
         [<FieldAttribute(6)>]
-        Charge                       : int;
+        ScanTime                     : float
         [<FieldAttribute(7)>]
-        PrecursorMZ                  : float
+        Charge                       : int;
         [<FieldAttribute(8)>]
-        TheoMass                     : float;
+        PrecursorMZ                  : float
         [<FieldAttribute(9)>]
-        AbsDeltaMass                 : float;
+        TheoMass                     : float;
         [<FieldAttribute(10)>]
-        PeptideLength                : int;
+        AbsDeltaMass                 : float;
         [<FieldAttribute(11)>]
-        MissCleavages                : int;
+        PeptideLength                : int;
         [<FieldAttribute(12)>]
-        SequestScore                 : float;
+        MissCleavages                : int;
         [<FieldAttribute(13)>]
-        SequestNormDeltaBestToRest   : float;
+        SequestScore                 : float;
         [<FieldAttribute(14)>]
-        SequestNormDeltaNext         : float;
+        SequestNormDeltaBestToRest   : float;
         [<FieldAttribute(15)>]
-        AndroScore                   : float;
+        SequestNormDeltaNext         : float;
         [<FieldAttribute(16)>]
-        AndroNormDeltaBestToRest     : float;
+        AndroScore                   : float;
         [<FieldAttribute(17)>]
-        AndroNormDeltaNext           : float;
+        AndroNormDeltaBestToRest     : float;
         [<FieldAttribute(18)>]
-        PercolatorScore              : float;
+        AndroNormDeltaNext           : float;
         [<FieldAttribute(19)>]
-        QValue                       : float;
+        PercolatorScore              : float;
         [<FieldAttribute(20)>]
-        PEPValue                     : float;
+        QValue                       : float;
         [<FieldAttribute(21)>]
-        StringSequence               : string;
+        PEPValue                     : float;
         [<FieldAttribute(22)>]
+        StringSequence               : string;
+        [<FieldAttribute(23)>]
         ProteinNames                 : string;
         }
 
@@ -426,44 +388,46 @@ module Dto =
         [<FieldAttribute(5)>]
         ScanNr                       : int
         [<FieldAttribute(6)>]
-        Charge                       : int
+        ScanTime                     : float
         [<FieldAttribute(7)>]
-        PrecursorMZ                  : float
+        Charge                       : int
         [<FieldAttribute(8)>]
-        TheoMass                     : float
+        PrecursorMZ                  : float
         [<FieldAttribute(9)>]
-        AbsDeltaMass                 : float
+        TheoMass                     : float
         [<FieldAttribute(10)>]
-        PeptideLength                : int
+        AbsDeltaMass                 : float
         [<FieldAttribute(11)>]
-        MissCleavages                : int
+        PeptideLength                : int
         [<FieldAttribute(12)>]
-        SequestScore                 : float
+        MissCleavages                : int
         [<FieldAttribute(13)>]
-        SequestNormDeltaBestToRest   : float
+        SequestScore                 : float
         [<FieldAttribute(14)>]
-        SequestNormDeltaNext         : float
+        SequestNormDeltaBestToRest   : float
         [<FieldAttribute(15)>]
-        AndroScore                   : float
+        SequestNormDeltaNext         : float
         [<FieldAttribute(16)>]
-        AndroNormDeltaBestToRest     : float
+        AndroScore                   : float
         [<FieldAttribute(17)>]
-        AndroNormDeltaNext           : float
+        AndroNormDeltaBestToRest     : float
         [<FieldAttribute(18)>]
-        XtandemScore                 : float
+        AndroNormDeltaNext           : float
         [<FieldAttribute(19)>]
-        XtandemNormDeltaBestToRest   : float
+        XtandemScore                 : float
         [<FieldAttribute(20)>]
-        XtandemNormDeltaNext         : float
+        XtandemNormDeltaBestToRest   : float
         [<FieldAttribute(21)>]
-        PercolatorScore              : float
+        XtandemNormDeltaNext         : float
         [<FieldAttribute(22)>]
-        QValue                       : float
+        PercolatorScore              : float
         [<FieldAttribute(23)>]
-        PEPValue                     : float
+        QValue                       : float
         [<FieldAttribute(24)>]
-        StringSequence               : string
+        PEPValue                     : float
         [<FieldAttribute(25)>]
+        StringSequence               : string
+        [<FieldAttribute(26)>]
         ProteinNames                 : string
         }
 
@@ -483,6 +447,36 @@ module Dto =
                 XicExtraction                = dtoQuantificationParams.XicExtraction
                 BaseLineCorrection           = dtoQuantificationParams.BaseLineCorrection
             }
+
+    ///
+    type QuantificationResult = {
+        StringSequence               : string
+        GlobalMod                    : int
+        Charge                       : int
+        PrecursorMZ                  : float
+        MeasuredMass                 : float 
+        TheoMass                     : float
+        AbsDeltaMass                 : float
+        MeanPercolatorScore          : float
+        QValue                       : float
+        PEPValue                     : float
+        ProteinNames                 : string
+        N14QuantMz                   : float
+        N14Quant                     : float
+        N14MeasuredApex              : float 
+        N14Seo                       : float
+        N14Params                    : string
+        N15QuantMz                   : float
+        N15Quant                     : float
+        N15MeasuredApex              : float
+        N15Seo                       : float
+        N15Params                    : string
+        N15Minus1QuantMz             : float
+        N15Minus1Quant               : float
+        N15Minus1MeasuredApex        : float
+        N15Minus1Seo                 : float
+        N15Minus1Params              : string
+        }
 
     type ProteinInferenceParams =
           {
