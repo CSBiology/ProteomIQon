@@ -9,9 +9,7 @@ module console1 =
     let main argv = 
         printfn "%A" argv
 
-        let parser = ArgumentParser.Create<CLIArguments>(programName =  (System.Reflection.Assembly.GetExecutingAssembly().GetName().Name)) 
-        let usage  = parser.PrintUsage()
-        printfn "%s" usage
+        let parser = ArgumentParser.Create<CLIArguments>(programName =  (System.Reflection.Assembly.GetExecutingAssembly().GetName().Name))
         let results = parser.Parse argv
         Library.printParams (results.GetAllResults())
         printfn "Hit any key to exit."
