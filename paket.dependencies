@@ -65,3 +65,9 @@ nuget Fake.DotNet.Paket
 nuget Fake.DotNet.Testing.Expecto 
 nuget Fake.DotNet.FSFormatting 
 nuget Fake.Api.GitHub
+
+group Logging
+
+source https://nuget.org/api/v2
+
+nuget NLog
