@@ -16,7 +16,7 @@ open Core.MzLite.Peaks
 open Core.MzLite
 open FSharpAux.IO
 
-module PeptideSpectrumMatching = 
+module PeptideSpectrumMatching2 = 
 
     open System.IO
     open System.Data
@@ -202,87 +202,81 @@ module PeptideSpectrumMatching =
                                                                )
                                                 |> AndromedaLike.getTheoSpecs processParams.MS2ScanRange assCh.PrecCharge    
                                                 
-                                            let andromedaLikeScored,xtandemScored = 
-                                                XScoring.calcAndromedaAndXTandemScore processParams.AndromedaParams.PMinPMax processParams.MS2ScanRange processParams.AndromedaParams.MatchingIonTolerancePPM
+                                            let andromedaLikeScored = 
+                                                AndromedaLike.calcAndromedaScore processParams.AndromedaParams.PMinPMax processParams.MS2ScanRange processParams.AndromedaParams.MatchingIonTolerancePPM
                                                     recSpec scanTime assCh.PrecCharge assCh.PrecursorMZ andromedaTheorticalSpecs ms2Id
 
                                             let result = 
-                                                List.map2 (fun (androRes:SearchEngineResult.SearchEngineResult<float>) (xTandemRes:SearchEngineResult.SearchEngineResult<float>) -> 
-                                                    // a combination of the spectrum ID in the rawFile, the ascending ms2 id and the chargeState in the search space seperated by '_'
-                                                    //let pSMId = androRes.SpectrumID.Replace(' ', '-') + "_" + ascendingID.ToString() + "_" + ch.ToString() + "_" + i.ToString()
-                                                    let label = if androRes.IsTarget then 1 else -1
-                                                    let scanNr = ascendingID
-                                                    let absDeltaMass = (androRes.TheoMass-androRes.MeasuredMass) |> abs
-                                                    match androRes.IsTarget with
-                                                    | true ->
-                                                        match Map.tryFind (androRes.ModSequenceID,androRes.GlobalMod) bestTargetSequest with
-                                                        | Some sequestScore ->
-                                                            let res i : Dto.PeptideSpectrumMatchingXtandemResult = 
-                                                                let pSMId i = androRes.SpectrumID.Replace(' ', '-') + "_" + ascendingID.ToString() + "_" + ch.ToString() + "_" + i.ToString()
-                                                                {                                                                        
-                                                                    PSMId                        = pSMId i
-                                                                    GlobalMod                    = androRes.GlobalMod
-                                                                    PepSequenceID                = androRes.PepSequenceID
-                                                                    ModSequenceID                = androRes.ModSequenceID
-                                                                    Label                        = label
-                                                                    ScanNr                       = scanNr
-                                                                    ScanTime                     = androRes.ScanTime
-                                                                    Charge                       = ch
-                                                                    PrecursorMZ                  = androRes.PrecursorMZ
-                                                                    TheoMass                     = androRes.TheoMass
-                                                                    AbsDeltaMass                 = absDeltaMass
-                                                                    PeptideLength                = androRes.PeptideLength
-                                                                    MissCleavages                = -1
-                                                                    SequestScore                 = sequestScore.Score
-                                                                    SequestNormDeltaBestToRest   = sequestScore.NormDeltaBestToRest
-                                                                    SequestNormDeltaNext         = sequestScore.NormDeltaNext
-                                                                    AndroScore                   = androRes.Score
-                                                                    AndroNormDeltaBestToRest     = androRes.NormDeltaBestToRest
-                                                                    AndroNormDeltaNext           = androRes.NormDeltaNext
-                                                                    XtandemScore                 = xTandemRes.Score  
-                                                                    XtandemNormDeltaBestToRest   = xTandemRes.NormDeltaBestToRest  
-                                                                    XtandemNormDeltaNext         = xTandemRes.NormDeltaNext  
-                                                                    StringSequence               = androRes.StringSequence
-                                                                    ProteinNames                 = "PlaceHolder"
-                                                                }
-                                                            Some (label,res)
-                                                        | None -> None 
-                                                    | false ->
-                                                        match Map.tryFind (androRes.ModSequenceID,androRes.GlobalMod) bestDecoySequest with
-                                                        | Some sequestScore ->
-                                                            let res i : Dto.PeptideSpectrumMatchingXtandemResult = 
-                                                                let pSMId i = androRes.SpectrumID.Replace(' ', '-') + "_" + ascendingID.ToString() + "_" + ch.ToString() + "_" + i.ToString()
+                                                andromedaLikeScored
+                                                |> List.choose (fun androRes -> 
+                                                                // a combination of the spectrum ID in the rawFile, the ascending ms2 id and the chargeState in the search space seperated by '_'
+                                                                //let pSMId = androRes.SpectrumID.Replace(' ', '-') + "_" + ascendingID.ToString() + "_" + ch.ToString() + "_" + i.ToString()
+                                                                let label = if androRes.IsTarget then 1 else -1
+                                                                let scanNr = ascendingID
+                                                                let absDeltaMass = (androRes.TheoMass-androRes.MeasuredMass) |> abs
+                                                                match androRes.IsTarget with
+                                                                | true ->
+                                                                    match Map.tryFind (androRes.ModSequenceID,androRes.GlobalMod) bestTargetSequest with
+                                                                    | Some sequestScore ->
+                                                                        let res i : Dto.PeptideSpectrumMatchingResult = 
+                                                                            let pSMId i = androRes.SpectrumID.Replace(' ', '-') + "_" + ascendingID.ToString() + "_" + ch.ToString() + "_" + i.ToString()
+                                                                            {                                                                        
+                                                                                PSMId                        = pSMId i
+                                                                                GlobalMod                    = androRes.GlobalMod
+                                                                                PepSequenceID                = androRes.PepSequenceID
+                                                                                ModSequenceID                = androRes.ModSequenceID
+                                                                                Label                        = label
+                                                                                ScanNr                       = scanNr
+                                                                                ScanTime                     = androRes.ScanTime
+                                                                                Charge                       = ch
+                                                                                PrecursorMZ                  = androRes.PrecursorMZ
+                                                                                TheoMass                     = androRes.TheoMass
+                                                                                AbsDeltaMass                 = absDeltaMass
+                                                                                PeptideLength                = androRes.PeptideLength
+                                                                                MissCleavages                = -1
+                                                                                SequestScore                 = sequestScore.Score
+                                                                                SequestNormDeltaBestToRest   = sequestScore.NormDeltaBestToRest
+                                                                                SequestNormDeltaNext         = sequestScore.NormDeltaNext
+                                                                                AndroScore                   = androRes.Score
+                                                                                AndroNormDeltaBestToRest     = androRes.NormDeltaBestToRest
+                                                                                AndroNormDeltaNext           = androRes.NormDeltaNext
+                                                                                StringSequence               = androRes.StringSequence
+                                                                                ProteinNames                 = "PlaceHolder"
+                                                                            }
+                                                                        Some (label,res)
+                                                                    | None -> None 
+                                                                | false ->
+                                                                    match Map.tryFind (androRes.ModSequenceID,androRes.GlobalMod) bestDecoySequest with
+                                                                    | Some sequestScore ->
+                                                                        let res i : Dto.PeptideSpectrumMatchingResult = 
+                                                                            let pSMId i = androRes.SpectrumID.Replace(' ', '-') + "_" + ascendingID.ToString() + "_" + ch.ToString() + "_" + i.ToString()
                                                                             
-                                                                {                                                                        
-                                                                    PSMId                        = pSMId i
-                                                                    GlobalMod                    = androRes.GlobalMod
-                                                                    PepSequenceID                = androRes.PepSequenceID
-                                                                    ModSequenceID                = androRes.ModSequenceID
-                                                                    Label                        = label
-                                                                    ScanNr                       = scanNr
-                                                                    ScanTime                     = androRes.ScanTime
-                                                                    Charge                       = ch
-                                                                    PrecursorMZ                  = androRes.PrecursorMZ
-                                                                    TheoMass                     = androRes.TheoMass
-                                                                    AbsDeltaMass                 = absDeltaMass
-                                                                    PeptideLength                = androRes.PeptideLength
-                                                                    MissCleavages                = -1
-                                                                    SequestScore                 = sequestScore.Score
-                                                                    SequestNormDeltaBestToRest   = sequestScore.NormDeltaBestToRest
-                                                                    SequestNormDeltaNext         = sequestScore.NormDeltaNext
-                                                                    AndroScore                   = androRes.Score
-                                                                    AndroNormDeltaBestToRest     = androRes.NormDeltaBestToRest
-                                                                    AndroNormDeltaNext           = androRes.NormDeltaNext
-                                                                    XtandemScore                 = xTandemRes.Score  
-                                                                    XtandemNormDeltaBestToRest   = xTandemRes.NormDeltaBestToRest  
-                                                                    XtandemNormDeltaNext         = xTandemRes.NormDeltaNext 
-                                                                    StringSequence               = androRes.StringSequence
-                                                                    ProteinNames                 = "PlaceHolder"
-                                                                }
-                                                            Some (label,res)
-                                                        | None -> None 
-                                                ) andromedaLikeScored xtandemScored
-                                                |> List.choose id
+                                                                            {                                                                        
+                                                                                PSMId                        = pSMId i
+                                                                                GlobalMod                    = androRes.GlobalMod
+                                                                                PepSequenceID                = androRes.PepSequenceID
+                                                                                ModSequenceID                = androRes.ModSequenceID
+                                                                                Label                        = label
+                                                                                ScanNr                       = scanNr
+                                                                                ScanTime                     = androRes.ScanTime
+                                                                                Charge                       = ch
+                                                                                PrecursorMZ                  = androRes.PrecursorMZ
+                                                                                TheoMass                     = androRes.TheoMass
+                                                                                AbsDeltaMass                 = absDeltaMass
+                                                                                PeptideLength                = androRes.PeptideLength
+                                                                                MissCleavages                = -1
+                                                                                SequestScore                 = sequestScore.Score
+                                                                                SequestNormDeltaBestToRest   = sequestScore.NormDeltaBestToRest
+                                                                                SequestNormDeltaNext         = sequestScore.NormDeltaNext
+                                                                                AndroScore                   = androRes.Score
+                                                                                AndroNormDeltaBestToRest     = androRes.NormDeltaBestToRest
+                                                                                AndroNormDeltaNext           = androRes.NormDeltaNext
+                                                                                StringSequence               = androRes.StringSequence
+                                                                                ProteinNames                 = "PlaceHolder"
+                                                                            }
+                                                                        Some (label,res)
+                                                                    | None -> None 
+                                                            )
                                                 |> List.groupBy (fun x -> fst x)
                                                 |> List.map (fun (x,y) -> 
                                                                 y 
