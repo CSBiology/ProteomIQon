@@ -4,11 +4,11 @@ open System.Data.SQLite
 open BioFSharp
 open BioFSharp.Mz.SearchDB
 open Domain
-open Core 
+open Core
 open Logary
 open System.IO
 open BioFSharp.Mz
-open MzLite 
+open MzLite
 open MzLite.Model
 open MzLite.Binary
 open Core.MzLite.Reader
@@ -16,7 +16,7 @@ open Core.MzLite.Peaks
 open Core.MzLite
 open FSharpAux.IO
 
-module PeptideSpectrumMatching = 
+module PeptideSpectrumMatching =
 
     open System.IO
     open System.Data
@@ -25,20 +25,20 @@ module PeptideSpectrumMatching =
     open BioFSharp.Mz.ChargeState
 
     /// Returns SearchDbParams of a existing database by filePath
-    let getSDBParamsBy (cn :SQLiteConnection)= 
-        let cn = 
-            match cn.State with 
+    let getSDBParamsBy (cn :SQLiteConnection)=
+        let cn =
+            match cn.State with
             | ConnectionState.Open ->
                 cn
-            | ConnectionState.Closed -> 
+            | ConnectionState.Closed ->
                 cn.Open()
                 cn
             | _ as x -> failwith "Data base is busy."
-        match Db.SQLiteQuery.selectSearchDbParams cn with 
-        | Some (iD,name,fo,fp,pr,minmscl,maxmscl,mass,minpL,maxpL,isoL,mMode,fMods,vMods,vThr) -> 
-            createSearchDbParams 
-                name fo fp id (Digestion.Table.getProteaseBy pr) minmscl maxmscl mass minpL maxpL 
-                    (Newtonsoft.Json.JsonConvert.DeserializeObject<SearchInfoIsotopic list>(isoL)) (Newtonsoft.Json.JsonConvert.DeserializeObject<MassMode>(mMode)) (massFBy (Newtonsoft.Json.JsonConvert.DeserializeObject<MassMode>(mMode))) 
+        match Db.SQLiteQuery.selectSearchDbParams cn with
+        | Some (iD,name,fo,fp,pr,minmscl,maxmscl,mass,minpL,maxpL,isoL,mMode,fMods,vMods,vThr) ->
+            createSearchDbParams
+                name fo fp id (Digestion.Table.getProteaseBy pr) minmscl maxmscl mass minpL maxpL
+                    (Newtonsoft.Json.JsonConvert.DeserializeObject<SearchInfoIsotopic list>(isoL)) (Newtonsoft.Json.JsonConvert.DeserializeObject<MassMode>(mMode)) (massFBy (Newtonsoft.Json.JsonConvert.DeserializeObject<MassMode>(mMode)))
                         (Newtonsoft.Json.JsonConvert.DeserializeObject<SearchModification list>(fMods)) (Newtonsoft.Json.JsonConvert.DeserializeObject<SearchModification list>(vMods)) vThr
         | None ->
             failwith "This database does not contain any SearchParameters. It is not recommended to work with this file."
@@ -59,11 +59,11 @@ module PeptideSpectrumMatching =
             |> Array.ofSeq
         let ms2AssignedToMS1 =
             ms2SortedByScanTime
-            |> Array.map (fun ms2 -> 
-                            ms1SortedByScanTime 
-                            |> Array.findBack (fun ms1 -> 
+            |> Array.map (fun ms2 ->
+                            ms1SortedByScanTime
+                            |> Array.findBack (fun ms1 ->
                                                     let ms1ScanTime = MassSpectrum.getScanTime ms1
-                                                    let ms2ScanTime = MassSpectrum.getScanTime ms2 
+                                                    let ms2ScanTime = MassSpectrum.getScanTime ms2
                                                     ms1ScanTime <= ms2ScanTime),ms2
                           )
             |> Array.groupBy fst
@@ -78,8 +78,8 @@ module PeptideSpectrumMatching =
                             |> Array.filter (fun ms2 -> inReader.ReadSpectrumPeaks(ms2.ID).Peaks |> Seq.isEmpty = false)
                             |> Array.map (fun ms2 ->
                                                 let assignedCharges = ChargeState.putativePrecursorChargeStatesBy chParams mzdata intensityData ms1.ID ms2.ID (MassSpectrum.getPrecursorMZ ms2)
-                                                match assignedCharges with 
-                                                | [] -> 
+                                                match assignedCharges with
+                                                | [] ->
                                                     [
                                                         for i = chParams.ExpectedMinimalCharge to chParams.ExpectedMaximumCharge do
                                                             let precursorMz = (MassSpectrum.getPrecursorMZ ms2)
@@ -113,7 +113,7 @@ module PeptideSpectrumMatching =
                                 let items =
                                     assignedCharges
                                     |> List.mapi (fun  i putativeCharge ->
-                                                    match putativeCharge.PositionMetricPValue with 
+                                                    match putativeCharge.PositionMetricPValue with
                                                     | Some x ->
                                                         putativeCharge
                                                     | None   ->
@@ -122,7 +122,7 @@ module PeptideSpectrumMatching =
                                                  )
                                     |> List.filter (fun testIt -> testIt.PositionMetricPValue.Value <= 0.05)
                                     |> ChargeState.removeSubSetsOfBestHit
-                                    |> (fun charges -> 
+                                    |> (fun charges ->
                                             match charges with
                                             | [] -> [
                                                         for i = chParams.ExpectedMinimalCharge to chParams.ExpectedMaximumCharge do
@@ -138,7 +138,8 @@ module PeptideSpectrumMatching =
 
         positionMetricScoredCharges
 
-    let psm (processParams:PeptideSpectrumMatchingParams) lookUpF calcIonSeries (reader: IMzLiteDataReader) outFilePath (ms2sAndAssignedCharges: AssignedCharge list list) =
+    let psm (processParams:PeptideSpectrumMatchingParams) lookUpF calcIonSeries (reader: IMzLiteDataReader) (outFilePath: string) (ms2sAndAssignedCharges: AssignedCharge list list) =
+        let logger = Logging.createLogger (sprintf @"%s\%s_log.txt" (System.IO.Path.GetDirectoryName outFilePath) (Path.GetFileNameWithoutExtension outFilePath)) "PeptideSpectrumMatching_psm"
         let resultWriter = new System.IO.StreamWriter(outFilePath, true)
         let (ms2IDAssignedCharge) =
                 ms2sAndAssignedCharges
@@ -148,19 +149,19 @@ module PeptideSpectrumMatching =
                 |> List.concat
                 |> List.groupBy (fun (ascendingID,ms2Id,assCH) -> assCH.PrecCharge)
                 |> List.map (fun (ch,ms2IDassCHL) ->
-                                ch, ms2IDassCHL |> List.sortBy (fun (ascendingID,ms2ID,assCh) -> assCh.PutMass )
+                                ch, ms2IDassCHL |> List.sortBy (fun (ascendingID,ms2ID,assCh) -> assCh.PutMass)
                             )
                 |> List.sortBy fst
-        ms2IDAssignedCharge 
-        |> List.iter (fun (ch, ms2IdAssCh) -> printfn "%i spectra with charge %i" ms2IdAssCh.Length ch )
+        ms2IDAssignedCharge
+        |> List.iter (fun (ch, ms2IdAssCh) -> logger.Trace (sprintf "%i spectra with charge %i" ms2IdAssCh.Length ch))
 
         ms2IDAssignedCharge
         |> List.iter (fun (ch,ms2IdAssCh) ->
-                        printfn "%i spectra with charge %i processed" ms2IdAssCh.Length ch
+                        logger.Trace (sprintf "%i spectra with charge %i processed" ms2IdAssCh.Length ch)
                         ms2IdAssCh
                         |> List.iteri (fun i (ascendingID,ms2Id,assCh) ->
-                                            if i%10000 = 0 then printfn "%i" i
-                                            try                                                
+                                            if i%10000 = 0 then logger.Trace (sprintf  "%i" i)
+                                            try
                                             let scanTime = MassSpectrum.getScanTime (reader.ReadMassSpectrum(ms2Id))
                                             let recSpec =
                                                 Peaks.unzipIMzliteArray (reader.ReadSpectrumPeaks(ms2Id).Peaks)
@@ -168,17 +169,17 @@ module PeptideSpectrumMatching =
                                             let lowerMass,upperMass =
                                                 let massWithH2O = assCh.PutMass
                                                 Mass.rangePpm processParams.LookUpPPM massWithH2O
-                                            let lookUpResults :SearchDB.LookUpResult<AminoAcids.AminoAcid> list = 
+                                            let lookUpResults :SearchDB.LookUpResult<AminoAcids.AminoAcid> list =
                                                 lookUpF lowerMass upperMass
-                                            let theoSpecs = 
+                                            let theoSpecs =
                                                 lookUpResults
-                                                |> List.map (fun lookUpResult -> 
+                                                |> List.map (fun lookUpResult ->
                                                                 let ionSeries = calcIonSeries lookUpResult.BioSequence
                                                                 lookUpResult,ionSeries
-                                                            )   
-                                            let sequestTheoreticalSpecs = SequestLike.getTheoSpecs processParams.MS2ScanRange assCh.PrecCharge theoSpecs   
-                                            let sequestLikeScored = 
-                                                SequestLike.calcSequestScore processParams.MS2ScanRange recSpec scanTime assCh.PrecCharge 
+                                                            )
+                                            let sequestTheoreticalSpecs = SequestLike.getTheoSpecs processParams.MS2ScanRange assCh.PrecCharge theoSpecs
+                                            let sequestLikeScored =
+                                                SequestLike.calcSequestScore processParams.MS2ScanRange recSpec scanTime assCh.PrecCharge
                                                     assCh.PrecursorMZ sequestTheoreticalSpecs ms2Id
 
                                             let bestTargetSequest =
@@ -194,23 +195,23 @@ module PeptideSpectrumMatching =
                                                 |> List.truncate 10
                                                 |> List.map (fun x -> (x.ModSequenceID,x.GlobalMod),x)
                                                 |> Map.ofList
-                                            let andromedaTheorticalSpecs = 
+                                            let andromedaTheorticalSpecs =
                                                 theoSpecs
-                                                |> List.filter (fun (lookUpResult,fragments) -> 
+                                                |> List.filter (fun (lookUpResult,fragments) ->
                                                                     bestTargetSequest |> Map.containsKey (lookUpResult.ModSequenceID,lookUpResult.GlobalMod) ||
-                                                                    bestDecoySequest  |> Map.containsKey (lookUpResult.ModSequenceID,lookUpResult.GlobalMod) 
+                                                                    bestDecoySequest  |> Map.containsKey (lookUpResult.ModSequenceID,lookUpResult.GlobalMod)
                                                                )
-                                                |> AndromedaLike.getTheoSpecs processParams.MS2ScanRange assCh.PrecCharge    
-                                                
-                                            let andromedaLikeScored = 
+                                                |> AndromedaLike.getTheoSpecs processParams.MS2ScanRange assCh.PrecCharge
+
+                                            let andromedaLikeScored =
                                                 AndromedaLike.calcAndromedaScore processParams.AndromedaParams.PMinPMax processParams.MS2ScanRange processParams.AndromedaParams.MatchingIonTolerancePPM
                                                     recSpec scanTime assCh.PrecCharge assCh.PrecursorMZ andromedaTheorticalSpecs ms2Id
 
-                                            let result = 
+                                            let result =
                                                 andromedaLikeScored
-                                                |> List.choose (fun androRes -> 
+                                                |> List.choose (fun androRes ->
                                                                 // a combination of the spectrum ID in the rawFile, the ascending ms2 id and the chargeState in the search space seperated by '_'
-                                                                //let pSMId = androRes.SpectrumID.Replace(' ', '-') + "_" + ascendingID.ToString() + "_" + ch.ToString() + "_" + i.ToString()
+                                                                // let pSMId = androRes.SpectrumID.Replace(' ', '-') + "_" + ascendingID.ToString() + "_" + ch.ToString() + "_" + i.ToString()
                                                                 let label = if androRes.IsTarget then 1 else -1
                                                                 let scanNr = ascendingID
                                                                 let absDeltaMass = (androRes.TheoMass-androRes.MeasuredMass) |> abs
@@ -218,9 +219,9 @@ module PeptideSpectrumMatching =
                                                                 | true ->
                                                                     match Map.tryFind (androRes.ModSequenceID,androRes.GlobalMod) bestTargetSequest with
                                                                     | Some sequestScore ->
-                                                                        let res i : Dto.PeptideSpectrumMatchingResult = 
+                                                                        let res i : Dto.PeptideSpectrumMatchingResult =
                                                                             let pSMId i = androRes.SpectrumID.Replace(' ', '-') + "_" + ascendingID.ToString() + "_" + ch.ToString() + "_" + i.ToString()
-                                                                            {                                                                        
+                                                                            {
                                                                                 PSMId                        = pSMId i
                                                                                 GlobalMod                    = androRes.GlobalMod
                                                                                 PepSequenceID                = androRes.PepSequenceID
@@ -244,14 +245,14 @@ module PeptideSpectrumMatching =
                                                                                 ProteinNames                 = "PlaceHolder"
                                                                             }
                                                                         Some (label,res)
-                                                                    | None -> None 
+                                                                    | None -> None
                                                                 | false ->
                                                                     match Map.tryFind (androRes.ModSequenceID,androRes.GlobalMod) bestDecoySequest with
                                                                     | Some sequestScore ->
-                                                                        let res i : Dto.PeptideSpectrumMatchingResult = 
+                                                                        let res i : Dto.PeptideSpectrumMatchingResult =
                                                                             let pSMId i = androRes.SpectrumID.Replace(' ', '-') + "_" + ascendingID.ToString() + "_" + ch.ToString() + "_" + i.ToString()
-                                                                            
-                                                                            {                                                                        
+
+                                                                            {
                                                                                 PSMId                        = pSMId i
                                                                                 GlobalMod                    = androRes.GlobalMod
                                                                                 PepSequenceID                = androRes.PepSequenceID
@@ -275,16 +276,16 @@ module PeptideSpectrumMatching =
                                                                                 ProteinNames                 = "PlaceHolder"
                                                                             }
                                                                         Some (label,res)
-                                                                    | None -> None 
+                                                                    | None -> None
                                                             )
                                                 |> List.groupBy (fun x -> fst x)
-                                                |> List.map (fun (x,y) -> 
-                                                                y 
-                                                                |> List.map snd 
+                                                |> List.map (fun (x,y) ->
+                                                                y
+                                                                |> List.map snd
                                                                 |> List.mapi (fun i x -> x i)
                                                             )
                                                 |> List.concat
-                
+
                                             result
                                             |> SeqIO.Seq.toCSV "\t" false
                                             |> Seq.iter resultWriter.WriteLine
@@ -297,27 +298,34 @@ module PeptideSpectrumMatching =
                                                     ()
                                         )
 
-
                         )
         resultWriter.Dispose()
     //    Logger.printTimenWithPre pre "Finished PSM"
 
     let scoreSpectra (processParams:PeptideSpectrumMatchingParams) (outputDir:string) (cn:SQLiteConnection) (instrumentOutput:string) =
-        printfn "Now performing peptide spectrum matching: %s Results will be written to: %s" instrumentOutput outputDir
+
+        let logger = Logging.createLogger (sprintf @"%s\%s_log.txt"outputDir (Path.GetFileNameWithoutExtension instrumentOutput)) "PeptideSpectrumMatching_scoreSpectra"
+
+        logger.Trace (sprintf "Input file: %s" instrumentOutput)
+        logger.Trace (sprintf "Output directory: %s" outputDir)
+        logger.Trace (sprintf "Parameters: %A" processParams)
 
         // initialize Reader and Transaction
-        let outFilePath = 
+        let outFilePath =
             let fileName = (Path.GetFileNameWithoutExtension instrumentOutput) + ".psm"
             Path.Combine [|outputDir;fileName|]
+        logger.Trace (sprintf "Result file path: %s" outFilePath)
 
-        printfn "Copy peptide DB into Memory"
-        let memoryDB = SearchDB.copyDBIntoMemory cn 
-        printfn "Copy peptide DB into Memory: finished"
+        logger.Trace "Copy peptide DB into Memory."
+        let memoryDB = SearchDB.copyDBIntoMemory cn
+        logger.Trace "Copy peptide DB into Memory: finished."
 
-        printfn "Prepare processing functions."
-        
+        logger.Trace "Prepare processing functions."
+
         let chargeParams = processParams.ChargeStateDeterminationParams
-        let dBParams     = getSDBParamsBy memoryDB      
+        logger.Trace (sprintf "Charge parameters: %A" chargeParams)
+        let dBParams     = getSDBParamsBy memoryDB
+        logger.Trace (sprintf "DB parameters: %A" dBParams)
 
         let calcIonSeries aal  =
             Fragmentation.Series.fragmentMasses Fragmentation.Series.bOfBioList Fragmentation.Series.yOfBioList dBParams.MassFunction aal
@@ -325,25 +333,25 @@ module PeptideSpectrumMatching =
         let rnd = new System.Random()
 
         let dbLookUp = SearchDB.getThreadSafePeptideLookUpFromFileBy memoryDB dBParams
-        printfn "Finished preparing processing functions."
-                
+        logger.Trace "Finished preparing processing functions."
+
         // initialize Reader and Transaction
-        printfn "Init connection to input data base." 
-        let inReader = Core.MzLite.Reader.getReader instrumentOutput  
+        logger.Trace "Init connection to input data base."
+        let inReader = Core.MzLite.Reader.getReader instrumentOutput
         let inRunID  = Core.MzLite.Reader.getDefaultRunID inReader
-        let inTr = inReader.BeginTransaction()                    
-     
-            
-        // Charge state determination 
-        printfn "Starting charge state determination."
+        logger.Trace (sprintf "Run ID: %s" inRunID)
+        let inTr = inReader.BeginTransaction()
+
+        // Charge state determination
+        logger.Trace "Starting charge state determination."
         let ms2sAndAssignedCharges = getPrecursorCharge chargeParams rnd inRunID inReader
-        printfn "Finished charge state determination."
-        
-        printfn "Starting peptide spectrum matching."
+        logger.Trace "Finished charge state determination."
+
+        logger.Trace "Starting peptide spectrum matching."
         psm processParams dbLookUp calcIonSeries inReader outFilePath ms2sAndAssignedCharges
-        printfn "Finished peptide spectrum matching."
-        
+        logger.Trace "Finished peptide spectrum matching."
+
         inTr.Commit()
         inTr.Dispose()
         inReader.Dispose()
-        printfn "Done."
+        logger.Trace "Done."
