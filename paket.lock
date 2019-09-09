@@ -125,7 +125,7 @@ NUGET
       Microsoft.NETCore.Platforms (>= 1.1)
     Newtonsoft.Json (11.0.2)
     NodaTime (2.4.6) - restriction: || (&& (== net47) (>= netstandard2.0)) (== netcoreapp2.1) (== netstandard2.0)
-    Paket.Core (5.216) - restriction: || (&& (== net47) (>= netcoreapp2.0)) (== netcoreapp2.1) (&& (== netstandard2.0) (>= netcoreapp2.0))
+    Paket.Core (5.219) - restriction: || (&& (== net47) (>= netcoreapp2.0)) (== netcoreapp2.1) (&& (== netstandard2.0) (>= netcoreapp2.0))
       Chessie (>= 0.6)
       Mono.Cecil (>= 0.10.0-beta6)
       Newtonsoft.Json (>= 10.0.3) - restriction: || (&& (== net47) (< net45) (>= netstandard2.0)) (== netcoreapp2.1) (== netstandard2.0)
@@ -500,18 +500,18 @@ NUGET
       System.Xml.XmlDocument (>= 4.3)
       System.Xml.XPath (>= 4.3)
   remote: paket-files/github.com/CSBiology/BioFSharp
-    BioFSharp (0.1.01)
+    BioFSharp (0.1.02)
       FSharp.Core
       FSharpAux
       FSharpAux.IO
-    BioFSharp.IO (0.1.01)
-      BioFSharp (>= 0.1.1)
+    BioFSharp.IO (0.1.02)
+      BioFSharp (>= 0.1.2)
       FSharp.Core
       FSharpAux
       FSharpAux.IO
       Newtonsoft.Json (>= 11.0.2)
   remote: paket-files/github.com/CSBiology/BioFSharp.Mz
-    BioFSharp.Mz (0.0.114)
+    BioFSharp.Mz (0.0.116)
       BioFSharp
       BioFSharp.IO
       FSharp.Core
@@ -547,10 +547,10 @@ GIT
      (2293a87e11e175f81af5bddab240b1638f220da0)
       path: /
   remote: https://github.com/CSBiology/BioFSharp.git
-     (1ebc5e62bcc1653707713e32117f807344c31eb3)
+     (54791653e662d64d5b7362f3dfe1dda8fe14623e)
       path: /
   remote: https://github.com/CSBiology/BioFSharp.Mz.git
-     (66a3046409b0e3b09fbe51ebcb0434e6ef480188)
+     (8f7ba5b69f5aebd33ab741dd8cc91c232bfa3dbf)
       path: /
   remote: https://github.com/CSBiology/MzLite.git
      (564daac197c94b24530cde587af991777852a5eb)
