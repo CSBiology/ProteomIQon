@@ -19,6 +19,6 @@
       "Item1": 4,
       "Item2": 10
     },
-    "MatchingIonTolerancePPM": 60.0
+    "MatchingIonTolerancePPM": 100.0
   }
 }

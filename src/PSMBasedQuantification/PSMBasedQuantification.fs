@@ -16,33 +16,6 @@ open BioFSharp
 open BioFSharp.Mz.Quantification
 
 module PSMBasedQuantification = 
-    ///
-    type Result = 
-        {
-        StringSequence               : string;
-        GlobalMod                    : int;
-        Charge                       : int;
-        PrecursorMZ                  : float;
-        MeasuredMass                 : float; 
-        TheoMass                     : float;
-        AbsDeltaMass                 : float;
-        MeanPercolatorScore          : float;
-        QValue                       : float;
-        PEPValue                     : float;
-        ProteinNames                 : string;
-        N14QuantMz                   : float
-        N14Quant                     : float
-        N14Seo                       : float
-        N14Params                    : string
-        N15QuantMz                   : float
-        N15Quant                     : float
-        N15Seo                       : float
-        N15Params                    : string
-        N15Minus1QuantMz             : float
-        N15Minus1Quant               : float
-        N15Minus1Seo                 : float
-        N15Minus1Params              : string
-        }
 
     ///
     let setIndexOnModSequenceAndGlobalMod (cn:SQLiteConnection) =
@@ -153,6 +126,7 @@ module PSMBasedQuantification =
     type InferredPeak = {
         Area                     :float
         StandardErrorOfPrediction:float
+        MeasuredApexIntensity:float
         EstimatedParams          :float[]
         xXic                     :float[]
         yXic                     :float[]
@@ -169,6 +143,7 @@ module PSMBasedQuantification =
             {
                 Area                      = nan
                 StandardErrorOfPrediction = nan
+                MeasuredApexIntensity     = nan
                 EstimatedParams           = [||]
                 xXic                      = [||]
                 yXic                      = [||]
@@ -181,6 +156,7 @@ module PSMBasedQuantification =
             {
                 Area                      = quantP.Area 
                 StandardErrorOfPrediction = quantP.StandardErrorOfPrediction
+                MeasuredApexIntensity     = quantP.MeasuredApexIntensity 
                 EstimatedParams           = quantP.EstimatedParams
                 xXic                      = retData
                 yXic                      = itzData
@@ -329,7 +305,7 @@ module PSMBasedQuantification =
         |> Array.groupBy (fun x -> x.StringSequence,x.Charge,x.GlobalMod)
         |> Array.mapi (fun i ((sequence,ch,globMod),psms) ->
                         try
-                        printfn "%i, sequence = %s,ch = %i,globMod =%i " i sequence ch globMod
+                        printfn "%i,sequence = %s,ch = %i,globMod =%i " i sequence ch globMod
                         let bestQValue,bestPepValue,prots = psms |> Array.minBy (fun x -> x.QValue) |> fun x -> x.QValue, x.PEPValue,x.ProteinNames
                         let psmsWithScanTime = psms |> Array.map (fun x -> x, MassSpectrum.getScanTime (inReader.ReadMassSpectrum(x.PSMId)))
                         let ms2s = psmsWithScanTime |> Array.map (fun (psm, scanTime) -> scanTime,psm.PercolatorScore)
@@ -349,7 +325,7 @@ module PSMBasedQuantification =
                                 averagePSM.WeightedAvgScanTime
                             else 
                                 quantP.EstimatedParams.[1] 
-                        let unlabeledMass   = massLookUp sequence 0
+                        let unlabeledMass  = massLookUp sequence 0
                         let labeledMass    = massLookUp sequence 1
                         if globMod = 0 then 
                             let n15mz          = Mass.toMZ (labeledMass.Value) (ch|> float)
@@ -376,14 +352,17 @@ module PSMBasedQuantification =
                             ProteinNames              = prots  
                             N14QuantMz                = averagePSM.MeanPrecMz   
                             N14Quant                  = quantP.Area  
+                            N14MeasuredApex           = quantP.MeasuredApexIntensity
                             N14Seo                    = quantP.StandardErrorOfPrediction
                             N14Params                 = quantP.EstimatedParams |> Array.map (fun x -> x.ToString()) |> String.concat "; "
                             N15QuantMz                = n15mz  
                             N15Quant                  = n15Inferred.Area   
+                            N15MeasuredApex           = n15Inferred.MeasuredApexIntensity
                             N15Seo                    = n15Inferred.StandardErrorOfPrediction 
                             N15Params                 = n15Inferred.EstimatedParams |> Array.map (fun x -> x.ToString()) |> String.concat "; "
                             N15Minus1QuantMz          = n15Minus1Mz
                             N15Minus1Quant            = n15Minus1Inferred.Area
+                            N15Minus1MeasuredApex     = n15Minus1Inferred.MeasuredApexIntensity
                             N15Minus1Seo              = n15Minus1Inferred.StandardErrorOfPrediction
                             N15Minus1Params           = n15Minus1Inferred.EstimatedParams  |> Array.fold (fun acc x -> acc + " " + x.ToString() + ";") "" 
                             } 
@@ -413,15 +392,18 @@ module PSMBasedQuantification =
                             PEPValue                  = bestPepValue
                             ProteinNames              = prots  
                             N14QuantMz                = n14mz  
-                            N14Quant                  = n14Inferred.Area   
+                            N14Quant                  = n14Inferred.Area
+                            N14MeasuredApex           = n14Inferred.MeasuredApexIntensity
                             N14Seo                    = n14Inferred.StandardErrorOfPrediction 
                             N14Params                 = n14Inferred.EstimatedParams |> Array.fold (fun acc x -> acc + " " + x.ToString() + ";") ""
                             N15QuantMz                = averagePSM.MeanPrecMz   
-                            N15Quant                  = quantP.Area  
+                            N15Quant                  = quantP.Area
+                            N15MeasuredApex           = quantP.MeasuredApexIntensity
                             N15Seo                    = quantP.StandardErrorOfPrediction
                             N15Params                 = quantP.EstimatedParams |> Array.fold (fun acc x -> acc + " " + x.ToString() + ";") ""    
                             N15Minus1QuantMz          = n15Minus1Mz
                             N15Minus1Quant            = n15Minus1Inferred.Area
+                            N15Minus1MeasuredApex     = n15Minus1Inferred.MeasuredApexIntensity
                             N15Minus1Seo              = n15Minus1Inferred.StandardErrorOfPrediction
                             N15Minus1Params           = n15Minus1Inferred.EstimatedParams  |> Array.fold (fun acc x -> acc + " " + x.ToString() + ";") ""    
                             } 
