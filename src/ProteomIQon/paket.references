@@ -14,3 +14,6 @@ MzLite.SQL
 MzLite.Bruker 
 MzLite.Thermo
 MzLite.Wiff
+
+group Logging
+    NLog
