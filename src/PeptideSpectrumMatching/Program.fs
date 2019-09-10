@@ -20,8 +20,8 @@ module console1 =
         Directory.CreateDirectory(o) |> ignore
         let logger = Logging.createLogger (sprintf @"%s\run_log.txt" o) "PeptideSpectrumMatching"
         logger.Info (sprintf "InputFilePath -i = %s" i)
-        logger.Info (sprintf "InputFilePath -o = %s" o)
-        logger.Info (sprintf "InputFilePath -p = %s" p)
+        logger.Info (sprintf "OutputFilePath -o = %s" o)
+        logger.Info (sprintf "ParamFilePath -p = %s" p)
         logger.Trace (sprintf "CLIArguments: %A" results)
         let p = 
             Json.ReadAndDeserialize<Dto.PeptideSpectrumMatchingParams> p
