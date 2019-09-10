@@ -108,8 +108,13 @@ module ProteinInference =
     /// its evidence class.
     ///
     /// No experimental data
-    let createClassItemCollection gff3Path fastAPath regexPattern =
+    let createClassItemCollection gff3Path fastAPath regexPattern outDirectory =
 
+        let logger = Logging.createLogger (sprintf @"%s\run_log.txt" outDirectory) "ProteinInference_createClassItemCollection"
+
+        logger.Trace (sprintf "Regex pattern: %s" regexPattern)
+
+        logger.Trace "Reading FastA sequence"
         let fastASequences =
             try
                 //fileDir + "Chlamy_Cp.fastA"
@@ -126,6 +131,7 @@ module ProteinInference =
         /// Create proteinModelInfos: Group all genevariants (RNA) for the gene loci (gene)
         ///
         /// The proteinModelInfos
+        logger.Trace "Reading GFF3 file"
         let proteinModelInfos =
            try
                 GFF3.fromFileWithoutFasta gff3Path
@@ -135,7 +141,7 @@ module ProteinInference =
                 printfn "ERROR: Could not read gff3 file %s" gff3Path
                 failwithf "%s" err.Message
         //reads from file to an array of FastaItems.
-
+        logger.Trace "Assigning FastA sequences to protein model info"
         /// Assigned fasta sequences to model Infos
         let proteinModels =
             try
@@ -149,7 +155,7 @@ module ProteinInference =
                         | None ->
                             failwithf "Could not find protein with id %s in gff3 File" regMatch.Value
                     else
-                        printfn "Could not extract id of header \"%s\" with regexPattern %s" header regexPattern
+                        logger.Trace (sprintf "Could not extract id of header \"%s\" with regexPattern %s" header regexPattern)
                         createProteinModelInfo header "Placeholder" StrandDirection.Forward (sprintf "Placeholder%i" i) 0 Seq.empty Seq.empty
                         |> fun x -> createProteinModel x sequence
                         |> Some
@@ -158,6 +164,7 @@ module ProteinInference =
             | err ->
                 printfn "Could not assign FastA sequences to RNAs"
                 failwithf "%s" err.Message
+        logger.Trace "Build classification map"
         try
             let ppRelationModel =
                 let digest sequence =
@@ -201,16 +208,20 @@ module ProteinInference =
     let proteinGroupToString (proteinGroup:string[]) =
         Array.reduce (fun x y ->  x + ";" + y) proteinGroup
 
-    let readAndInferFile classItemCollection protein peptide groupFiles outdirectory rawFolderPath=
+    let readAndInferFile classItemCollection protein peptide groupFiles outDirectory rawFolderPath =
+
+        let logger = Logging.createLogger (sprintf @"%s\run_log.txt" outDirectory) "ProteinInference_readAndInferFile"
+
         let rawFilePaths = System.IO.Directory.GetFiles (rawFolderPath, "*.qpsm")
                            |> Array.toList
+        logger.Trace "Map peptide sequences to proteins"
         let classifiedProteins =
             rawFilePaths
             |> List.map (fun filePath ->
                 try
                     let out =
                         let foldername = (rawFolderPath.Split ([|"\\"|], System.StringSplitOptions.None))
-                        outdirectory + @"\" + foldername.[foldername.Length - 1] + "\\" + (System.IO.Path.GetFileNameWithoutExtension filePath) + ".prot"
+                        outDirectory + @"\" + foldername.[foldername.Length - 1] + "\\" + (System.IO.Path.GetFileNameWithoutExtension filePath) + ".prot"
                     let psmInputs =
                         Seq.fromFileWithCsvSchema<PSMInput>(filePath, '\t', true,schemaMode = SchemaModes.Fill)
                         |> Seq.toList
@@ -233,12 +244,14 @@ module ProteinInference =
                 )
 
         if groupFiles then
+            logger.Trace "Create combined list"
             let combinedClasses =
                 List.collect (fun (_,pepSeq,_) -> pepSeq) classifiedProteins
                 |> BioFSharp.Mz.ProteinInference.inferSequences protein peptide
             classifiedProteins
             |> List.iter (fun (inp,prots,out) ->
                 let pepSeqSet = prots |> List.map (fun x -> x.PeptideSequence) |> Set.ofList
+                logger.Trace (sprintf "Start with %s" inp)
                 combinedClasses
                 |> Seq.choose (fun ic ->
                     let filteredPepSet =
@@ -252,11 +265,12 @@ module ProteinInference =
                 |> Seq.map (fun (c,prots,pep) -> OutputProtein.createOutputProtein prots c pep)
                 |> FSharpAux.IO.SeqIO.Seq.toCSV "\t" true
                 |> Seq.write out
+                logger.Trace (sprintf "File written to %s" out)
             )
         else
             classifiedProteins
             |> List.iter (fun (inp,sequences,out) ->
-                printfn "\t\t start inferring %s" inp
+                logger.Trace (sprintf "start inferring %s" inp)
                 BioFSharp.Mz.ProteinInference.inferSequences protein peptide sequences
                 |> Seq.map (fun x -> OutputProtein.createOutputProtein x.GroupOfProteinIDs x.Class (proteinGroupToString x.PeptideSequence))
                 |> FSharpAux.IO.SeqIO.Seq.toCSV "\t" true
@@ -264,7 +278,16 @@ module ProteinInference =
             )
 
     let inferProteins gff3Location fastaLocation (proteinInferenceParams: ProteinInferenceParams) outDirectory rawFolderPath =
-        printfn "Start building ClassItemCollection"
-        let classItemCollection = createClassItemCollection gff3Location fastaLocation proteinInferenceParams.ProteinIdentifierRegex
-        printfn "Classify and Infer Proteins"
+
+        let logger = Logging.createLogger (sprintf @"%s\run_log.txt" outDirectory) "ProteinInference_inferProteins"
+
+        logger.Trace (sprintf "InputFilePath = %s" rawFolderPath)
+        logger.Trace (sprintf "InputFastAPath = %s" fastaLocation)
+        logger.Trace (sprintf "InputGFF3Path = %s" gff3Location)
+        logger.Trace (sprintf "OutputFilePath = %s" outDirectory)
+        logger.Trace (sprintf "Protein inference parameters = %A" proteinInferenceParams)
+
+        logger.Trace "Start building ClassItemCollection"
+        let classItemCollection = createClassItemCollection gff3Location fastaLocation proteinInferenceParams.ProteinIdentifierRegex outDirectory
+        logger.Trace "Classify and Infer Proteins"
         readAndInferFile classItemCollection proteinInferenceParams.Protein proteinInferenceParams.Peptide proteinInferenceParams.GroupFiles outDirectory rawFolderPath
