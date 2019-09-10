@@ -11,7 +11,7 @@ before_install:
  - dotnet restore build.proj
 
 script:
- - dotnet fake build --target Linux
+ - dotnet fake build
 
 branches:
   except:
