@@ -22,6 +22,7 @@ module console1 =
         logger.Info (sprintf "InputFilePath -i = %s" i)
         logger.Info (sprintf "OutputFilePath -o = %s" o)
         logger.Info (sprintf "ParamFilePath -p = %s" p)
+        logger.Info (sprintf "Peptide data base -d = %s" d)
         logger.Trace (sprintf "CLIArguments: %A" results)
         let p = 
             Json.ReadAndDeserialize<Dto.PeptideSpectrumMatchingParams> p
