@@ -208,13 +208,20 @@ module PSMBasedQuantification =
         | Domain.WindowSize.Estimate -> fun yData -> optimizeWindowWidth polynomOrder windowWidthToTest noiseAutoCorrelationMedian yData
     ///
     let quantifyPeptides (processParams:Domain.QuantificationParams) (outputDir:string) (cn:SQLiteConnection) (instrumentOutput:string) (scoredPSMs:string)  =
-        printfn "Now performing Quantification using: %s and %s, Results will be written to: %s" instrumentOutput scoredPSMs outputDir
+
+        let logger = Logging.createLogger (sprintf @"%s\%s_log.txt"outputDir (Path.GetFileNameWithoutExtension instrumentOutput)) "PSMBasedQuantification_quantifyPeptides"
+
+        logger.Trace (sprintf "Input file: %s" instrumentOutput)
+        logger.Trace (sprintf "Output directory: %s" outputDir)
+        logger.Trace (sprintf "Parameters: %A" processParams)
+
+        logger.Trace (sprintf "Now performing Quantification using: %s and %s, Results will be written to: %s" instrumentOutput scoredPSMs outputDir)
 
         // initialize Reader and Transaction
         let outFilePath = 
             let fileName = (Path.GetFileNameWithoutExtension instrumentOutput) + ".quant"
             Path.Combine [|outputDir;fileName|]
-        printfn "outFilePath:%s" outFilePath
+        logger.Trace (sprintf "outFilePath:%s" outFilePath)
 
         //
         let plotDirectory = 
@@ -225,27 +232,27 @@ module PSMBasedQuantification =
             else 
                 System.IO.Directory.CreateDirectory path |> ignore
                 path
-        printfn "plotDirectory:%s" plotDirectory
+        logger.Trace (sprintf "plotDirectory:%s" plotDirectory)
         
-        printfn "Copy peptide DB into Memory"
+        logger.Trace "Copy peptide DB into Memory"
         let memoryDB = SearchDB.copyDBIntoMemory cn 
-        printfn "Copy peptide DB into Memory: finished"
+        logger.Trace "Copy peptide DB into Memory: finished"
         
-        printfn  "Get peptide lookUp function"
+        logger.Trace "Get peptide lookUp function"
         let massLookUp = prepareSelectMassByModSequenceAndGlobalMod memoryDB 
-        printfn  "Get peptide lookUp function: finished"
+        logger.Trace "Get peptide lookUp function: finished"
 
         // initialize Reader and Transaction
-        printfn "Init connection to mass spectrum data." 
+        logger.Trace "Init connection to mass spectrum data."
         let inReader = Core.MzLite.Reader.getReader instrumentOutput  
         let inRunID  = Core.MzLite.Reader.getDefaultRunID inReader
         let inTr = inReader.BeginTransaction()
 
-        printfn "Create RetentionTime index"
+        logger.Trace "Create RetentionTime index"
         let retTimeIdxed = Query.getMS1RTIdx inReader inRunID
-        printfn "Create RetentionTime index:finished"
+        logger.Trace "Create RetentionTime index:finished"
             
-        printfn "Read scored PSMs."
+        logger.Trace "Read scored PSMs."
         ///
         let peptides =
             Csv.CsvReader<PSMStatisticsResult>(SchemaMode=Csv.Fill).ReadFile(scoredPSMs,'\t',false,1)
@@ -257,7 +264,7 @@ module PSMBasedQuantification =
             match processParams.XicExtraction.WindowSize with 
             | Domain.WindowSize.Fixed w  -> fun yData -> w
             | Domain.WindowSize.Estimate ->
-                printfn "Estimate noise autocorrelation"
+                logger.Trace "Estimate noise autocorrelation"
                 try
                 let noiseAutoCorr = 
                     let gpeptides =
@@ -271,9 +278,9 @@ module PSMBasedQuantification =
                     |> Array.take n
                     |> Array.choose (fun ((sequence,ch,globMod),psms) ->
                                     try
-                                    printfn "sequence = %s,ch = %i,globMod = %i " sequence ch globMod
+                                    logger.Trace (sprintf "sequence = %s,ch = %i,globMod = %i " sequence ch globMod)
                                     let psmsWithScanTime = psms |> Array.map (fun x -> x, MassSpectrum.getScanTime (inReader.ReadMassSpectrum(x.PSMId)))
-                                    printfn "quantify target"
+                                    logger.Trace "quantify target"
                                     let averagePSM = average getXIC psmsWithScanTime
                                     let peaks          = Signal.PeakDetection.SecondDerivative.getPeaks 0.1 2 11 averagePSM.X_Xic averagePSM.Y_Xic_uncorrected
                                     let NoNoise = peaks |> Array.map (fun x -> x.XData) |> Array.concat |> Set.ofArray
@@ -290,7 +297,7 @@ module PSMBasedQuantification =
                                         None
                                  )
                 let medianAutoCorr = Seq.median (noiseAutoCorr |> Array.filter (fun x -> nan.Equals(x) |> not) |> Array.sort)
-                printfn "Estimate noise autocorrelation:finished"
+                logger.Trace "Estimate noise autocorrelation:finished"
                 Chart.BoxPlot noiseAutoCorr
                 |> Chart.SaveHtmlAs(Path.Combine[|plotDirectory;"NoiseAutoCorrelation"|])
                 
@@ -305,11 +312,11 @@ module PSMBasedQuantification =
         |> Array.groupBy (fun x -> x.StringSequence,x.Charge,x.GlobalMod)
         |> Array.mapi (fun i ((sequence,ch,globMod),psms) ->
                         try
-                        printfn "%i,sequence = %s,ch = %i,globMod =%i " i sequence ch globMod
+                        logger.Trace (sprintf "%i,sequence = %s,ch = %i,globMod =%i " i sequence ch globMod)
                         let bestQValue,bestPepValue,prots = psms |> Array.minBy (fun x -> x.QValue) |> fun x -> x.QValue, x.PEPValue,x.ProteinNames
                         let psmsWithScanTime = psms |> Array.map (fun x -> x, MassSpectrum.getScanTime (inReader.ReadMassSpectrum(x.PSMId)))
                         let ms2s = psmsWithScanTime |> Array.map (fun (psm, scanTime) -> scanTime,psm.PercolatorScore)
-                        printfn "quantify target"
+                        logger.Trace "quantify target"
                         let averagePSM = average getXIC psmsWithScanTime
                         let avgMass = Mass.ofMZ (averagePSM.MeanPrecMz) (ch |> float)
                         let windowWidth = getWindowWidth averagePSM.Y_Xic_uncorrected
@@ -329,9 +336,9 @@ module PSMBasedQuantification =
                         let labeledMass    = massLookUp sequence 1
                         if globMod = 0 then 
                             let n15mz          = Mass.toMZ (labeledMass.Value) (ch|> float)
-                            printfn "quantify inferred"
+                            logger.Trace "quantify inferred"
                             let n15Inferred    = quantifyInferredPeak processParams.XicExtraction.MinSNR processParams.XicExtraction.PolynomOrder getWindowWidth getXIC n15mz searchScanTime
-                            printfn "quantify n15Minus 1"
+                            logger.Trace "quantify n15Minus 1"
                             let n15Minus1Mz    = n15mz - (Mass.Table.NMassInU / (ch|> float))
                             let n15Minus1Inferred = quantifyInferredPeak processParams.XicExtraction.MinSNR processParams.XicExtraction.PolynomOrder getWindowWidth getXIC n15Minus1Mz searchScanTime
                                 
@@ -370,9 +377,9 @@ module PSMBasedQuantification =
 
                         else
                             let n14mz          = Mass.toMZ (unlabeledMass.Value) (ch|> float)
-                            printfn "quantify inferred"
+                            logger.Trace "quantify inferred"
                             let n14Inferred    = quantifyInferredPeak processParams.XicExtraction.MinSNR processParams.XicExtraction.PolynomOrder getWindowWidth getXIC n14mz searchScanTime
-                            printfn "quantify n15Minus 1"
+                            logger.Trace "quantify n15Minus 1"
                             let n15Minus1Mz    = averagePSM.MeanPrecMz - (Mass.Table.NMassInU / (ch|> float))
                             let n15Minus1Inferred = quantifyInferredPeak processParams.XicExtraction.MinSNR processParams.XicExtraction.PolynomOrder getWindowWidth getXIC n15Minus1Mz searchScanTime
                                                         
