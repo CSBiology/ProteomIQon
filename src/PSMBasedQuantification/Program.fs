@@ -9,67 +9,73 @@ module console1 =
     open BioFSharp.Mz
 
     [<EntryPoint>]
-    let main argv = 
+    let main argv =
         printfn "%A" argv
 
-        let parser = ArgumentParser.Create<CLIArguments>(programName =  (System.Reflection.Assembly.GetExecutingAssembly().GetName().Name)) 
+        let parser = ArgumentParser.Create<CLIArguments>(programName =  (System.Reflection.Assembly.GetExecutingAssembly().GetName().Name))
         let results = parser.Parse argv
         let i = results.GetResult InstrumentOutput
         let ii = results.GetResult ScoredPSMs
         let o = results.GetResult OutputDirectory
         let p = results.GetResult ParamFile
         let d = results.GetResult PeptideDataBase
-        printfn "InputFilePath -i = %s" i
-        printfn "InputFilePath -ii = %s" ii
-        printfn "InputFilePath -o = %s" o
-        printfn "InputFilePath -p = %s" p
+        let logger = Logging.createLogger (sprintf @"%s\run_log.txt" o) "PSMBasedQuantification"
+        logger.Info (sprintf "InputFilePath -i = %s" i)
+        logger.Info (sprintf "ScoredPSMsPath -ii = %s" ii)
+        logger.Info (sprintf "OutputFilePath -o = %s" o)
+        logger.Info (sprintf "ParamFilePath -p = %s" p)
+        logger.Trace (sprintf "CLIArguments: %A" results)
         Directory.CreateDirectory(o) |> ignore
-        let p = 
+        let p =
             Json.ReadAndDeserialize<Dto.QuantificationParams> p
             |> Dto.QuantificationParams.toDomain
-        
-        let dbConnection = 
+
+        let dbConnection =
             if File.Exists d then
+                logger.Trace (sprintf "Database found at given location (%s)" d)
                 SearchDB.getDBConnection d
             else
                 failwith "The given path to the instrument output is neither a valid file path nor a valid directory path."
-        printfn "Set Index on data base if not present."
+        logger.Trace "Set Index on data base if not present."
         setIndexOnModSequenceAndGlobalMod dbConnection |> ignore
-        printfn "Set Index on data base if not present: finished"
+        logger.Trace "Set Index on data base if not present: finished"
 
         if File.Exists i then
-            printfn "singleFile"
+            logger.Info "single file"
             quantifyPeptides p o dbConnection i ii
-        elif Directory.Exists i && Directory.Exists ii then 
-            printfn "multiple files"
-            let mzfiles = 
-                Directory.GetFiles(i,("*.mzlite"))                
-            let pepfiles = 
-                Directory.GetFiles(ii,("*.qpsm"))                
-            let mzFilesAndPepFiles = 
+        elif Directory.Exists i && Directory.Exists ii then
+            logger.Info "multiple files"
+            let mzfiles =
+                Directory.GetFiles(i,("*.mzlite"))
+            let pepfiles =
+                Directory.GetFiles(ii,("*.qpsm"))
+            logger.Trace (sprintf "mz files : %A" mzfiles)
+            logger.Trace (sprintf "PEP files : %A" pepfiles)
+            let mzFilesAndPepFiles =
                 mzfiles
-                |> Array.choose (fun mzFilePath -> 
+                |> Array.choose (fun mzFilePath ->
                                 match pepfiles  |> Array.tryFind (fun pepFilePath -> (Path.GetFileNameWithoutExtension pepFilePath) = (Path.GetFileNameWithoutExtension mzFilePath)) with
                                 | Some pepFile -> Some(mzFilePath,pepFile)
-                                | None -> 
-                                    printfn "no qpsmFileFor %s" mzFilePath
+                                | None ->
+                                    logger.Trace (sprintf "no qpsmFileFor %s" mzFilePath)
                                     None
 
                               )
-            if mzfiles.Length <> mzFilesAndPepFiles.Length then 
-                printfn "There are %i mzFiles but %i files containing scored PSMs" mzfiles.Length pepfiles.Length
-            let c = 
-                match results.TryGetResult Parallelism_Level with 
+            if mzfiles.Length <> mzFilesAndPepFiles.Length then
+                logger.Info (sprintf "There are %i mzFiles but %i files containing scored PSMs" mzfiles.Length pepfiles.Length)
+            let c =
+                match results.TryGetResult Parallelism_Level with
                 | Some c    -> c
                 | None      -> 1
-            mzFilesAndPepFiles 
-            |> FSharpAux.PSeq.map (fun (i,ii) -> quantifyPeptides p o dbConnection i ii) 
+            logger.Trace (sprintf "Program is running on %i cores" c)
+            mzFilesAndPepFiles
+            |> FSharpAux.PSeq.map (fun (i,ii) -> quantifyPeptides p o dbConnection i ii)
             |> FSharpAux.PSeq.withDegreeOfParallelism c
             |> Array.ofSeq
             |> ignore
-        else 
+        else
             failwith "The given path to the instrument output is neither a valid file path nor a valid directory path."
 
-        printfn "Hit any key to exit."
+        logger.Info "Hit any key to exit."
         System.Console.ReadKey() |> ignore
         0
