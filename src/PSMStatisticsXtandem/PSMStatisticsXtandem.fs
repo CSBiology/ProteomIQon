@@ -21,7 +21,7 @@ open BioFSharp.Mz.PercolatorWrapper
 open BioFSharp.Mz.PercolatorWrapper.Parameters
 open System.Reflection
 
-module PSMStatisticsXtandem = 
+module PSMStatistics = 
     open System.IO
 
     type PercolatorIn = {
@@ -85,7 +85,7 @@ module PSMStatisticsXtandem =
         |> String.concat " "
 
     ///
-    let initToPercolatorIn maxCharge fastaHeaderToName proteinAndClvIdxLookUp (psm:Dto.PeptideSpectrumMatchingXtandemResult) =
+    let initToPercolatorIn maxCharge fastaHeaderToName proteinAndClvIdxLookUp (psm:Dto.PeptideSpectrumMatchingResult) =
         let charge =
             let ch = psm.Charge
             Array.init maxCharge (fun i -> if i = ch-1 then 1 else 0)
@@ -162,7 +162,7 @@ module PSMStatisticsXtandem =
         
         printfn "Read scored PSMs."
         let psms =
-            FSharpAux.IO.SchemaReader.Csv.CsvReader<Dto.PeptideSpectrumMatchingXtandemResult>().ReadFile(psms,'\t',false,0)
+            FSharpAux.IO.SchemaReader.Csv.CsvReader<Dto.PeptideSpectrumMatchingResult>().ReadFile(psms,'\t',false,0)
             |> Array.ofSeq
         printfn "Read scored PSMs: finished"
 
@@ -216,7 +216,7 @@ module PSMStatisticsXtandem =
                 |> Seq.map (fun scoredPSM -> scoredPSM .PSMId,scoredPSM )
                 |> Map.ofSeq
 
-            let result: Dto.PSMStatisticsXtandemResult [] =
+            let result: Dto.PSMStatisticsResult [] =
                 psms
                 |> Array.choose (fun candidatePSM ->
                                     match candidatePSM.Label with

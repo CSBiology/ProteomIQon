@@ -41,6 +41,9 @@ module PSMStatistics =
         AndroScore                   : float
         AndroNormDeltaBestToRest     : float
         AndroNormDeltaNext           : float
+        XtandemScore                 : float
+        XtandemNormDeltaBestToRest   : float
+        XtandemNormDeltaNext         : float
         Peptide                      : string
         Protein                      : string 
         }
@@ -127,20 +130,16 @@ module PSMStatistics =
             AndroScore                   = psm.AndroScore
             AndroNormDeltaBestToRest     = psm.AndroNormDeltaBestToRest
             AndroNormDeltaNext           = psm. AndroNormDeltaNext
+            XtandemScore                 = psm.XtandemScore
+            XtandemNormDeltaBestToRest   = psm.XtandemNormDeltaBestToRest
+            XtandemNormDeltaNext         = psm.XtandemNormDeltaNext
             Peptide                      = flankedPepSequence
             Protein                      = proteinNames
         }
              
     ///
     let pepValueCalcAndProteinInference (processParams:PSMStatisticsParams) (outputDir:string) (cn:SQLiteConnection) (psms:string) =
-    
-        let logger = Logging.createLogger (sprintf @"%s\%s_log.txt"outputDir (Path.GetFileNameWithoutExtension psms)) "PSMStatistics_pepValueCalcAndProteinInference"
-
-        logger.Trace (sprintf "Input file: %s" psms)
-        logger.Trace (sprintf "Output directory: %s" outputDir)
-        logger.Trace (sprintf "Parameters: %A" processParams)
-
-        logger.Trace (sprintf "Now performing peptide spectrum matching: %s Results will be written to: %s" psms outputDir)
+        printfn "Now performing peptide spectrum matching: %s Results will be written to: %s" psms outputDir
 
         let percolatorInFilePath = 
             let fileName = (Path.GetFileNameWithoutExtension psms).Replace(" ","") + ".pin"
@@ -154,26 +153,26 @@ module PSMStatistics =
             let fileName = (Path.GetFileNameWithoutExtension psms) + ".qpsm"
             Path.Combine [|outputDir;fileName|]
 
-        logger.Trace (sprintf "outFilePath:%s" outFilePath)
+        printfn "outFilePath:%s" outFilePath
 
-        logger.Trace "Copy peptide DB into Memory"
+        printfn "Copy peptide DB into Memory"
         let memoryDB = SearchDB.copyDBIntoMemory cn 
         let pepDBTr = memoryDB.BeginTransaction()
-        logger.Trace "Copy peptide DB into Memory: finished"
+        printfn "Copy peptide DB into Memory: finished"
         
-        logger.Trace "Read scored PSMs."
+        printfn "Read scored PSMs."
         let psms =
             FSharpAux.IO.SchemaReader.Csv.CsvReader<Dto.PeptideSpectrumMatchingResult>().ReadFile(psms,'\t',false,0)
             |> Array.ofSeq
-        logger.Trace "Read scored PSMs: finished"
+        printfn "Read scored PSMs: finished"
 
-        logger.Trace "Prepare processing functions."
+        printfn "Prepare processing functions."
         let maxCharge = psms |> Array.map (fun x -> x.Charge) |> Array.max
         let proteinAndClvIdxLookUp = initProteinAndClvIdxLookUp memoryDB pepDBTr
         let toPercolatorIn = initToPercolatorIn maxCharge processParams.FastaHeaderToName proteinAndClvIdxLookUp
-        logger.Trace "Finished preparing processing functions."
+        printfn "Finished preparing processing functions."
         
-        logger.Trace "Converting psms to percolatorIn format."
+        printfn "Converting psms to percolatorIn format."
         let percolatorIn =
             psms
             |> Array.map toPercolatorIn
@@ -184,17 +183,17 @@ module PSMStatistics =
             |> Array.filter (fun candidatePSM -> candidatePSM.Label = 1)
             |> Array.map (fun candidatePSM -> candidatePSM.PSMId,(candidatePSM.Protein,candidatePSM.MissCleavages))
             |> Map.ofArray
-        logger.Trace "Converting psms to percolatorIn format: finished"
+        printfn "Converting psms to percolatorIn format: finished"
         
-        logger.Trace "Writing percolatorIn.tab. to disk"
+        printfn "Writing percolatorIn.tab. to disk"
         percolatorIn
         |> FSharpAux.IO.SeqIO.Seq.toCSV "\t" true
         |> Seq.map (fun x -> FSharpAux.String.replace ";" "\t" x)
         |> FSharpAux.IO.FileIO.writeToFile false percolatorInFilePath
-        logger.Trace "Writing percolatorIn.tab. to disk:finished"
+        printfn "Writing percolatorIn.tab. to disk:finished"
  
 
-        logger.Trace "Executing Percolator"
+        printfn "Executing Percolator"
         let percolatorParams =
             [
             PercolatorParams.GeneralOptions  [(GeneralOptions.PostProcessing_TargetDecoyCompetition)]
@@ -205,10 +204,10 @@ module PSMStatistics =
             let percPath = 
                 let assembly = Assembly.GetExecutingAssembly()
                 System.IO.FileInfo(assembly.Location).DirectoryName + @"\percolator-v3-01\bin\percolator.exe"
-            logger.Trace (sprintf "\tlooking for percolator at %s" percPath)
+            printfn "\tlooking for percolator at %s" percPath
             let percolator = new PercolatorWrapper(OperatingSystem.Windows,percPath)
             percolator.Percolate percolatorParams
-        logger.Trace "Executing Percolator:finished"
+        printfn "Executing Percolator:finished"
 
         try
             let scoredPSMs =
@@ -246,14 +245,19 @@ module PSMStatistics =
                                             AndroScore                  = candidatePSM.AndroScore
                                             AndroNormDeltaBestToRest    = candidatePSM.AndroNormDeltaBestToRest
                                             AndroNormDeltaNext          = candidatePSM.AndroNormDeltaNext
+                                            XtandemScore                = candidatePSM.XtandemScore
+                                            XtandemNormDeltaBestToRest  = candidatePSM.XtandemNormDeltaBestToRest
+                                            XtandemNormDeltaNext        = candidatePSM.XtandemNormDeltaNext
                                             PercolatorScore             = validPSM.PercolatorScore
                                             QValue                      = validPSM.QValue
                                             PEPValue                    = validPSM.PosteriorErrorProbability
                                             StringSequence              = candidatePSM.StringSequence
                                             ProteinNames                = proteins 
                                             }
-                                        | None -> None
-                                    | _ -> None
+                                        | None  -> 
+                                            None
+                                    | _ -> 
+                                        None
                                 )
 
             result
@@ -264,5 +268,5 @@ module PSMStatistics =
         | ex ->
             printfn "%A" ex.Message
             ()
-        logger.Trace "Done."
+        printfn "Done."
          

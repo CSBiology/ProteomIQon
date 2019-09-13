@@ -242,54 +242,6 @@ module Dto =
         [<FieldAttribute(18)>]
         AndroNormDeltaNext           : float
         [<FieldAttribute(19)>]
-        StringSequence               : string
-        [<FieldAttribute(20)>]
-        ProteinNames                 : string
-        }
-
-    type PeptideSpectrumMatchingXtandemResult =
-        {
-        // a combination of the spectrum ID in the rawFile, the ascending ms2 id and the chargeState in the search space seperated by '_'
-        [<FieldAttribute(0)>]
-        PSMId                        : string
-        [<FieldAttribute(1)>]
-        GlobalMod                    : int
-        [<FieldAttribute(2)>]
-        PepSequenceID                : int
-        [<FieldAttribute(3)>]
-        ModSequenceID                : int
-        [<FieldAttribute(4)>]
-        Label                        : int
-        // ascending ms2 id (file specific)
-        [<FieldAttribute(5)>]
-        ScanNr                       : int
-        [<FieldAttribute(6)>]
-        ScanTime                     : float
-        [<FieldAttribute(7)>]
-        Charge                       : int
-        [<FieldAttribute(8)>]
-        PrecursorMZ                  : float
-        [<FieldAttribute(9)>]
-        TheoMass                     : float
-        [<FieldAttribute(10)>]
-        AbsDeltaMass                 : float
-        [<FieldAttribute(11)>]
-        PeptideLength                : int
-        [<FieldAttribute(12)>]
-        MissCleavages                : int
-        [<FieldAttribute(13)>]
-        SequestScore                 : float
-        [<FieldAttribute(14)>]
-        SequestNormDeltaBestToRest   : float
-        [<FieldAttribute(15)>]
-        SequestNormDeltaNext         : float
-        [<FieldAttribute(16)>]
-        AndroScore                   : float
-        [<FieldAttribute(17)>]
-        AndroNormDeltaBestToRest     : float
-        [<FieldAttribute(18)>]
-        AndroNormDeltaNext           : float
-        [<FieldAttribute(19)>]
         XtandemScore                 : float
         [<FieldAttribute(20)>]
         XtandemNormDeltaBestToRest   : float
@@ -320,59 +272,6 @@ module Dto =
             }
 
     type PSMStatisticsResult = {
-        // a combination of the spectrum ID in the rawFile, the ascending ms2 id and the chargeState in the search space seperated by '_'
-        [<FieldAttribute(0)>]
-        PSMId                        : string;
-        [<FieldAttribute(1)>]
-        GlobalMod                    : int
-        [<FieldAttribute(2)>]
-        PepSequenceID                : int
-        [<FieldAttribute(3)>]
-        ModSequenceID                : int
-        [<FieldAttribute(4)>]
-        Label                        : int
-        // ascending ms2 id (file specific)
-        [<FieldAttribute(5)>]
-        ScanNr                       : int;
-        [<FieldAttribute(6)>]
-        ScanTime                     : float
-        [<FieldAttribute(7)>]
-        Charge                       : int;
-        [<FieldAttribute(8)>]
-        PrecursorMZ                  : float
-        [<FieldAttribute(9)>]
-        TheoMass                     : float;
-        [<FieldAttribute(10)>]
-        AbsDeltaMass                 : float;
-        [<FieldAttribute(11)>]
-        PeptideLength                : int;
-        [<FieldAttribute(12)>]
-        MissCleavages                : int;
-        [<FieldAttribute(13)>]
-        SequestScore                 : float;
-        [<FieldAttribute(14)>]
-        SequestNormDeltaBestToRest   : float;
-        [<FieldAttribute(15)>]
-        SequestNormDeltaNext         : float;
-        [<FieldAttribute(16)>]
-        AndroScore                   : float;
-        [<FieldAttribute(17)>]
-        AndroNormDeltaBestToRest     : float;
-        [<FieldAttribute(18)>]
-        AndroNormDeltaNext           : float;
-        [<FieldAttribute(19)>]
-        PercolatorScore              : float;
-        [<FieldAttribute(20)>]
-        QValue                       : float;
-        [<FieldAttribute(21)>]
-        PEPValue                     : float;
-        [<FieldAttribute(22)>]
-        StringSequence               : string;
-        [<FieldAttribute(23)>]
-        ProteinNames                 : string;
-        }
-
-    type PSMStatisticsXtandemResult = {
         // a combination of the spectrum ID in the rawFile, the ascending ms2 id and the chargeState in the search space seperated by '_'
         [<FieldAttribute(0)>]
         PSMId                        : string
