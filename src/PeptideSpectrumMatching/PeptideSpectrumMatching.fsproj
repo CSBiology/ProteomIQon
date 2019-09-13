@@ -11,7 +11,6 @@
   </PropertyGroup>
   <ItemGroup>
     <None Include="App.config" />
-    <Compile Include="PeptideSpectrumMatching - Copy.fs" />
     <Compile Include="PeptideSpectrumMatching.fs" />
     <Compile Include="CLIArgumentParsing.fs" />
     <Compile Include="Program.fs" />
