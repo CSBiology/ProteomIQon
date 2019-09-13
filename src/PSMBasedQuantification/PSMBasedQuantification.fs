@@ -339,8 +339,8 @@ module PSMBasedQuantification =
                             let n15Minus1Mz    = n15mz - (Mass.Table.NMassInU / (ch|> float))
                             let n15Minus1Inferred = quantifyInferredPeak processParams.XicExtraction.MinSNR processParams.XicExtraction.PolynomOrder getWindowWidth getXIC n15Minus1Mz searchScanTime
 
-                            let chart = saveChart windowWidth sequence globMod ch averagePSM.X_Xic averagePSM.Y_Xic ms2s averagePSM.WeightedAvgScanTime
-                                                peakToQuantify.XData peakToQuantify.YData quantP.YPredicted n15Inferred.xXic n15Inferred.yXic n15Inferred.xXic n15Inferred.yFitted plotDirectory
+                            //let chart = saveChart windowWidth sequence globMod ch averagePSM.X_Xic averagePSM.Y_Xic ms2s averagePSM.WeightedAvgScanTime
+                            //                    peakToQuantify.XData peakToQuantify.YData quantP.YPredicted n15Inferred.xXic n15Inferred.yXic n15Inferred.xXic n15Inferred.yFitted plotDirectory
 
                             {
                             StringSequence            = sequence
@@ -380,8 +380,8 @@ module PSMBasedQuantification =
                             let n15Minus1Mz    = averagePSM.MeanPrecMz - (Mass.Table.NMassInU / (ch|> float))
                             let n15Minus1Inferred = quantifyInferredPeak processParams.XicExtraction.MinSNR processParams.XicExtraction.PolynomOrder getWindowWidth getXIC n15Minus1Mz searchScanTime
 
-                            let chart = saveChart windowWidth sequence globMod ch averagePSM.X_Xic averagePSM.Y_Xic ms2s averagePSM.WeightedAvgScanTime
-                                                peakToQuantify.XData peakToQuantify.YData quantP.YPredicted n14Inferred.xXic n14Inferred.yXic n14Inferred.xXic n14Inferred.yFitted plotDirectory
+                            //let chart = saveChart windowWidth sequence globMod ch averagePSM.X_Xic averagePSM.Y_Xic ms2s averagePSM.WeightedAvgScanTime
+                            //                    peakToQuantify.XData peakToQuantify.YData quantP.YPredicted n14Inferred.xXic n14Inferred.yXic n14Inferred.xXic n14Inferred.yFitted plotDirectory
 
                             {
                             StringSequence            = sequence

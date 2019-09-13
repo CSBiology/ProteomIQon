@@ -220,7 +220,7 @@ module PeptideSpectrumMatching =
                                                     | true ->
                                                         match Map.tryFind (androRes.ModSequenceID,androRes.GlobalMod) bestTargetSequest with
                                                         | Some sequestScore ->
-                                                            let res i : Dto.PeptideSpectrumMatchingXtandemResult = 
+                                                            let res i : Dto.PeptideSpectrumMatchingResult = 
                                                                 let pSMId i = androRes.SpectrumID.Replace(' ', '-') + "_" + ascendingID.ToString() + "_" + ch.ToString() + "_" + i.ToString()
                                                                 {                                                                        
                                                                     PSMId                        = pSMId i
@@ -253,7 +253,7 @@ module PeptideSpectrumMatching =
                                                     | false ->
                                                         match Map.tryFind (androRes.ModSequenceID,androRes.GlobalMod) bestDecoySequest with
                                                         | Some sequestScore ->
-                                                            let res i : Dto.PeptideSpectrumMatchingXtandemResult = 
+                                                            let res i : Dto.PeptideSpectrumMatchingResult = 
                                                                 let pSMId i = androRes.SpectrumID.Replace(' ', '-') + "_" + ascendingID.ToString() + "_" + ch.ToString() + "_" + i.ToString()
                                                                             
                                                                 {                                                                        
