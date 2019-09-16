@@ -139,7 +139,14 @@ module PSMStatistics =
              
     ///
     let pepValueCalcAndProteinInference (processParams:PSMStatisticsParams) (outputDir:string) (cn:SQLiteConnection) (psms:string) =
-        printfn "Now performing peptide spectrum matching: %s Results will be written to: %s" psms outputDir
+
+        let logger = Logging.createLogger (sprintf @"%s\%s_log.txt"outputDir (Path.GetFileNameWithoutExtension psms)) "PSMStatistics_pepValueCalcAndProteinInference"
+
+        logger.Trace (sprintf "Input file: %s" psms)
+        logger.Trace (sprintf "Output directory: %s" outputDir)
+        logger.Trace (sprintf "Parameters: %A" processParams)
+
+        logger.Trace (sprintf "Now performing peptide spectrum matching: %s Results will be written to: %s" psms outputDir)
 
         let percolatorInFilePath = 
             let fileName = (Path.GetFileNameWithoutExtension psms).Replace(" ","") + ".pin"
@@ -149,30 +156,37 @@ module PSMStatistics =
             let fileName = (Path.GetFileNameWithoutExtension percolatorInFilePath) + ".spsm"
             Path.Combine [|outputDir;fileName|]
 
+        //let percolatorDecoyOutFilePath = 
+        //    let fileName = (Path.GetFileNameWithoutExtension percolatorInFilePath) + "_decoy.spsm"
+        //    Path.Combine [|outputDir;fileName|]
+
         let outFilePath = 
             let fileName = (Path.GetFileNameWithoutExtension psms) + ".qpsm"
             Path.Combine [|outputDir;fileName|]
 
-        printfn "outFilePath:%s" outFilePath
+        logger.Trace (sprintf "percolatorInFilePath:%s" percolatorInFilePath)
+        logger.Trace (sprintf "percolatorOutFilePath:%s" percolatorOutFilePath)
+        //logger.Trace (sprintf "percolatorDecoyOutFilePath:%s" percolatorDecoyOutFilePath)
+        logger.Trace (sprintf "outFilePath:%s" outFilePath)
 
-        printfn "Copy peptide DB into Memory"
+        logger.Trace "Copy peptide DB into Memory"
         let memoryDB = SearchDB.copyDBIntoMemory cn 
         let pepDBTr = memoryDB.BeginTransaction()
-        printfn "Copy peptide DB into Memory: finished"
+        logger.Trace "Copy peptide DB into Memory: finished"
         
-        printfn "Read scored PSMs."
+        logger.Trace "Read scored PSMs."
         let psms =
             FSharpAux.IO.SchemaReader.Csv.CsvReader<Dto.PeptideSpectrumMatchingResult>().ReadFile(psms,'\t',false,0)
             |> Array.ofSeq
-        printfn "Read scored PSMs: finished"
+        logger.Trace "Read scored PSMs: finished"
 
-        printfn "Prepare processing functions."
+        logger.Trace "Prepare processing functions."
         let maxCharge = psms |> Array.map (fun x -> x.Charge) |> Array.max
         let proteinAndClvIdxLookUp = initProteinAndClvIdxLookUp memoryDB pepDBTr
         let toPercolatorIn = initToPercolatorIn maxCharge processParams.FastaHeaderToName proteinAndClvIdxLookUp
-        printfn "Finished preparing processing functions."
+        logger.Trace "Finished preparing processing functions."
         
-        printfn "Converting psms to percolatorIn format."
+        logger.Trace "Converting psms to percolatorIn format."
         let percolatorIn =
             psms
             |> Array.map toPercolatorIn
@@ -183,31 +197,32 @@ module PSMStatistics =
             |> Array.filter (fun candidatePSM -> candidatePSM.Label = 1)
             |> Array.map (fun candidatePSM -> candidatePSM.PSMId,(candidatePSM.Protein,candidatePSM.MissCleavages))
             |> Map.ofArray
-        printfn "Converting psms to percolatorIn format: finished"
+        logger.Trace "Converting psms to percolatorIn format: finished"
         
-        printfn "Writing percolatorIn.tab. to disk"
+        logger.Trace "Writing percolatorIn.tab. to disk"
         percolatorIn
         |> FSharpAux.IO.SeqIO.Seq.toCSV "\t" true
         |> Seq.map (fun x -> FSharpAux.String.replace ";" "\t" x)
         |> FSharpAux.IO.FileIO.writeToFile false percolatorInFilePath
-        printfn "Writing percolatorIn.tab. to disk:finished"
+        logger.Trace "Writing percolatorIn.tab. to disk: finished"
  
 
-        printfn "Executing Percolator"
+        logger.Trace "Executing Percolator"
         let percolatorParams =
             [
             PercolatorParams.GeneralOptions  [(GeneralOptions.PostProcessing_TargetDecoyCompetition)]
             PercolatorParams.FileInputOptions [(FileInputOptions.PINTAB (System.IO.FileInfo(percolatorInFilePath)))]
             PercolatorParams.FileOutputOptions [(FileOutputOptions.POUTTAB_PSMs (System.IO.FileInfo(percolatorOutFilePath)));];
+            //PercolatorParams.FileOutputOptions [(FileOutputOptions.POUTTAB_DecoyPSMs (System.IO.FileInfo(percolatorDecoyOutFilePath)))]
             ]
         let executePercolator =
             let percPath = 
                 let assembly = Assembly.GetExecutingAssembly()
                 System.IO.FileInfo(assembly.Location).DirectoryName + @"\percolator-v3-01\bin\percolator.exe"
-            printfn "\tlooking for percolator at %s" percPath
+            logger.Trace (sprintf "\tlooking for percolator at %s" percPath)
             let percolator = new PercolatorWrapper(OperatingSystem.Windows,percPath)
             percolator.Percolate percolatorParams
-        printfn "Executing Percolator:finished"
+        logger.Trace "Executing Percolator:finished"
 
         try
             let scoredPSMs =
@@ -268,5 +283,5 @@ module PSMStatistics =
         | ex ->
             printfn "%A" ex.Message
             ()
-        printfn "Done."
+        logger.Trace "Done."
          
