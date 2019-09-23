@@ -20,7 +20,7 @@ module Preprocessing =
     let private initPeakPicking (reader:IMzLiteDataReader) (peakPickingParams:PeakPicking) (outputDir:string) (instrumentOutput:string)=
 
         //outputDir and instrumentOutput only added for logger
-        let logger = Logging.createLogger (sprintf @"%s\%s_log.txt"outputDir (Path.GetFileNameWithoutExtension instrumentOutput)) "Preprocessing_initPeakPicking"
+        let logger = Logging.createLogger (Path.GetFileNameWithoutExtension instrumentOutput)
 
         match reader, peakPickingParams with
         | :? BafFileReader as r, PeakPicking.Centroid CentroidizationMode.Manufacturer ->
@@ -125,7 +125,7 @@ module Preprocessing =
 
     let processFile (processParams:PreprocessingParams) (outputDir:string) (instrumentOutput:string) =
 
-        let logger = Logging.createLogger (sprintf @"%s\%s_log.txt"outputDir (Path.GetFileNameWithoutExtension instrumentOutput)) "Preprocessing_processFile"
+        let logger = Logging.createLogger (Path.GetFileNameWithoutExtension instrumentOutput)
 
         logger.Trace (sprintf "Input file: %s" instrumentOutput)
         logger.Trace (sprintf "Output directory: %s" outputDir)

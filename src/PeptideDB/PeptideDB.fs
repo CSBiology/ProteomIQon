@@ -9,7 +9,7 @@ module PeptideDB =
 
     let createPeptideDB (processParams:PeptideDBParams) (outputDir:string) =
 
-        let logger = Logging.createLogger (sprintf @"%s\PeptideDB_log.txt" outputDir) "PeptideDB_createPeptideDB"
+        let logger = Logging.createLogger (sprintf "PeptideDB_%s" processParams.Name)
 
         let searchDBParams :SearchDB.SearchDbParams =
             {

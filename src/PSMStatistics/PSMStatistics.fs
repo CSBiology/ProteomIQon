@@ -140,7 +140,7 @@ module PSMStatistics =
     ///
     let pepValueCalcAndProteinInference (processParams:PSMStatisticsParams) (outputDir:string) (cn:SQLiteConnection) (psms:string) =
 
-        let logger = Logging.createLogger (sprintf @"%s\%s_log.txt"outputDir (Path.GetFileNameWithoutExtension psms)) "PSMStatistics_pepValueCalcAndProteinInference"
+        let logger = Logging.createLogger (Path.GetFileNameWithoutExtension psms)
 
         logger.Trace (sprintf "Input file: %s" psms)
         logger.Trace (sprintf "Output directory: %s" outputDir)

@@ -206,7 +206,7 @@ module PSMBasedQuantification =
     ///
     let quantifyPeptides (processParams:Domain.QuantificationParams) (outputDir:string) (cn:SQLiteConnection) (instrumentOutput:string) (scoredPSMs:string)  =
 
-        let logger = Logging.createLogger (sprintf @"%s\%s_log.txt"outputDir (Path.GetFileNameWithoutExtension scoredPSMs)) "PSMBasedQuantification_quantifyPeptides"
+        let logger = Logging.createLogger (Path.GetFileNameWithoutExtension scoredPSMs)
 
         logger.Trace (sprintf "Input file: %s" instrumentOutput)
         logger.Trace (sprintf "Output directory: %s" outputDir)

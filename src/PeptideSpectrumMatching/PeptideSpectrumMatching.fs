@@ -139,7 +139,7 @@ module PeptideSpectrumMatching =
         positionMetricScoredCharges
 
     let psm (processParams:PeptideSpectrumMatchingParams) lookUpF calcIonSeries (reader: IMzLiteDataReader) (outFilePath: string) (ms2sAndAssignedCharges: AssignedCharge list list) =
-        let logger = Logging.createLogger (sprintf @"%s\%s_log.txt" (System.IO.Path.GetDirectoryName outFilePath) (Path.GetFileNameWithoutExtension outFilePath)) "PeptideSpectrumMatching_psm"
+        let logger = Logging.createLogger (Path.GetFileNameWithoutExtension outFilePath)
         let resultWriter = new System.IO.StreamWriter(outFilePath, true)
         let (ms2IDAssignedCharge) =
                 ms2sAndAssignedCharges
@@ -312,7 +312,7 @@ module PeptideSpectrumMatching =
 
     let scoreSpectra (processParams:PeptideSpectrumMatchingParams) (outputDir:string) (cn:SQLiteConnection) (instrumentOutput:string) =
 
-        let logger = Logging.createLogger (sprintf @"%s\%s_log.txt"outputDir (Path.GetFileNameWithoutExtension instrumentOutput)) "PeptideSpectrumMatching_scoreSpectra"
+        let logger = Logging.createLogger (Path.GetFileNameWithoutExtension instrumentOutput)
 
         logger.Trace (sprintf "Input file: %s" instrumentOutput)
         logger.Trace (sprintf "Output directory: %s" outputDir)

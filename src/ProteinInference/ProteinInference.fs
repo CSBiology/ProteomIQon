@@ -110,7 +110,7 @@ module ProteinInference =
     /// No experimental data
     let createClassItemCollection gff3Path fastAPath regexPattern outDirectory =
 
-        let logger = Logging.createLogger (sprintf @"%s\run_log.txt" outDirectory) "ProteinInference_createClassItemCollection"
+        let logger = Logging.createLogger "ProteinInference_createClassItemCollection"
 
         logger.Trace (sprintf "Regex pattern: %s" regexPattern)
 
@@ -210,7 +210,7 @@ module ProteinInference =
 
     let readAndInferFile classItemCollection protein peptide groupFiles outDirectory rawFolderPath =
 
-        let logger = Logging.createLogger (sprintf @"%s\run_log.txt" outDirectory) "ProteinInference_readAndInferFile"
+        let logger = Logging.createLogger "ProteinInference_readAndInferFile"
 
         let rawFilePaths = System.IO.Directory.GetFiles (rawFolderPath, "*.qpsm")
                            |> Array.toList
@@ -279,7 +279,7 @@ module ProteinInference =
 
     let inferProteins gff3Location fastaLocation (proteinInferenceParams: ProteinInferenceParams) outDirectory rawFolderPath =
 
-        let logger = Logging.createLogger (sprintf @"%s\run_log.txt" outDirectory) "ProteinInference_inferProteins"
+        let logger = Logging.createLogger "ProteinInference_inferProteins"
 
         logger.Trace (sprintf "InputFilePath = %s" rawFolderPath)
         logger.Trace (sprintf "InputFastAPath = %s" fastaLocation)
