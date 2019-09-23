@@ -19,7 +19,8 @@ module console1 =
         let o = results.GetResult OutputDirectory
         let p = results.GetResult ParamFile
         let d = results.GetResult PeptideDataBase
-        let logger = Logging.createLogger (sprintf @"%s\run_log.txt" o) "PSMBasedQuantification"
+        Logging.generateConfig o
+        let logger = Logging.createLogger "PSMBasedQuantification"
         logger.Info (sprintf "InputFilePath -i = %s" i)
         logger.Info (sprintf "ScoredPSMsPath -ii = %s" ii)
         logger.Info (sprintf "OutputFilePath -o = %s" o)

@@ -16,7 +16,8 @@ module console1 =
         let gff3  = results.GetResult GFF3
         let o     = results.GetResult OutputDirectory
         let p     = results.GetResult ParamFile
-        let logger = Logging.createLogger (sprintf @"%s\run_log.txt" o) "ProteinInference"
+        Logging.generateConfig o
+        let logger = Logging.createLogger "ProteinInference"
         logger.Info (sprintf "InputFilePath -i = %s" i)
         logger.Info (sprintf "InputFastAPath -f = %s" fastA)
         logger.Info (sprintf "InputGFF3Path -g = %s" gff3)

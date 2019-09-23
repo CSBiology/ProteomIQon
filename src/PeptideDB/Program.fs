@@ -16,7 +16,8 @@ module console1 =
         let paramF = results.TryGetResult ParamFile
         match outputDir, paramF with
         | Some o , Some p ->
-            let logger = Logging.createLogger (sprintf @"%s\db_log.txt" o) "PeptideDB"
+            Logging.generateConfig outputDir.Value
+            let logger = Logging.createLogger "PeptideDB"
             logger.Trace (sprintf "CLIArguments %A" results)
             logger.Info (sprintf "OutputFilePath %s" o)
             logger.Info (sprintf "ParamFilePath %s" p)

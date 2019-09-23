@@ -18,7 +18,8 @@ module console1 =
         let p = results.GetResult ParamFile
         let d = results.GetResult PeptideDataBase
         Directory.CreateDirectory(o) |> ignore
-        let logger = Logging.createLogger (sprintf @"%s\run_log.txt" o) "PeptideSpectrumMatching"
+        Logging.generateConfig o
+        let logger = Logging.createLogger "PeptideSpectrumMatching"
         logger.Info (sprintf "InputFilePath -i = %s" i)
         logger.Info (sprintf "OutputFilePath -o = %s" o)
         logger.Info (sprintf "ParamFilePath -p = %s" p)
