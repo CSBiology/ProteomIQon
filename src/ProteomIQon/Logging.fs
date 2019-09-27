@@ -7,19 +7,20 @@ open NLog.Config
 module Logging =
 
     let generateConfig (folderPath: string)= 
+        //initializes base configuration class, can be modified
         let config = new LoggingConfiguration()
 
         //initialises base console target, can be modified
         let consoleTarget = new ColoredConsoleTarget("console")
         //new parameters for console target
-        let layoutConsole = new Layouts.SimpleLayout (@"${date:format=HH\:mm\:ss} ${level}  ${message} ${exception}")
+        let layoutConsole = new Layouts.SimpleLayout (@"${date:format=HH\:mm\:ss} ${level} ${message} ${exception}")
         consoleTarget.Layout <- layoutConsole
 
         //initialises base file target, can be modified
         let fileTarget = new FileTarget("file")
         //new parameters for file target
         let fileName = new Layouts.SimpleLayout (sprintf @"%s\${logger}_log.txt" folderPath)
-        let layoutFile = new Layouts.SimpleLayout ("${longdate} ${logger} ${level:uppercase=true} ${message}  ${exception}")
+        let layoutFile = new Layouts.SimpleLayout ("${longdate} ${logger} ${level:uppercase=true} ${message} ${exception}")
         fileTarget.FileName <- fileName
         fileTarget.Layout <- layoutFile
 
@@ -35,7 +36,6 @@ module Logging =
         LogManager.Configuration <- config
 
     let createLogger (loggerName: string) = 
-        //initializes base configuration class, can be modified
 
 
         //new instance of "Logger" with activated config
