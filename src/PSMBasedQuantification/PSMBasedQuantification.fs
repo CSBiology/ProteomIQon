@@ -14,6 +14,7 @@ open FSharpAux.IO.SchemaReader
 open FSharp.Plotly
 open BioFSharp
 open BioFSharp.Mz.Quantification
+open MzIO.Processing
 
 module PSMBasedQuantification =
 
@@ -276,7 +277,7 @@ module PSMBasedQuantification =
                     |> Array.choose (fun ((sequence,ch,globMod),psms) ->
                                     try
                                     logger.Trace (sprintf "sequence = %s,ch = %i,globMod = %i " sequence ch globMod)
-                                    let psmsWithScanTime = psms |> Array.map (fun x -> x, MassSpectrum.getScanTime (inReader.ReadMassSpectrum(x.PSMId)))
+                                    let psmsWithScanTime = psms |> Array.map (fun x -> x, AccessMassSpectrum.getScanTime (inReader.ReadMassSpectrum(x.PSMId)))
                                     logger.Trace "quantify target"
                                     let averagePSM = average getXIC psmsWithScanTime
                                     let peaks          = Signal.PeakDetection.SecondDerivative.getPeaks 0.1 2 11 averagePSM.X_Xic averagePSM.Y_Xic_uncorrected
@@ -311,7 +312,7 @@ module PSMBasedQuantification =
                         try
                         logger.Trace (sprintf "%i,sequence = %s,ch = %i,globMod =%i " i sequence ch globMod)
                         let bestQValue,bestPepValue,prots = psms |> Array.minBy (fun x -> x.QValue) |> fun x -> x.QValue, x.PEPValue,x.ProteinNames
-                        let psmsWithScanTime = psms |> Array.map (fun x -> x, MassSpectrum.getScanTime (inReader.ReadMassSpectrum(x.PSMId)))
+                        let psmsWithScanTime = psms |> Array.map (fun x -> x, AccessMassSpectrum.getScanTime (inReader.ReadMassSpectrum(x.PSMId)))
                         let ms2s = psmsWithScanTime |> Array.map (fun (psm, scanTime) -> scanTime,psm.PercolatorScore)
                         logger.Trace "quantify target"
                         let averagePSM = average getXIC psmsWithScanTime
