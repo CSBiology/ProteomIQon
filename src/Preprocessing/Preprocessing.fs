@@ -2,22 +2,22 @@ namespace ProteomIQon
 
 open Domain
 open Core
-open Logary
 open System.IO
-open MzLite
 open BioFSharp.Mz
-open MzLite.Model
-open MzLite.Binary
 open Core.MzLite.Reader
-open Core.MzLite.Peaks
-open MzLite.Bruker
+open MzIO
+open MzIO.Binary
+open MzIO.Model
+open MzIO.Processing
+open MzIO.Bruker
+open MzIO.IO
+open MzIO.MzSQL
+open Core.MzLite
 
 module Preprocessing =
-    open MzLite.IO
-    open MzLite.SQL
 
     ///
-    let private initPeakPicking (reader:IMzLiteDataReader) (peakPickingParams:PeakPicking) (outputDir:string) (instrumentOutput:string)=
+    let private initPeakPicking (reader:IMzIODataReader) (peakPickingParams:PeakPicking) (outputDir:string) (instrumentOutput:string)=
 
         //outputDir and instrumentOutput only added for logger
         let logger = Logging.createLogger (Path.GetFileNameWithoutExtension instrumentOutput)
@@ -26,11 +26,11 @@ module Preprocessing =
         | :? BafFileReader as r, PeakPicking.Centroid CentroidizationMode.Manufacturer ->
             fun (massSpec:MassSpectrum) ->
                 r.ReadSpectrumPeaks(massSpec.ID,true).Peaks
-                |> unzipIMzliteArray
+                |> Core.MzLite.Peaks.unzipIMzliteArray
         | _ as r , PeakPicking.ProfilePeaks ->
             fun (massSpec:MassSpectrum) ->
                 r.ReadSpectrumPeaks(massSpec.ID).Peaks
-                |> unzipIMzliteArray
+                |> Core.MzLite.Peaks.unzipIMzliteArray
         | _ as r , PeakPicking.Centroid (CentroidizationMode.Wavelet waveletParams) ->
             match waveletParams.PaddingParams with
             | Some pParams ->
@@ -55,7 +55,7 @@ module Preprocessing =
                     fun (massSpec:MassSpectrum) ->
                         let mzData, intensityData =
                             r.ReadSpectrumPeaks(massSpec.ID).Peaks
-                            |> unzipIMzliteArray
+                            |> Core.MzLite.Peaks.unzipIMzliteArray
                         let paddedMz,paddedIntensity =
                             SignalDetection.Padding.paddDataBy paddingParams mzData intensityData
                         BioFSharp.Mz.SignalDetection.Wavelet.toCentroidWithRicker2D waveletParameters paddedMz paddedIntensity
@@ -64,7 +64,7 @@ module Preprocessing =
                     fun (massSpec:MassSpectrum) ->
                         let mzData, intensityData =
                             r.ReadSpectrumPeaks(massSpec.ID).Peaks
-                            |> unzipIMzliteArray
+                            |> Core.MzLite.Peaks.unzipIMzliteArray
                         let yThreshold = Array.min intensityData
                         let paddedMz,paddedIntensity =
                             let paddingParams = initPaddingParameters yThreshold
@@ -86,13 +86,13 @@ module Preprocessing =
                     fun (massSpec:MassSpectrum) ->
                         let mzData, intensityData =
                             r.ReadSpectrumPeaks(massSpec.ID).Peaks
-                            |> unzipIMzliteArray
+                            |> Core.MzLite.Peaks.unzipIMzliteArray
                         BioFSharp.Mz.SignalDetection.Wavelet.toCentroidWithRicker2D waveletParameters mzData intensityData
                 | YThreshold.MinSpectrumIntensity ->
                     fun (massSpec:MassSpectrum) ->
                         let mzData, intensityData =
                             r.ReadSpectrumPeaks(massSpec.ID).Peaks
-                            |> unzipIMzliteArray
+                            |> Core.MzLite.Peaks.unzipIMzliteArray
                         let yThreshold = Array.min intensityData
                         let waveletParameters = initwaveletParameters yThreshold
                         BioFSharp.Mz.SignalDetection.Wavelet.toCentroidWithRicker2D waveletParameters mzData intensityData
@@ -100,26 +100,26 @@ module Preprocessing =
             failwith "Manufacturer peak picking is only supported for .baf (Bruker) files."
 
     ///
-    let insertSprectrum (compress:bool) (outReader: MzLite.SQL.MzLiteSQL) (runID:string)
+    let insertSprectrum (compress:bool) (outReader: MzSQL.MzSQL) (runID:string)
         (ms1PeakPicking: MassSpectrum -> float [] * float []) (ms2PeakPicking: MassSpectrum -> float [] * float [])
             (spectrum: MassSpectrum) =
-        match MassSpectrum.getMsLevel spectrum with
+        match AccessMassSpectrum.getMsLevel spectrum with
         | 1 ->
             let mzData,intensityData =
                 try
                 ms1PeakPicking spectrum
                 with
                 | _ -> [||],[||]
-            let peaks = createPeak1DArray compress BinaryDataType.Float64 BinaryDataType.Float64 mzData intensityData
-            outReader.Insert(runID, spectrum, peaks)
+            let peaks = AccessPeakArray.createPeak1DArray "NumPressZLib" BinaryDataType.Float64 BinaryDataType.Float64 mzData intensityData 
+            outReader.InsertMass(runID, spectrum, peaks)
         | 2 ->
             let mzData,intensityData =
                 try
                 ms2PeakPicking spectrum
                 with
                 | _ -> [||],[||]
-            let peaks = createPeak1DArray compress BinaryDataType.Float64 BinaryDataType.Float64 mzData intensityData
-            outReader.Insert(runID, spectrum, peaks)
+            let peaks = AccessPeakArray.createPeak1DArray "NumPressZLib" BinaryDataType.Float64 BinaryDataType.Float64 mzData intensityData
+            outReader.InsertMass(runID, spectrum, peaks)
         | _ ->
             failwith "Only mass spectra of level 1 and 2 are supported."
 
@@ -143,7 +143,7 @@ module Preprocessing =
             let fileName = (Path.GetFileNameWithoutExtension instrumentOutput) + ".mzlite"
             Path.Combine [|outputDir;fileName|]
 
-        let outReader = new MzLiteSQL(outFilePath)
+        let outReader = new MzSQL(outFilePath)
         /// All files created by this application will have a unified runID.
         let outRunID  = Core.MzLite.Reader.getDefaultRunID outReader
         let outTr = outReader.BeginTransaction()
@@ -164,19 +164,19 @@ module Preprocessing =
             | Some s, Some e ->
                 massSpectra
                 |> Seq.filter (fun ms ->
-                                let scanTime = Core.MzLite.MassSpectrum.getScanTime ms
+                                let scanTime = AccessMassSpectrum.getScanTime ms
                                 scanTime > s && scanTime < e
                               )
             | Some s, None ->
                 massSpectra
                 |> Seq.filter (fun ms ->
-                                let scanTime = Core.MzLite.MassSpectrum.getScanTime ms
+                                let scanTime = AccessMassSpectrum.getScanTime ms
                                 scanTime > s
                               )
             | None, Some e ->
                 massSpectra
                 |> Seq.filter (fun ms ->
-                                let scanTime = Core.MzLite.MassSpectrum.getScanTime ms
+                                let scanTime = AccessMassSpectrum.getScanTime ms
                                 scanTime < e
                               )
             | None, None ->
@@ -186,7 +186,7 @@ module Preprocessing =
         ///
         massSpectraF
         |> Seq.filter (fun ms ->
-                            let level = Core.MzLite.MassSpectrum.getMsLevel ms
+                            let level = AccessMassSpectrum.getMsLevel ms
                             level = 1 || level = 2
                       )
         |> Seq.iter (fun ms ->
