@@ -33,7 +33,7 @@ module console1 =
         elif Directory.Exists i then
             logger.Info "multiple files"
             let files =
-                Core.MzLite.Reader.getMSFilePaths i
+                Core.MzIO.Reader.getMSFilePaths i
                 |> Array.sort
             logger.Trace (sprintf "Preprocessing multiple files: %A" files)
             let c =

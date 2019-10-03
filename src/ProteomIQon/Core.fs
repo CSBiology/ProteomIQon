@@ -15,9 +15,10 @@ open MzIO.MzSQL
 
 module Core =
     
-    module MzLite = 
+    module MzIO = 
 
         module Reader = 
+
             let getMzLiteFiles directoryPath = 
                 Directory.GetFiles(directoryPath,("*.mzlite"))   
 

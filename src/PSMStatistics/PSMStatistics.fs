@@ -5,14 +5,8 @@ open BioFSharp
 open BioFSharp.Mz.SearchDB
 open Domain
 open Core 
-open Logary
 open System.IO
 open BioFSharp.Mz
-open MzLite 
-
-open Core.MzLite.Reader
-open Core.MzLite.Peaks
-open Core.MzLite
 open FSharpAux.IO
 open FSharpAux.IO.SchemaReader
 open FSharpAux.IO.SchemaReader.Csv
@@ -20,6 +14,7 @@ open FSharpAux.IO.SchemaReader.Attribute
 open BioFSharp.Mz.PercolatorWrapper
 open BioFSharp.Mz.PercolatorWrapper.Parameters
 open System.Reflection
+
 
 module PSMStatistics = 
     open System.IO

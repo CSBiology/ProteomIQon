@@ -5,22 +5,22 @@ open BioFSharp
 open BioFSharp.Mz.SearchDB
 open Domain
 open Core
-open Logary
 open System.IO
 open BioFSharp.Mz
-open MzLite
-open MzLite.Model
-open MzLite.Binary
-open Core.MzLite.Reader
-open Core.MzLite.Peaks
-open Core.MzLite
+open MzIO
+open MzIO.IO
+open MzIO.Model
+open MzIO.Binary
+open MzIO.Processing
+open Core.MzIO
+open Core.MzIO.Reader
+open Core.MzIO.Peaks
 open FSharpAux.IO
 
 module PeptideSpectrumMatching =
 
     open System.IO
     open System.Data
-    open MzLite.IO
     open BioFSharp.Mz.TheoreticalSpectra
     open BioFSharp.Mz.ChargeState
 
@@ -43,14 +43,14 @@ module PeptideSpectrumMatching =
         | None ->
             failwith "This database does not contain any SearchParameters. It is not recommended to work with this file."
 
-    let getPrecursorCharge (chParams:ChargeState.ChargeDetermParams) rnd inRunID (inReader: IMzLiteDataReader) =
+    let getPrecursorCharge (chParams:ChargeState.ChargeDetermParams) rnd inRunID (inReader: IMzIODataReader) =
         /// Returns a Sequence containing all MassSpectra of a single MS-run
         let massSpectra = inReader.ReadMassSpectra(inRunID)
         /// Returns a Array that contains all MS1s sorted by their scanTime
         let ms1SortedByScanTime =
             massSpectra
             |> Seq.filter (fun ms -> MassSpectrum.getMsLevel ms = 1)
-            |> Seq.sortBy  Core.MzLite.MassSpectrum.getScanTime
+            |> Seq.sortBy  MassSpectrum.getScanTime
             |> Array.ofSeq
         let ms2SortedByScanTime =
             massSpectra
@@ -138,7 +138,7 @@ module PeptideSpectrumMatching =
 
         positionMetricScoredCharges
 
-    let psm (processParams:PeptideSpectrumMatchingParams) lookUpF calcIonSeries (reader: IMzLiteDataReader) (outFilePath: string) (ms2sAndAssignedCharges: AssignedCharge list list) =
+    let psm (processParams:PeptideSpectrumMatchingParams) lookUpF calcIonSeries (reader: IMzIODataReader) (outFilePath: string) (ms2sAndAssignedCharges: AssignedCharge list list) =
         let logger = Logging.createLogger (Path.GetFileNameWithoutExtension outFilePath)
         let resultWriter = new System.IO.StreamWriter(outFilePath, true)
         let (ms2IDAssignedCharge) =
@@ -345,8 +345,8 @@ module PeptideSpectrumMatching =
 
         // initialize Reader and Transaction
         logger.Trace "Init connection to input data base."
-        let inReader = Core.MzLite.Reader.getReader instrumentOutput
-        let inRunID  = Core.MzLite.Reader.getDefaultRunID inReader
+        let inReader = Core.MzIO.Reader.getReader instrumentOutput
+        let inRunID  = Core.MzIO.Reader.getDefaultRunID inReader
         logger.Trace (sprintf "Run ID: %s" inRunID)
         let inTr = inReader.BeginTransaction()
 

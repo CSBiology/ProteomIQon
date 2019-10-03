@@ -2,6 +2,7 @@ namespace ProteomIQon
 
 open BioFSharp
 open BioFSharp.Mz
+open MzIO.Binary
 
 module Domain = 
 
@@ -40,7 +41,7 @@ module Domain =
 
     type PreprocessingParams =
         {
-            Compress                    : bool
+            Compress                    : BinaryDataCompressionType
             StartRetentionTime          : float option 
             EndRetentionTime            : float option 
             MS1PeakPicking              : PeakPicking

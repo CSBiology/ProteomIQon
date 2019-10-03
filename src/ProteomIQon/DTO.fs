@@ -7,6 +7,7 @@ open Domain
 open FSharpAux.IO.SchemaReader
 open FSharpAux.IO.SchemaReader.Csv
 open FSharpAux.IO.SchemaReader.Attribute
+open MzIO.Binary
 
 [<AutoOpen>]
 module Common =
@@ -117,7 +118,7 @@ module Dto =
 
     type PreprocessingParams =
         {
-            Compress                    : bool
+            Compress                    : BinaryDataCompressionType
             StartRetentionTime          : float option
             EndRetentionTime            : float option
             MS1PeakPicking              : PeakPicking
