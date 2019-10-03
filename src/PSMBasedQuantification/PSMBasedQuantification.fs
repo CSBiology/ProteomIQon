@@ -62,18 +62,19 @@ module PSMBasedQuantification =
         let sum,n = Seq.fold2 (fun (sum,n) w i -> w*i+sum,n + w ) (0.,0.) weights items
         sum / n
 
-    let substractBaseLine (baseLineParams:Domain.BaseLineCorrection) (yData:float []) =
+    let substractBaseLine (logger: NLog.Logger) (baseLineParams:Domain.BaseLineCorrection) (yData:float []) =
         if yData.Length > 300 then
-            printfn "xic Length > 300"
+            logger.Trace "xic Length > 300"
             yData
         else
-        let baseLine = FSharp.Stats.Signal.Baseline.baselineAls baseLineParams.MaxIterations baseLineParams.Lambda baseLineParams.P yData |> Array.ofSeq
-        Array.map2 (fun y b ->
-                       let c = y - b
-                       if c < 0. then 0. else c
-                   ) yData baseLine
+            logger.Trace "xic Length < 300"
+            let baseLine = FSharp.Stats.Signal.Baseline.baselineAls baseLineParams.MaxIterations baseLineParams.Lambda baseLineParams.P yData |> Array.ofSeq
+            Array.map2 (fun y b ->
+                           let c = y - b
+                           if c < 0. then 0. else c
+                       ) yData baseLine
 
-    let initGetProcessedXIC (baseLineCorrection:Domain.BaseLineCorrection option) reader idx scanTimeWindow mzWindow_Da meanScanTime meanPrecMz =
+    let initGetProcessedXIC logger (baseLineCorrection:Domain.BaseLineCorrection option) reader idx scanTimeWindow mzWindow_Da meanScanTime meanPrecMz =
         let rtQuery = Query.createRangeQuery meanScanTime scanTimeWindow
         let mzQuery = Query.createRangeQuery meanPrecMz mzWindow_Da
         let retData',itzData' =
@@ -97,7 +98,7 @@ module PSMBasedQuantification =
             |> Array.unzip
         match baseLineCorrection with
         | Some baseLineParams ->
-            retData', substractBaseLine baseLineParams itzData', itzData'
+            retData', substractBaseLine logger baseLineParams itzData', itzData'
         | None ->
             retData',itzData',itzData'
 
@@ -256,7 +257,7 @@ module PSMBasedQuantification =
             Csv.CsvReader<PSMStatisticsResult>(SchemaMode=Csv.Fill).ReadFile(scoredPSMs,'\t',false,1)
             |> Array.ofSeq
 
-        let getXIC = initGetProcessedXIC processParams.BaseLineCorrection inReader retTimeIdxed processParams.XicExtraction.ScanTimeWindow processParams.XicExtraction.MzWindow_Da
+        let getXIC = initGetProcessedXIC logger processParams.BaseLineCorrection inReader retTimeIdxed processParams.XicExtraction.ScanTimeWindow processParams.XicExtraction.MzWindow_Da
 
         let getWindowWidth  =
             match processParams.XicExtraction.WindowSize with
