@@ -1,13 +1,16 @@
 // Learn more about F# at http://fsharp.org. See the 'F# Tutorial' project
 // for more guidance on F# programming.
+#r @"../../../packages\MzIO\lib\net45\MzIO.dll"
 #r "netstandard"
 #r @"../../../bin\ProteomIQon\netstandard2.0\ProteomIQon.dll"
 #r @"../../../packages\BioFSharp.Mz\lib\netstandard2.0\BioFSharp.Mz.dll"
 #r @"../../../packages\FSharpAux.IO\lib\netstandard2.0\FSharpAux.IO.dll"
+//#r @"C:\Users\david\source\repos\ProteomIQon_mzlite\packages\MzIO.Processing\lib\net45\MzIO.Processing.dll"
 
 open ProteomIQon
 open ProteomIQon.Dto
 open ProteomIQon.Domain
+open MzIO
 
 let defaultPreprocessingParams :Dto.PreprocessingParams = 
 
@@ -41,7 +44,7 @@ let defaultPreprocessingParams :Dto.PreprocessingParams =
         } 
          
     {
-        Compress                    = true
+        Compress                    = MzIO.Binary.BinaryDataCompressionType.NumPressZLib
         StartRetentionTime          = None
         EndRetentionTime            = None 
         MS1PeakPicking              = PeakPicking.Centroid (CentroidizationMode.Wavelet ms1PeakPickingParams)
