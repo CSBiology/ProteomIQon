@@ -1,5 +1,7 @@
 framework: auto-detect
 
+generate_load_scripts: true
+
 source https://nuget.org/api/v2
 
 nuget FSharp.Core 
