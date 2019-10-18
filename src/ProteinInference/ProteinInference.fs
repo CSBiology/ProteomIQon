@@ -269,13 +269,7 @@ module ProteinInference =
                 failwithf "%s" err.Message
         logger.Trace "Build classification map"
         try
-            let ppRelationModel =
-                let digest sequence =
-                    Digestion.BioArray.digest (Digestion.Table.getProteaseBy "Trypsin") 0 sequence
-                    |> Digestion.BioArray.concernMissCleavages 0 3
-                    |> Seq.map (fun p -> p.PepSequence |> List.toArray) // TODO not |> List.toArray
-
-                createPeptideProteinRelation proteinModels
+            let ppRelationModel = createPeptideProteinRelation proteinModels
 
             let spliceVariantCount = PeptideClassification.createLocusSpliceVariantCount ppRelationModel
 
@@ -292,7 +286,7 @@ module ProteinInference =
                     }
                     )
 
-            classified |> Array.map (fun ci -> ci.Sequence,(createProteinClassItem ci.Proteins ci.Class ci.Sequence)) |> Map.ofArray
+            classified |> Array.map (fun ci -> ci.Sequence,(createProteinClassItem ci.Proteins ci.Class ci.Sequence)) |> Map.ofArray, psmInputs
         with
         | err ->
             printfn "\nERROR: Could not build classification map"
@@ -304,25 +298,26 @@ module ProteinInference =
     let proteinGroupToString (proteinGroup:string[]) =
         Array.reduce (fun x y ->  x + ";" + y) proteinGroup
 
-    let readAndInferFile classItemCollection protein peptide groupFiles outDirectory rawFolderPath =
+    let readAndInferFile classItemCollection protein peptide groupFiles outDirectory rawFolderPath psmInputs=
 
         let logger = Logging.createLogger "ProteinInference_readAndInferFile"
 
         let rawFilePaths = System.IO.Directory.GetFiles (rawFolderPath, "*.qpsm")
                            |> Array.toList
-        logger.Trace "Map peptide sequences to proteins"
-        let classifiedProteins =
+
+        let outFiles: string list =
             rawFilePaths
             |> List.map (fun filePath ->
+                let foldername = (rawFolderPath.Split ([|"\\"|], System.StringSplitOptions.None))
+                outDirectory + @"\" + foldername.[foldername.Length - 1] + "\\" + (System.IO.Path.GetFileNameWithoutExtension filePath) + ".prot"
+                )
+
+        logger.Trace "Map peptide sequences to proteins"
+        let classifiedProteins =
+            
+            List.map2 (fun psmInput (outFile: string) ->
                 try
-                    let out =
-                        let foldername = (rawFolderPath.Split ([|"\\"|], System.StringSplitOptions.None))
-                        outDirectory + @"\" + foldername.[foldername.Length - 1] + "\\" + (System.IO.Path.GetFileNameWithoutExtension filePath) + ".prot"
-                    let psmInputs =
-                        Seq.fromFileWithCsvSchema<PSMInput>(filePath, '\t', true,schemaMode = SchemaModes.Fill)
-                        |> Seq.toList
-                    filePath,
-                    psmInputs
+                    psmInput
                     |> List.map (fun s ->
                         let s =
                             s.Seq
@@ -332,22 +327,22 @@ module ProteinInference =
                         | None -> failwithf "Could not find sequence %s in classItemCollection" s
                             //createProteinClassItem [|""|] PeptideEvidenceClass.Unknown ""
                         ),
-                        out
+                        outFile
                 with
                 | err ->
-                    printfn "Could not map sequences of file %s to proteins:" filePath
+                    printfn "Could not map sequences of file %s to proteins:" (System.IO.Path.GetFileNameWithoutExtension outFile)
                     failwithf "%s" err.Message
-                )
+                ) psmInputs outFiles
 
         if groupFiles then
             logger.Trace "Create combined list"
             let combinedClasses =
-                List.collect (fun (_,pepSeq,_) -> pepSeq) classifiedProteins
+                List.collect (fun (pepSeq,_) -> pepSeq) classifiedProteins
                 |> BioFSharp.Mz.ProteinInference.inferSequences protein peptide
             classifiedProteins
-            |> List.iter (fun (inp,prots,out) ->
+            |> List.iter (fun (prots,outFile) ->
                 let pepSeqSet = prots |> List.map (fun x -> x.PeptideSequence) |> Set.ofList
-                logger.Trace (sprintf "Start with %s" inp)
+                logger.Trace (sprintf "Start with %s"(System.IO.Path.GetFileNameWithoutExtension outFile))
                 combinedClasses
                 |> Seq.choose (fun ic ->
                     let filteredPepSet =
@@ -360,17 +355,17 @@ module ProteinInference =
                     )
                 |> Seq.map (fun (c,prots,pep) -> OutputProtein.createOutputProtein prots c pep)
                 |> FSharpAux.IO.SeqIO.Seq.toCSV "\t" true
-                |> Seq.write out
-                logger.Trace (sprintf "File written to %s" out)
+                |> Seq.write outFile
+                logger.Trace (sprintf "File written to %s" outFile)
             )
         else
             classifiedProteins
-            |> List.iter (fun (inp,sequences,out) ->
-                logger.Trace (sprintf "start inferring %s" inp)
+            |> List.iter (fun (sequences,outFile) ->
+                logger.Trace (sprintf "start inferring %s" (System.IO.Path.GetFileNameWithoutExtension outFile))
                 BioFSharp.Mz.ProteinInference.inferSequences protein peptide sequences
                 |> Seq.map (fun x -> OutputProtein.createOutputProtein x.GroupOfProteinIDs x.Class (proteinGroupToString x.PeptideSequence))
                 |> FSharpAux.IO.SeqIO.Seq.toCSV "\t" true
-                |> Seq.write out
+                |> Seq.write outFile
             )
 
     let inferProteins gff3Location dbConnection (proteinInferenceParams: ProteinInferenceParams) outDirectory rawFolderPath =
@@ -387,6 +382,6 @@ module ProteinInference =
         logger.Trace "Copy peptide DB into Memory: finished."
 
         logger.Trace "Start building ClassItemCollection"
-        let classItemCollection = createClassItemCollection gff3Location memoryDB proteinInferenceParams.ProteinIdentifierRegex rawFolderPath
+        let classItemCollection, psmInputs = createClassItemCollection gff3Location memoryDB proteinInferenceParams.ProteinIdentifierRegex rawFolderPath
         logger.Trace "Classify and Infer Proteins"
-        readAndInferFile classItemCollection proteinInferenceParams.Protein proteinInferenceParams.Peptide proteinInferenceParams.GroupFiles outDirectory rawFolderPath
+        readAndInferFile classItemCollection proteinInferenceParams.Protein proteinInferenceParams.Peptide proteinInferenceParams.GroupFiles outDirectory rawFolderPath psmInputs
