@@ -1,11 +1,16 @@
 namespace ProteomIQon
 
 open BioFSharp
+open System.Data
+open System.Data.SQLite
+open BioFSharp.Mz
+open BioFSharp.Mz.SearchDB
 open BioFSharp.Mz.ProteinInference
 open BioFSharp.IO
 open FSharpAux
 open System.Text.RegularExpressions
 open PeptideClassification
+open ProteomIQon
 open FSharpAux.IO
 open FSharpAux.IO.SchemaReader
 open FSharpAux.IO.SchemaReader.Csv
@@ -37,6 +42,14 @@ module ProteinInference =
             Sequence : string
             Class    : PeptideClassification.PeptideEvidenceClass
             Proteins : string []
+        }
+
+    type PSMInput =
+        {
+            [<FieldAttribute("PepSequenceID")>]
+            PepSequenceID : int
+            [<FieldAttribute("StringSequence")>]
+            Seq:string
         }
 
     ///checks if GFF line describes gene
@@ -101,6 +114,76 @@ module ProteinInference =
         |> Seq.concat
         |> Map.ofSeq
 
+    /// Returns SearchDbParams of a existing database by filePath
+    let getSDBParamsBy (cn :SQLiteConnection)=
+        let cn =
+            match cn.State with
+            | ConnectionState.Open ->
+                cn
+            | ConnectionState.Closed ->
+                cn.Open()
+                cn
+            | _ as x -> failwith "Data base is busy."
+        match Db.SQLiteQuery.selectSearchDbParams cn with
+        | Some (iD,name,fo,fp,pr,minmscl,maxmscl,mass,minpL,maxpL,isoL,mMode,fMods,vMods,vThr) ->
+            createSearchDbParams
+                name fo fp id (Digestion.Table.getProteaseBy pr) minmscl maxmscl mass minpL maxpL
+                    (Newtonsoft.Json.JsonConvert.DeserializeObject<SearchInfoIsotopic list>(isoL)) (Newtonsoft.Json.JsonConvert.DeserializeObject<MassMode>(mMode)) (massFBy (Newtonsoft.Json.JsonConvert.DeserializeObject<MassMode>(mMode)))
+                        (Newtonsoft.Json.JsonConvert.DeserializeObject<SearchModification list>(fMods)) (Newtonsoft.Json.JsonConvert.DeserializeObject<SearchModification list>(vMods)) vThr
+        | None ->
+            failwith "This database does not contain any SearchParameters. It is not recommended to work with this file."
+
+    /// Prepares statement to select a Protein Accession entry by ID        
+    let prepareSelectProteinAccessionByID (cn:SQLiteConnection) (tr) =
+        let querystring = "SELECT Accession FROM Protein WHERE ID=@id "
+        let cmd = new SQLiteCommand(querystring, cn, tr) 
+        cmd.Parameters.Add("@id", DbType.Int32) |> ignore       
+        (fun (id:int32)  ->         
+            cmd.Parameters.["@id"].Value <- id
+            use reader = cmd.ExecuteReader()            
+            match reader.Read() with
+            | true  -> (reader.GetString(0)) 
+            | false -> ""
+        )
+
+    /// Prepares statement to select a Peptide Sequence entry by ID  
+    let prepareSelectPepSequenceByPepSequenceID (cn:SQLiteConnection) (tr) =
+        let querystring = "SELECT Sequence FROM PepSequence WHERE ID=@pepSequenceID"
+        let cmd = new SQLiteCommand(querystring, cn, tr) 
+        cmd.Parameters.Add("@pepSequenceID", DbType.Int32) |> ignore       
+        (fun (pepSequenceID:int)  ->         
+            cmd.Parameters.["@pepSequenceID"].Value <- pepSequenceID       
+            use reader = cmd.ExecuteReader()
+            reader.Read() |> ignore 
+            reader.GetString(0)           
+            )
+
+    /// Prepares a function which returns a list of protein Accessions tupled with the peptide sequence whose ID they were retrieved by
+    let getProteinPeptideLookUpFromFileBy (memoryDB: SQLiteConnection) = 
+        let tr = memoryDB.BeginTransaction()
+        let selectCleavageIdxByPepSeqID   = Db.SQLiteQuery.prepareSelectCleavageIndexByPepSequenceID memoryDB tr
+        let selectProteinByProtID         = prepareSelectProteinAccessionByID memoryDB tr  
+        let selectPeptideByPepSeqID       = prepareSelectPepSequenceByPepSequenceID memoryDB tr
+        (fun pepSequenceID -> 
+                selectCleavageIdxByPepSeqID pepSequenceID
+                |> List.map (fun (_,protID,pepID,_,_,_) -> selectProteinByProtID protID, selectPeptideByPepSeqID pepID )
+        )
+
+    /// Creates a lookup data base to assign peptides to the proteins they are contained in
+    let createPeptideProteinRelation (protModels:seq<ProteinModel<'id,'chromosomeId,'geneLocus,'sequence list> option>) =
+        let ppRelation = BidirectionalDictionary<'sequence,ProteinModelInfo<'id,'chromosomeId,'geneLocus>>()
+        protModels            
+        |> Seq.iter (fun prot ->                                              
+                        // insert peptide-protein relationship
+                        // Todo: change type of proteinID in digest
+                        match prot with 
+                        | Some proteinModel ->
+                            proteinModel.Sequence
+                            |> Seq.iter (fun pepSequence -> ppRelation.Add pepSequence proteinModel.ProteinModelInfo)                
+                        | None                   -> ()
+                    )
+        ppRelation  
+
     /// Given a ggf3 and a fasta file, creates a collection of all theoretically possible peptides and the proteins they might
     /// originate from
     ///
@@ -108,25 +191,45 @@ module ProteinInference =
     /// its evidence class.
     ///
     /// No experimental data
-    let createClassItemCollection gff3Path fastAPath regexPattern outDirectory =
+    let createClassItemCollection gff3Path (memoryDB: SQLiteConnection) regexPattern rawFolderPath=
 
         let logger = Logging.createLogger "ProteinInference_createClassItemCollection"
 
         logger.Trace (sprintf "Regex pattern: %s" regexPattern)
 
-        logger.Trace "Reading FastA sequence"
-        let fastASequences =
-            try
-                //fileDir + "Chlamy_Cp.fastA"
-                fastAPath
-                |> FastA.fromFile BioArray.ofAminoAcidString
-                |> Seq.map (fun item ->
-                    item.Header
-                    ,item.Sequence)
-            with
-            | err ->
-                printfn "Could not read FastA file %s"fastAPath
-                failwithf "%s" err.Message
+        let rawFilePaths = System.IO.Directory.GetFiles (rawFolderPath, "*.qpsm")
+                           |> List.ofArray
+
+        // retrieves peptide sequences and IDs from input files
+        let psmInputs =
+            rawFilePaths
+            |> List.map (fun filePath ->
+                Seq.fromFileWithCsvSchema<PSMInput>(filePath, '\t', true,schemaMode = SchemaModes.Fill)
+                |> Seq.toList
+                )
+
+         //gets distinct IDs of all peptides represented in the raw files
+        let inputPepSeqIDs =
+            psmInputs
+            |> List.collect (fun psmArray ->
+                psmArray
+                |> List.map (fun psm -> psm.PepSequenceID)
+                )
+            |> List.distinct
+
+        //let inputPepSeqIDs =
+        //    psmInputs
+        //    |> List.concat
+        //    |> List.map (fun psm -> psm.PepSequenceID)
+        
+        //list of proteins tupled with list of possible peptides found in psm
+        let accessionSequencePairs =
+            let preparedProtPepFunc = getProteinPeptideLookUpFromFileBy memoryDB
+            inputPepSeqIDs
+            |> List.map (fun pepID -> preparedProtPepFunc pepID)
+            |> List.concat
+            |> List.groupBy (fun (protein, _)-> protein)
+            |> List.map (fun (protein, pepList) -> protein, (pepList |> List.map (fun (_,pep)-> BioArray.ofAminoAcidString pep)))
 
         /// Create proteinModelInfos: Group all genevariants (RNA) for the gene loci (gene)
         ///
@@ -145,7 +248,7 @@ module ProteinInference =
         /// Assigned fasta sequences to model Infos
         let proteinModels =
             try
-                fastASequences
+                accessionSequencePairs
                 |> Seq.mapi (fun i (header,sequence) ->
                     let regMatch = System.Text.RegularExpressions.Regex.Match(header,regexPattern)
                     if regMatch.Success then
@@ -172,7 +275,7 @@ module ProteinInference =
                     |> Digestion.BioArray.concernMissCleavages 0 3
                     |> Seq.map (fun p -> p.PepSequence |> List.toArray) // TODO not |> List.toArray
 
-                PeptideClassification.createPeptideProteinRelation digest proteinModels
+                createPeptideProteinRelation proteinModels
 
             let spliceVariantCount = PeptideClassification.createLocusSpliceVariantCount ppRelationModel
 
@@ -194,13 +297,6 @@ module ProteinInference =
         | err ->
             printfn "\nERROR: Could not build classification map"
             failwithf "\t%s" err.Message
-
-    type PSMInput =
-        {
-            //TO-DO: is this reversion still needed?
-            [<FieldAttribute("StringSequence")>]//[<SeqConverter>]
-            Seq:string
-        }
 
     let removeModification pepSeq =
         String.filter (fun c -> System.Char.IsLower c |> not && c <> '[' && c <> ']') pepSeq
@@ -233,8 +329,8 @@ module ProteinInference =
 
                         match Map.tryFind (removeModification s) classItemCollection with
                         | Some (x:ProteinClassItem<'sequence>) -> createProteinClassItem x.GroupOfProteinIDs x.Class s
-                        | None ->
-                            failwithf "Could not find sequence %s in classItemCollection"  s
+                        | None -> failwithf "Could not find sequence %s in classItemCollection" s
+                            //createProteinClassItem [|""|] PeptideEvidenceClass.Unknown ""
                         ),
                         out
                 with
@@ -277,17 +373,20 @@ module ProteinInference =
                 |> Seq.write out
             )
 
-    let inferProteins gff3Location fastaLocation (proteinInferenceParams: ProteinInferenceParams) outDirectory rawFolderPath =
+    let inferProteins gff3Location dbConnection (proteinInferenceParams: ProteinInferenceParams) outDirectory rawFolderPath =
 
         let logger = Logging.createLogger "ProteinInference_inferProteins"
 
         logger.Trace (sprintf "InputFilePath = %s" rawFolderPath)
-        logger.Trace (sprintf "InputFastAPath = %s" fastaLocation)
         logger.Trace (sprintf "InputGFF3Path = %s" gff3Location)
         logger.Trace (sprintf "OutputFilePath = %s" outDirectory)
         logger.Trace (sprintf "Protein inference parameters = %A" proteinInferenceParams)
 
+        logger.Trace "Copy peptide DB into Memory."
+        let memoryDB = SearchDB.copyDBIntoMemory dbConnection
+        logger.Trace "Copy peptide DB into Memory: finished."
+
         logger.Trace "Start building ClassItemCollection"
-        let classItemCollection = createClassItemCollection gff3Location fastaLocation proteinInferenceParams.ProteinIdentifierRegex outDirectory
+        let classItemCollection = createClassItemCollection gff3Location memoryDB proteinInferenceParams.ProteinIdentifierRegex rawFolderPath
         logger.Trace "Classify and Infer Proteins"
         readAndInferFile classItemCollection proteinInferenceParams.Protein proteinInferenceParams.Peptide proteinInferenceParams.GroupFiles outDirectory rawFolderPath
