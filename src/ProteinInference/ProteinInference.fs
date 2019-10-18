@@ -354,7 +354,7 @@ module ProteinInference =
                         Some (ic.Class,ic.GroupOfProteinIDs,proteinGroupToString filteredPepSet)
                     )
                 |> Seq.map (fun (c,prots,pep) -> OutputProtein.createOutputProtein prots c pep)
-                |> FSharpAux.IO.SeqIO.Seq.toCSV "\t" true
+                |> FSharpAux.IO.SeqIO.Seq.CSV "\t" true true
                 |> Seq.write outFile
                 logger.Trace (sprintf "File written to %s" outFile)
             )
@@ -364,7 +364,7 @@ module ProteinInference =
                 logger.Trace (sprintf "start inferring %s" (System.IO.Path.GetFileNameWithoutExtension outFile))
                 BioFSharp.Mz.ProteinInference.inferSequences protein peptide sequences
                 |> Seq.map (fun x -> OutputProtein.createOutputProtein x.GroupOfProteinIDs x.Class (proteinGroupToString x.PeptideSequence))
-                |> FSharpAux.IO.SeqIO.Seq.toCSV "\t" true
+                |> FSharpAux.IO.SeqIO.Seq.CSV "\t" true true
                 |> Seq.write outFile
             )
 
