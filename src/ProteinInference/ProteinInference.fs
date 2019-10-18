@@ -26,14 +26,16 @@ module ProteinInference =
             ProteinID        : string
             EvidenceClass    : PeptideEvidenceClass
             PeptideSequences : string
+            SumOfScores      : float
         }
 
     /// Packages info into one element of the final output. It's the protein, with all the peptides that were measured and are pointing to it.
-        static member createOutputProtein protID evidenceClass sequences =
+        static member createOutputProtein protID evidenceClass sequences score=
             {
                 ProteinID        = protID
                 EvidenceClass    = evidenceClass
                 PeptideSequences = sequences
+                SumOfScores      = score
             }
 
     /// Represents one peptide-entry with its evidence class and the proteins it points to.
@@ -47,9 +49,11 @@ module ProteinInference =
     type PSMInput =
         {
             [<FieldAttribute("PepSequenceID")>]
-            PepSequenceID : int
+            PepSequenceID   : int
             [<FieldAttribute("StringSequence")>]
-            Seq:string
+            Seq             :string
+            [<FieldAttribute("PercolatorScore")>]
+            PercolatorScore : float
         }
 
     ///checks if GFF line describes gene
@@ -133,38 +137,38 @@ module ProteinInference =
         | None ->
             failwith "This database does not contain any SearchParameters. It is not recommended to work with this file."
 
-    /// Prepares statement to select a Protein Accession entry by ID        
+    /// Prepares statement to select a Protein Accession entry by ID
     let prepareSelectProteinAccessionByID (cn:SQLiteConnection) (tr) =
         let querystring = "SELECT Accession FROM Protein WHERE ID=@id "
-        let cmd = new SQLiteCommand(querystring, cn, tr) 
-        cmd.Parameters.Add("@id", DbType.Int32) |> ignore       
-        (fun (id:int32)  ->         
+        let cmd = new SQLiteCommand(querystring, cn, tr)
+        cmd.Parameters.Add("@id", DbType.Int32) |> ignore
+        (fun (id:int32)  ->
             cmd.Parameters.["@id"].Value <- id
-            use reader = cmd.ExecuteReader()            
+            use reader = cmd.ExecuteReader()
             match reader.Read() with
-            | true  -> (reader.GetString(0)) 
+            | true  -> (reader.GetString(0))
             | false -> ""
         )
 
-    /// Prepares statement to select a Peptide Sequence entry by ID  
+    /// Prepares statement to select a Peptide Sequence entry by ID
     let prepareSelectPepSequenceByPepSequenceID (cn:SQLiteConnection) (tr) =
         let querystring = "SELECT Sequence FROM PepSequence WHERE ID=@pepSequenceID"
-        let cmd = new SQLiteCommand(querystring, cn, tr) 
-        cmd.Parameters.Add("@pepSequenceID", DbType.Int32) |> ignore       
-        (fun (pepSequenceID:int)  ->         
-            cmd.Parameters.["@pepSequenceID"].Value <- pepSequenceID       
+        let cmd = new SQLiteCommand(querystring, cn, tr)
+        cmd.Parameters.Add("@pepSequenceID", DbType.Int32) |> ignore
+        (fun (pepSequenceID:int)  ->
+            cmd.Parameters.["@pepSequenceID"].Value <- pepSequenceID
             use reader = cmd.ExecuteReader()
-            reader.Read() |> ignore 
-            reader.GetString(0)           
+            reader.Read() |> ignore
+            reader.GetString(0)
             )
 
     /// Prepares a function which returns a list of protein Accessions tupled with the peptide sequence whose ID they were retrieved by
-    let getProteinPeptideLookUpFromFileBy (memoryDB: SQLiteConnection) = 
+    let getProteinPeptideLookUpFromFileBy (memoryDB: SQLiteConnection) =
         let tr = memoryDB.BeginTransaction()
         let selectCleavageIdxByPepSeqID   = Db.SQLiteQuery.prepareSelectCleavageIndexByPepSequenceID memoryDB tr
-        let selectProteinByProtID         = prepareSelectProteinAccessionByID memoryDB tr  
+        let selectProteinByProtID         = prepareSelectProteinAccessionByID memoryDB tr
         let selectPeptideByPepSeqID       = prepareSelectPepSequenceByPepSequenceID memoryDB tr
-        (fun pepSequenceID -> 
+        (fun pepSequenceID ->
                 selectCleavageIdxByPepSeqID pepSequenceID
                 |> List.map (fun (_,protID,pepID,_,_,_) -> selectProteinByProtID protID, selectPeptideByPepSeqID pepID )
         )
@@ -172,17 +176,17 @@ module ProteinInference =
     /// Creates a lookup data base to assign peptides to the proteins they are contained in
     let createPeptideProteinRelation (protModels:seq<ProteinModel<'id,'chromosomeId,'geneLocus,'sequence list> option>) =
         let ppRelation = BidirectionalDictionary<'sequence,ProteinModelInfo<'id,'chromosomeId,'geneLocus>>()
-        protModels            
-        |> Seq.iter (fun prot ->                                              
+        protModels
+        |> Seq.iter (fun prot ->
                         // insert peptide-protein relationship
                         // Todo: change type of proteinID in digest
-                        match prot with 
+                        match prot with
                         | Some proteinModel ->
                             proteinModel.Sequence
-                            |> Seq.iter (fun pepSequence -> ppRelation.Add pepSequence proteinModel.ProteinModelInfo)                
+                            |> Seq.iter (fun pepSequence -> ppRelation.Add pepSequence proteinModel.ProteinModelInfo)
                         | None                   -> ()
                     )
-        ppRelation  
+        ppRelation
 
     /// Given a ggf3 and a fasta file, creates a collection of all theoretically possible peptides and the proteins they might
     /// originate from
@@ -217,11 +221,6 @@ module ProteinInference =
                 )
             |> List.distinct
 
-        //let inputPepSeqIDs =
-        //    psmInputs
-        //    |> List.concat
-        //    |> List.map (fun psm -> psm.PepSequenceID)
-        
         //list of proteins tupled with list of possible peptides found in psm
         let accessionSequencePairs =
             let preparedProtPepFunc = getProteinPeptideLookUpFromFileBy memoryDB
@@ -312,9 +311,28 @@ module ProteinInference =
                 outDirectory + @"\" + foldername.[foldername.Length - 1] + "\\" + (System.IO.Path.GetFileNameWithoutExtension filePath) + ".prot"
                 )
 
+        // Creates a Map which maps every peptide sequence to its highest score
+        let peptideScoreMap =
+            psmInputs
+            |> List.concat
+            |> List.groupBy (fun psm -> psm.Seq)
+            |> List.map (fun (sequence, psmList) -> 
+                sequence,
+                psmList
+                |> List.sortByDescending (fun psm -> psm.PercolatorScore)
+                |> List.head
+                |> fun psm -> psm.PercolatorScore
+                )
+            |> Map.ofList
+
+        /// Sums up score of all peptide sequences
+        let assignPeptideScores (peptideSequences : string []) =
+            peptideSequences
+            |> Array.map (fun sequence -> peptideScoreMap.Item sequence)
+            |> Array.sum
+
         logger.Trace "Map peptide sequences to proteins"
         let classifiedProteins =
-            
             List.map2 (fun psmInput (outFile: string) ->
                 try
                     psmInput
@@ -325,7 +343,6 @@ module ProteinInference =
                         match Map.tryFind (removeModification s) classItemCollection with
                         | Some (x:ProteinClassItem<'sequence>) -> createProteinClassItem x.GroupOfProteinIDs x.Class s
                         | None -> failwithf "Could not find sequence %s in classItemCollection" s
-                            //createProteinClassItem [|""|] PeptideEvidenceClass.Unknown ""
                         ),
                         outFile
                 with
@@ -351,9 +368,9 @@ module ProteinInference =
                     if filteredPepSet = [||] then
                         None
                     else
-                        Some (ic.Class,ic.GroupOfProteinIDs,proteinGroupToString filteredPepSet)
+                        Some (ic.Class,ic.GroupOfProteinIDs, filteredPepSet)
                     )
-                |> Seq.map (fun (c,prots,pep) -> OutputProtein.createOutputProtein prots c pep)
+                |> Seq.map (fun (c,prots,pep) -> OutputProtein.createOutputProtein prots c (proteinGroupToString pep) (assignPeptideScores pep))
                 |> FSharpAux.IO.SeqIO.Seq.CSV "\t" true true
                 |> Seq.write outFile
                 logger.Trace (sprintf "File written to %s" outFile)
@@ -363,7 +380,7 @@ module ProteinInference =
             |> List.iter (fun (sequences,outFile) ->
                 logger.Trace (sprintf "start inferring %s" (System.IO.Path.GetFileNameWithoutExtension outFile))
                 BioFSharp.Mz.ProteinInference.inferSequences protein peptide sequences
-                |> Seq.map (fun x -> OutputProtein.createOutputProtein x.GroupOfProteinIDs x.Class (proteinGroupToString x.PeptideSequence))
+                |> Seq.map (fun x -> OutputProtein.createOutputProtein x.GroupOfProteinIDs x.Class (proteinGroupToString x.PeptideSequence) (assignPeptideScores x.PeptideSequence))
                 |> FSharpAux.IO.SeqIO.Seq.CSV "\t" true true
                 |> Seq.write outFile
             )
