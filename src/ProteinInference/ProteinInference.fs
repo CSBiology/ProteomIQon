@@ -205,6 +205,39 @@ module ProteinInference =
                     )
         ppRelation
 
+    // Creates a Map of peptides with their highest found score
+    let createPeptideScoreMap (psmInputs: PSMInput list list) =
+        psmInputs
+        |> List.concat
+        |> List.groupBy (fun psm -> psm.Seq)
+        |> List.map (fun (sequence, psmList) -> 
+            sequence,
+            psmList
+            |> List.sortByDescending (fun psm -> psm.PercolatorScore)
+            |> List.head
+            |> fun psm -> psm.PercolatorScore
+            )
+        |> Map.ofList
+
+    // Assigns a score to each protein with reverse digested peptides based on the peptides obtained in psm.
+    let createReverseProteinScores (reverseProteins: (string*string[])[]) (peptideScoreMap: Map<string,float>) =
+        reverseProteins
+        |> Array.map (fun (protein, peptides) ->
+        (protein |> String.split ' ').[0],
+        peptides
+        |> Array.map (fun pep ->
+        peptideScoreMap.TryFind pep
+        |> (fun x ->
+            match x with
+            | Some score -> score
+            | None -> 0.
+            )
+        )
+        |> Array.sum
+        )
+        |> Array.filter (fun (protein, score) -> score <> 0.)
+        |> Map.ofArray
+
     let assignDecoyScoreToTargetScore (proteins: string) (decoyScores: Map<string,float>) =
         let prots = proteins |> String.split ';'
         prots
@@ -342,18 +375,18 @@ module ProteinInference =
         let dbParams = getSDBParamsBy dbConnection
 
         // Creates a Map which maps every peptide sequence to its highest score
-        let peptideScoreMap =
-            psmInputs
-            |> List.concat
-            |> List.groupBy (fun psm -> psm.Seq)
-            |> List.map (fun (sequence, psmList) -> 
-                sequence,
-                psmList
-                |> List.sortByDescending (fun psm -> psm.PercolatorScore)
-                |> List.head
-                |> fun psm -> psm.PercolatorScore
-                )
-            |> Map.ofList
+        //let peptideScoreMap =
+        //    psmInputs
+        //    |> List.concat
+        //    |> List.groupBy (fun psm -> psm.Seq)
+        //    |> List.map (fun (sequence, psmList) -> 
+        //        sequence,
+        //        psmList
+        //        |> List.sortByDescending (fun psm -> psm.PercolatorScore)
+        //        |> List.head
+        //        |> fun psm -> psm.PercolatorScore
+        //        )
+        //    |> Map.ofList
 
         // Reverts all proteins of the SearchDB and digests them with the parameters taken from the DB.
         // Returns an array of protein accessions tupled with all reverse digested peptides.
@@ -367,27 +400,8 @@ module ProteinInference =
                 |> fun x -> x |> Array.map (fun y -> y.PepSequence |> List.toArray |> BioArray.toString)
                 )
 
-        // Assigns a score to each protein with reverse digested peptides based on the peptides obtained in psm.
-        let reverseProteinScores =
-            reverseProteins
-            |> Array.map (fun (protein, peptides) ->
-            (protein |> String.split ' ').[0],
-            peptides
-            |> Array.map (fun pep ->
-            peptideScoreMap.TryFind pep
-            |> (fun x ->
-                match x with
-                | Some score -> score
-                | None -> 0.
-                )
-            )
-            |> Array.sum
-            )
-            |> Array.filter (fun (protein, score) -> score <> 0.)
-            |> Map.ofArray
-
         /// Sums up score of all peptide sequences
-        let assignPeptideScores (peptideSequences : string []) =
+        let assignPeptideScores (peptideSequences : string []) (peptideScoreMap : Map<string,float>) =
             peptideSequences
             |> Array.map (fun sequence -> peptideScoreMap.Item sequence)
             |> Array.sum
@@ -432,6 +446,11 @@ module ProteinInference =
                         else
                             Some (ic.Class,ic.GroupOfProteinIDs, filteredPepSet)
                         )
+
+                let peptideScoreMap = createPeptideScoreMap psmInputs
+
+                let reverseProteinScores = createReverseProteinScores reverseProteins peptideScoreMap
+
                 // creates output type for decoy proteins that have no match
                 let reverseNoMatch =
                     let proteinsPresent = 
@@ -447,10 +466,10 @@ module ProteinInference =
                             OutputProtein.createOutputProtein protein PeptideEvidenceClass.Unknown "" 0. score
                     )
                     |> Array.filter (fun out -> out.ProteinID <> "nf")
-
+                // Peptide score Map
                 let combRes =
                     combinedInferenceresult
-                    |> Seq.map (fun (c,prots,pep) -> OutputProtein.createOutputProtein prots c (proteinGroupToString pep) (assignPeptideScores pep) (assignDecoyScoreToTargetScore prots reverseProteinScores))
+                    |> Seq.map (fun (c,prots,pep) -> OutputProtein.createOutputProtein prots c (proteinGroupToString pep) (assignPeptideScores pep peptideScoreMap) (assignDecoyScoreToTargetScore prots reverseProteinScores))
                     // appends found decoy proteins without matching proteins
                     |> Seq.append reverseNoMatch
 
@@ -485,33 +504,23 @@ module ProteinInference =
             )
         else
             classifiedProteins
-            |> List.iter (fun (sequences,outFile) ->
+            |> List.iter2 (fun psm (sequences,outFile) ->
                 logger.Trace (sprintf "start inferring %s" (System.IO.Path.GetFileNameWithoutExtension outFile))
                 let inferenceResult = BioFSharp.Mz.ProteinInference.inferSequences protein peptide sequences
                 // creates output type for decoy proteins that have no match
-                let reverseNoMatch =
-                    let proteinsPresent = 
-                        inferenceResult
-                        |> Array.ofSeq
-                        |> Array.collect (fun (inferredProteins) -> inferredProteins.GroupOfProteinIDs |> String.split ';')
-                    reverseProteinScores
-                    |> Map.toArray
-                    |> Array.map (fun (protein, score) ->
-                        if (proteinsPresent |> Array.contains protein) then
-                            OutputProtein.createOutputProtein "nf" PeptideEvidenceClass.Unknown "" (-1.) (-1.)
-                        else
-                            OutputProtein.createOutputProtein protein PeptideEvidenceClass.Unknown "" 0. score
-                    )
-                    |> Array.filter (fun out -> out.ProteinID <> "nf")
+
+                let peptideScoreMap = createPeptideScoreMap [psm]
+
+                let reverseProteinScores = createReverseProteinScores reverseProteins peptideScoreMap
+
                 let combRes =
                     inferenceResult
-                    |> Seq.map (fun x -> OutputProtein.createOutputProtein x.GroupOfProteinIDs x.Class (proteinGroupToString x.PeptideSequence) (assignPeptideScores x.PeptideSequence) (assignDecoyScoreToTargetScore x.GroupOfProteinIDs reverseProteinScores))
+                    |> Seq.map (fun x -> OutputProtein.createOutputProtein x.GroupOfProteinIDs x.Class (proteinGroupToString x.PeptideSequence) (assignPeptideScores x.PeptideSequence peptideScoreMap) (assignDecoyScoreToTargetScore x.GroupOfProteinIDs reverseProteinScores))
                     // appends found decoy proteins without matching proteins
-                    |> Seq.append reverseNoMatch
                 combRes
                 |> FSharpAux.IO.SeqIO.Seq.CSV "\t" true true
                 |> Seq.write outFile
-            )
+            ) psmInputs
 
     let inferProteins gff3Location dbConnection (proteinInferenceParams: ProteinInferenceParams) outDirectory rawFolderPath =
 
