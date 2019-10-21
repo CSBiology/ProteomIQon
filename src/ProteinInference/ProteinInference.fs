@@ -17,6 +17,7 @@ open FSharpAux.IO.SchemaReader.Csv
 open FSharpAux.IO.SchemaReader.Attribute
 open GFF3
 open Domain
+open FSharp.Plotly
 
 module ProteinInference =
 
@@ -27,15 +28,17 @@ module ProteinInference =
             EvidenceClass    : PeptideEvidenceClass
             PeptideSequences : string
             SumOfScores      : float
+            DecoyScore       : float
         }
 
     /// Packages info into one element of the final output. It's the protein, with all the peptides that were measured and are pointing to it.
-        static member createOutputProtein protID evidenceClass sequences score=
+        static member createOutputProtein protID evidenceClass sequences score decoyScore =
             {
                 ProteinID        = protID
                 EvidenceClass    = evidenceClass
                 PeptideSequences = sequences
                 SumOfScores      = score
+                DecoyScore       = decoyScore
             }
 
     /// Represents one peptide-entry with its evidence class and the proteins it points to.
@@ -173,6 +176,20 @@ module ProteinInference =
                 |> List.map (fun (_,protID,pepID,_,_,_) -> selectProteinByProtID protID, selectPeptideByPepSeqID pepID )
         )
 
+    /// Returns Accession and Sequence of Proteins from SearchDB
+    let selectProteins (cn:SQLiteConnection) =
+        let selectProteins =
+            let querystring = "SELECT Accession, Sequence FROM Protein"
+            let cmd = new SQLiteCommand(querystring, cn)
+            use reader = cmd.ExecuteReader()
+            (let rec loop (list: (string*string) list) =
+                match reader.Read() with
+                | false -> list |> List.rev
+                | true  -> loop ((reader.GetString(0), reader.GetString(1))::list)
+            loop []
+            )
+        selectProteins
+
     /// Creates a lookup data base to assign peptides to the proteins they are contained in
     let createPeptideProteinRelation (protModels:seq<ProteinModel<'id,'chromosomeId,'geneLocus,'sequence list> option>) =
         let ppRelation = BidirectionalDictionary<'sequence,ProteinModelInfo<'id,'chromosomeId,'geneLocus>>()
@@ -188,6 +205,17 @@ module ProteinInference =
                     )
         ppRelation
 
+    let assignDecoyScoreToTargetScore (proteins: string) (decoyScores: Map<string,float>) =
+        let prots = proteins |> String.split ';'
+        prots
+        |> Array.map (fun protein ->
+            decoyScores.TryFind protein
+            |> fun protOpt ->
+                match protOpt with
+                | Some score -> score
+                | None -> 0.
+        )
+        |> Array.max
     /// Given a ggf3 and a fasta file, creates a collection of all theoretically possible peptides and the proteins they might
     /// originate from
     ///
@@ -297,7 +325,7 @@ module ProteinInference =
     let proteinGroupToString (proteinGroup:string[]) =
         Array.reduce (fun x y ->  x + ";" + y) proteinGroup
 
-    let readAndInferFile classItemCollection protein peptide groupFiles outDirectory rawFolderPath psmInputs=
+    let readAndInferFile classItemCollection protein peptide groupFiles outDirectory rawFolderPath psmInputs (dbConnection: SQLiteConnection) =
 
         let logger = Logging.createLogger "ProteinInference_readAndInferFile"
 
@@ -310,6 +338,8 @@ module ProteinInference =
                 let foldername = (rawFolderPath.Split ([|"\\"|], System.StringSplitOptions.None))
                 outDirectory + @"\" + foldername.[foldername.Length - 1] + "\\" + (System.IO.Path.GetFileNameWithoutExtension filePath) + ".prot"
                 )
+
+        let dbParams = getSDBParamsBy dbConnection
 
         // Creates a Map which maps every peptide sequence to its highest score
         let peptideScoreMap =
@@ -324,6 +354,37 @@ module ProteinInference =
                 |> fun psm -> psm.PercolatorScore
                 )
             |> Map.ofList
+
+        // Reverts all proteins of the SearchDB and digests them with the parameters taken from the DB.
+        // Returns an array of protein accessions tupled with all reverse digested peptides.
+        let reverseProteins = 
+            (selectProteins dbConnection)
+            |> Array.ofList
+            |> Array.map (fun (name, sequence) ->
+                name,
+                Digestion.BioArray.digest dbParams.Protease 0 ((sequence |> String.rev) |> BioArray.ofAminoAcidString)
+                |> Digestion.BioArray.concernMissCleavages dbParams.MinMissedCleavages dbParams.MaxMissedCleavages
+                |> fun x -> x |> Array.map (fun y -> y.PepSequence |> List.toArray |> BioArray.toString)
+                )
+
+        // Assigns a score to each protein with reverse digested peptides based on the peptides obtained in psm.
+        let reverseProteinScores =
+            reverseProteins
+            |> Array.map (fun (protein, peptides) ->
+            (protein |> String.split ' ').[0],
+            peptides
+            |> Array.map (fun pep ->
+            peptideScoreMap.TryFind pep
+            |> (fun x ->
+                match x with
+                | Some score -> score
+                | None -> 0.
+                )
+            )
+            |> Array.sum
+            )
+            |> Array.filter (fun (protein, score) -> score <> 0.)
+            |> Map.ofArray
 
         /// Sums up score of all peptide sequences
         let assignPeptideScores (peptideSequences : string []) =
@@ -360,17 +421,64 @@ module ProteinInference =
             |> List.iter (fun (prots,outFile) ->
                 let pepSeqSet = prots |> List.map (fun x -> x.PeptideSequence) |> Set.ofList
                 logger.Trace (sprintf "Start with %s"(System.IO.Path.GetFileNameWithoutExtension outFile))
-                combinedClasses
-                |> Seq.choose (fun ic ->
-                    let filteredPepSet =
-                        ic.PeptideSequence
-                        |> Array.filter (fun pep -> Set.contains pep pepSeqSet)
-                    if filteredPepSet = [||] then
-                        None
-                    else
-                        Some (ic.Class,ic.GroupOfProteinIDs, filteredPepSet)
+                let combinedInferenceresult =
+                    combinedClasses
+                    |> Seq.choose (fun ic ->
+                        let filteredPepSet =
+                            ic.PeptideSequence
+                            |> Array.filter (fun pep -> Set.contains pep pepSeqSet)
+                        if filteredPepSet = [||] then
+                            None
+                        else
+                            Some (ic.Class,ic.GroupOfProteinIDs, filteredPepSet)
+                        )
+                // creates output type for decoy proteins that have no match
+                let reverseNoMatch =
+                    let proteinsPresent = 
+                        combinedInferenceresult
+                        |> Array.ofSeq
+                        |> Array.collect (fun (_, prots, _) -> prots |> String.split ';')
+                    reverseProteinScores
+                    |> Map.toArray
+                    |> Array.map (fun (protein, score) ->
+                        if (proteinsPresent |> Array.contains protein) then
+                            OutputProtein.createOutputProtein "nf" PeptideEvidenceClass.Unknown "" (-1.) (-1.)
+                        else
+                            OutputProtein.createOutputProtein protein PeptideEvidenceClass.Unknown "" 0. score
                     )
-                |> Seq.map (fun (c,prots,pep) -> OutputProtein.createOutputProtein prots c (proteinGroupToString pep) (assignPeptideScores pep))
+                    |> Array.filter (fun out -> out.ProteinID <> "nf")
+
+                let combRes =
+                    combinedInferenceresult
+                    |> Seq.map (fun (c,prots,pep) -> OutputProtein.createOutputProtein prots c (proteinGroupToString pep) (assignPeptideScores pep) (assignDecoyScoreToTargetScore prots reverseProteinScores))
+                    // appends found decoy proteins without matching proteins
+                    |> Seq.append reverseNoMatch
+
+                //let histogram =
+                //    let mutable target = []
+                //    let mutable decoy  = []
+                //    combRes
+                //    |> Array.ofSeq
+                //    |> Array.filter (fun out -> (out.ProteinID |> String.split ';').Length = 1)
+                //    |> Array.map (fun out ->
+                //        if out.SumOfScores > out.DecoyScore then
+                //            target <- (out.SumOfScores)::target
+                //        else
+                //            decoy <- (out.DecoyScore)::decoy
+                //    ) |> ignore
+                //    let freqTarget = FSharp.Stats.Distributions.Frequency.create 0.1 target
+                //                     |> Map.toArray
+                //    let freqDecoy = FSharp.Stats.Distributions.Frequency.create 0.1 decoy
+                //                     |> Map.toArray
+                //    [
+                //        Chart.Column freqTarget |> Chart.withTraceName "Target";
+                //        Chart.Column freqDecoy |> Chart.withTraceName "Decoy"
+                //    ]
+                //    |> Chart.Combine
+                //    |> Chart.withX_AxisStyle "Score"
+                //    |> Chart.SaveHtmlAs (outFile + ".html")
+
+                combRes
                 |> FSharpAux.IO.SeqIO.Seq.CSV "\t" true true
                 |> Seq.write outFile
                 logger.Trace (sprintf "File written to %s" outFile)
@@ -379,8 +487,28 @@ module ProteinInference =
             classifiedProteins
             |> List.iter (fun (sequences,outFile) ->
                 logger.Trace (sprintf "start inferring %s" (System.IO.Path.GetFileNameWithoutExtension outFile))
-                BioFSharp.Mz.ProteinInference.inferSequences protein peptide sequences
-                |> Seq.map (fun x -> OutputProtein.createOutputProtein x.GroupOfProteinIDs x.Class (proteinGroupToString x.PeptideSequence) (assignPeptideScores x.PeptideSequence))
+                let inferenceResult = BioFSharp.Mz.ProteinInference.inferSequences protein peptide sequences
+                // creates output type for decoy proteins that have no match
+                let reverseNoMatch =
+                    let proteinsPresent = 
+                        inferenceResult
+                        |> Array.ofSeq
+                        |> Array.collect (fun (inferredProteins) -> inferredProteins.GroupOfProteinIDs |> String.split ';')
+                    reverseProteinScores
+                    |> Map.toArray
+                    |> Array.map (fun (protein, score) ->
+                        if (proteinsPresent |> Array.contains protein) then
+                            OutputProtein.createOutputProtein "nf" PeptideEvidenceClass.Unknown "" (-1.) (-1.)
+                        else
+                            OutputProtein.createOutputProtein protein PeptideEvidenceClass.Unknown "" 0. score
+                    )
+                    |> Array.filter (fun out -> out.ProteinID <> "nf")
+                let combRes =
+                    inferenceResult
+                    |> Seq.map (fun x -> OutputProtein.createOutputProtein x.GroupOfProteinIDs x.Class (proteinGroupToString x.PeptideSequence) (assignPeptideScores x.PeptideSequence) (assignDecoyScoreToTargetScore x.GroupOfProteinIDs reverseProteinScores))
+                    // appends found decoy proteins without matching proteins
+                    |> Seq.append reverseNoMatch
+                combRes
                 |> FSharpAux.IO.SeqIO.Seq.CSV "\t" true true
                 |> Seq.write outFile
             )
@@ -401,4 +529,4 @@ module ProteinInference =
         logger.Trace "Start building ClassItemCollection"
         let classItemCollection, psmInputs = createClassItemCollection gff3Location memoryDB proteinInferenceParams.ProteinIdentifierRegex rawFolderPath
         logger.Trace "Classify and Infer Proteins"
-        readAndInferFile classItemCollection proteinInferenceParams.Protein proteinInferenceParams.Peptide proteinInferenceParams.GroupFiles outDirectory rawFolderPath psmInputs
+        readAndInferFile classItemCollection proteinInferenceParams.Protein proteinInferenceParams.Peptide proteinInferenceParams.GroupFiles outDirectory rawFolderPath psmInputs dbConnection
