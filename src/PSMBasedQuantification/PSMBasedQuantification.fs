@@ -138,7 +138,7 @@ module PSMBasedQuantification =
         let (retData,itzData,uncorrectedItzData)   =
             getXic targetScanTime targetMz
         let  windowSize = estWindowSize uncorrectedItzData
-        let peaks          = Signal.PeakDetection.SecondDerivative.getPeaks minSNR polOrder windowSize retData itzData
+        let peaks          = SignalDetectionTemp.getPeaks minSNR polOrder windowSize retData itzData
         if Array.isEmpty peaks then
             {
                 Area                      = nan
@@ -281,7 +281,7 @@ module PSMBasedQuantification =
                                     let psmsWithScanTime = psms |> Array.map (fun x -> x, MassSpectrum.getScanTime (inReader.ReadMassSpectrum(x.PSMId)))
                                     logger.Trace "quantify target"
                                     let averagePSM = average getXIC psmsWithScanTime
-                                    let peaks          = Signal.PeakDetection.SecondDerivative.getPeaks 0.1 2 11 averagePSM.X_Xic averagePSM.Y_Xic_uncorrected
+                                    let peaks          = SignalDetectionTemp.getPeaks 0.1 2 11 averagePSM.X_Xic averagePSM.Y_Xic_uncorrected
                                     let NoNoise = peaks |> Array.map (fun x -> x.XData) |> Array.concat |> Set.ofArray
                                     let noiseArr =
                                         Array.zip averagePSM.X_Xic averagePSM.Y_Xic
@@ -319,7 +319,7 @@ module PSMBasedQuantification =
                         let averagePSM = average getXIC psmsWithScanTime
                         let avgMass = Mass.ofMZ (averagePSM.MeanPrecMz) (ch |> float)
                         let windowWidth = getWindowWidth averagePSM.Y_Xic_uncorrected
-                        let peaks          = Signal.PeakDetection.SecondDerivative.getPeaks processParams.XicExtraction.MinSNR processParams.XicExtraction.PolynomOrder windowWidth averagePSM.X_Xic averagePSM.Y_Xic
+                        let peaks          = SignalDetectionTemp.getPeaks processParams.XicExtraction.MinSNR processParams.XicExtraction.PolynomOrder windowWidth averagePSM.X_Xic averagePSM.Y_Xic
                         if Array.isEmpty peaks then None
                         else
                         let peakToQuantify = BioFSharp.Mz.Quantification.HULQ.getPeakBy peaks averagePSM.WeightedAvgScanTime
@@ -341,8 +341,8 @@ module PSMBasedQuantification =
                             let n15Minus1Mz    = n15mz - (Mass.Table.NMassInU / (ch|> float))
                             let n15Minus1Inferred = quantifyInferredPeak processParams.XicExtraction.MinSNR processParams.XicExtraction.PolynomOrder getWindowWidth getXIC n15Minus1Mz searchScanTime
 
-                            //let chart = saveChart windowWidth sequence globMod ch averagePSM.X_Xic averagePSM.Y_Xic ms2s averagePSM.WeightedAvgScanTime
-                            //                    peakToQuantify.XData peakToQuantify.YData quantP.YPredicted n15Inferred.xXic n15Inferred.yXic n15Inferred.xXic n15Inferred.yFitted plotDirectory
+                            let chart = saveChart windowWidth sequence globMod ch averagePSM.X_Xic averagePSM.Y_Xic ms2s averagePSM.WeightedAvgScanTime
+                                                peakToQuantify.XData peakToQuantify.YData quantP.YPredicted n15Inferred.xXic n15Inferred.yXic n15Inferred.xPeak n15Inferred.yFitted plotDirectory
 
                             {
                             StringSequence            = sequence
@@ -382,8 +382,8 @@ module PSMBasedQuantification =
                             let n15Minus1Mz    = averagePSM.MeanPrecMz - (Mass.Table.NMassInU / (ch|> float))
                             let n15Minus1Inferred = quantifyInferredPeak processParams.XicExtraction.MinSNR processParams.XicExtraction.PolynomOrder getWindowWidth getXIC n15Minus1Mz searchScanTime
 
-                            //let chart = saveChart windowWidth sequence globMod ch averagePSM.X_Xic averagePSM.Y_Xic ms2s averagePSM.WeightedAvgScanTime
-                            //                    peakToQuantify.XData peakToQuantify.YData quantP.YPredicted n14Inferred.xXic n14Inferred.yXic n14Inferred.xXic n14Inferred.yFitted plotDirectory
+                            let chart = saveChart windowWidth sequence globMod ch averagePSM.X_Xic averagePSM.Y_Xic ms2s averagePSM.WeightedAvgScanTime
+                                                peakToQuantify.XData peakToQuantify.YData quantP.YPredicted n14Inferred.xXic n14Inferred.yXic n14Inferred.xPeak n14Inferred.yFitted plotDirectory
 
                             {
                             StringSequence            = sequence
