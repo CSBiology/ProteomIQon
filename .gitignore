@@ -185,3 +185,5 @@ docsrc/content/release-notes.md
 docsrc/tools/FSharp.Formatting.svclog
 docs
 temp
+/.paket/load
+/src/ProteinInference/Test.fsx
