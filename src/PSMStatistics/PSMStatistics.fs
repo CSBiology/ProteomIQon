@@ -196,7 +196,7 @@ module PSMStatistics =
         
         logger.Trace "Writing percolatorIn.tab. to disk"
         percolatorIn
-        |> FSharpAux.IO.SeqIO.Seq.toCSV "\t" true
+        |> FSharpAux.IO.SeqIO.Seq.CSV "\t" true true
         |> Seq.map (fun x -> FSharpAux.String.replace ";" "\t" x)
         |> FSharpAux.IO.FileIO.writeToFile false percolatorInFilePath
         logger.Trace "Writing percolatorIn.tab. to disk: finished"
@@ -271,7 +271,7 @@ module PSMStatistics =
                                 )
 
             result
-            |> FSharpAux.IO.SeqIO.Seq.toCSV "\t" true
+            |> FSharpAux.IO.SeqIO.Seq.CSV "\t" true true
             |> FSharpAux.IO.FileIO.writeToFile false outFilePath
 
         with
