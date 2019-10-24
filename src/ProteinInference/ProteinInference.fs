@@ -18,6 +18,7 @@ open FSharpAux.IO.SchemaReader.Attribute
 open GFF3
 open Domain
 open FSharp.Plotly
+open FSharp.Stats
 
 module ProteinInference =
 
@@ -295,18 +296,53 @@ module ProteinInference =
         )
         |> Array.max
 
+    /// for given data, creates a logistic regression model and returns a mapping function for this model
+    let getLogisticRegressionFunction (x:vector) (y:vector) epsilon = 
+        let alpha = 
+            match FSharp.Stats.Fitting.LogisticRegression.Univariable.estimateAlpha epsilon x y with 
+            | Some a -> a
+            | None -> failwith "Could not find an alpha for logistic regression of fdr data"
+        let weight = FSharp.Stats.Fitting.LogisticRegression.Univariable.coefficient epsilon alpha x y
+        FSharp.Stats.Fitting.LogisticRegression.Univariable.fit weight
+
+    /// returns scores, pep, q
+    let binningFunction bandwidth pi0 (scoreF: 'A -> float) (isDecoyF: 'A -> bool) (data:'A[])  = 
+        let totalDecoyProportion = 
+            let decoyCount = Array.filter isDecoyF data |> Array.length |> float
+            let totalCount = data |> Array.length  |> float
+            (2. * decoyCount / totalCount)
+        data
+        |> Array.groupBy (fun s -> floor (scoreF s / bandwidth))
+        |> Array.sortBy fst
+        |> Array.map (fun (k,values)->
+            let median     = values |> Array.map scoreF |> Array.average
+            let totalCount = values |> Array.length |> float
+            let decoyCount = values |> Array.filter isDecoyF |> Array.length |> float |> (*) totalDecoyProportion
+            //(median |> float,(decoyCount * pi0  / totalCount))
+            median,totalCount,decoyCount
+                //(median, totalCount )
+        )
+        |> fun a ->
+            a
+            |> Array.mapi (fun i (median,totalCountBin,decoyCountBin) ->
+                            /// TODO: Accumulate totalCount + totalDecoyCount beforeHand and skip the time intensive mapping accross the array in each iteration.
+                            let _,totalCountRight,decoyCountRight = a.[i..a.Length-1] |> Array.reduce (fun (x,y,z) (x',y',z') -> x+x',y+y',z+z')
+                            (median,(pi0 * 2. * decoyCountBin / totalCountBin),(pi0 * 2. * decoyCountRight / totalCountRight))
+                          )
+        |> Array.sortBy (fun (score,pep,q) -> score) 
+        |> Array.unzip3 
+        |> fun (score,pep,q) -> vector score, vector pep, vector q
+
+
+
     /// Calculates q value mapping funtion for target/decoy dataset
-    let getQValueFunc pi0 (scoreF: 'A -> float) (isDecoyF: 'A -> bool) (data:'A[]) = 
-        let bw = 
-            data 
-            |> Array.map scoreF
-            |> FSharp.Stats.Distributions.Bandwidth.nrd0
-        let (scores,_,q) = FDRControl.binningFunction 0.01 pi0 scoreF isDecoyF data
-        FDRControl.getLogisticRegressionFunction scores q 0.0000001
+    let getQValueFunc pi0 bw (scoreF: 'A -> float) (isDecoyF: 'A -> bool) (data:'A[]) = 
+        let (scores,_,q) = binningFunction bw pi0 scoreF isDecoyF data
+        getLogisticRegressionFunction scores q 0.0000001
 
     /// Calculates q values for target/decoy dataset
     let getQValues pi0 (scoreF: 'A -> float) (isDecoyF: 'A -> bool) (data:'A[]) = 
-        let f = getQValueFunc pi0 scoreF isDecoyF data
+        let f = getQValueFunc pi0 0.01 scoreF isDecoyF data
         Array.map (scoreF >> f) data
 
     // Calculates a q-value for the indentified proteins
@@ -331,7 +367,7 @@ module ProteinInference =
         // Combined InferredProteinClassItemScored input, which gets assigned its corresponding q value
         let combinedIPCISInput = Array.append targetDecoyMatch decoyNoMatch
 
-        let qValues = getQValues 0.5 (fun (x: QValueInput) -> x.Score) (fun (x: QValueInput) -> x.IsDecoy) combinedInput
+        let qValues = getQValues 1. (fun (x: QValueInput) -> x.Score) (fun (x: QValueInput) -> x.IsDecoy) combinedInput
         Array.map2 (fun (qValue: float) (input: InferredProteinClassItemScored<'sequence>) ->
             createInferredProteinClassItemScored input.GroupOfProteinIDs input.Class input.PeptideSequence input.TargetScore input.DecoyScore qValue input.Decoy input.DecoyBigger
             ) qValues combinedIPCISInput
@@ -584,6 +620,13 @@ module ProteinInference =
                 )
                 |> Array.filter (fun out -> out.Decoy <> false)
 
+            //let randomDecoy =
+            //    let rnd = System.Random()
+            //    let arr: InferredProteinClassItemScored<string>[] = Array.zeroCreate 1000
+            //    for i = 0 to 999 do
+            //        arr.[i] <- createInferredProteinClassItemScored "RandomDecoy" PeptideEvidenceClass.Unknown [|""|] 0. (rnd.NextDouble()/10.) (-1.) true true
+            //    arr
+
             // Assign q values to each protein (now also includes decoy only hits)
             let combinedScoredClassesQVal =
                 calculateQValue combinedScoredClasses reverseNoMatch
@@ -592,7 +635,7 @@ module ProteinInference =
                 calculateQValuePaper combinedScoredClasses reverseNoMatch
                 |> Array.map (fun (qvalue, input) -> qvalue, input.Score)
                 |> Array.unzip
-
+            
             let chartQValPaper =
                 Chart.Line (score, qValuePaper)
                 
