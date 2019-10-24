@@ -494,8 +494,8 @@ NUGET
   remote: paket-files/github.com/CSBiology/FSharp.Stats
     FSharp.Stats (0.1.0)
   remote: paket-files/github.com/CSBiology/FSharpAux
-    FSharpAux (0.0.14)
-    FSharpAux.IO (0.0.14)
+    FSharpAux (0.0.15)
+    FSharpAux.IO (0.0.15)
   remote: paket-files/github.com/CSBiology/MzIO
     MzIO (0.0.9.3)
       EntityFramework
@@ -543,7 +543,7 @@ NUGET
       System.Xml.Linq
 GIT
   remote: https://github.com/CSBiology/FSharpAux.git
-     (a8542fbfb4db1d0c7a10d51d72cee33a638b332f)
+     (456f096ee9b48ad866c483590c86421ee300c857)
       path: /
   remote: https://github.com/CSBiology/FSharp.Stats.git
      (2293a87e11e175f81af5bddab240b1638f220da0)
