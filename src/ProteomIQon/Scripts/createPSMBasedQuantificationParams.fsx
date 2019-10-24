@@ -30,7 +30,7 @@ let defaultPreprocessingParams :Dto.QuantificationParams =
     {
         PerformLabeledQuantification = true
         XicExtraction                = XicExtraction
-        BaseLineCorrection           = Some BaseLineCorrection
+        BaseLineCorrection           = None//Some BaseLineCorrection
     }
 
 
@@ -38,7 +38,7 @@ let serialized =
     defaultPreprocessingParams
     |> Json.serialize
 
-System.IO.File.WriteAllText(__SOURCE_DIRECTORY__ + @"/../defaultParams\QuantificationParams.json",serialized)
+System.IO.File.WriteAllText(__SOURCE_DIRECTORY__ + @"/../defaultParams\QuantificationParams_NoBaseline.json",serialized)
 
 let deserialized = 
     System.IO.File.ReadAllText(__SOURCE_DIRECTORY__ + @"/../defaultParams\QuantificationParams.json")
