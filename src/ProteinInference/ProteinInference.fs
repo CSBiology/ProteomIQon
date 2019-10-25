@@ -22,6 +22,12 @@ open FSharp.Stats
 
 module ProteinInference =
 
+    type QValScore =
+        {
+            QValue: float
+            Score: float
+        }
+
     /// This type represents one element of the final output. It's the protein, with all the peptides that were measured and are pointing to it.
     type IntermediateResult =
         {
@@ -74,7 +80,7 @@ module ProteinInference =
         }
 
     /// For a group of proteins, contains information about all peptides that might be used for its quantification and score / q-value calculated for it.
-    type InferredProteinClassItemScored<'sequence> = 
+    type InferredProteinClassItemScored<'sequence> =
         {
             GroupOfProteinIDs: string
             PeptideSequence  : 'sequence []
@@ -96,7 +102,7 @@ module ProteinInference =
             QValue            = qValue
             Decoy             = isDecoy
             DecoyBigger       = decoyBigger
-        }   
+        }
 
     ///checks if GFF line describes gene
     let isGene (item: GFFLine<seq<char>>) =
@@ -249,7 +255,7 @@ module ProteinInference =
         psmInputs
         |> List.concat
         |> List.groupBy (fun psm -> psm.Seq)
-        |> List.map (fun (sequence, psmList) -> 
+        |> List.map (fun (sequence, psmList) ->
             sequence,
             psmList
             |> List.sortByDescending (fun psm -> psm.PercolatorScore)
@@ -297,17 +303,17 @@ module ProteinInference =
         |> Array.max
 
     /// for given data, creates a logistic regression model and returns a mapping function for this model
-    let getLogisticRegressionFunction (x:vector) (y:vector) epsilon = 
-        let alpha = 
-            match FSharp.Stats.Fitting.LogisticRegression.Univariable.estimateAlpha epsilon x y with 
+    let getLogisticRegressionFunction (x:vector) (y:vector) epsilon =
+        let alpha =
+            match FSharp.Stats.Fitting.LogisticRegression.Univariable.estimateAlpha epsilon x y with
             | Some a -> a
             | None -> failwith "Could not find an alpha for logistic regression of fdr data"
         let weight = FSharp.Stats.Fitting.LogisticRegression.Univariable.coefficient epsilon alpha x y
         FSharp.Stats.Fitting.LogisticRegression.Univariable.fit weight
 
     /// returns scores, pep, q
-    let binningFunction bandwidth pi0 (scoreF: 'A -> float) (isDecoyF: 'A -> bool) (data:'A[])  = 
-        let totalDecoyProportion = 
+    let binningFunction bandwidth pi0 (scoreF: 'A -> float) (isDecoyF: 'A -> bool) (data:'A[])  =
+        let totalDecoyProportion =
             let decoyCount = Array.filter isDecoyF data |> Array.length |> float
             let totalCount = data |> Array.length  |> float
             (2. * decoyCount / totalCount)
@@ -329,19 +335,17 @@ module ProteinInference =
                             let _,totalCountRight,decoyCountRight = a.[i..a.Length-1] |> Array.reduce (fun (x,y,z) (x',y',z') -> x+x',y+y',z+z')
                             (median,(pi0 * 2. * decoyCountBin / totalCountBin),(pi0 * 2. * decoyCountRight / totalCountRight))
                           )
-        |> Array.sortBy (fun (score,pep,q) -> score) 
-        |> Array.unzip3 
+        |> Array.sortBy (fun (score,pep,q) -> score)
+        |> Array.unzip3
         |> fun (score,pep,q) -> vector score, vector pep, vector q
 
-
-
     /// Calculates q value mapping funtion for target/decoy dataset
-    let getQValueFunc pi0 bw (scoreF: 'A -> float) (isDecoyF: 'A -> bool) (data:'A[]) = 
+    let getQValueFunc pi0 bw (scoreF: 'A -> float) (isDecoyF: 'A -> bool) (data:'A[]) =
         let (scores,_,q) = binningFunction bw pi0 scoreF isDecoyF data
         getLogisticRegressionFunction scores q 0.0000001
 
     /// Calculates q values for target/decoy dataset
-    let getQValues pi0 (scoreF: 'A -> float) (isDecoyF: 'A -> bool) (data:'A[]) = 
+    let getQValues pi0 (scoreF: 'A -> float) (isDecoyF: 'A -> bool) (data:'A[]) =
         let f = getQValueFunc pi0 0.01 scoreF isDecoyF data
         Array.map (scoreF >> f) data
 
@@ -358,7 +362,7 @@ module ProteinInference =
                 )
         let createDecoyNoMatchInput =
             decoyNoMatch
-            |> Array.map (fun intermediateResult -> 
+            |> Array.map (fun intermediateResult ->
                 createQValueInput intermediateResult.DecoyScore true
                 )
         // Combined input for q value calculation
@@ -384,7 +388,7 @@ module ProteinInference =
                 )
         let createDecoyNoMatchInput =
             decoyNoMatch
-            |> Array.map (fun intermediateResult -> 
+            |> Array.map (fun intermediateResult ->
                 createQValueInput intermediateResult.DecoyScore true
                 )
         // Combined input for q value calculation
@@ -542,7 +546,7 @@ module ProteinInference =
         let dbParams = getSDBParamsBy dbConnection
 
         // Array of prtoein Accessions tupled with their reverse digested peptides
-        let reverseProteins = 
+        let reverseProteins =
             (selectProteins dbConnection)
             |> Array.ofList
             |> Array.map (fun (name, sequence) ->
@@ -578,7 +582,6 @@ module ProteinInference =
                 List.collect (fun (pepSeq,_) -> pepSeq) classifiedProteins
                 |> BioFSharp.Mz.ProteinInference.inferSequences protein peptide
 
-
             // Peptide score Map
             let peptideScoreMap = createPeptideScoreMap psmInputs
 
@@ -595,7 +598,7 @@ module ProteinInference =
                     // Looks if the reverse protein has been randomly matched and assigns the score
                     let decoyScore = (assignDecoyScoreToTargetScore inferredPCI.GroupOfProteinIDs reverseProteinScores)
 
-                    createInferredProteinClassItemScored 
+                    createInferredProteinClassItemScored
                         inferredPCI.GroupOfProteinIDs inferredPCI.Class inferredPCI.PeptideSequence
                         peptideScore
                         decoyScore
@@ -635,10 +638,34 @@ module ProteinInference =
                 calculateQValuePaper combinedScoredClasses reverseNoMatch
                 |> Array.map (fun (qvalue, input) -> qvalue, input.Score)
                 |> Array.unzip
-            
+
+            let jX,jY = 
+                Array.zip score qValuePaper
+                |> Array.sortBy fst
+                |> Array.unzip
+                //|> fun (x,y) -> x.[0..3499] |> Seq.getMeanOfReplicates 20 |> Array.ofSeq, y.[0..3499] |> Seq.getMeanOfReplicates 20 |> Array.ofSeq
+
+            let rawChart = Chart.Point (jX,jY)
+            rawChart |> Chart.Show
+
+            let smoothingSpline = FSharp.Stats.Fitting.Spline.smoothingSpline (Array.zip jX jY) jX
+
+            let chartSS = 
+                [0.000001]
+                |> List.mapi (fun i lambda -> 
+                    printfn "%i" i
+                    jX
+                    |> Seq.mapi (fun i x -> 
+                        if i%100=0 then printfn "%i" i
+                        x,smoothingSpline lambda x)
+                    |> Chart.Line
+                    |> Chart.withTraceName (sprintf "Lam: %.3f" lambda))
+                |> Chart.Combine
+
+            [chartSS;rawChart] |> Chart.Combine |> Chart.withSize(1000.,800.) |> Chart.SaveHtmlAs (outDirectory + @"\SmoothGraph")
+
             let chartQValPaper =
                 Chart.Line (score, qValuePaper)
-                
 
             let histogram =
                 let decoy, target = combinedScoredClassesQVal |> Array.partition (fun x -> x.DecoyBigger)
@@ -685,7 +712,6 @@ module ProteinInference =
                 |> Chart.withSize (900., 900.)
                 |> Chart.SaveHtmlAs (outDirectory + @"\QValueGraph")
 
-
             // Assign results to files in which they can be found
             classifiedProteins
             |> List.iter (fun (prots,outFile) ->
@@ -702,8 +728,6 @@ module ProteinInference =
                         else
                             Some (ic.Class,ic.GroupOfProteinIDs, filteredPepSet)
                         )
-
-
 
                 let combRes =
                     combinedInferenceresult
@@ -727,7 +751,7 @@ module ProteinInference =
 
                 // creates intermediate result type for decoy proteins that have no match
                 let reverseNoMatch =
-                    let proteinsPresent = 
+                    let proteinsPresent =
                         inferenceResult
                         |> Array.ofSeq
                         |> Array.collect (fun prots -> prots.GroupOfProteinIDs |> String.split ';')
