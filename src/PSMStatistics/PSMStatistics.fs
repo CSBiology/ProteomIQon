@@ -151,9 +151,9 @@ module PSMStatistics =
             let fileName = (Path.GetFileNameWithoutExtension percolatorInFilePath) + ".spsm"
             Path.Combine [|outputDir;fileName|]
 
-        //let percolatorDecoyOutFilePath = 
-        //    let fileName = (Path.GetFileNameWithoutExtension percolatorInFilePath) + "_decoy.spsm"
-        //    Path.Combine [|outputDir;fileName|]
+        let percolatorDecoyOutFilePath = 
+            let fileName = (Path.GetFileNameWithoutExtension percolatorInFilePath) + "_decoy.spsm"
+            Path.Combine [|outputDir;fileName|]
 
         let outFilePath = 
             let fileName = (Path.GetFileNameWithoutExtension psms) + ".qpsm"
@@ -161,7 +161,7 @@ module PSMStatistics =
 
         logger.Trace (sprintf "percolatorInFilePath:%s" percolatorInFilePath)
         logger.Trace (sprintf "percolatorOutFilePath:%s" percolatorOutFilePath)
-        //logger.Trace (sprintf "percolatorDecoyOutFilePath:%s" percolatorDecoyOutFilePath)
+        logger.Trace (sprintf "percolatorDecoyOutFilePath:%s" percolatorDecoyOutFilePath)
         logger.Trace (sprintf "outFilePath:%s" outFilePath)
 
         logger.Trace "Copy peptide DB into Memory"
@@ -208,7 +208,7 @@ module PSMStatistics =
             PercolatorParams.GeneralOptions  [(GeneralOptions.PostProcessing_TargetDecoyCompetition)]
             PercolatorParams.FileInputOptions [(FileInputOptions.PINTAB (System.IO.FileInfo(percolatorInFilePath)))]
             PercolatorParams.FileOutputOptions [(FileOutputOptions.POUTTAB_PSMs (System.IO.FileInfo(percolatorOutFilePath)));];
-            //PercolatorParams.FileOutputOptions [(FileOutputOptions.POUTTAB_DecoyPSMs (System.IO.FileInfo(percolatorDecoyOutFilePath)))]
+            PercolatorParams.FileOutputOptions [(FileOutputOptions.POUTTAB_DecoyPSMs (System.IO.FileInfo(percolatorDecoyOutFilePath)))]
             ]
         let executePercolator =
             let percPath = 
