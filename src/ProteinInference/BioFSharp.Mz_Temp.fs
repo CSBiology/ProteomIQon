@@ -88,6 +88,20 @@ module SearchDB =
         | None ->
             failwith "This database does not contain any SearchParameters. It is not recommended to work with this file."
 
+module FDRControl' =
+
+    open FSharp.Stats
+
+    /// Calculates q value mapping funtion for target/decoy dataset
+    let getQValueFunc pi0 bw (scoreF: 'A -> float) (isDecoyF: 'A -> bool) (data:'A[]) =
+        let (scores,_,q) = FDRControl.binningFunction bw pi0 scoreF isDecoyF data
+        FDRControl.getLogisticRegressionFunction scores q 0.0000001
+
+    /// Calculates q values for target/decoy dataset
+    let getQValues pi0 (scoreF: 'A -> float) (isDecoyF: 'A -> bool) (data:'A[]) =
+        let f = getQValueFunc pi0 0.01 scoreF isDecoyF data
+        Array.map (scoreF >> f) data
+
 module ProteinInference' =
 
     open BioFSharp.PeptideClassification
@@ -127,6 +141,19 @@ module ProteinInference' =
             Seq             :string
             [<FieldAttribute("PercolatorScore")>]
             PercolatorScore : float
+        }
+
+        // Input for QValue calulation
+    type QValueInput =
+        {
+            Score    : float
+            IsDecoy  : bool
+        }
+
+    let createQValueInput score isDecoy =
+        {
+            Score     = score
+            IsDecoy   = isDecoy
         }
 
     ///checks if GFF line describes gene
@@ -257,3 +284,67 @@ module ProteinInference' =
                 | None -> 0.
         )
         |> Array.max
+
+    // Calculates a q-value for the indentified proteins
+    let calculateQValueLogReg fdrEstimate (targetDecoyMatch: InferredProteinClassItemScored<'sequence>[]) (decoyNoMatch: InferredProteinClassItemScored<'sequence>[]) =
+        // Input for q value calculation
+        let createTargetDecoyInput =
+            targetDecoyMatch
+            |> Array.map (fun inferredProteinCIS ->
+                if inferredProteinCIS.DecoyBigger then
+                    createQValueInput inferredProteinCIS.DecoyScore true
+                else
+                    createQValueInput inferredProteinCIS.TargetScore false
+                )
+        let createDecoyNoMatchInput =
+            decoyNoMatch
+            |> Array.map (fun intermediateResult ->
+                createQValueInput intermediateResult.DecoyScore true
+                )
+        // Combined input for q value calculation
+        let combinedInput = Array.append createTargetDecoyInput createDecoyNoMatchInput
+
+        // Combined InferredProteinClassItemScored input, which gets assigned its corresponding q value
+        let combinedIPCISInput = Array.append targetDecoyMatch decoyNoMatch
+
+        let qValues = FDRControl'.getQValues fdrEstimate (fun (x: QValueInput) -> x.Score) (fun (x: QValueInput) -> x.IsDecoy) combinedInput
+
+        // Create a new instance of InferredProteinClassItemScored with q values assigned
+        Array.map2 (fun (qValue: float) (input: InferredProteinClassItemScored<'sequence>) ->
+            createInferredProteinClassItemScored input.GroupOfProteinIDs input.Class input.PeptideSequence input.TargetScore input.DecoyScore qValue input.Decoy input.DecoyBigger
+            ) qValues combinedIPCISInput
+
+    let calculateQValueStorey (targetDecoyMatch: InferredProteinClassItemScored<'sequence>[]) (decoyNoMatch: InferredProteinClassItemScored<'sequence>[]) =
+        // Combined input for q value calculation
+        let combinedInput = Array.append targetDecoyMatch decoyNoMatch
+                            |> Array.sortByDescending (fun x -> if x.DecoyBigger then
+                                                                    x.DecoyScore
+                                                                else
+                                                                    x.TargetScore
+                                                      )
+        let rec traverseTopBottom (i: int) (target: float) (decoy: float) (multiplier: float) (qValues: float list)=
+            if i >= combinedInput.Length then
+                qValues
+            else
+                match combinedInput.[i].DecoyBigger with
+                | true  -> traverseTopBottom (i + 1) target (decoy + 1. * multiplier) multiplier (((decoy + 1. * multiplier) / (if target > 0. then target else 1.))::qValues)
+                | false -> traverseTopBottom (i + 1) (target + 1.) decoy multiplier ((decoy / (target + 1.))::qValues)
+        let reverseQVal = traverseTopBottom 0 0. 0. 1. []
+
+        let rec traverseBottomTop (i: int) (monotonizedQValues: float list) =
+            if i >= reverseQVal.Length then
+                monotonizedQValues
+            elif i = 0 then
+                traverseBottomTop (i + 1) (reverseQVal.[i]::monotonizedQValues)
+            else
+                if reverseQVal.[i] > monotonizedQValues.[0] then
+                    traverseBottomTop (i + 1) (monotonizedQValues.[0]::monotonizedQValues)
+                else
+                    traverseBottomTop (i + 1) (reverseQVal.[i]::monotonizedQValues)
+        let monotoneQVal = traverseBottomTop 0 []
+                           |> Array.ofList
+
+        // Create a new instance of InferredProteinClassItemScored with q values assigned
+        Array.map2 (fun (qValue: float) (input: InferredProteinClassItemScored<'sequence>) ->
+            createInferredProteinClassItemScored input.GroupOfProteinIDs input.Class input.PeptideSequence input.TargetScore input.DecoyScore qValue input.Decoy input.DecoyBigger
+            ) monotoneQVal combinedInput
