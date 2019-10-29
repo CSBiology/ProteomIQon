@@ -22,12 +22,6 @@ open FSharp.Stats
 
 module ProteinInference =
 
-    type QValScore =
-        {
-            QValue: float
-            Score: float
-        }
-
     /// This type represents one element of the final output. It's the protein, with all the peptides that were measured and are pointing to it.
     type IntermediateResult =
         {
@@ -350,7 +344,7 @@ module ProteinInference =
         Array.map (scoreF >> f) data
 
     // Calculates a q-value for the indentified proteins
-    let calculateQValue (targetDecoyMatch: InferredProteinClassItemScored<'sequence>[]) (decoyNoMatch: InferredProteinClassItemScored<'sequence>[]) =
+    let calculateQValueLogReg fdrEstimate (targetDecoyMatch: InferredProteinClassItemScored<'sequence>[]) (decoyNoMatch: InferredProteinClassItemScored<'sequence>[]) =
         // Input for q value calculation
         let createTargetDecoyInput =
             targetDecoyMatch
@@ -371,34 +365,26 @@ module ProteinInference =
         // Combined InferredProteinClassItemScored input, which gets assigned its corresponding q value
         let combinedIPCISInput = Array.append targetDecoyMatch decoyNoMatch
 
-        let qValues = getQValues 1. (fun (x: QValueInput) -> x.Score) (fun (x: QValueInput) -> x.IsDecoy) combinedInput
+        let qValues = getQValues fdrEstimate (fun (x: QValueInput) -> x.Score) (fun (x: QValueInput) -> x.IsDecoy) combinedInput
+
+        // Create a new instance of InferredProteinClassItemScored with q values assigned
         Array.map2 (fun (qValue: float) (input: InferredProteinClassItemScored<'sequence>) ->
             createInferredProteinClassItemScored input.GroupOfProteinIDs input.Class input.PeptideSequence input.TargetScore input.DecoyScore qValue input.Decoy input.DecoyBigger
             ) qValues combinedIPCISInput
 
-    let calculateQValuePaper (targetDecoyMatch: InferredProteinClassItemScored<'sequence>[]) (decoyNoMatch: InferredProteinClassItemScored<'sequence>[]) =
-        // Input for q value calculation
-        let createTargetDecoyInput =
-            targetDecoyMatch
-            |> Array.map (fun inferredProteinCIS ->
-                if inferredProteinCIS.DecoyBigger then
-                    createQValueInput inferredProteinCIS.DecoyScore true
-                else
-                    createQValueInput inferredProteinCIS.TargetScore false
-                )
-        let createDecoyNoMatchInput =
-            decoyNoMatch
-            |> Array.map (fun intermediateResult ->
-                createQValueInput intermediateResult.DecoyScore true
-                )
+    let calculateQValueStorey (targetDecoyMatch: InferredProteinClassItemScored<'sequence>[]) (decoyNoMatch: InferredProteinClassItemScored<'sequence>[]) =
         // Combined input for q value calculation
-        let combinedInput = Array.append createTargetDecoyInput createDecoyNoMatchInput
-                            |> Array.sortByDescending (fun x -> x.Score)
+        let combinedInput = Array.append targetDecoyMatch decoyNoMatch
+                            |> Array.sortByDescending (fun x -> if x.DecoyBigger then
+                                                                    x.DecoyScore
+                                                                else
+                                                                    x.TargetScore
+                                                      )
         let rec traverseTopBottom (i: int) (target: float) (decoy: float) (multiplier: float) (qValues: float list)=
             if i >= combinedInput.Length then
                 qValues
             else
-                match combinedInput.[i].IsDecoy with
+                match combinedInput.[i].DecoyBigger with
                 | true  -> traverseTopBottom (i + 1) target (decoy + 1. * multiplier) multiplier (((decoy + 1. * multiplier) / (if target > 0. then target else 1.))::qValues)
                 | false -> traverseTopBottom (i + 1) (target + 1.) decoy multiplier ((decoy / (target + 1.))::qValues)
         let reverseQVal = traverseTopBottom 0 0. 0. 1. []
@@ -416,8 +402,9 @@ module ProteinInference =
         let monotoneQVal = traverseBottomTop 0 []
                            |> Array.ofList
 
-        Array.map2 (fun (qValue: float) (input: QValueInput) ->
-            qValue, input
+        // Create a new instance of InferredProteinClassItemScored with q values assigned
+        Array.map2 (fun (qValue: float) (input: InferredProteinClassItemScored<'sequence>) ->
+            createInferredProteinClassItemScored input.GroupOfProteinIDs input.Class input.PeptideSequence input.TargetScore input.DecoyScore qValue input.Decoy input.DecoyBigger
             ) monotoneQVal combinedInput
 
     /// Given a ggf3 and a fasta file, creates a collection of all theoretically possible peptides and the proteins they might
@@ -529,7 +516,7 @@ module ProteinInference =
     let proteinGroupToString (proteinGroup:string[]) =
         Array.reduce (fun x y ->  x + ";" + y) proteinGroup
 
-    let readAndInferFile classItemCollection protein peptide groupFiles outDirectory rawFolderPath psmInputs (dbConnection: SQLiteConnection) =
+    let readAndInferFile classItemCollection protein peptide groupFiles outDirectory rawFolderPath psmInputs (dbConnection: SQLiteConnection) (qValMethod: QValueMethod) =
 
         let logger = Logging.createLogger "ProteinInference_readAndInferFile"
 
@@ -585,7 +572,7 @@ module ProteinInference =
             // Peptide score Map
             let peptideScoreMap = createPeptideScoreMap psmInputs
 
-            // Should this only be done with peptides present in the file?
+            // Assigns scores to reverse digested Proteins using the peptideScoreMap
             let reverseProteinScores = createReverseProteinScores reverseProteins peptideScoreMap
 
             // Scores each inferred protein and assigns each protein where a reverted peptide was hit its score
@@ -608,7 +595,7 @@ module ProteinInference =
                         (decoyScore > peptideScore)
                     )
 
-            // creates output type for decoy proteins that have no match
+            // creates InferredProteinClassItemScored type for decoy proteins that have no match
             let reverseNoMatch =
                 let proteinsPresent =
                     combinedScoredClasses
@@ -623,91 +610,62 @@ module ProteinInference =
                 )
                 |> Array.filter (fun out -> out.Decoy <> false)
 
-            //let randomDecoy =
-            //    let rnd = System.Random()
-            //    let arr: InferredProteinClassItemScored<string>[] = Array.zeroCreate 1000
-            //    for i = 0 to 999 do
-            //        arr.[i] <- createInferredProteinClassItemScored "RandomDecoy" PeptideEvidenceClass.Unknown [|""|] 0. (rnd.NextDouble()/10.) (-1.) true true
-            //    arr
-
             // Assign q values to each protein (now also includes decoy only hits)
             let combinedScoredClassesQVal =
-                calculateQValue combinedScoredClasses reverseNoMatch
+                if qValMethod = Domain.QValueMethod.LogisticRegression then
+                    let fdr = (combinedScoredClasses |> Array.filter (fun x -> x.DecoyBigger) |> Array.length |> float |> (*)2.)/(combinedScoredClasses |> Array.filter (fun x -> not x.DecoyBigger) |> Array.length |> float)
+                    calculateQValueLogReg fdr combinedScoredClasses reverseNoMatch
+                else
+                    calculateQValueStorey combinedScoredClasses reverseNoMatch
 
-            let qValuePaper, score =
-                calculateQValuePaper combinedScoredClasses reverseNoMatch
-                |> Array.map (fun (qvalue, input) -> qvalue, input.Score)
-                |> Array.unzip
-
-            let jX,jY = 
-                Array.zip score qValuePaper
-                |> Array.sortBy fst
-                |> Array.unzip
-                //|> fun (x,y) -> x.[0..3499] |> Seq.getMeanOfReplicates 20 |> Array.ofSeq, y.[0..3499] |> Seq.getMeanOfReplicates 20 |> Array.ofSeq
-
-            let rawChart = Chart.Point (jX,jY)
-            rawChart |> Chart.Show
-
-            let smoothingSpline = FSharp.Stats.Fitting.Spline.smoothingSpline (Array.zip jX jY) jX
-
-            let chartSS = 
-                [0.000001]
-                |> List.mapi (fun i lambda -> 
-                    printfn "%i" i
-                    jX
-                    |> Seq.mapi (fun i x -> 
-                        if i%100=0 then printfn "%i" i
-                        x,smoothingSpline lambda x)
-                    |> Chart.Line
-                    |> Chart.withTraceName (sprintf "Lam: %.3f" lambda))
-                |> Chart.Combine
-
-            [chartSS;rawChart] |> Chart.Combine |> Chart.withSize(1000.,800.) |> Chart.SaveHtmlAs (outDirectory + @"\SmoothGraph")
-
-            let chartQValPaper =
-                Chart.Line (score, qValuePaper)
-
-            let histogram =
+            let graph =
                 let decoy, target = combinedScoredClassesQVal |> Array.partition (fun x -> x.DecoyBigger)
+                // Histogram with relative abundance
                 let freqTarget = FSharp.Stats.Distributions.Frequency.create 0.01 (target |> Array.map (fun x -> x.TargetScore))
                                  |> Map.toArray
                                  |> Array.map (fun x -> fst x, (float (snd x)) / (float target.Length))
                 let freqDecoy  = FSharp.Stats.Distributions.Frequency.create 0.01 (decoy |> Array.map (fun x -> x.DecoyScore))
                                  |> Map.toArray
                                  |> Array.map (fun x -> fst x, (float (snd x)) / (float target.Length))
+                // Histogram with absolute values
                 let freqTarget1 = FSharp.Stats.Distributions.Frequency.create 0.01 (target |> Array.map (fun x -> x.TargetScore))
                                  |> Map.toArray
                 let freqDecoy1  = FSharp.Stats.Distributions.Frequency.create 0.01 (decoy |> Array.map (fun x -> x.DecoyScore))
                                  |> Map.toArray
+                let histogram =
+                    [
+                        Chart.Column freqTarget |> Chart.withTraceName "Target"
+                            |> Chart.withAxisAnchor(Y=1);
+                        Chart.Column freqDecoy |> Chart.withTraceName "Decoy"
+                            |> Chart.withAxisAnchor(Y=1);
+                        Chart.Column freqTarget1
+                            |> Chart.withAxisAnchor(Y=2)
+                            |> Chart.withMarkerStyle (Opacity = 0.)
+                            |> Chart.withTraceName (Showlegend = false);
+                        Chart.Column freqDecoy1
+                            |> Chart.withAxisAnchor(Y=2)
+                            |> Chart.withMarkerStyle (Opacity = 0.)
+                            |> Chart.withTraceName (Showlegend = false)
+                    ]
+                    |> Chart.Combine
+
+                let sortedQValues = 
+                    combinedScoredClassesQVal 
+                    |> Array.map 
+                        (fun x -> if x.DecoyBigger then
+                                    x.DecoyScore, x.QValue
+                                  else
+                                    x.TargetScore, x.QValue
+                        )
+                    |> Array.sortBy (fun (score, qVal) -> score)
 
                 [
-                    Chart.Column freqTarget |> Chart.withTraceName "TargetHisto"
-                        |> Chart.withAxisAnchor(Y=1);
-                    Chart.Column freqDecoy |> Chart.withTraceName "DecoyHisto"
-                        |> Chart.withAxisAnchor(Y=1);
-                    Chart.Column freqTarget1
-                        |> Chart.withAxisAnchor(Y=2);
-                    Chart.Column freqDecoy1
-                        |> Chart.withAxisAnchor(Y=2)
-                ]
-                |> Chart.Combine
-                //|> Chart.withX_AxisStyle "Score"
-                //|> Chart.SaveHtmlAs (outFile + ".html")
-            let qValueGraph =
-                let decoy, target = combinedScoredClassesQVal |> Array.partition (fun x -> x.DecoyBigger)
-                let sortedDecoy = decoy |> Array.sortBy (fun x -> x.DecoyScore)
-                                  |> Array.map (fun x -> x.DecoyScore, x.QValue)
-                let sortedTarget = target |> Array.sortBy (fun x -> x.TargetScore)
-                                   |> Array.map (fun x -> x.TargetScore, x.QValue)
-                [
-                    Chart.Line sortedTarget |> Chart.withTraceName "TargetQVal";
-                    Chart.Line sortedDecoy |> Chart.withTraceName "DecoyQVal"
-                    chartQValPaper |> Chart.withTraceName "QVlaueMethodPaper"
+                    Chart.Line sortedQValues |> Chart.withTraceName "Q-Values";
                     histogram
                 ]
                 |> Chart.Combine
-                |> Chart.withY_AxisStyle("Norm",Side=StyleParam.Side.Left,Id=1, MinMax = (0., 1.))
-                |> Chart.withY_AxisStyle("NoNorm",Side=StyleParam.Side.Right,Id=2,Overlaying=StyleParam.AxisAnchorId.Y 1, MinMax = (0., float target.Length))
+                |> Chart.withY_AxisStyle("Relative Frequency / Q-Value",Side=StyleParam.Side.Left,Id=1, MinMax = (0., 1.))
+                |> Chart.withY_AxisStyle("Absolute Frequency",Side=StyleParam.Side.Right,Id=2,Overlaying=StyleParam.AxisAnchorId.Y 1, MinMax = (0., float target.Length))
                 |> Chart.withX_AxisStyle "Score"
                 |> Chart.withSize (900., 900.)
                 |> Chart.SaveHtmlAs (outDirectory + @"\QValueGraph")
@@ -718,7 +676,7 @@ module ProteinInference =
                 let pepSeqSet = prots |> List.map (fun x -> x.PeptideSequence) |> Set.ofList
                 logger.Trace (sprintf "Start with %s"(System.IO.Path.GetFileNameWithoutExtension outFile))
                 let combinedInferenceresult =
-                    combinedClasses
+                    combinedScoredClassesQVal |> Array.filter (fun inferredPCIS -> not inferredPCIS.Decoy)
                     |> Seq.choose (fun ic ->
                         let filteredPepSet =
                             ic.PeptideSequence
@@ -726,14 +684,10 @@ module ProteinInference =
                         if filteredPepSet = [||] then
                             None
                         else
-                            Some (ic.Class,ic.GroupOfProteinIDs, filteredPepSet)
+                            Some (createInferredProteinClassItemScored ic.GroupOfProteinIDs ic.Class [|proteinGroupToString filteredPepSet|] ic.TargetScore ic.DecoyScore ic.QValue ic.Decoy ic.DecoyBigger)
                         )
 
-                let combRes =
-                    combinedInferenceresult
-                    |> Seq.map (fun (c,prots,pep) -> IntermediateResult.createIntermediateResult prots c (proteinGroupToString pep) (assignPeptideScores pep peptideScoreMap) (assignDecoyScoreToTargetScore prots reverseProteinScores))
-
-                combRes
+                combinedInferenceresult
                 |> FSharpAux.IO.SeqIO.Seq.CSV "\t" true true
                 |> Seq.write outFile
                 logger.Trace (sprintf "File written to %s" outFile)
@@ -743,34 +697,111 @@ module ProteinInference =
             |> List.iter2 (fun psm (sequences,outFile) ->
                 logger.Trace (sprintf "start inferring %s" (System.IO.Path.GetFileNameWithoutExtension outFile))
                 let inferenceResult = BioFSharp.Mz.ProteinInference.inferSequences protein peptide sequences
-                // creates output type for decoy proteins that have no match
 
+                // Peptide Score Map
                 let peptideScoreMap = createPeptideScoreMap [psm]
 
+                // Assigns scores to reverse digested Proteins using the peptideScoreMap
                 let reverseProteinScores = createReverseProteinScores reverseProteins peptideScoreMap
 
-                // creates intermediate result type for decoy proteins that have no match
+                // Scores each inferred protein and assigns each protein where a reverted peptide was hit its score
+                let inferenceResultScored =
+                    inferenceResult
+                    |> Array.ofSeq
+                    |> Array.map (fun inferredPCI ->
+                        // Looks up all peptides assigned to the protein and sums up their score
+                        let peptideScore = (assignPeptideScores inferredPCI.PeptideSequence peptideScoreMap)
+                        // Looks if the reverse protein has been randomly matched and assigns the score
+                        let decoyScore = (assignDecoyScoreToTargetScore inferredPCI.GroupOfProteinIDs reverseProteinScores)
+
+                        createInferredProteinClassItemScored
+                            inferredPCI.GroupOfProteinIDs inferredPCI.Class inferredPCI.PeptideSequence
+                            peptideScore
+                            decoyScore
+                            // Placeholder for q value
+                            -1.
+                            false
+                            (decoyScore > peptideScore)
+                        )
+
+                // creates InferredProteinClassItemScored type for decoy proteins that have no match
                 let reverseNoMatch =
                     let proteinsPresent =
-                        inferenceResult
-                        |> Array.ofSeq
+                        inferenceResultScored
                         |> Array.collect (fun prots -> prots.GroupOfProteinIDs |> String.split ';')
                     reverseProteinScores
                     |> Map.toArray
                     |> Array.map (fun (protein, score) ->
                         if (proteinsPresent |> Array.contains protein) then
-                            IntermediateResult.createIntermediateResult "nf" PeptideEvidenceClass.Unknown "" (-1.) (-1.)
+                            createInferredProteinClassItemScored "HasMatch" PeptideEvidenceClass.Unknown [|""|] (-1.) (-1.) (-1.) false false
                         else
-                            IntermediateResult.createIntermediateResult protein PeptideEvidenceClass.Unknown "" 0. score
+                            createInferredProteinClassItemScored protein PeptideEvidenceClass.Unknown [|""|] 0. score (-1.) true true
                     )
-                    |> Array.filter (fun out -> out.ProteinID <> "nf")
+                    |> Array.filter (fun out -> out.Decoy <> false)
 
-                let combRes =
-                    inferenceResult
-                    |> Seq.map (fun x -> IntermediateResult.createIntermediateResult x.GroupOfProteinIDs x.Class (proteinGroupToString x.PeptideSequence) (assignPeptideScores x.PeptideSequence peptideScoreMap) (assignDecoyScoreToTargetScore x.GroupOfProteinIDs reverseProteinScores))
-                    // appends found decoy proteins without matching proteins
-                    |> Seq.append reverseNoMatch
-                combRes
+                // Assign q values to each protein (now also includes decoy only hits)
+                let inferenceResultScoredQVal =
+                    if qValMethod = Domain.QValueMethod.LogisticRegression then
+                        let fdr = (inferenceResultScored |> Array.filter (fun x -> x.DecoyBigger) |> Array.length |> float |> (*)2.)/(inferenceResultScored |> Array.filter (fun x -> not x.DecoyBigger) |> Array.length |> float)
+                        calculateQValueLogReg fdr inferenceResultScored reverseNoMatch
+                    else
+                        calculateQValueStorey inferenceResultScored reverseNoMatch
+
+                let graph =
+                    let decoy, target = inferenceResultScoredQVal |> Array.partition (fun x -> x.DecoyBigger)
+                    // Histogram with relative abundance
+                    let freqTarget = FSharp.Stats.Distributions.Frequency.create 0.01 (target |> Array.map (fun x -> x.TargetScore))
+                                     |> Map.toArray
+                                     |> Array.map (fun x -> fst x, (float (snd x)) / (float target.Length))
+                    let freqDecoy  = FSharp.Stats.Distributions.Frequency.create 0.01 (decoy |> Array.map (fun x -> x.DecoyScore))
+                                     |> Map.toArray
+                                     |> Array.map (fun x -> fst x, (float (snd x)) / (float target.Length))
+                    // Histogram with absolute values
+                    let freqTarget1 = FSharp.Stats.Distributions.Frequency.create 0.01 (target |> Array.map (fun x -> x.TargetScore))
+                                     |> Map.toArray
+                    let freqDecoy1  = FSharp.Stats.Distributions.Frequency.create 0.01 (decoy |> Array.map (fun x -> x.DecoyScore))
+                                     |> Map.toArray
+                    let histogram =
+                        [
+                            Chart.Column freqTarget |> Chart.withTraceName "Target"
+                                |> Chart.withAxisAnchor(Y=1);
+                            Chart.Column freqDecoy |> Chart.withTraceName "Decoy"
+                                |> Chart.withAxisAnchor(Y=1);
+                            Chart.Column freqTarget1
+                                |> Chart.withAxisAnchor(Y=2)
+                                |> Chart.withMarkerStyle (Opacity = 0.)
+                                |> Chart.withTraceName (Showlegend = false);
+                            Chart.Column freqDecoy1
+                                |> Chart.withAxisAnchor(Y=2)
+                                |> Chart.withMarkerStyle (Opacity = 0.)
+                                |> Chart.withTraceName (Showlegend = false)
+                        ]
+                        |> Chart.Combine
+
+                    let sortedQValues = 
+                        inferenceResultScoredQVal 
+                        |> Array.map 
+                            (fun x -> if x.DecoyBigger then
+                                        x.DecoyScore, x.QValue
+                                      else
+                                        x.TargetScore, x.QValue
+                            )
+                        |> Array.sortBy (fun (score, qVal) -> score)
+
+                    [
+                        Chart.Line sortedQValues |> Chart.withTraceName "Q-Values";
+                        histogram
+                    ]
+                    |> Chart.Combine
+                    |> Chart.withY_AxisStyle("Relative Frequency / Q-Value",Side=StyleParam.Side.Left,Id=1, MinMax = (0., 1.))
+                    |> Chart.withY_AxisStyle("Absolute Frequency",Side=StyleParam.Side.Right,Id=2,Overlaying=StyleParam.AxisAnchorId.Y 1, MinMax = (0., float target.Length))
+                    |> Chart.withX_AxisStyle "Score"
+                    |> Chart.withSize (900., 900.)
+                    |> Chart.SaveHtmlAs (outFile + @"_QValueGraph")
+
+
+                inferenceResultScoredQVal
+                |> Array.filter (fun inferredPCIS -> not inferredPCIS.Decoy)
                 |> FSharpAux.IO.SeqIO.Seq.CSV "\t" true true
                 |> Seq.write outFile
             ) psmInputs
@@ -791,4 +822,5 @@ module ProteinInference =
         logger.Trace "Start building ClassItemCollection"
         let classItemCollection, psmInputs = createClassItemCollection gff3Location memoryDB proteinInferenceParams.ProteinIdentifierRegex rawFolderPath
         logger.Trace "Classify and Infer Proteins"
-        readAndInferFile classItemCollection proteinInferenceParams.Protein proteinInferenceParams.Peptide proteinInferenceParams.GroupFiles outDirectory rawFolderPath psmInputs dbConnection
+        readAndInferFile classItemCollection proteinInferenceParams.Protein proteinInferenceParams.Peptide 
+                         proteinInferenceParams.GroupFiles outDirectory rawFolderPath psmInputs dbConnection proteinInferenceParams.QValueMethod
