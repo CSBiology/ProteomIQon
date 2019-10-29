@@ -126,6 +126,9 @@ module Domain =
             BaseLineCorrection           : BaseLineCorrection option
         }
 
+    type QValueMethod =
+        |Storey
+        |LogisticRegression
 
     type ProteinInferenceParams = 
         {
@@ -133,5 +136,6 @@ module Domain =
             Protein                : ProteinInference.IntegrationStrictness
             Peptide                : ProteinInference.PeptideUsageForQuantification
             GroupFiles             : bool
+            QValueMethod           : QValueMethod
         }
    
