@@ -384,6 +384,7 @@ module Dto =
               Protein                : ProteinInference.IntegrationStrictness
               Peptide                : ProteinInference.PeptideUsageForQuantification
               GroupFiles             : bool
+              QValueMethod           : Domain.QValueMethod
           }
 
     module ProteinInferenceParams =
@@ -394,4 +395,5 @@ module Dto =
                 Protein                = dtoProteinInferenceParams.Protein
                 Peptide                = dtoProteinInferenceParams.Peptide
                 GroupFiles             = dtoProteinInferenceParams.GroupFiles
+                QValueMethod           = dtoProteinInferenceParams.QValueMethod
             }
