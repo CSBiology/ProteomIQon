@@ -361,12 +361,18 @@ module ProteinInference' =
         // Combined InferredProteinClassItemScored input, which gets assigned its corresponding q value
         let combinedIPCISInput = Array.append targetDecoyMatch decoyNoMatch
 
-        let qValues = FDRControl'.getQValues fdrEstimate (fun (x: QValueInput) -> x.Score) (fun (x: QValueInput) -> x.IsDecoy) combinedInput
+        let qValues = FDRControl'.getQValueFunc fdrEstimate 0.01 (fun (x: QValueInput) -> x.Score) (fun (x: QValueInput) -> x.IsDecoy) combinedInput
 
         // Create a new instance of InferredProteinClassItemScored with q values assigned
-        Array.map2 (fun (qValue: float) (input: InferredProteinClassItemScored<'sequence>) ->
-            createInferredProteinClassItemScored input.GroupOfProteinIDs input.Class input.PeptideSequence input.TargetScore input.DecoyScore qValue input.Decoy input.DecoyBigger
-            ) qValues combinedIPCISInput
+        let combinedInputQVal =
+            combinedIPCISInput
+            |> Array.map (fun item ->
+                if item.Decoy then
+                    createInferredProteinClassItemScored item.GroupOfProteinIDs item.Class item.PeptideSequence item.TargetScore item.DecoyScore (qValues item.DecoyScore) item.Decoy item.DecoyBigger
+                else
+                    createInferredProteinClassItemScored item.GroupOfProteinIDs item.Class item.PeptideSequence item.TargetScore item.DecoyScore (qValues item.TargetScore) item.Decoy item.DecoyBigger
+            )
+        combinedInputQVal
 
     /// Calculates the q value using Storeys method and the paired target-decoy approach to determine target or decoy hits.
     let calculateQValueStorey (targetDecoyMatch: InferredProteinClassItemScored<'sequence>[]) (decoyNoMatch: InferredProteinClassItemScored<'sequence>[]) =
