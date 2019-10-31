@@ -65,7 +65,7 @@ module ProteinInference =
 
         //list of proteins tupled with list of possible peptides found in psm
         let accessionSequencePairs =
-            let preparedProtPepFunc = ProteomIQon.SearchDB.getProteinPeptideLookUpFromFileBy memoryDB
+            let preparedProtPepFunc = ProteomIQon.SearchDB'.getProteinPeptideLookUpFromFileBy memoryDB
             inputPepSeqIDs
             |> List.map (fun pepID -> preparedProtPepFunc pepID)
             |> List.concat
@@ -153,11 +153,11 @@ module ProteinInference =
                 outDirectory + @"\" + foldername.[foldername.Length - 1] + "\\" + (System.IO.Path.GetFileNameWithoutExtension filePath) + ".prot"
                 )
 
-        let dbParams = ProteomIQon.SearchDB.getSDBParamsBy dbConnection
+        let dbParams = ProteomIQon.SearchDB'.getSDBParamsBy dbConnection
 
         // Array of prtoein Accessions tupled with their reverse digested peptides
         let reverseProteins =
-            (ProteomIQon.SearchDB.selectProteins dbConnection)
+            (ProteomIQon.SearchDB'.selectProteins dbConnection)
             |> Array.ofList
             |> Array.map (fun (name, sequence) ->
                 name,
@@ -275,7 +275,7 @@ module ProteinInference =
                 let sortedQValues = 
                     combinedScoredClassesQVal 
                     |> Array.map 
-                        (fun x -> if x.DecoyBigger then
+                        (fun x -> if x.Decoy then
                                     x.DecoyScore, x.QValue
                                   else
                                     x.TargetScore, x.QValue
@@ -283,7 +283,7 @@ module ProteinInference =
                     |> Array.sortBy (fun (score, qVal) -> score)
 
                 [
-                    Chart.Line sortedQValues |> Chart.withTraceName "Q-Values";
+                    Chart.Point sortedQValues |> Chart.withTraceName "Q-Values";
                     histogram
                 ]
                 |> Chart.Combine
@@ -404,11 +404,11 @@ module ProteinInference =
                     let sortedQValues = 
                         inferenceResultScoredQVal 
                         |> Array.map 
-                            (fun x -> if x.DecoyBigger then
+                            (fun x -> if x.Decoy then
                                         x.DecoyScore, x.QValue
                                       else
                                         x.TargetScore, x.QValue
-                            )
+                        )
                         |> Array.sortBy (fun (score, qVal) -> score)
 
                     [

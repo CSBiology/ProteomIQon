@@ -12,12 +12,12 @@ open AminoAcids
 open ModificationInfo
 open ProteomIQon
 
-module SearchDB =
+module SearchDB' =
 
 
-    module DB =
+    module DB' =
 
-        module SQLiteQuery =
+        module SQLiteQuery' =
             
             /// Prepares statement to select a Protein Accession entry by ID
             let prepareSelectProteinAccessionByID (cn:SQLiteConnection) (tr) =
@@ -42,14 +42,14 @@ module SearchDB =
                     use reader = cmd.ExecuteReader()
                     reader.Read() |> ignore
                     reader.GetString(0)
-                    )
+                )
 
     /// Prepares a function which returns a list of protein Accessions tupled with the peptide sequence whose ID they were retrieved by
     let getProteinPeptideLookUpFromFileBy (memoryDB: SQLiteConnection) =
         let tr = memoryDB.BeginTransaction()
         let selectCleavageIdxByPepSeqID   = Db.SQLiteQuery.prepareSelectCleavageIndexByPepSequenceID memoryDB tr
-        let selectProteinByProtID         = DB.SQLiteQuery.prepareSelectProteinAccessionByID memoryDB tr
-        let selectPeptideByPepSeqID       = DB.SQLiteQuery.prepareSelectPepSequenceByPepSequenceID memoryDB tr
+        let selectProteinByProtID         = DB'.SQLiteQuery'.prepareSelectProteinAccessionByID memoryDB tr
+        let selectPeptideByPepSeqID       = DB'.SQLiteQuery'.prepareSelectPepSequenceByPepSequenceID memoryDB tr
         (fun pepSequenceID ->
                 selectCleavageIdxByPepSeqID pepSequenceID
                 |> List.map (fun (_,protID,pepID,_,_,_) -> selectProteinByProtID protID, selectPeptideByPepSeqID pepID )
@@ -92,6 +92,43 @@ module FDRControl' =
 
     open FSharp.Stats
 
+    /// for given data, creates a logistic regression model and returns a mapping function for this model
+    let getLogisticRegressionFunction (x:vector) (y:vector) epsilon =
+        let alpha =
+            match FSharp.Stats.Fitting.LogisticRegression.Univariable.estimateAlpha epsilon x y with
+            | Some a -> a
+            | None -> failwith "Could not find an alpha for logistic regression of fdr data"
+        let weight = FSharp.Stats.Fitting.LogisticRegression.Univariable.coefficient epsilon alpha x y
+        FSharp.Stats.Fitting.LogisticRegression.Univariable.fit weight
+
+    /// returns scores, pep, q
+    let binningFunction bandwidth pi0 (scoreF: 'A -> float) (isDecoyF: 'A -> bool) (data:'A[])  =
+        let totalDecoyProportion =
+            let decoyCount = Array.filter isDecoyF data |> Array.length |> float
+            let totalCount = data |> Array.length  |> float
+            1. / (2. * decoyCount / totalCount)
+        data
+        |> Array.groupBy (fun s -> floor (scoreF s / bandwidth))
+        |> Array.sortBy fst
+        |> Array.map (fun (k,values)->
+            let median     = values |> Array.map scoreF |> Array.average
+            let totalCount = values |> Array.length |> float
+            let decoyCount = values |> Array.filter isDecoyF |> Array.length |> float |> (*) totalDecoyProportion
+            //(median |> float,(decoyCount * pi0  / totalCount))
+            median,totalCount,decoyCount
+                //(median, totalCount )
+        )
+        |> fun a ->
+            a
+            |> Array.mapi (fun i (median,totalCountBin,decoyCountBin) ->
+                            /// TODO: Accumulate totalCount + totalDecoyCount beforeHand and skip the time intensive mapping accross the array in each iteration.
+                            let _,totalCountRight,decoyCountRight = a.[i..a.Length-1] |> Array.reduce (fun (x,y,z) (x',y',z') -> x+x',y+y',z+z')
+                            (median,(pi0 * 2. * decoyCountBin / totalCountBin),(pi0 * 2. * decoyCountRight / totalCountRight))
+            )
+        |> Array.sortBy (fun (score,pep,q) -> score)
+        |> Array.unzip3
+        |> fun (score,pep,q) -> vector score, vector pep, vector q
+
     /// Calculates q value mapping funtion for target/decoy dataset
     let getQValueFunc pi0 bw (scoreF: 'A -> float) (isDecoyF: 'A -> bool) (data:'A[]) =
         let (scores,_,q) = FDRControl.binningFunction bw pi0 scoreF isDecoyF data
@@ -107,6 +144,8 @@ module ProteinInference' =
     open BioFSharp.PeptideClassification
     open BioFSharp.IO.GFF3
     open FSharpAux.IO.SchemaReader.Attribute
+    open FSharp.Stats.Interpolation
+    open FSharp.Plotly
 
     /// For a group of proteins, contains information about all peptides that might be used for its quantification and score / q-value calculated for it.
     type InferredProteinClassItemScored<'sequence> =
@@ -211,10 +250,10 @@ module ProteinInference' =
                         modelInfo
                     else
                         failwithf "could not match gff3 entry id %s with regexpattern %s. Either gff3 file is corrupt or regexpattern is not correct" modelInfo.Id regexPattern
-                    )
+                )
 
             | _ -> Seq.empty
-            )
+        )
         |> Seq.concat
         |> Map.ofSeq
 
@@ -230,7 +269,7 @@ module ProteinInference' =
                             proteinModel.Sequence
                             |> Seq.iter (fun pepSequence -> ppRelation.Add pepSequence proteinModel.ProteinModelInfo)
                         | None                   -> ()
-                    )
+        )
         ppRelation
 
     // Creates a Map of peptides with their highest found score
@@ -244,7 +283,7 @@ module ProteinInference' =
             |> List.sortByDescending (fun psm -> psm.PercolatorScore)
             |> List.head
             |> fun psm -> psm.PercolatorScore
-            )
+        )
         |> Map.ofList
 
     // Assigns a score to each protein with reverse digested peptides based on the peptides obtained in psm.
@@ -259,7 +298,7 @@ module ProteinInference' =
             match x with
             | Some score -> score
             | None -> 0.
-            )
+        )
         )
         |> Array.sum
         )
@@ -295,12 +334,12 @@ module ProteinInference' =
                     createQValueInput inferredProteinCIS.DecoyScore true
                 else
                     createQValueInput inferredProteinCIS.TargetScore false
-                )
+            )
         let createDecoyNoMatchInput =
             decoyNoMatch
             |> Array.map (fun intermediateResult ->
                 createQValueInput intermediateResult.DecoyScore true
-                )
+            )
         // Combined input for q value calculation
         let combinedInput = Array.append createTargetDecoyInput createDecoyNoMatchInput
 
@@ -314,37 +353,72 @@ module ProteinInference' =
             createInferredProteinClassItemScored input.GroupOfProteinIDs input.Class input.PeptideSequence input.TargetScore input.DecoyScore qValue input.Decoy input.DecoyBigger
             ) qValues combinedIPCISInput
 
+    /// Calculates the q value using Storeys method and the paired target-decoy approach to determine target or decoy hits.
     let calculateQValueStorey (targetDecoyMatch: InferredProteinClassItemScored<'sequence>[]) (decoyNoMatch: InferredProteinClassItemScored<'sequence>[]) =
         // Combined input for q value calculation
+        // Gives an array of scores with the frequency of decoy and target hits at that score
         let combinedInput = Array.append targetDecoyMatch decoyNoMatch
-                            |> Array.sortByDescending (fun x -> if x.DecoyBigger then
-                                                                    x.DecoyScore
-                                                                else
-                                                                    x.TargetScore
-                                                      )
-        let rec traverseTopBottom (i: int) (target: float) (decoy: float) (multiplier: float) (qValues: float list)=
-            if i >= combinedInput.Length then
+        let scoreFrequencies =
+            combinedInput
+            |> Array.map (fun x -> if x.DecoyBigger then
+                                    x.DecoyScore, true
+                                    else
+                                    x.TargetScore, false
+            )
+            |> Array.groupBy fst
+            |> Array.map (fun (score,scoreDecoyInfo) ->
+                let decoyCount = 
+                    Array.filter (fun (score, decoyInfo) -> decoyInfo = true) scoreDecoyInfo
+                    |> Array.length
+                let targetCount = 
+                    Array.filter (fun (score, decoyInfo) -> decoyInfo = false) scoreDecoyInfo
+                    |> Array.length
+                {|Score = score; DecoyCount = float decoyCount; TargetCount = float targetCount|}
+            )
+            |> Array.sortByDescending (fun x -> x.Score)
+        // Goes through the list and assigns each protein a "q value" by dividing total decoy hits so far through total target hits so far
+        let rec traverseTopBottom (i: int) (target: float) (decoy: float) (multiplier: float) (qValues: (float*float) list)=
+            if i >= scoreFrequencies.Length then
                 qValues
             else
-                match combinedInput.[i].DecoyBigger with
-                | true  -> traverseTopBottom (i + 1) target (decoy + 1. * multiplier) multiplier (((decoy + 1. * multiplier) / (if target > 0. then target else 1.))::qValues)
-                | false -> traverseTopBottom (i + 1) (target + 1.) decoy multiplier ((decoy / (target + 1.))::qValues)
+                traverseTopBottom (i + 1) (target + scoreFrequencies.[i].TargetCount) (decoy + scoreFrequencies.[i].DecoyCount * multiplier) multiplier
+                                  // Divides cumulative decoy hits with cumulative target hits
+                                  ((scoreFrequencies.[i].Score, ((decoy + scoreFrequencies.[i].DecoyCount * multiplier)
+                                    / (if (target + scoreFrequencies.[i].TargetCount) > 0. then
+                                        (target + scoreFrequencies.[i].TargetCount) 
+                                       else 1.)))
+                                   ::qValues)
+        // Decoy hits are doubled
         let reverseQVal = traverseTopBottom 0 0. 0. 1. []
-
-        let rec traverseBottomTop (i: int) (monotonizedQValues: float list) =
+        // Assures monotonicity by going through the list from the bottom to top and assigning the previous q value if it is smaller than the current one
+        let rec traverseBottomTop (i: int) (monotonizedQValues: (float*float) list) =
             if i >= reverseQVal.Length then
                 monotonizedQValues
             elif i = 0 then
                 traverseBottomTop (i + 1) (reverseQVal.[i]::monotonizedQValues)
             else
-                if reverseQVal.[i] > monotonizedQValues.[0] then
+                if (snd reverseQVal.[i]) > (snd monotonizedQValues.[0]) then
                     traverseBottomTop (i + 1) (monotonizedQValues.[0]::monotonizedQValues)
                 else
                     traverseBottomTop (i + 1) (reverseQVal.[i]::monotonizedQValues)
-        let monotoneQVal = traverseBottomTop 0 []
-                           |> Array.ofList
+        let score, monotoneQVal = traverseBottomTop 0 []
+                                  |> Array.ofList
+                                  |> Array.sortBy fst
+                                  |> Array.unzip
+        Chart.Point (score, monotoneQVal)
+        |> Chart.Show
+        // Linear Interpolation
+        let linearSplineCoeff = LinearSpline.initInterpolateSorted score monotoneQVal
+        let interpolation = LinearSpline.interpolate linearSplineCoeff
+        // Assigns q values based on scores with interpolation function
+        let combinedInputQVal =
+            combinedInput
+            |> Array.map (fun item ->
+                if item.Decoy then
+                    createInferredProteinClassItemScored item.GroupOfProteinIDs item.Class item.PeptideSequence item.TargetScore item.DecoyScore (interpolation item.DecoyScore) item.Decoy item.DecoyBigger
+                else
+                    createInferredProteinClassItemScored item.GroupOfProteinIDs item.Class item.PeptideSequence item.TargetScore item.DecoyScore (interpolation item.TargetScore) item.Decoy item.DecoyBigger
+            )
+        combinedInputQVal
 
-        // Create a new instance of InferredProteinClassItemScored with q values assigned
-        Array.map2 (fun (qValue: float) (input: InferredProteinClassItemScored<'sequence>) ->
-            createInferredProteinClassItemScored input.GroupOfProteinIDs input.Class input.PeptideSequence input.TargetScore input.DecoyScore qValue input.Decoy input.DecoyBigger
-            ) monotoneQVal combinedInput
+
