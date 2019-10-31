@@ -195,6 +195,21 @@ module ProteinInference' =
             IsDecoy   = isDecoy
         }
 
+    type ScoreTargetDecoyCount =
+        {
+            Score      : float
+            DecoyCount : float
+            TargetCount: float
+        }
+
+    let createScoreTargetDecoyCount score decoyCount targetCount =
+        {
+            Score       = score
+            DecoyCount  = decoyCount
+            TargetCount = targetCount
+        }
+
+
     ///checks if GFF line describes gene
     let isGene (item: GFFLine<seq<char>>) =
         match item with
@@ -373,40 +388,44 @@ module ProteinInference' =
                 let targetCount = 
                     Array.filter (fun (score, decoyInfo) -> decoyInfo = false) scoreDecoyInfo
                     |> Array.length
-                {|Score = score; DecoyCount = float decoyCount; TargetCount = float targetCount|}
+                createScoreTargetDecoyCount score (float decoyCount) (float targetCount)
             )
             |> Array.sortByDescending (fun x -> x.Score)
+
         // Goes through the list and assigns each protein a "q value" by dividing total decoy hits so far through total target hits so far
-        let rec traverseTopBottom (i: int) (target: float) (decoy: float) (multiplier: float) (qValues: (float*float) list)=
-            if i >= scoreFrequencies.Length then
-                qValues
-            else
-                traverseTopBottom (i + 1) (target + scoreFrequencies.[i].TargetCount) (decoy + scoreFrequencies.[i].DecoyCount * multiplier) multiplier
-                                  // Divides cumulative decoy hits with cumulative target hits
-                                  ((scoreFrequencies.[i].Score, ((decoy + scoreFrequencies.[i].DecoyCount * multiplier)
-                                    / (if (target + scoreFrequencies.[i].TargetCount) > 0. then
-                                        (target + scoreFrequencies.[i].TargetCount) 
-                                       else 1.)))
-                                   ::qValues)
-        // Decoy hits are doubled
-        let reverseQVal = traverseTopBottom 0 0. 0. 1. []
-        // Assures monotonicity by going through the list from the bottom to top and assigning the previous q value if it is smaller than the current one
-        let rec traverseBottomTop (i: int) (monotonizedQValues: (float*float) list) =
-            if i >= reverseQVal.Length then
-                monotonizedQValues
-            elif i = 0 then
-                traverseBottomTop (i + 1) (reverseQVal.[i]::monotonizedQValues)
-            else
-                if (snd reverseQVal.[i]) > (snd monotonizedQValues.[0]) then
-                    traverseBottomTop (i + 1) (monotonizedQValues.[0]::monotonizedQValues)
+        let reverseQVal =
+            scoreFrequencies
+            |> Array.fold (fun (acc: (float*float*float*float) list) scoreCounts ->
+                let _,_,decoyCount,targetCount = acc.Head
+                // Decoy hits are doubled
+                let newDecoyCount  = decoyCount + scoreCounts.DecoyCount * 2.
+                let newTargetCount = targetCount + scoreCounts.TargetCount
+                let newQVal = 
+                    let nominator = 
+                        if newTargetCount > 0. then
+                            newTargetCount 
+                        else 1.
+                    newDecoyCount / nominator
+                (scoreCounts.Score, newQVal, newDecoyCount, newTargetCount):: acc
+            ) [0., 0., 0., 0.]
+            |> fun list -> list.[.. list.Length-2]
+            |> List.map (fun (score, qVal, decoyC, targetC) -> score, qVal)
+
+        //Assures monotonicity by going through the list from the bottom to top and assigning the previous q value if it is smaller than the current one
+        let score, monotoneQVal =
+            let head::tail = reverseQVal
+            tail
+            |> List.fold (fun (acc: (float*float) list) (score, newQValue) ->
+                let _,qValue = acc.Head
+                if newQValue > qValue then
+                    (score, qValue)::acc
                 else
-                    traverseBottomTop (i + 1) (reverseQVal.[i]::monotonizedQValues)
-        let score, monotoneQVal = traverseBottomTop 0 []
-                                  |> Array.ofList
-                                  |> Array.sortBy fst
-                                  |> Array.unzip
-        Chart.Point (score, monotoneQVal)
-        |> Chart.Show
+                    (score, newQValue)::acc
+
+            )[head]
+            |> Array.ofList
+            |> Array.sortBy fst
+            |> Array.unzip
         // Linear Interpolation
         let linearSplineCoeff = LinearSpline.initInterpolateSorted score monotoneQVal
         let interpolation = LinearSpline.interpolate linearSplineCoeff
@@ -420,5 +439,57 @@ module ProteinInference' =
                     createInferredProteinClassItemScored item.GroupOfProteinIDs item.Class item.PeptideSequence item.TargetScore item.DecoyScore (interpolation item.TargetScore) item.Decoy item.DecoyBigger
             )
         combinedInputQVal
+
+    let qValueHitsVisualization inferredProteinClassItemScored path=
+        let decoy, target = inferredProteinClassItemScored |> Array.partition (fun x -> x.DecoyBigger)
+        // Histogram with relative abundance
+        let freqTarget = FSharp.Stats.Distributions.Frequency.create 0.01 (target |> Array.map (fun x -> x.TargetScore))
+                            |> Map.toArray
+                            |> Array.map (fun x -> fst x, (float (snd x)) / (float target.Length))
+        let freqDecoy  = FSharp.Stats.Distributions.Frequency.create 0.01 (decoy |> Array.map (fun x -> x.DecoyScore))
+                            |> Map.toArray
+                            |> Array.map (fun x -> fst x, (float (snd x)) / (float target.Length))
+        // Histogram with absolute values
+        let freqTarget1 = FSharp.Stats.Distributions.Frequency.create 0.01 (target |> Array.map (fun x -> x.TargetScore))
+                            |> Map.toArray
+        let freqDecoy1  = FSharp.Stats.Distributions.Frequency.create 0.01 (decoy |> Array.map (fun x -> x.DecoyScore))
+                            |> Map.toArray
+        let histogram =
+            [
+                Chart.Column freqTarget |> Chart.withTraceName "Target"
+                    |> Chart.withAxisAnchor(Y=1);
+                Chart.Column freqDecoy |> Chart.withTraceName "Decoy"
+                    |> Chart.withAxisAnchor(Y=1);
+                Chart.Column freqTarget1
+                    |> Chart.withAxisAnchor(Y=2)
+                    |> Chart.withMarkerStyle (Opacity = 0.)
+                    |> Chart.withTraceName (Showlegend = false);
+                Chart.Column freqDecoy1
+                    |> Chart.withAxisAnchor(Y=2)
+                    |> Chart.withMarkerStyle (Opacity = 0.)
+                    |> Chart.withTraceName (Showlegend = false)
+            ]
+            |> Chart.Combine
+
+        let sortedQValues = 
+            inferredProteinClassItemScored 
+            |> Array.map 
+                (fun x -> if x.Decoy then
+                            x.DecoyScore, x.QValue
+                            else
+                            x.TargetScore, x.QValue
+                )
+            |> Array.sortBy (fun (score, qVal) -> score)
+
+        [
+            Chart.Point sortedQValues |> Chart.withTraceName "Q-Values";
+            histogram
+        ]
+        |> Chart.Combine
+        |> Chart.withY_AxisStyle("Relative Frequency / Q-Value",Side=StyleParam.Side.Left,Id=1, MinMax = (0., 1.))
+        |> Chart.withY_AxisStyle("Absolute Frequency",Side=StyleParam.Side.Right,Id=2,Overlaying=StyleParam.AxisAnchorId.Y 1, MinMax = (0., float target.Length))
+        |> Chart.withX_AxisStyle "Score"
+        |> Chart.withSize (900., 900.)
+        |> Chart.SaveHtmlAs (path + @"\QValueGraph")
 
 
