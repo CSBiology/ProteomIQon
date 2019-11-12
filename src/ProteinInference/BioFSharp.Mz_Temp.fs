@@ -6,11 +6,90 @@ open System.Data
 open System.Data.SQLite
 open BioFSharp.Mz
 open BioFSharp.Mz.SearchDB
+open FSharp.Stats
+open FSharp.Stats.Fitting.NonLinearRegression
 open System
 open FSharpAux
 open AminoAcids
 open ModificationInfo
 open ProteomIQon
+
+
+
+module Fitting' =
+
+    module NonLinearRegression' =
+        
+        module LevenbergMarquardtConstrained' =
+            
+            /// Returns an estimate for an initial parameter for the linear least square estimator for a given dataset (xData, yData).
+            /// The initial estimation is intended for a logistic function.
+            let initialParam (xData: float[]) (yData: float[]) =
+                let xRange = abs ((xData |> Array.max) - (xData |> Array.min))
+                let yRange = abs ((yData |> Array.max) - (yData |> Array.min))
+                let maxY = yData |> Array.max
+                let combined = Array.map2 (fun x y -> x,y) xData yData
+                // Looks for the real point that is closest to the given point
+                let rec findClosest i (point: float) (data: float []) (distance: float) (range: float)=
+                    let newDistance = abs (data.[i] - point)
+                    // Checks if point is located in the middle of the range of possible points
+                    if distance < newDistance && (data.[i - 1] < (point + 0.25 * range) && data.[i - 1] > (point - 0.25 * range)) then
+                        data.[i - 1]
+                    else
+                        findClosest (i + 1) point data newDistance range
+                let midX,midY =
+                    let point = maxY - yRange / 2.
+                    let middleYData = findClosest 1 point yData (abs (yData.[0] - point)) yRange
+                    Array.filter (fun (x,y) -> y = middleYData) combined
+                    |> Array.averageBy fst, middleYData
+                let rightSlopeX,rightSlopeY =
+                    combined
+                    |> Array.filter (fun (x, y) -> (maxY - y) < 0.001 * yRange)
+                    |> Array.head
+                let leftSlopeX, leftSlopeY =
+                    let leftX = midX - (rightSlopeX - midX)
+                    leftX, maxY
+                let slope =
+                    ((rightSlopeY - leftSlopeY)/yRange) / ((rightSlopeX - leftSlopeX)/xRange)
+                let steepness = abs slope
+                Table.lineSolverOptions [|maxY; steepness; midX|]
+
+            /// Returns an estimate for an initial parameter for the linear least square estimator for a given dataset (xData, yData).
+            /// The steepness is given as an array and not estimated. An initial estimate is returned for every given steepness.
+            /// The initial estimation is intended for a logistic function.
+            let initialParamsOverRange (xData: float[]) (yData: float[]) (steepnessRange: float []) =
+                let yRange = abs ((yData |> Array.max) - (yData |> Array.min))
+                let maxY = yData |> Array.max
+                let combined = Array.map2 (fun x y -> x,y) xData yData
+                // Looks for the real point that is closest to the given point
+                let rec findClosest i (point: float) (data: float []) (distance: float) (range: float)=
+                    let newDistance = abs (data.[i] - point)
+                    // Checks if point is located in the middle of the range of possible points
+                    if distance < newDistance && (data.[i - 1] < (point + 0.25 * range) && data.[i - 1] > (point - 0.25 * range)) then
+                        data.[i - 1]
+                    else
+                        findClosest (i + 1) point data newDistance range
+                let midX,midY =
+                    let point = maxY - yRange / 2.
+                    let middleYData = findClosest 1 point yData (abs (yData.[0] - point)) yRange
+                    Array.filter (fun (x,y) -> y = middleYData) combined
+                    |> Array.averageBy fst, middleYData
+                steepnessRange
+                |> Array.map (fun steepness ->
+                    Table.lineSolverOptions [|maxY; steepness; midX|]
+                )
+
+            /// Returns a parameter vector tupled with its residual sum of squares (RSS) as a possible solution for linear least square based nonlinear fitting of a given dataset (xData, yData) with a given 
+            /// model function. 
+            let estimatedParamsWithRSS (model: Model) (solverOptions: SolverOptions) lambdaInitial lambdaFactor (lowerBound: vector) (upperBound: vector) (xData: float[]) (yData: float []) =
+                let estParams = LevenbergMarquardtConstrained.estimatedParamsVerbose model solverOptions lambdaInitial lambdaFactor lowerBound upperBound xData yData
+                estParams
+                |> fun estParams ->
+                    let paramGuess = Vector.ofArray solverOptions.InitialParamGuess
+                    let rss = getRSS model xData yData paramGuess
+                    estParams.[estParams.Count-1], rss
+            
+    
 
 module SearchDB' =
 
