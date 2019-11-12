@@ -21,6 +21,18 @@ module Fitting' =
     module NonLinearRegression' =
         
         module LevenbergMarquardtConstrained' =
+
+            /// Logistic Function 
+            /// Line model of the form "y = a * x + b"
+            let LogisticFunction = {
+                ParameterNames= [|"L - curve maximum";"k - Steepness"; "x0 xValue of midpoint"|]
+                GetFunctionValue = (fun (parameterVector:Vector<float>) xValue -> parameterVector.[0] / (1. + exp(parameterVector.[1]*(xValue-parameterVector.[2]))))
+                GetGradientValue = (fun (parameterVector:Vector<float>) (gradientVector: Vector<float>) xValue -> 
+                                    gradientVector.[0] <- 1. / (1. + exp(parameterVector.[1]*(xValue-parameterVector.[2])))
+                                    gradientVector.[1] <- (parameterVector.[0] * (xValue-parameterVector.[2]) * exp(parameterVector.[1]*(xValue-parameterVector.[2])) ) / (exp(parameterVector.[1]*(xValue-parameterVector.[2])) + 1.)**2.
+                                    gradientVector.[2] <- (parameterVector.[0] * parameterVector.[1] * exp(parameterVector.[1]*(xValue-parameterVector.[2])) ) / (exp(parameterVector.[1]*(xValue-parameterVector.[2])) + 1.)**2. 
+                                    gradientVector)
+                }
             
             /// Returns an estimate for an initial parameter for the linear least square estimator for a given dataset (xData, yData).
             /// The initial estimation is intended for a logistic function.
@@ -30,16 +42,21 @@ module Fitting' =
                 let maxY = yData |> Array.max
                 let combined = Array.map2 (fun x y -> x,y) xData yData
                 // Looks for the real point that is closest to the given point
-                let rec findClosest i (point: float) (data: float []) (distance: float) (range: float)=
-                    let newDistance = abs (data.[i] - point)
-                    // Checks if point is located in the middle of the range of possible points
-                    if distance < newDistance && (data.[i - 1] < (point + 0.25 * range) && data.[i - 1] > (point - 0.25 * range)) then
-                        data.[i - 1]
-                    else
-                        findClosest (i + 1) point data newDistance range
+                let findClosest (point: float) (data: float []) =
+                    let distance =
+                        data
+                        |> Array.map (fun x ->
+                            abs (point - x)
+                        )
+                    let indexSmallest = 
+                        distance
+                        |> Array.findIndex (fun x -> 
+                            x = (distance |> Array.min)
+                        )
+                    data.[indexSmallest]
                 let midX,midY =
                     let point = maxY - yRange / 2.
-                    let middleYData = findClosest 1 point yData (abs (yData.[0] - point)) yRange
+                    let middleYData = findClosest point yData
                     Array.filter (fun (x,y) -> y = middleYData) combined
                     |> Array.averageBy fst, middleYData
                 let rightSlopeX,rightSlopeY =
@@ -62,16 +79,22 @@ module Fitting' =
                 let maxY = yData |> Array.max
                 let combined = Array.map2 (fun x y -> x,y) xData yData
                 // Looks for the real point that is closest to the given point
-                let rec findClosest i (point: float) (data: float []) (distance: float) (range: float)=
-                    let newDistance = abs (data.[i] - point)
-                    // Checks if point is located in the middle of the range of possible points
-                    if distance < newDistance && (data.[i - 1] < (point + 0.25 * range) && data.[i - 1] > (point - 0.25 * range)) then
-                        data.[i - 1]
-                    else
-                        findClosest (i + 1) point data newDistance range
+                let findClosest (point: float) (data: float []) =
+                    let distance =
+                        data
+                        |> Array.map (fun x ->
+                            abs (point - x)
+                        )
+                    let indexSmallest = 
+                        distance
+                        |> Array.findIndex (fun x -> 
+                            x = (distance |> Array.min)
+                        )
+                    data.[indexSmallest]
                 let midX,midY =
                     let point = maxY - yRange / 2.
-                    let middleYData = findClosest 1 point yData (abs (yData.[0] - point)) yRange
+                    let middleYData = findClosest point yData
+                    printfn "%f" middleYData
                     Array.filter (fun (x,y) -> y = middleYData) combined
                     |> Array.averageBy fst, middleYData
                 steepnessRange
@@ -169,8 +192,6 @@ module SearchDB' =
 
 module FDRControl' =
 
-    open FSharp.Stats
-
     /// for given data, creates a logistic regression model and returns a mapping function for this model
     let getLogisticRegressionFunction (x:vector) (y:vector) epsilon =
         let alpha =
@@ -191,8 +212,10 @@ module FDRControl' =
         |> Array.sortBy fst
         |> Array.map (fun (k,values)->
             let median     = values |> Array.map scoreF |> Array.average
-            let totalCount = values |> Array.length |> float
+            //let totalCount = values |> Array.length |> float
             let decoyCount = values |> Array.filter isDecoyF |> Array.length |> float |> (*) totalDecoyProportion
+            // Include modified decoy count in total count?
+            let totalCount = values |> Array.filter (isDecoyF >> not) |> Array.length |> float |> (+) decoyCount
             //(median |> float,(decoyCount * pi0  / totalCount))
             median,totalCount,decoyCount
                 //(median, totalCount )
@@ -225,6 +248,7 @@ module ProteinInference' =
     open FSharpAux.IO.SchemaReader.Attribute
     open FSharp.Stats.Interpolation
     open FSharp.Plotly
+    open Fitting'.NonLinearRegression'.LevenbergMarquardtConstrained'
 
     /// For a group of proteins, contains information about all peptides that might be used for its quantification and score / q-value calculated for it.
     type InferredProteinClassItemScored<'sequence> =
@@ -440,16 +464,45 @@ module ProteinInference' =
         // Combined InferredProteinClassItemScored input, which gets assigned its corresponding q value
         let combinedIPCISInput = Array.append targetDecoyMatch decoyNoMatch
 
-        let qValues = FDRControl'.getQValueFunc fdrEstimate 0.01 (fun (x: QValueInput) -> x.Score) (fun (x: QValueInput) -> x.IsDecoy) combinedInput
+        let scores,pep,qVal = 
+            FDRControl'.binningFunction 0.01 fdrEstimate (fun (x: QValueInput) -> x.Score) (fun (x: QValueInput) -> x.IsDecoy) combinedInput
+            |> fun (scores,pep,qVal) -> scores.ToArray(), pep.ToArray(), qVal.ToArray()
+
+        Chart.Point (scores,qVal)
+        |> Chart.Show
+
+        let initialGuess =
+            initialParamsOverRange scores qVal [|1. .. 30.|]
+
+        let estimate =
+            initialGuess
+            |> Array.map (fun initial ->
+                if initial.InitialParamGuess.Length > 3 then failwith "Invalid initial param guess for Logistic Function"
+                let lowerBound = 
+                    initial.InitialParamGuess
+                    |> Array.map (fun param -> param - param * 0.1)
+                    |> vector
+                let upperBound = 
+                    initial.InitialParamGuess
+                    |> Array.map (fun param -> param + param * 0.1)
+                    |> vector
+                estimatedParamsWithRSS LogisticFunction initial 0.001 10.0 lowerBound upperBound scores qVal
+            )
+            |> Array.minBy snd
+            |> fst
+
+        let logisticFunction = LogisticFunction.GetFunctionValue estimate
+
+        //let qValues = FDRControl'.getQValueFunc fdrEstimate 0.01 (fun (x: QValueInput) -> x.Score) (fun (x: QValueInput) -> x.IsDecoy) combinedInput
 
         // Create a new instance of InferredProteinClassItemScored with q values assigned
         let combinedInputQVal =
             combinedIPCISInput
             |> Array.map (fun item ->
                 if item.Decoy then
-                    createInferredProteinClassItemScored item.GroupOfProteinIDs item.Class item.PeptideSequence item.TargetScore item.DecoyScore (qValues item.DecoyScore) item.Decoy item.DecoyBigger
+                    createInferredProteinClassItemScored item.GroupOfProteinIDs item.Class item.PeptideSequence item.TargetScore item.DecoyScore (logisticFunction item.DecoyScore) item.Decoy item.DecoyBigger
                 else
-                    createInferredProteinClassItemScored item.GroupOfProteinIDs item.Class item.PeptideSequence item.TargetScore item.DecoyScore (qValues item.TargetScore) item.Decoy item.DecoyBigger
+                    createInferredProteinClassItemScored item.GroupOfProteinIDs item.Class item.PeptideSequence item.TargetScore item.DecoyScore (logisticFunction item.TargetScore) item.Decoy item.DecoyBigger
             )
         combinedInputQVal
 
