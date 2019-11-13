@@ -8,32 +8,27 @@ open BioFSharp.Mz
 open BioFSharp.Mz.SearchDB
 open FSharp.Stats
 open FSharp.Stats.Fitting.NonLinearRegression
-open System
 open FSharpAux
-open AminoAcids
 open ModificationInfo
-open ProteomIQon
-
-
 
 module Fitting' =
 
     module NonLinearRegression' =
-        
+
         module LevenbergMarquardtConstrained' =
 
-            /// Logistic Function 
+            /// Logistic Function
             /// Line model of the form "y = a * x + b"
             let LogisticFunction = {
                 ParameterNames= [|"L - curve maximum";"k - Steepness"; "x0 xValue of midpoint"|]
                 GetFunctionValue = (fun (parameterVector:Vector<float>) xValue -> parameterVector.[0] / (1. + exp(parameterVector.[1]*(xValue-parameterVector.[2]))))
-                GetGradientValue = (fun (parameterVector:Vector<float>) (gradientVector: Vector<float>) xValue -> 
+                GetGradientValue = (fun (parameterVector:Vector<float>) (gradientVector: Vector<float>) xValue ->
                                     gradientVector.[0] <- 1. / (1. + exp(parameterVector.[1]*(xValue-parameterVector.[2])))
                                     gradientVector.[1] <- (parameterVector.[0] * (xValue-parameterVector.[2]) * exp(parameterVector.[1]*(xValue-parameterVector.[2])) ) / (exp(parameterVector.[1]*(xValue-parameterVector.[2])) + 1.)**2.
-                                    gradientVector.[2] <- (parameterVector.[0] * parameterVector.[1] * exp(parameterVector.[1]*(xValue-parameterVector.[2])) ) / (exp(parameterVector.[1]*(xValue-parameterVector.[2])) + 1.)**2. 
+                                    gradientVector.[2] <- (parameterVector.[0] * parameterVector.[1] * exp(parameterVector.[1]*(xValue-parameterVector.[2])) ) / (exp(parameterVector.[1]*(xValue-parameterVector.[2])) + 1.)**2.
                                     gradientVector)
                 }
-            
+
             /// Returns an estimate for an initial parameter for the linear least square estimator for a given dataset (xData, yData).
             /// The initial estimation is intended for a logistic function.
             let initialParam (xData: float[]) (yData: float[]) =
@@ -48,9 +43,9 @@ module Fitting' =
                         |> Array.map (fun x ->
                             abs (point - x)
                         )
-                    let indexSmallest = 
+                    let indexSmallest =
                         distance
-                        |> Array.findIndex (fun x -> 
+                        |> Array.findIndex (fun x ->
                             x = (distance |> Array.min)
                         )
                     data.[indexSmallest]
@@ -85,9 +80,9 @@ module Fitting' =
                         |> Array.map (fun x ->
                             abs (point - x)
                         )
-                    let indexSmallest = 
+                    let indexSmallest =
                         distance
-                        |> Array.findIndex (fun x -> 
+                        |> Array.findIndex (fun x ->
                             x = (distance |> Array.min)
                         )
                     data.[indexSmallest]
@@ -102,8 +97,8 @@ module Fitting' =
                     Table.lineSolverOptions [|maxY; steepness; midX|]
                 )
 
-            /// Returns a parameter vector tupled with its residual sum of squares (RSS) as a possible solution for linear least square based nonlinear fitting of a given dataset (xData, yData) with a given 
-            /// model function. 
+            /// Returns a parameter vector tupled with its residual sum of squares (RSS) as a possible solution for linear least square based nonlinear fitting of a given dataset (xData, yData) with a given
+            /// model function.
             let estimatedParamsWithRSS (model: Model) (solverOptions: SolverOptions) lambdaInitial lambdaFactor (lowerBound: vector) (upperBound: vector) (xData: float[]) (yData: float []) =
                 let estParams = LevenbergMarquardtConstrained.estimatedParamsVerbose model solverOptions lambdaInitial lambdaFactor lowerBound upperBound xData yData
                 estParams
@@ -111,16 +106,13 @@ module Fitting' =
                     let paramGuess = Vector.ofArray solverOptions.InitialParamGuess
                     let rss = getRSS model xData yData paramGuess
                     estParams.[estParams.Count-1], rss
-            
-    
 
 module SearchDB' =
-
 
     module DB' =
 
         module SQLiteQuery' =
-            
+
             /// Prepares statement to select a Protein Accession entry by ID
             let prepareSelectProteinAccessionByID (cn:SQLiteConnection) (tr) =
                 let querystring = "SELECT Accession FROM Protein WHERE ID=@id "
@@ -312,7 +304,6 @@ module ProteinInference' =
             TargetCount = targetCount
         }
 
-
     ///checks if GFF line describes gene
     let isGene (item: GFFLine<seq<char>>) =
         match item with
@@ -464,7 +455,7 @@ module ProteinInference' =
         // Combined InferredProteinClassItemScored input, which gets assigned its corresponding q value
         let combinedIPCISInput = Array.append targetDecoyMatch decoyNoMatch
 
-        let scores,pep,qVal = 
+        let scores,pep,qVal =
             FDRControl'.binningFunction 0.01 fdrEstimate (fun (x: QValueInput) -> x.Score) (fun (x: QValueInput) -> x.IsDecoy) combinedInput
             |> fun (scores,pep,qVal) -> scores.ToArray(), pep.ToArray(), qVal.ToArray()
 
@@ -478,11 +469,11 @@ module ProteinInference' =
             initialGuess
             |> Array.map (fun initial ->
                 if initial.InitialParamGuess.Length > 3 then failwith "Invalid initial param guess for Logistic Function"
-                let lowerBound = 
+                let lowerBound =
                     initial.InitialParamGuess
                     |> Array.map (fun param -> param - param * 0.1)
                     |> vector
-                let upperBound = 
+                let upperBound =
                     initial.InitialParamGuess
                     |> Array.map (fun param -> param + param * 0.1)
                     |> vector
@@ -520,10 +511,10 @@ module ProteinInference' =
             )
             |> Array.groupBy fst
             |> Array.map (fun (score,scoreDecoyInfo) ->
-                let decoyCount = 
+                let decoyCount =
                     Array.filter (fun (score, decoyInfo) -> decoyInfo = true) scoreDecoyInfo
                     |> Array.length
-                let targetCount = 
+                let targetCount =
                     Array.filter (fun (score, decoyInfo) -> decoyInfo = false) scoreDecoyInfo
                     |> Array.length
                 createScoreTargetDecoyCount score (float decoyCount) (float targetCount)
@@ -538,10 +529,10 @@ module ProteinInference' =
                 // Decoy hits are doubled
                 let newDecoyCount  = decoyCount + scoreCounts.DecoyCount * 2.
                 let newTargetCount = targetCount + scoreCounts.TargetCount
-                let newQVal = 
-                    let nominator = 
+                let newQVal =
+                    let nominator =
                         if newTargetCount > 0. then
-                            newTargetCount 
+                            newTargetCount
                         else 1.
                     newDecoyCount / nominator
                 (scoreCounts.Score, newQVal, newDecoyCount, newTargetCount):: acc
@@ -609,9 +600,9 @@ module ProteinInference' =
             ]
             |> Chart.Combine
 
-        let sortedQValues = 
-            inferredProteinClassItemScored 
-            |> Array.map 
+        let sortedQValues =
+            inferredProteinClassItemScored
+            |> Array.map
                 (fun x -> if x.Decoy then
                             x.DecoyScore, x.QValue
                             else
@@ -629,5 +620,3 @@ module ProteinInference' =
         |> Chart.withX_AxisStyle "Score"
         |> Chart.withSize (900., 900.)
         |> Chart.SaveHtmlAs (path + @"\QValueGraph")
-
-
