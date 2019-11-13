@@ -1,21 +1,16 @@
 namespace ProteomIQon
 
 open BioFSharp
-open System.Data
 open System.Data.SQLite
 open BioFSharp.Mz
 open BioFSharp.Mz.SearchDB
 open BioFSharp.Mz.ProteinInference
 open BioFSharp.IO
 open FSharpAux
-open System.Text.RegularExpressions
 open PeptideClassification
 open ProteomIQon
 open FSharpAux.IO
-open FSharpAux.IO.SchemaReader
 open FSharpAux.IO.SchemaReader.Csv
-open FSharpAux.IO.SchemaReader.Attribute
-open GFF3
 open Domain
 open FSharp.Plotly
 open FSharp.Stats
@@ -344,5 +339,5 @@ module ProteinInference =
         logger.Trace "Start building ClassItemCollection"
         let classItemCollection, psmInputs = createClassItemCollection gff3Location memoryDB proteinInferenceParams.ProteinIdentifierRegex rawFolderPath
         logger.Trace "Classify and Infer Proteins"
-        readAndInferFile classItemCollection proteinInferenceParams.Protein proteinInferenceParams.Peptide 
+        readAndInferFile classItemCollection proteinInferenceParams.Protein proteinInferenceParams.Peptide
                          proteinInferenceParams.GroupFiles outDirectory rawFolderPath psmInputs dbConnection proteinInferenceParams.QValueMethod
