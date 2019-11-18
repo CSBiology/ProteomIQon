@@ -18,6 +18,7 @@ let defaultProteinInferenceParams: Dto.ProteinInferenceParams =
         Peptide                = ProteinInference.PeptideUsageForQuantification.Minimal
         GroupFiles             = true
         QValueMethod           = QValueMethod.Storey
+        FDRMethod              = FDRMethod.MAYU
     }
 
 let serialized = 

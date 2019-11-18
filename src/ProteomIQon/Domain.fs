@@ -130,6 +130,11 @@ module Domain =
         |Storey
         |LogisticRegression
 
+    type FDRMethod =
+        |Traditional
+        |MAYU
+        |TargetDecoyRatio
+
     type ProteinInferenceParams = 
         {
             ProteinIdentifierRegex : string
@@ -137,5 +142,6 @@ module Domain =
             Peptide                : ProteinInference.PeptideUsageForQuantification
             GroupFiles             : bool
             QValueMethod           : QValueMethod
+            FDRMethod              : FDRMethod
         }
    

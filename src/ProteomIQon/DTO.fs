@@ -385,6 +385,7 @@ module Dto =
               Peptide                : ProteinInference.PeptideUsageForQuantification
               GroupFiles             : bool
               QValueMethod           : Domain.QValueMethod
+              FDRMethod              : Domain.FDRMethod
           }
 
     module ProteinInferenceParams =
@@ -396,4 +397,5 @@ module Dto =
                 Peptide                = dtoProteinInferenceParams.Peptide
                 GroupFiles             = dtoProteinInferenceParams.GroupFiles
                 QValueMethod           = dtoProteinInferenceParams.QValueMethod
+                FDRMethod              = dtoProteinInferenceParams.FDRMethod
             }
