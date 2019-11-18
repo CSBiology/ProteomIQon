@@ -232,9 +232,9 @@ module ProteinInference =
             let combinedScoredClassesQVal =
                 if qValMethod = Domain.QValueMethod.LogisticRegression then
                     let fdr = (combinedScoredClasses |> Array.filter (fun x -> x.DecoyBigger) |> Array.length |> float |> (*)2.)/(combinedScoredClasses |> Array.filter (fun x -> not x.DecoyBigger) |> Array.length |> float)
-                    ProteomIQon.ProteinInference'.calculateQValueLogReg fdr combinedScoredClasses reverseNoMatch
+                    ProteomIQon.FDRControl'.calculateQValueLogReg fdr combinedScoredClasses reverseNoMatch
                 else
-                    ProteomIQon.ProteinInference'.calculateQValueStorey combinedScoredClasses reverseNoMatch
+                    ProteomIQon.FDRControl'.calculateQValueStorey combinedScoredClasses reverseNoMatch
 
             ProteinInference'.qValueHitsVisualization combinedScoredClassesQVal outDirectory
 
@@ -311,9 +311,9 @@ module ProteinInference =
                 let inferenceResultScoredQVal =
                     if qValMethod = Domain.QValueMethod.LogisticRegression then
                         let fdr = (inferenceResultScored |> Array.filter (fun x -> x.DecoyBigger) |> Array.length |> float |> (*)2.)/(inferenceResultScored |> Array.filter (fun x -> not x.DecoyBigger) |> Array.length |> float)
-                        ProteomIQon.ProteinInference'.calculateQValueLogReg fdr inferenceResultScored reverseNoMatch
+                        ProteomIQon.FDRControl'.calculateQValueLogReg fdr inferenceResultScored reverseNoMatch
                     else
-                        ProteomIQon.ProteinInference'.calculateQValueStorey inferenceResultScored reverseNoMatch
+                        ProteomIQon.FDRControl'.calculateQValueStorey inferenceResultScored reverseNoMatch
 
                 ProteinInference'.qValueHitsVisualization inferenceResultScoredQVal outFile
 
