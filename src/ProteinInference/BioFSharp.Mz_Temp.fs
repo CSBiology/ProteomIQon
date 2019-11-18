@@ -107,6 +107,7 @@ module Fitting' =
                     let rss = getRSS model xData yData paramGuess
                     estParams.[estParams.Count-1], rss
 
+
 module SearchDB' =
 
     module DB' =
@@ -181,113 +182,6 @@ module SearchDB' =
                         (Newtonsoft.Json.JsonConvert.DeserializeObject<SearchModification list>(fMods)) (Newtonsoft.Json.JsonConvert.DeserializeObject<SearchModification list>(vMods)) vThr
         | None ->
             failwith "This database does not contain any SearchParameters. It is not recommended to work with this file."
-
-module FDRControl' =
-
-    /// for given data, creates a logistic regression model and returns a mapping function for this model
-    let getLogisticRegressionFunction (x:vector) (y:vector) epsilon =
-        let alpha =
-            match FSharp.Stats.Fitting.LogisticRegression.Univariable.estimateAlpha epsilon x y with
-            | Some a -> a
-            | None -> failwith "Could not find an alpha for logistic regression of fdr data"
-        let weight = FSharp.Stats.Fitting.LogisticRegression.Univariable.coefficient epsilon alpha x y
-        FSharp.Stats.Fitting.LogisticRegression.Univariable.fit weight
-
-    /// returns scores, pep, q
-    let binningFunction bandwidth pi0 (scoreF: 'A -> float) (isDecoyF: 'A -> bool) (data:'A[])  =
-        let totalDecoyProportion =
-            let decoyCount = Array.filter isDecoyF data |> Array.length |> float
-            let totalCount = data |> Array.length  |> float
-            1. / (2. * decoyCount / totalCount)
-        data
-        |> Array.groupBy (fun s -> floor (scoreF s / bandwidth))
-        |> Array.sortBy fst
-        |> Array.map (fun (k,values)->
-            let median     = values |> Array.map scoreF |> Array.average
-            //let totalCount = values |> Array.length |> float
-            let decoyCount = values |> Array.filter isDecoyF |> Array.length |> float |> (*) totalDecoyProportion
-            // Include modified decoy count in total count?
-            let totalCount = values |> Array.filter (isDecoyF >> not) |> Array.length |> float |> (+) decoyCount
-            //(median |> float,(decoyCount * pi0  / totalCount))
-            median,totalCount,decoyCount
-                //(median, totalCount )
-        )
-        |> fun a ->
-            a
-            |> Array.mapi (fun i (median,totalCountBin,decoyCountBin) ->
-                            /// TODO: Accumulate totalCount + totalDecoyCount beforeHand and skip the time intensive mapping accross the array in each iteration.
-                            let _,totalCountRight,decoyCountRight = a.[i..a.Length-1] |> Array.reduce (fun (x,y,z) (x',y',z') -> x+x',y+y',z+z')
-                            (median,(pi0 * 2. * decoyCountBin / totalCountBin),(pi0 * 2. * decoyCountRight / totalCountRight))
-            )
-        |> Array.sortBy (fun (score,pep,q) -> score)
-        |> Array.unzip3
-        |> fun (score,pep,q) -> vector score, vector pep, vector q
-
-    /// Calculates q value mapping funtion for target/decoy dataset
-    let getQValueFunc pi0 bw (scoreF: 'A -> float) (isDecoyF: 'A -> bool) (data:'A[]) =
-        let (scores,_,q) = FDRControl.binningFunction bw pi0 scoreF isDecoyF data
-        FDRControl.getLogisticRegressionFunction scores q 0.0000001
-
-    /// Calculates q values for target/decoy dataset
-    let getQValues pi0 (scoreF: 'A -> float) (isDecoyF: 'A -> bool) (data:'A[]) =
-        let f = getQValueFunc pi0 0.01 scoreF isDecoyF data
-        Array.map (scoreF >> f) data
-
-// FDR estimation using MAYU
-
-    let stirling_log_factorial (n: float) =
-        log(sqrt(2. * pi  *n)) + n * log(n) - n
-
-    let exact_log_factorial (n: float) =
-        let rec loop i log_fact =
-            if i > n then
-                log_fact
-            else
-                let new_log_fact = log_fact + (log i)
-                loop (i + 1.) new_log_fact
-        loop 2. 0.
-
-    let log_factorial (n: float) =
-        if n < 1000. then
-            exact_log_factorial n
-        else
-            stirling_log_factorial n
-
-    let log_binomial (n: float) (k: float) =
-        (log_factorial n) - (log_factorial k) - (log_factorial (n - k))
-
-    let hypergeometric (x: float) (n: float) (w: float) (d: float) =
-        //natural logarithm of the probability
-        if(d > 0.) then
-            exp((log_binomial w x) + (log_binomial (n-w) (d-x)) - (log_binomial n d))
-        else 0.
-
-    let estimatePi0HG (n: float) (targets: float) (cf: float) =
-        let rec loop (fp: float) (logprob: float list) =
-            if fp > cf then
-                logprob |> List.rev
-            else
-                let tp = targets - fp
-                let w = n - tp
-                let prob = hypergeometric fp n w cf
-                loop (fp + 1.) (prob::logprob)
-        let logprob = loop 0. []
-        let sum = logprob |> List.sum
-        let logprob_Norm =
-            logprob
-            |> List.map (fun x ->
-                x / sum
-            )
-        //// MAYU rounds here to first decimal
-        let expectation_value_FP_PID =
-            logprob_Norm
-            |> List.foldi (fun i acc x ->
-                acc + x * (float i)
-            ) 0.
-        if (isNan expectation_value_FP_PID) || (isInf expectation_value_FP_PID) then
-            -1.
-        else 
-            expectation_value_FP_PID
 
 
 module ProteinInference' =
@@ -490,142 +384,6 @@ module ProteinInference' =
         )
         |> Array.max
 
-    // Calculates a q-value for the indentified proteins
-    let calculateQValueLogReg fdrEstimate (targetDecoyMatch: InferredProteinClassItemScored<'sequence>[]) (decoyNoMatch: InferredProteinClassItemScored<'sequence>[]) =
-        // Input for q value calculation
-        let createTargetDecoyInput =
-            targetDecoyMatch
-            |> Array.map (fun inferredProteinCIS ->
-                if inferredProteinCIS.DecoyBigger then
-                    createQValueInput inferredProteinCIS.DecoyScore true
-                else
-                    createQValueInput inferredProteinCIS.TargetScore false
-            )
-        let createDecoyNoMatchInput =
-            decoyNoMatch
-            |> Array.map (fun intermediateResult ->
-                createQValueInput intermediateResult.DecoyScore true
-            )
-        // Combined input for q value calculation
-        let combinedInput = Array.append createTargetDecoyInput createDecoyNoMatchInput
-
-        // Combined InferredProteinClassItemScored input, which gets assigned its corresponding q value
-        let combinedIPCISInput = Array.append targetDecoyMatch decoyNoMatch
-
-        let scores,pep,qVal =
-            FDRControl'.binningFunction 0.01 fdrEstimate (fun (x: QValueInput) -> x.Score) (fun (x: QValueInput) -> x.IsDecoy) combinedInput
-            |> fun (scores,pep,qVal) -> scores.ToArray(), pep.ToArray(), qVal.ToArray()
-
-        Chart.Point (scores,qVal)
-        |> Chart.Show
-
-        let initialGuess =
-            initialParamsOverRange scores qVal [|1. .. 30.|]
-
-        let estimate =
-            initialGuess
-            |> Array.map (fun initial ->
-                if initial.InitialParamGuess.Length > 3 then failwith "Invalid initial param guess for Logistic Function"
-                let lowerBound =
-                    initial.InitialParamGuess
-                    |> Array.map (fun param -> param - param * 0.1)
-                    |> vector
-                let upperBound =
-                    initial.InitialParamGuess
-                    |> Array.map (fun param -> param + param * 0.1)
-                    |> vector
-                estimatedParamsWithRSS LogisticFunction initial 0.001 10.0 lowerBound upperBound scores qVal
-            )
-            |> Array.minBy snd
-            |> fst
-
-        let logisticFunction = LogisticFunction.GetFunctionValue estimate
-
-        //let qValues = FDRControl'.getQValueFunc fdrEstimate 0.01 (fun (x: QValueInput) -> x.Score) (fun (x: QValueInput) -> x.IsDecoy) combinedInput
-
-        // Create a new instance of InferredProteinClassItemScored with q values assigned
-        let combinedInputQVal =
-            combinedIPCISInput
-            |> Array.map (fun item ->
-                if item.Decoy then
-                    createInferredProteinClassItemScored item.GroupOfProteinIDs item.Class item.PeptideSequence item.TargetScore item.DecoyScore (logisticFunction item.DecoyScore) item.Decoy item.DecoyBigger
-                else
-                    createInferredProteinClassItemScored item.GroupOfProteinIDs item.Class item.PeptideSequence item.TargetScore item.DecoyScore (logisticFunction item.TargetScore) item.Decoy item.DecoyBigger
-            )
-        combinedInputQVal
-
-    /// Calculates the q value using Storeys method and the paired target-decoy approach to determine target or decoy hits.
-    let calculateQValueStorey (targetDecoyMatch: InferredProteinClassItemScored<'sequence>[]) (decoyNoMatch: InferredProteinClassItemScored<'sequence>[]) =
-        // Combined input for q value calculation
-        // Gives an array of scores with the frequency of decoy and target hits at that score
-        let combinedInput = Array.append targetDecoyMatch decoyNoMatch
-        let scoreFrequencies =
-            combinedInput
-            |> Array.map (fun x -> if x.DecoyBigger then
-                                    x.DecoyScore, true
-                                    else
-                                    x.TargetScore, false
-            )
-            |> Array.groupBy fst
-            |> Array.map (fun (score,scoreDecoyInfo) ->
-                let decoyCount =
-                    Array.filter (fun (score, decoyInfo) -> decoyInfo = true) scoreDecoyInfo
-                    |> Array.length
-                let targetCount =
-                    Array.filter (fun (score, decoyInfo) -> decoyInfo = false) scoreDecoyInfo
-                    |> Array.length
-                createScoreTargetDecoyCount score (float decoyCount) (float targetCount)
-            )
-            |> Array.sortByDescending (fun x -> x.Score)
-
-        // Goes through the list and assigns each protein a "q value" by dividing total decoy hits so far through total target hits so far
-        let reverseQVal =
-            scoreFrequencies
-            |> Array.fold (fun (acc: (float*float*float*float) list) scoreCounts ->
-                let _,_,decoyCount,targetCount = acc.Head
-                // Decoy hits are doubled
-                let newDecoyCount  = decoyCount + scoreCounts.DecoyCount * 2.
-                let newTargetCount = targetCount + scoreCounts.TargetCount
-                let newQVal =
-                    let nominator =
-                        if newTargetCount > 0. then
-                            newTargetCount
-                        else 1.
-                    newDecoyCount / nominator
-                (scoreCounts.Score, newQVal, newDecoyCount, newTargetCount):: acc
-            ) [0., 0., 0., 0.]
-            |> fun list -> list.[.. list.Length-2]
-            |> List.map (fun (score, qVal, decoyC, targetC) -> score, qVal)
-
-        //Assures monotonicity by going through the list from the bottom to top and assigning the previous q value if it is smaller than the current one
-        let score, monotoneQVal =
-            let head::tail = reverseQVal
-            tail
-            |> List.fold (fun (acc: (float*float) list) (score, newQValue) ->
-                let _,qValue = acc.Head
-                if newQValue > qValue then
-                    (score, qValue)::acc
-                else
-                    (score, newQValue)::acc
-
-            )[head]
-            |> Array.ofList
-            |> Array.sortBy fst
-            |> Array.unzip
-        // Linear Interpolation
-        let linearSplineCoeff = LinearSpline.initInterpolateSorted score monotoneQVal
-        let interpolation = LinearSpline.interpolate linearSplineCoeff
-        // Assigns q values based on scores with interpolation function
-        let combinedInputQVal =
-            combinedInput
-            |> Array.map (fun item ->
-                if item.Decoy then
-                    createInferredProteinClassItemScored item.GroupOfProteinIDs item.Class item.PeptideSequence item.TargetScore item.DecoyScore (interpolation item.DecoyScore) item.Decoy item.DecoyBigger
-                else
-                    createInferredProteinClassItemScored item.GroupOfProteinIDs item.Class item.PeptideSequence item.TargetScore item.DecoyScore (interpolation item.TargetScore) item.Decoy item.DecoyBigger
-            )
-        combinedInputQVal
-
     let qValueHitsVisualization inferredProteinClassItemScored path=
         let decoy, target = inferredProteinClassItemScored |> Array.partition (fun x -> x.DecoyBigger)
         // Histogram with relative abundance
@@ -677,3 +435,251 @@ module ProteinInference' =
         |> Chart.withX_AxisStyle "Score"
         |> Chart.withSize (900., 900.)
         |> Chart.SaveHtmlAs (path + @"\QValueGraph")
+
+module FDRControl' =
+
+    open FSharp.Plotly
+    open Fitting'.NonLinearRegression'.LevenbergMarquardtConstrained'
+    open FSharp.Stats.Interpolation
+
+    /// for given data, creates a logistic regression model and returns a mapping function for this model
+    let getLogisticRegressionFunction (x:vector) (y:vector) epsilon =
+        let alpha =
+            match FSharp.Stats.Fitting.LogisticRegression.Univariable.estimateAlpha epsilon x y with
+            | Some a -> a
+            | None -> failwith "Could not find an alpha for logistic regression of fdr data"
+        let weight = FSharp.Stats.Fitting.LogisticRegression.Univariable.coefficient epsilon alpha x y
+        FSharp.Stats.Fitting.LogisticRegression.Univariable.fit weight
+
+    /// returns scores, pep, q
+    let binningFunction bandwidth pi0 (scoreF: 'A -> float) (isDecoyF: 'A -> bool) (data:'A[])  =
+        let totalDecoyProportion =
+            let decoyCount = Array.filter isDecoyF data |> Array.length |> float
+            let totalCount = data |> Array.length  |> float
+            1. / (2. * decoyCount / totalCount)
+        data
+        |> Array.groupBy (fun s -> floor (scoreF s / bandwidth))
+        |> Array.sortBy fst
+        |> Array.map (fun (k,values)->
+            let median     = values |> Array.map scoreF |> Array.average
+            //let totalCount = values |> Array.length |> float
+            let decoyCount = values |> Array.filter isDecoyF |> Array.length |> float |> (*) totalDecoyProportion
+            // Include modified decoy count in total count?
+            let totalCount = values |> Array.filter (isDecoyF >> not) |> Array.length |> float |> (+) decoyCount
+            //(median |> float,(decoyCount * pi0  / totalCount))
+            median,totalCount,decoyCount
+                //(median, totalCount )
+        )
+        |> fun a ->
+            a
+            |> Array.mapi (fun i (median,totalCountBin,decoyCountBin) ->
+                            /// TODO: Accumulate totalCount + totalDecoyCount beforeHand and skip the time intensive mapping accross the array in each iteration.
+                            let _,totalCountRight,decoyCountRight = a.[i..a.Length-1] |> Array.reduce (fun (x,y,z) (x',y',z') -> x+x',y+y',z+z')
+                            (median,(pi0 * 2. * decoyCountBin / totalCountBin),(pi0 * 2. * decoyCountRight / totalCountRight))
+            )
+        |> Array.sortBy (fun (score,pep,q) -> score)
+        |> Array.unzip3
+        |> fun (score,pep,q) -> vector score, vector pep, vector q
+
+    /// Calculates q value mapping funtion for target/decoy dataset
+    let getQValueFunc pi0 bw (scoreF: 'A -> float) (isDecoyF: 'A -> bool) (data:'A[]) =
+        let (scores,_,q) = FDRControl.binningFunction bw pi0 scoreF isDecoyF data
+        FDRControl.getLogisticRegressionFunction scores q 0.0000001
+
+    /// Calculates q values for target/decoy dataset
+    let getQValues pi0 (scoreF: 'A -> float) (isDecoyF: 'A -> bool) (data:'A[]) =
+        let f = getQValueFunc pi0 0.01 scoreF isDecoyF data
+        Array.map (scoreF >> f) data
+
+// FDR estimation using MAYU
+
+    let stirling_log_factorial (n: float) =
+        log(sqrt(2. * pi  *n)) + n * log(n) - n
+
+    let exact_log_factorial (n: float) =
+        let rec loop i log_fact =
+            if i > n then
+                log_fact
+            else
+                let new_log_fact = log_fact + (log i)
+                loop (i + 1.) new_log_fact
+        loop 2. 0.
+
+    let log_factorial (n: float) =
+        if n < 1000. then
+            exact_log_factorial n
+        else
+            stirling_log_factorial n
+
+    let log_binomial (n: float) (k: float) =
+        (log_factorial n) - (log_factorial k) - (log_factorial (n - k))
+
+    let hypergeometric (x: float) (n: float) (w: float) (d: float) =
+        //natural logarithm of the probability
+        if(d > 0.) then
+            exp((log_binomial w x) + (log_binomial (n-w) (d-x)) - (log_binomial n d))
+        else 0.
+
+    let estimatePi0HG (n: float) (targets: float) (cf: float) =
+        let rec loop (fp: float) (logprob: float list) =
+            if fp > cf then
+                logprob |> List.rev
+            else
+                let tp = targets - fp
+                let w = n - tp
+                let prob = hypergeometric fp n w cf
+                loop (fp + 1.) (prob::logprob)
+        let logprob = loop 0. []
+        let sum = logprob |> List.sum
+        let logprob_Norm =
+            logprob
+            |> List.map (fun x ->
+                x / sum
+            )
+        //// MAYU rounds here to first decimal
+        let expectation_value_FP_PID =
+            logprob_Norm
+            |> List.foldi (fun i acc x ->
+                acc + x * (float i)
+            ) 0.
+        if (isNan expectation_value_FP_PID) || (isInf expectation_value_FP_PID) then
+            -1.
+        else 
+            expectation_value_FP_PID
+
+    
+    // Calculates a q-value for the indentified proteins
+    let calculateQValueLogReg fdrEstimate (targetDecoyMatch: ProteinInference'.InferredProteinClassItemScored<'sequence>[]) (decoyNoMatch: ProteinInference'.InferredProteinClassItemScored<'sequence>[]) =
+        // Input for q value calculation
+        let createTargetDecoyInput =
+            targetDecoyMatch
+            |> Array.map (fun inferredProteinCIS ->
+                if inferredProteinCIS.DecoyBigger then
+                    ProteinInference'.createQValueInput inferredProteinCIS.DecoyScore true
+                else
+                    ProteinInference'.createQValueInput inferredProteinCIS.TargetScore false
+            )
+        let createDecoyNoMatchInput =
+            decoyNoMatch
+            |> Array.map (fun intermediateResult ->
+                ProteinInference'.createQValueInput intermediateResult.DecoyScore true
+            )
+        // Combined input for q value calculation
+        let combinedInput = Array.append createTargetDecoyInput createDecoyNoMatchInput
+
+        // Combined InferredProteinClassItemScored input, which gets assigned its corresponding q value
+        let combinedIPCISInput = Array.append targetDecoyMatch decoyNoMatch
+
+        let scores,pep,qVal =
+            binningFunction 0.01 fdrEstimate (fun (x: ProteinInference'.QValueInput) -> x.Score) (fun (x: ProteinInference'.QValueInput) -> x.IsDecoy) combinedInput
+            |> fun (scores,pep,qVal) -> scores.ToArray(), pep.ToArray(), qVal.ToArray()
+
+        Chart.Point (scores,qVal)
+        |> Chart.Show
+
+        let initialGuess =
+            initialParamsOverRange scores qVal [|1. .. 30.|]
+
+        let estimate =
+            initialGuess
+            |> Array.map (fun initial ->
+                if initial.InitialParamGuess.Length > 3 then failwith "Invalid initial param guess for Logistic Function"
+                let lowerBound =
+                    initial.InitialParamGuess
+                    |> Array.map (fun param -> param - param * 0.1)
+                    |> vector
+                let upperBound =
+                    initial.InitialParamGuess
+                    |> Array.map (fun param -> param + param * 0.1)
+                    |> vector
+                estimatedParamsWithRSS LogisticFunction initial 0.001 10.0 lowerBound upperBound scores qVal
+            )
+            |> Array.minBy snd
+            |> fst
+
+        let logisticFunction = LogisticFunction.GetFunctionValue estimate
+
+        //let qValues = FDRControl'.getQValueFunc fdrEstimate 0.01 (fun (x: QValueInput) -> x.Score) (fun (x: QValueInput) -> x.IsDecoy) combinedInput
+
+        // Create a new instance of InferredProteinClassItemScored with q values assigned
+        let combinedInputQVal =
+            combinedIPCISInput
+            |> Array.map (fun item ->
+                if item.Decoy then
+                    ProteinInference'.createInferredProteinClassItemScored item.GroupOfProteinIDs item.Class item.PeptideSequence item.TargetScore item.DecoyScore (logisticFunction item.DecoyScore) item.Decoy item.DecoyBigger
+                else
+                    ProteinInference'.createInferredProteinClassItemScored item.GroupOfProteinIDs item.Class item.PeptideSequence item.TargetScore item.DecoyScore (logisticFunction item.TargetScore) item.Decoy item.DecoyBigger
+            )
+        combinedInputQVal
+
+    /// Calculates the q value using Storeys method and the paired target-decoy approach to determine target or decoy hits.
+    let calculateQValueStorey (targetDecoyMatch: ProteinInference'.InferredProteinClassItemScored<'sequence>[]) (decoyNoMatch: ProteinInference'.InferredProteinClassItemScored<'sequence>[]) =
+        // Combined input for q value calculation
+        // Gives an array of scores with the frequency of decoy and target hits at that score
+        let combinedInput = Array.append targetDecoyMatch decoyNoMatch
+        let scoreFrequencies =
+            combinedInput
+            |> Array.map (fun x -> if x.DecoyBigger then
+                                    x.DecoyScore, true
+                                    else
+                                    x.TargetScore, false
+            )
+            |> Array.groupBy fst
+            |> Array.map (fun (score,scoreDecoyInfo) ->
+                let decoyCount =
+                    Array.filter (fun (score, decoyInfo) -> decoyInfo = true) scoreDecoyInfo
+                    |> Array.length
+                let targetCount =
+                    Array.filter (fun (score, decoyInfo) -> decoyInfo = false) scoreDecoyInfo
+                    |> Array.length
+                ProteinInference'.createScoreTargetDecoyCount score (float decoyCount) (float targetCount)
+            )
+            |> Array.sortByDescending (fun x -> x.Score)
+
+        // Goes through the list and assigns each protein a "q value" by dividing total decoy hits so far through total target hits so far
+        let reverseQVal =
+            scoreFrequencies
+            |> Array.fold (fun (acc: (float*float*float*float) list) scoreCounts ->
+                let _,_,decoyCount,targetCount = acc.Head
+                // Decoy hits are doubled
+                let newDecoyCount  = decoyCount + scoreCounts.DecoyCount * 2.
+                let newTargetCount = targetCount + scoreCounts.TargetCount
+                let newQVal =
+                    let nominator =
+                        if newTargetCount > 0. then
+                            newTargetCount
+                        else 1.
+                    newDecoyCount / nominator
+                (scoreCounts.Score, newQVal, newDecoyCount, newTargetCount):: acc
+            ) [0., 0., 0., 0.]
+            |> fun list -> list.[.. list.Length-2]
+            |> List.map (fun (score, qVal, decoyC, targetC) -> score, qVal)
+
+        //Assures monotonicity by going through the list from the bottom to top and assigning the previous q value if it is smaller than the current one
+        let score, monotoneQVal =
+            let head::tail = reverseQVal
+            tail
+            |> List.fold (fun (acc: (float*float) list) (score, newQValue) ->
+                let _,qValue = acc.Head
+                if newQValue > qValue then
+                    (score, qValue)::acc
+                else
+                    (score, newQValue)::acc
+
+            )[head]
+            |> Array.ofList
+            |> Array.sortBy fst
+            |> Array.unzip
+        // Linear Interpolation
+        let linearSplineCoeff = LinearSpline.initInterpolateSorted score monotoneQVal
+        let interpolation = LinearSpline.interpolate linearSplineCoeff
+        // Assigns q values based on scores with interpolation function
+        let combinedInputQVal =
+            combinedInput
+            |> Array.map (fun item ->
+                if item.Decoy then
+                    ProteinInference'.createInferredProteinClassItemScored item.GroupOfProteinIDs item.Class item.PeptideSequence item.TargetScore item.DecoyScore (interpolation item.DecoyScore) item.Decoy item.DecoyBigger
+                else
+                    ProteinInference'.createInferredProteinClassItemScored item.GroupOfProteinIDs item.Class item.PeptideSequence item.TargetScore item.DecoyScore (interpolation item.TargetScore) item.Decoy item.DecoyBigger
+            )
+        combinedInputQVal
