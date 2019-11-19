@@ -204,9 +204,10 @@ module ProteinInference' =
             QValue           : float
             Decoy            : bool
             DecoyBigger      : bool
+            FoundInDB        : bool
         }
 
-    let createInferredProteinClassItemScored proteinIDs evidenceClass peptideSequences targetScore decoyScore qValue isDecoy decoyBigger =
+    let createInferredProteinClassItemScored proteinIDs evidenceClass peptideSequences targetScore decoyScore qValue isDecoy decoyBigger foundInDB =
         {
             GroupOfProteinIDs = proteinIDs
             PeptideSequence   = peptideSequences
@@ -216,6 +217,7 @@ module ProteinInference' =
             QValue            = qValue
             Decoy             = isDecoy
             DecoyBigger       = decoyBigger
+            FoundInDB         = foundInDB
         }
 
     type PSMInput =
@@ -543,11 +545,80 @@ module FDRControl' =
                 acc + x * (float i)
             ) 0.
         if (isNan expectation_value_FP_PID) || (isInf expectation_value_FP_PID) then
-            -1.
+            0.
         else 
             expectation_value_FP_PID
 
-    
+    let binProteinsLength (proteins: ProteinInference'.InferredProteinClassItemScored<'sequence> []) (proteinsFromDB: (string*string)[]) binCount =
+        // need to bin all proteins in the db, not only those with hit?
+        let proteinsNotMatchedDB =
+            let proteinsMatched =
+                proteins
+                |> Array.collect (fun protein ->
+                    protein.GroupOfProteinIDs
+                    |> String.split ';'
+                )
+                |> Set.ofArray
+            let proteinsInDB =
+                proteinsFromDB
+                |> Array.map fst
+                |> Set.ofArray
+            Set.difference proteinsMatched proteinsInDB
+            |> Set.toArray
+            |> Array.map (fun protein ->
+                ProteinInference'.createInferredProteinClassItemScored protein BioFSharp.PeptideClassification.PeptideEvidenceClass.Unknown [|""|] (-1.) (-1.) (-1.) false false false
+            )
+
+        let combined = Array.append proteins proteinsNotMatchedDB
+        // sorting treats protein groups as one protein with average length. They are also treated as one protein for total and target counts.
+        let sortLength =
+            combined
+            |> Array.sortBy (fun protein ->
+                let proteinsInGroup =
+                    protein.GroupOfProteinIDs
+                    |> String.split ';'
+                let averageLength =
+                    proteinsInGroup
+                    |> Array.map (fun string ->
+                        float string.Length
+                    )
+                    |> Array.average
+                averageLength
+            )
+        let bins =
+            let binSize =
+                sortLength.Length / binCount
+            sortLength
+            |> Array.chunkBySize binSize
+        bins
+
+    let expectedFP (proteinBins: ProteinInference'.InferredProteinClassItemScored<'sequence> [] []) =
+        proteinBins
+        |> Array.map (fun proteinBin ->
+            let numberTarget =
+                proteinBin
+                |> Array.filter (fun protein -> not protein.DecoyBigger && protein.FoundInDB) 
+                |> Array.length
+                |> float
+            let numberDecoy = 
+                proteinBin
+                |> Array.filter (fun protein -> protein.DecoyBigger && protein.FoundInDB) 
+                |> Array.length
+                |> float
+            let total = 
+                let notFound = 
+                    proteinBin
+                    |> Array.filter (fun protein -> not protein.FoundInDB)
+                    |> Array.length 
+                    |> float
+                notFound + numberTarget + numberDecoy
+            let fpInBin = estimatePi0HG total numberTarget numberDecoy
+            printfn "target: %f; decoy: %f; total: %f" numberTarget numberDecoy total
+            fpInBin
+        )
+        |> Array.sum
+
+
     // Calculates a q-value for the indentified proteins
     let calculateQValueLogReg fdrEstimate (targetDecoyMatch: ProteinInference'.InferredProteinClassItemScored<'sequence>[]) (decoyNoMatch: ProteinInference'.InferredProteinClassItemScored<'sequence>[]) =
         // Input for q value calculation
@@ -606,9 +677,9 @@ module FDRControl' =
             combinedIPCISInput
             |> Array.map (fun item ->
                 if item.Decoy then
-                    ProteinInference'.createInferredProteinClassItemScored item.GroupOfProteinIDs item.Class item.PeptideSequence item.TargetScore item.DecoyScore (logisticFunction item.DecoyScore) item.Decoy item.DecoyBigger
+                    ProteinInference'.createInferredProteinClassItemScored item.GroupOfProteinIDs item.Class item.PeptideSequence item.TargetScore item.DecoyScore (logisticFunction item.DecoyScore) item.Decoy item.DecoyBigger true
                 else
-                    ProteinInference'.createInferredProteinClassItemScored item.GroupOfProteinIDs item.Class item.PeptideSequence item.TargetScore item.DecoyScore (logisticFunction item.TargetScore) item.Decoy item.DecoyBigger
+                    ProteinInference'.createInferredProteinClassItemScored item.GroupOfProteinIDs item.Class item.PeptideSequence item.TargetScore item.DecoyScore (logisticFunction item.TargetScore) item.Decoy item.DecoyBigger true
             )
         combinedInputQVal
 
@@ -678,8 +749,8 @@ module FDRControl' =
             combinedInput
             |> Array.map (fun item ->
                 if item.Decoy then
-                    ProteinInference'.createInferredProteinClassItemScored item.GroupOfProteinIDs item.Class item.PeptideSequence item.TargetScore item.DecoyScore (interpolation item.DecoyScore) item.Decoy item.DecoyBigger
+                    ProteinInference'.createInferredProteinClassItemScored item.GroupOfProteinIDs item.Class item.PeptideSequence item.TargetScore item.DecoyScore (interpolation item.DecoyScore) item.Decoy item.DecoyBigger true
                 else
-                    ProteinInference'.createInferredProteinClassItemScored item.GroupOfProteinIDs item.Class item.PeptideSequence item.TargetScore item.DecoyScore (interpolation item.TargetScore) item.Decoy item.DecoyBigger
+                    ProteinInference'.createInferredProteinClassItemScored item.GroupOfProteinIDs item.Class item.PeptideSequence item.TargetScore item.DecoyScore (interpolation item.TargetScore) item.Decoy item.DecoyBigger true
             )
         combinedInputQVal
