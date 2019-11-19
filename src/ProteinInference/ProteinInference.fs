@@ -234,8 +234,8 @@ module ProteinInference =
 
             // Assign q values to each protein (now also includes decoy only hits)
             let combinedScoredClassesQVal =
-                let combWithNoMatch = Array.append reverseNoMatch combinedScoredClasses
                 let fdr =
+                    let combWithNoMatch = Array.append reverseNoMatch combinedScoredClasses
                     match fdrMethod with
                     |Traditional -> 1.
                     |TargetDecoyRatio ->
@@ -244,14 +244,12 @@ module ProteinInference =
                         let targetCount = combinedScoredClasses |> Array.filter (fun x -> not x.DecoyBigger) |> Array.length |> float
                         decoyCount / targetCount
                     |MAYU ->
-                        //  binning reduces fdr by around 10?
+                        // binning reduces fdr by around 10?
+                        // 0.002701326953 to 0.000321 in test data
                         let binnedProteins = FDRControl'.binProteinsLength combWithNoMatch proteinsDB 10
                         let expectedFP = FDRControl'.expectedFP binnedProteins
-                        let decoyCount  = combWithNoMatch |> Array.filter (fun x -> x.DecoyBigger) |> Array.length |> float
                         let targetCount = combinedScoredClasses |> Array.filter (fun x -> not x.DecoyBigger) |> Array.length |> float
-                        printfn "Decoy/Target: %f" (decoyCount / targetCount)
                         let fdr = expectedFP / targetCount
-                        printfn "expectedFP: %f" expectedFP
                         printfn "Mayu: %f" fdr
                         fdr
                 
@@ -334,8 +332,22 @@ module ProteinInference =
 
                 // Assign q values to each protein (now also includes decoy only hits)
                 let inferenceResultScoredQVal =
+                    let fdr =
+                        let combWithNoMatch = Array.append reverseNoMatch inferenceResultScored
+                        match fdrMethod with
+                        |Traditional -> 1.
+                        |TargetDecoyRatio ->
+                            let decoyCount  = combWithNoMatch |> Array.filter (fun x -> x.DecoyBigger) |> Array.length |> float
+                            let targetCount = inferenceResultScored |> Array.filter (fun x -> not x.DecoyBigger) |> Array.length |> float
+                            decoyCount / targetCount
+                        |MAYU ->
+                            let binnedProteins = FDRControl'.binProteinsLength combWithNoMatch proteinsDB 10
+                            let expectedFP = FDRControl'.expectedFP binnedProteins
+                            let targetCount = inferenceResultScored |> Array.filter (fun x -> not x.DecoyBigger) |> Array.length |> float
+                            let fdr = expectedFP / targetCount
+                            printfn "Mayu: %f" fdr
+                            fdr
                     if qValMethod = Domain.QValueMethod.LogisticRegression then
-                        let fdr = (inferenceResultScored |> Array.filter (fun x -> x.DecoyBigger) |> Array.length |> float |> (*)2.)/(inferenceResultScored |> Array.filter (fun x -> not x.DecoyBigger) |> Array.length |> float)
                         ProteomIQon.FDRControl'.calculateQValueLogReg fdr inferenceResultScored reverseNoMatch
                     else
                         ProteomIQon.FDRControl'.calculateQValueStorey inferenceResultScored reverseNoMatch

@@ -587,10 +587,29 @@ module FDRControl' =
             )
         let bins =
             let binSize =
-                sortLength.Length / binCount
+                ceil (float sortLength.Length / float binCount)
             sortLength
-            |> Array.chunkBySize binSize
+            |> Array.chunkBySize (int binSize)
         bins
+
+    // The original paper of Mayu describes a protein as:
+    // FP = if only if all its peptides with q <= threshold are decoy
+    // TP = at least one of its peptides with q <= threshold is target
+    // However, the way mayu estimates it on the program is like this:
+    // FP = any protein that contains a decoy psm with q <= threshold
+    // TP = any protein that contains a target psm with q <= threshold
+    // They do not consider protein containing both decoy and target psms.
+    // ProteomIQon currently uses the picked target decoy approach with the following definitions:
+    // FP = protein where the score of decoy hits is higher than score of target hits
+    // TP = protein where the score of target hits is higher than score of decoy hits
+    // Also, mayu estimates q as the empirical (target-decoy) q value.
+    // Percolator estimates q as the empirical (target-decoy) q value and adjusted by pi0
+    // Mayu extracts the list of TP and FP proteins from PSM level whereas percolator
+    // extract the list of TP and FP proteins from peptide level, this avoids redundancy and
+    // gives a better calibration since peptide level q values are re-adjusted in percolator.
+    // ProteomIQon extracts TP and FP proteins from the result of the picked target decoy approach.
+    // This creates sometimes a difference in the number of TP and FP proteins between percolator, Mayu, and ProteomIQon,
+    // which causes a slight difference in the estimated protein FDR.
 
     let expectedFP (proteinBins: ProteinInference'.InferredProteinClassItemScored<'sequence> [] []) =
         proteinBins
