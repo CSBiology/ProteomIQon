@@ -581,20 +581,37 @@ module FDRControl' =
                 if Set.contains proteinName proteinsMatched then
                     None
                 else
-                    Some (ProteinInference'.createInferredProteinClassItemScored proteinName BioFSharp.PeptideClassification.PeptideEvidenceClass.Unknown [|peptideSequence|] (-1.) (-1.) (-1.) false false false)
+                    Some ((ProteinInference'.createInferredProteinClassItemScored proteinName BioFSharp.PeptideClassification.PeptideEvidenceClass.Unknown [|peptideSequence|] (-1.) (-1.) (-1.) false false false),
+                         float peptideSequence.Length)
             )
-        let combined = Array.append proteins proteinsNotMatchedDB
+
+        let addedSequenceLength =
+            let proteinLengthMap =
+                proteinsFromDB
+                |> Array.map (fun (protein,sequence) ->
+                    protein, sequence.Length
+                )
+                |> Map.ofArray
+            proteins
+            |> Array.map (fun ipcis ->
+                ipcis,
+                let groupOfProteins =
+                    ipcis.GroupOfProteinIDs
+                    |> String.split ';'
+                groupOfProteins
+                |> Array.map (fun protein ->
+                    match proteinLengthMap.TryFind protein with
+                    | None -> failwith "A protein where you are trying to get the length from isn't present in the database"
+                    | Some length -> float length
+                )
+                |> Array.average 
+            )
+        let combined = Array.append addedSequenceLength proteinsNotMatchedDB
         // sorting treats protein groups as one protein with average length. They are also treated as one protein for total and target counts.
         let sortLength =
             combined
-            |> Array.sortBy (fun protein ->
-                protein.PeptideSequence
-                |> Array.map (fun string ->
-                    float string.Length
-                )
-                |> Array.average
-            )
-        printfn "%i" sortLength.Length
+            |> Array.sortBy snd
+            |> Array.map fst
         let bins =
             let binSize =
                 ceil (float sortLength.Length / float binCount)
