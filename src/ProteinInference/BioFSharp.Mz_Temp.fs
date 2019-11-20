@@ -269,6 +269,12 @@ module ProteinInference' =
         | GFFEntryLine x -> if x.Feature = "mRNA" then Some x else None
         | _ -> None
 
+    let removeModification pepSeq =
+        String.filter (fun c -> System.Char.IsLower c |> not && c <> '[' && c <> ']') pepSeq
+
+    let proteinGroupToString (proteinGroup:string[]) =
+        Array.reduce (fun x y ->  x + ";" + y) proteinGroup
+
     /// Reads geographical information about protein from gff entry and builds the modelinfo of it
     /// This function takes an RNA gff3 entry and therefore will contain the splice variant id of the gene in its result.
     /// This splice variant id should be the same in the given FastA-file.
@@ -350,21 +356,32 @@ module ProteinInference' =
 
     // Assigns a score to each protein with reverse digested peptides based on the peptides obtained in psm.
     let createReverseProteinScores (reverseProteins: (string*string[])[]) (peptideScoreMap: Map<string,float>) =
+        // Remove modifications from map since protein inference was also done using unmodified peptides
+        let scoreMapWithoutMods = 
+            peptideScoreMap
+            |> Map.toArray
+            |> Array.map (fun (seq, score) ->
+                removeModification seq, score
+            )
+            |> Map.ofArray
         reverseProteins
         |> Array.map (fun (protein, peptides) ->
-        (protein |> String.split ' ').[0],
-        peptides
-        |> Array.map (fun pep ->
-        peptideScoreMap.TryFind pep
-        |> (fun x ->
-            match x with
-            | Some score -> score
-            | None -> 0.
+        protein,
+            (
+            peptides
+            |> Array.map (fun pep ->
+                scoreMapWithoutMods.TryFind pep
+                |> (fun x ->
+                    match x with
+                    | Some score -> score
+                    | None -> 0.
+            )
+            )
+            |> Array.sum,
+            peptides
+            )
         )
-        )
-        |> Array.sum
-        )
-        |> Array.filter (fun (protein, score) -> score <> 0.)
+        |> Array.filter (fun (protein, (score, peptides)) -> score <> 0.)
         |> Map.ofArray
 
     /// Sums up score of all peptide sequences
@@ -374,14 +391,14 @@ module ProteinInference' =
         |> Array.sum
 
     // Looks if the given protein accession is present in a map of identified decoy proteins and assigns its score when found.
-    let assignDecoyScoreToTargetScore (proteins: string) (decoyScores: Map<string,float>) =
+    let assignDecoyScoreToTargetScore (proteins: string) (decoyScores: Map<string,(float * string[])>) =
         let prots = proteins |> String.split ';'
         prots
         |> Array.map (fun protein ->
             decoyScores.TryFind protein
             |> fun protOpt ->
                 match protOpt with
-                | Some score -> score
+                | Some (score,peptides) -> score
                 | None -> 0.
         )
         |> Array.max
@@ -559,32 +576,25 @@ module FDRControl' =
                     |> String.split ';'
                 )
                 |> Set.ofArray
-            let proteinsInDB =
-                proteinsFromDB
-                |> Array.map fst
-                |> Set.ofArray
-            Set.difference proteinsMatched proteinsInDB
-            |> Set.toArray
-            |> Array.map (fun protein ->
-                ProteinInference'.createInferredProteinClassItemScored protein BioFSharp.PeptideClassification.PeptideEvidenceClass.Unknown [|""|] (-1.) (-1.) (-1.) false false false
+            proteinsFromDB
+            |> Array.choose (fun (proteinName, peptideSequence) ->
+                if Set.contains proteinName proteinsMatched then
+                    None
+                else
+                    Some (ProteinInference'.createInferredProteinClassItemScored proteinName BioFSharp.PeptideClassification.PeptideEvidenceClass.Unknown [|peptideSequence|] (-1.) (-1.) (-1.) false false false)
             )
-
         let combined = Array.append proteins proteinsNotMatchedDB
         // sorting treats protein groups as one protein with average length. They are also treated as one protein for total and target counts.
         let sortLength =
             combined
             |> Array.sortBy (fun protein ->
-                let proteinsInGroup =
-                    protein.GroupOfProteinIDs
-                    |> String.split ';'
-                let averageLength =
-                    proteinsInGroup
-                    |> Array.map (fun string ->
-                        float string.Length
-                    )
-                    |> Array.average
-                averageLength
+                protein.PeptideSequence
+                |> Array.map (fun string ->
+                    float string.Length
+                )
+                |> Array.average
             )
+        printfn "%i" sortLength.Length
         let bins =
             let binSize =
                 ceil (float sortLength.Length / float binCount)

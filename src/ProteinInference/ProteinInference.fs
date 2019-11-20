@@ -128,12 +128,6 @@ module ProteinInference =
             printfn "\nERROR: Could not build classification map"
             failwithf "\t%s" err.Message
 
-    let removeModification pepSeq =
-        String.filter (fun c -> System.Char.IsLower c |> not && c <> '[' && c <> ']') pepSeq
-
-    let proteinGroupToString (proteinGroup:string[]) =
-        Array.reduce (fun x y ->  x + ";" + y) proteinGroup
-
     let readAndInferFile classItemCollection protein peptide groupFiles outDirectory rawFolderPath psmInputs (dbConnection: SQLiteConnection) (qValMethod: QValueMethod) (fdrMethod: FDRMethod) =
 
         let logger = Logging.createLogger "ProteinInference_readAndInferFile"
@@ -153,6 +147,10 @@ module ProteinInference =
         let proteinsDB =
             ProteomIQon.SearchDB'.selectProteins dbConnection
             |> Array.ofList
+            |> Array.map (fun (protein, peptideSequence) ->
+                //is this the best way to get the protein names?
+                (protein |> String.split ' ').[0], peptideSequence
+            )
 
         // Array of prtoein Accessions tupled with their reverse digested peptides
         let reverseProteins =
@@ -173,7 +171,7 @@ module ProteinInference =
                         let s =
                             s.Seq
 
-                        match Map.tryFind (removeModification s) classItemCollection with
+                        match Map.tryFind (ProteinInference'.removeModification s) classItemCollection with
                         | Some (x:ProteinClassItem<'sequence>) -> createProteinClassItem x.GroupOfProteinIDs x.Class s
                         | None -> failwithf "Could not find sequence %s in classItemCollection" s
                         ),
@@ -224,13 +222,12 @@ module ProteinInference =
                     |> Array.collect (fun prots -> prots.GroupOfProteinIDs |> String.split ';')
                 reverseProteinScores
                 |> Map.toArray
-                |> Array.map (fun (protein, score) ->
+                |> Array.choose (fun (protein, (score, peptides)) ->
                     if (proteinsPresent |> Array.contains protein) then
-                        ProteomIQon.ProteinInference'.createInferredProteinClassItemScored "HasMatch" PeptideEvidenceClass.Unknown [|""|] (-1.) (-1.) (-1.) false false false
+                        None
                     else
-                        ProteomIQon.ProteinInference'.createInferredProteinClassItemScored protein PeptideEvidenceClass.Unknown [|""|] 0. score (-1.) true true true
+                        Some (ProteomIQon.ProteinInference'.createInferredProteinClassItemScored protein PeptideEvidenceClass.Unknown peptides 0. score (-1.) true true true)
                 )
-                |> Array.filter (fun out -> out.Decoy <> false)
 
             // Assign q values to each protein (now also includes decoy only hits)
             let combinedScoredClassesQVal =
@@ -249,7 +246,13 @@ module ProteinInference =
                         let binnedProteins = FDRControl'.binProteinsLength combWithNoMatch proteinsDB 10
                         let expectedFP = FDRControl'.expectedFP binnedProteins
                         let targetCount = combinedScoredClasses |> Array.filter (fun x -> not x.DecoyBigger) |> Array.length |> float
-                        let fdr = expectedFP / targetCount
+                        let fdr = 
+                            if (isNan expectedFP) || (isInf expectedFP) || expectedFP = 0. then
+                                1.
+                            elif (expectedFP / targetCount < 0.) || (expectedFP / targetCount > 1.) then
+                                1.
+                            else
+                                expectedFP / targetCount
                         printfn "Mayu: %f" fdr
                         fdr
                 
@@ -274,7 +277,7 @@ module ProteinInference =
                         if filteredPepSet = [||] then
                             None
                         else
-                            Some (ProteomIQon.ProteinInference'.createInferredProteinClassItemScored ic.GroupOfProteinIDs ic.Class [|proteinGroupToString filteredPepSet|] ic.TargetScore ic.DecoyScore ic.QValue ic.Decoy ic.DecoyBigger true)
+                            Some (ProteomIQon.ProteinInference'.createInferredProteinClassItemScored ic.GroupOfProteinIDs ic.Class [|ProteinInference'.proteinGroupToString filteredPepSet|] ic.TargetScore ic.DecoyScore ic.QValue ic.Decoy ic.DecoyBigger true)
                         )
 
                 combinedInferenceresult
@@ -322,13 +325,12 @@ module ProteinInference =
                         |> Array.collect (fun prots -> prots.GroupOfProteinIDs |> String.split ';')
                     reverseProteinScores
                     |> Map.toArray
-                    |> Array.map (fun (protein, score) ->
+                    |> Array.choose (fun (protein, (score, peptides)) ->
                         if (proteinsPresent |> Array.contains protein) then
-                            ProteomIQon.ProteinInference'.createInferredProteinClassItemScored "HasMatch" PeptideEvidenceClass.Unknown [|""|] (-1.) (-1.) (-1.) false false false
+                            None
                         else
-                            ProteomIQon.ProteinInference'.createInferredProteinClassItemScored protein PeptideEvidenceClass.Unknown [|""|] 0. score (-1.) true true true
+                            Some (ProteomIQon.ProteinInference'.createInferredProteinClassItemScored protein PeptideEvidenceClass.Unknown peptides 0. score (-1.) true true true)
                     )
-                    |> Array.filter (fun out -> out.Decoy <> false)
 
                 // Assign q values to each protein (now also includes decoy only hits)
                 let inferenceResultScoredQVal =
