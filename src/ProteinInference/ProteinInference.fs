@@ -226,6 +226,8 @@ module ProteinInference =
                     if (proteinsPresent |> Array.contains protein) then
                         None
                     else
+                        // peptides are the peptides which point to the reverse digested protein. This info is currently unused, since in cases where a partner was found this field still contains
+                        // the peptides that point to the forward digested protein.
                         Some (ProteomIQon.ProteinInference'.createInferredProteinClassItemScored protein PeptideEvidenceClass.Unknown peptides 0. score (-1.) true true true)
                 )
 
@@ -241,8 +243,6 @@ module ProteinInference =
                         let targetCount = combinedScoredClasses |> Array.filter (fun x -> not x.DecoyBigger) |> Array.length |> float
                         decoyCount / targetCount
                     |MAYU ->
-                        // binning reduces fdr by around 10?
-                        // 0.002701326953 to 0.000321 in test data
                         let binnedProteins = FDRControl'.binProteinsLength combWithNoMatch proteinsDB 10
                         let expectedFP = FDRControl'.expectedFP binnedProteins
                         let targetCount = combinedScoredClasses |> Array.filter (fun x -> not x.DecoyBigger) |> Array.length |> float
