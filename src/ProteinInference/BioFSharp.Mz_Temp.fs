@@ -29,6 +29,20 @@ module Fitting' =
                                     gradientVector)
                 }
 
+            // Looks for the real point in a dataset that is closest to the given point
+            let private findClosestPoint (point: float) (data: float []) =
+                let distance =
+                    data
+                    |> Array.map (fun x ->
+                        abs (point - x)
+                    )
+                let indexSmallest =
+                    distance
+                    |> Array.findIndex (fun x ->
+                        x = (distance |> Array.min)
+                    )
+                data.[indexSmallest]
+
             /// Returns an estimate for an initial parameter for the linear least square estimator for a given dataset (xData, yData).
             /// The initial estimation is intended for a logistic function.
             let initialParam (xData: float[]) (yData: float[]) =
@@ -37,22 +51,11 @@ module Fitting' =
                 let maxY = yData |> Array.max
                 let combined = Array.map2 (fun x y -> x,y) xData yData
                 // Looks for the real point that is closest to the given point
-                let findClosest (point: float) (data: float []) =
-                    let distance =
-                        data
-                        |> Array.map (fun x ->
-                            abs (point - x)
-                        )
-                    let indexSmallest =
-                        distance
-                        |> Array.findIndex (fun x ->
-                            x = (distance |> Array.min)
-                        )
-                    data.[indexSmallest]
+
                 // finds the point which is closest to the middle of the range on the y axis
                 let midX,midY =
                     let point = maxY - yRange / 2.
-                    let middleYData = findClosest point yData
+                    let middleYData = findClosestPoint point yData
                     Array.filter (fun (x,y) -> y = middleYData) combined
                     |> Array.averageBy fst, middleYData
                 // looks for the point where the descending functions slope begins to flatten
@@ -61,9 +64,12 @@ module Fitting' =
                     combined
                     |> Array.filter (fun (x, y) -> (maxY - y) < 0.001 * yRange)
                     |> Array.head
+                // mirrors the x value of the right slope point through the x value of the middle point
+                // takes max y for y
                 let leftSlopeX, leftSlopeY =
                     let leftX = midX - (rightSlopeX - midX)
                     leftX, maxY
+                // slope = (y2 - y1)/(x2 - x1)
                 let slope =
                     ((rightSlopeY - leftSlopeY)/yRange) / ((rightSlopeX - leftSlopeX)/xRange)
                 let steepness = abs slope
@@ -73,25 +79,13 @@ module Fitting' =
             /// The steepness is given as an array and not estimated. An initial estimate is returned for every given steepness.
             /// The initial estimation is intended for a logistic function.
             let initialParamsOverRange (xData: float[]) (yData: float[]) (steepnessRange: float []) =
+                // works the same as initialParam for mid point estimation
                 let yRange = abs ((yData |> Array.max) - (yData |> Array.min))
                 let maxY = yData |> Array.max
                 let combined = Array.map2 (fun x y -> x,y) xData yData
-                // Looks for the real point that is closest to the given point
-                let findClosest (point: float) (data: float []) =
-                    let distance =
-                        data
-                        |> Array.map (fun x ->
-                            abs (point - x)
-                        )
-                    let indexSmallest =
-                        distance
-                        |> Array.findIndex (fun x ->
-                            x = (distance |> Array.min)
-                        )
-                    data.[indexSmallest]
                 let midX,midY =
                     let point = maxY - yRange / 2.
-                    let middleYData = findClosest point yData
+                    let middleYData = findClosestPoint point yData
                     printfn "%f" middleYData
                     Array.filter (fun (x,y) -> y = middleYData) combined
                     |> Array.averageBy fst, middleYData
@@ -109,7 +103,6 @@ module Fitting' =
                     let paramGuess = Vector.ofArray solverOptions.InitialParamGuess
                     let rss = getRSS model xData yData paramGuess
                     estParams.[estParams.Count-1], rss
-
 
 module SearchDB' =
 
@@ -186,7 +179,6 @@ module SearchDB' =
         | None ->
             failwith "This database does not contain any SearchParameters. It is not recommended to work with this file."
 
-
 module ProteinInference' =
 
     open BioFSharp.PeptideClassification
@@ -233,7 +225,7 @@ module ProteinInference' =
             PercolatorScore : float
         }
 
-        // Input for QValue calulation
+    /// Input for QValue calulation
     type QValueInput =
         {
             Score    : float
@@ -253,6 +245,7 @@ module ProteinInference' =
             TargetCount: float
         }
 
+    /// Gives the decoy and target count at a specific score
     let createScoreTargetDecoyCount score decoyCount targetCount =
         {
             Score       = score
@@ -349,6 +342,8 @@ module ProteinInference' =
         |> List.concat
         |> List.groupBy (fun psm -> psm.Seq)
         |> List.map (fun (sequence, psmList) ->
+            // This sequence may contain modifications.
+            // Depending on the type of lookup this map is used for, the modifications have to be removed.
             sequence,
             psmList
             |> List.sortByDescending (fun psm -> psm.PercolatorScore)
@@ -360,7 +355,7 @@ module ProteinInference' =
     // Assigns a score to each protein with reverse digested peptides based on the peptides obtained in psm.
     let createReverseProteinScores (reverseProteins: (string*string[])[]) (peptideScoreMap: Map<string,float>) =
         // Remove modifications from map since protein inference was also done using unmodified peptides
-        let scoreMapWithoutMods = 
+        let scoreMapWithoutMods =
             peptideScoreMap
             |> Map.toArray
             |> Array.map (fun (seq, score) ->
@@ -371,19 +366,21 @@ module ProteinInference' =
         |> Array.map (fun (protein, peptides) ->
         protein,
             (
-            peptides
-            |> Array.map (fun pep ->
-                scoreMapWithoutMods.TryFind pep
-                |> (fun x ->
-                    match x with
-                    | Some score -> score
-                    | None -> 0.
-            )
-            )
-            |> Array.sum,
-            peptides
+                peptides
+                // looks wether the peptides resulting from the reverse digest appear in the peptides from the psm
+                |> Array.map (fun pep ->
+                    scoreMapWithoutMods.TryFind pep
+                    |> (fun x ->
+                        match x with
+                        | Some score -> score
+                        | None -> 0.
+                    )
+                )
+                |> Array.sum,
+                peptides
             )
         )
+        // only hits are relevant
         |> Array.filter (fun (protein, (score, peptides)) -> score <> 0.)
         |> Map.ofArray
 
@@ -393,7 +390,7 @@ module ProteinInference' =
         |> Array.map (fun sequence -> peptideScoreMap.Item sequence)
         |> Array.sum
 
-    // Looks if the given protein accession is present in a map of identified decoy proteins and assigns its score when found.
+    /// Looks if the given protein accession is present in a map of identified decoy proteins and assigns its score when found.
     let assignDecoyScoreToTargetScore (proteins: string) (decoyScores: Map<string,(float * string[])>) =
         let prots = proteins |> String.split ';'
         prots
@@ -401,6 +398,7 @@ module ProteinInference' =
             decoyScores.TryFind protein
             |> fun protOpt ->
                 match protOpt with
+                // peptides which pointed to the decoy version of this protein are discarded here, they can be included if needed
                 | Some (score,peptides) -> score
                 | None -> 0.
         )
@@ -513,12 +511,12 @@ module FDRControl' =
         let f = getQValueFunc pi0 0.01 scoreF isDecoyF data
         Array.map (scoreF >> f) data
 
-// FDR estimation using MAYU
+    // FDR estimation using MAYU
 
-    let stirling_log_factorial (n: float) =
+    let private stirling_log_factorial (n: float) =
         log(sqrt(2. * pi  *n)) + n * log(n) - n
 
-    let exact_log_factorial (n: float) =
+    let private exact_log_factorial (n: float) =
         let rec loop i log_fact =
             if i > n then
                 log_fact
@@ -527,21 +525,22 @@ module FDRControl' =
                 loop (i + 1.) new_log_fact
         loop 2. 0.
 
-    let log_factorial (n: float) =
+    let private log_factorial (n: float) =
         if n < 1000. then
             exact_log_factorial n
         else
             stirling_log_factorial n
 
-    let log_binomial (n: float) (k: float) =
+    let private log_binomial (n: float) (k: float) =
         (log_factorial n) - (log_factorial k) - (log_factorial (n - k))
 
-    let hypergeometric (x: float) (n: float) (w: float) (d: float) =
+    let private hypergeometric (x: float) (n: float) (w: float) (d: float) =
         //natural logarithm of the probability
-        if(d > 0.) then
-            exp((log_binomial w x) + (log_binomial (n-w) (d-x)) - (log_binomial n d))
+        if (d > 0.) then
+            exp((log_binomial w x) + (log_binomial (n - w) (d - x)) - (log_binomial n d))
         else 0.
 
+    /// Estimates the false positives given the total number of entries, the number of target hits and the number of decoy hits
     let estimatePi0HG (n: float) (targets: float) (cf: float) =
         let rec loop (fp: float) (logprob: float list) =
             if fp > cf then
@@ -558,7 +557,7 @@ module FDRControl' =
             |> List.map (fun x ->
                 x / sum
             )
-        //// MAYU rounds here to first decimal
+        // MAYU rounds here to first decimal
         let expectation_value_FP_PID =
             logprob_Norm
             |> List.foldi (fun i acc x ->
@@ -566,7 +565,7 @@ module FDRControl' =
             ) 0.
         if (isNan expectation_value_FP_PID) || (isInf expectation_value_FP_PID) then
             0.
-        else 
+        else
             expectation_value_FP_PID
 
     let binProteinsLength (proteins: ProteinInference'.InferredProteinClassItemScored<'sequence> []) (proteinsFromDB: (string*string)[]) binCount =
@@ -579,6 +578,7 @@ module FDRControl' =
                     |> String.split ';'
                 )
                 |> Set.ofArray
+            // Creates an entry for every protein that is present in the search db and wasn't inferred
             proteinsFromDB
             |> Array.choose (fun (proteinName, peptideSequence) ->
                 if Set.contains proteinName proteinsMatched then
@@ -588,6 +588,7 @@ module FDRControl' =
                          float peptideSequence.Length)
             )
 
+        // Adds the length of the peptide sequence to every protein, since they should be binned according to it
         let addedSequenceLength =
             let proteinLengthMap =
                 proteinsFromDB
@@ -607,7 +608,8 @@ module FDRControl' =
                     | None -> failwith "A protein where you are trying to get the length from isn't present in the database"
                     | Some length -> float length
                 )
-                |> Array.average 
+                // lengths are averaged for protein groups
+                |> Array.average
             )
         let combined = Array.append addedSequenceLength proteinsNotMatchedDB
         // sorting treats protein groups as one protein with average length. They are also treated as one protein for total and target counts.
@@ -641,32 +643,32 @@ module FDRControl' =
     // This creates sometimes a difference in the number of TP and FP proteins between percolator, Mayu, and ProteomIQon,
     // which causes a slight difference in the estimated protein FDR.
 
+    /// Calculates the expected false positives for every protein bin and sums them up.
     let expectedFP (proteinBins: ProteinInference'.InferredProteinClassItemScored<'sequence> [] []) =
         proteinBins
         |> Array.map (fun proteinBin ->
             let numberTarget =
                 proteinBin
-                |> Array.filter (fun protein -> not protein.DecoyBigger && protein.FoundInDB) 
+                |> Array.filter (fun protein -> not protein.DecoyBigger && protein.FoundInDB)
                 |> Array.length
                 |> float
-            let numberDecoy = 
+            let numberDecoy =
                 proteinBin
-                |> Array.filter (fun protein -> protein.DecoyBigger && protein.FoundInDB) 
+                |> Array.filter (fun protein -> protein.DecoyBigger && protein.FoundInDB)
                 |> Array.length
                 |> float
-            let total = 
-                let notFound = 
+            let total =
+                let notFound =
                     proteinBin
                     |> Array.filter (fun protein -> not protein.FoundInDB)
-                    |> Array.length 
+                    |> Array.length
                     |> float
                 notFound + numberTarget + numberDecoy
             let fpInBin = estimatePi0HG total numberTarget numberDecoy
-            printfn "target: %f; decoy: %f; total: %f" numberTarget numberDecoy total
+            // MAYU rounds the number of expected false positives for every bin to the first decimal
             fpInBin
         )
         |> Array.sum
-
 
     // Calculates a q-value for the indentified proteins
     let calculateQValueLogReg fdrEstimate (targetDecoyMatch: ProteinInference'.InferredProteinClassItemScored<'sequence>[]) (decoyNoMatch: ProteinInference'.InferredProteinClassItemScored<'sequence>[]) =
@@ -694,12 +696,14 @@ module FDRControl' =
             binningFunction 0.01 fdrEstimate (fun (x: ProteinInference'.QValueInput) -> x.Score) (fun (x: ProteinInference'.QValueInput) -> x.IsDecoy) combinedInput
             |> fun (scores,pep,qVal) -> scores.ToArray(), pep.ToArray(), qVal.ToArray()
 
-        Chart.Point (scores,qVal)
-        |> Chart.Show
+        //Chart.Point (scores,qVal)
+        //|> Chart.Show
 
+        // gives a range of 1 to 30 for the steepness. This can be adjusted depending on the data, but normally it should lie in this range
         let initialGuess =
             initialParamsOverRange scores qVal [|1. .. 30.|]
 
+        // performs Levenberg Marguardt Constrained algorithm on the data for every given initial estimate with different steepnesses and selects the one with the lowest RSS
         let estimate =
             initialGuess
             |> Array.map (fun initial ->
@@ -727,6 +731,7 @@ module FDRControl' =
             |> Array.map (fun item ->
                 if item.Decoy then
                     ProteinInference'.createInferredProteinClassItemScored item.GroupOfProteinIDs item.Class item.PeptideSequence item.TargetScore item.DecoyScore (logisticFunction item.DecoyScore) item.Decoy item.DecoyBigger true
+                // here, a protein that has a bigger decoy score gets a q value assigned to its target score
                 else
                     ProteinInference'.createInferredProteinClassItemScored item.GroupOfProteinIDs item.Class item.PeptideSequence item.TargetScore item.DecoyScore (logisticFunction item.TargetScore) item.Decoy item.DecoyBigger true
             )
@@ -735,16 +740,19 @@ module FDRControl' =
     /// Calculates the q value using Storeys method and the paired target-decoy approach to determine target or decoy hits.
     let calculateQValueStorey (targetDecoyMatch: ProteinInference'.InferredProteinClassItemScored<'sequence>[]) (decoyNoMatch: ProteinInference'.InferredProteinClassItemScored<'sequence>[]) =
         // Combined input for q value calculation
-        // Gives an array of scores with the frequency of decoy and target hits at that score
         let combinedInput = Array.append targetDecoyMatch decoyNoMatch
+        // Gives an array of scores with the frequency of decoy and target hits at that score
         let scoreFrequencies =
             combinedInput
-            |> Array.map (fun x -> if x.DecoyBigger then
-                                    x.DecoyScore, true
-                                    else
-                                    x.TargetScore, false
+            |> Array.map (fun x -> 
+                if x.DecoyBigger then
+                    x.DecoyScore, true
+                else
+                    x.TargetScore, false
             )
+            // groups by score
             |> Array.groupBy fst
+            // counts occurences of targets and decoys at that score
             |> Array.map (fun (score,scoreDecoyInfo) ->
                 let decoyCount =
                     Array.filter (fun (score, decoyInfo) -> decoyInfo = true) scoreDecoyInfo
@@ -761,8 +769,10 @@ module FDRControl' =
             scoreFrequencies
             |> Array.fold (fun (acc: (float*float*float*float) list) scoreCounts ->
                 let _,_,decoyCount,targetCount = acc.Head
-                // Decoy hits are doubled
+                // Should decoy hits be doubled?
+                // accumulates decoy hits
                 let newDecoyCount  = decoyCount + scoreCounts.DecoyCount(* * 2.*)
+                // accumulates target hits
                 let newTargetCount = targetCount + scoreCounts.TargetCount
                 let newQVal =
                     let nominator =
@@ -772,6 +782,7 @@ module FDRControl' =
                     newDecoyCount / nominator
                 (scoreCounts.Score, newQVal, newDecoyCount, newTargetCount):: acc
             ) [0., 0., 0., 0.]
+            // removes last part of the list which was the "empty" initial entry
             |> fun list -> list.[.. list.Length-2]
             |> List.map (fun (score, qVal, decoyC, targetC) -> score, qVal)
 
