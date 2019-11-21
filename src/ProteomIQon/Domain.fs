@@ -131,9 +131,10 @@ module Domain =
         |LogisticRegression
 
     type FDRMethod =
-        |Traditional
+        |Conservative
         |MAYU
         |TargetDecoyRatio
+        |NoInitialEstimate
 
     type ProteinInferenceParams = 
         {
