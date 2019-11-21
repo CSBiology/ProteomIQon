@@ -32,8 +32,8 @@ module Fitting' =
             /// Returns an estimate for an initial parameter for the linear least square estimator for a given dataset (xData, yData).
             /// The initial estimation is intended for a logistic function.
             let initialParam (xData: float[]) (yData: float[]) =
-                let xRange = abs ((xData |> Array.max) - (xData |> Array.min))
-                let yRange = abs ((yData |> Array.max) - (yData |> Array.min))
+                let xRange = ((xData |> Array.max) - (xData |> Array.min))
+                let yRange = ((yData |> Array.max) - (yData |> Array.min))
                 let maxY = yData |> Array.max
                 let combined = Array.map2 (fun x y -> x,y) xData yData
                 // Looks for the real point that is closest to the given point
@@ -49,11 +49,14 @@ module Fitting' =
                             x = (distance |> Array.min)
                         )
                     data.[indexSmallest]
+                // finds the point which is closest to the middle of the range on the y axis
                 let midX,midY =
                     let point = maxY - yRange / 2.
                     let middleYData = findClosest point yData
                     Array.filter (fun (x,y) -> y = middleYData) combined
                     |> Array.averageBy fst, middleYData
+                // looks for the point where the descending functions slope begins to flatten
+                // for that the first point which is in the lowest percent of the y values is taken
                 let rightSlopeX,rightSlopeY =
                     combined
                     |> Array.filter (fun (x, y) -> (maxY - y) < 0.001 * yRange)
@@ -481,10 +484,10 @@ module FDRControl' =
         |> Array.sortBy fst
         |> Array.map (fun (k,values)->
             let median     = values |> Array.map scoreF |> Array.average
-            //let totalCount = values |> Array.length |> float
+            let totalCount = values |> Array.length |> float
             let decoyCount = values |> Array.filter isDecoyF |> Array.length |> float |> (*) totalDecoyProportion
             // Include modified decoy count in total count?
-            let totalCount = values |> Array.filter (isDecoyF >> not) |> Array.length |> float |> (+) decoyCount
+            //let totalCount = values |> Array.filter (isDecoyF >> not) |> Array.length |> float |> (+) decoyCount
             //(median |> float,(decoyCount * pi0  / totalCount))
             median,totalCount,decoyCount
                 //(median, totalCount )
@@ -759,7 +762,7 @@ module FDRControl' =
             |> Array.fold (fun (acc: (float*float*float*float) list) scoreCounts ->
                 let _,_,decoyCount,targetCount = acc.Head
                 // Decoy hits are doubled
-                let newDecoyCount  = decoyCount + scoreCounts.DecoyCount * 2.
+                let newDecoyCount  = decoyCount + scoreCounts.DecoyCount(* * 2.*)
                 let newTargetCount = targetCount + scoreCounts.TargetCount
                 let newQVal =
                     let nominator =
