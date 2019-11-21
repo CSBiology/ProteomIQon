@@ -338,23 +338,29 @@ module ProteinInference =
 
                 // Assign q values to each protein (now also includes decoy only hits)
                 let inferenceResultScoredQVal =
-                    let fdr =
-                        let combWithNoMatch = Array.append reverseNoMatch inferenceResultScored
-                        match fdrMethod with
-                        |Traditional -> 1.
-                        |TargetDecoyRatio ->
-                            let decoyCount  = combWithNoMatch |> Array.filter (fun x -> x.DecoyBigger) |> Array.length |> float
-                            let targetCount = inferenceResultScored |> Array.filter (fun x -> not x.DecoyBigger) |> Array.length |> float
-                            (2. * decoyCount) / targetCount
-                        |MAYU ->
-                            let binnedProteins = FDRControl'.binProteinsLength combWithNoMatch proteinsDB 10
-                            let expectedFP = FDRControl'.expectedFP binnedProteins
-                            let targetCount = inferenceResultScored |> Array.filter (fun x -> not x.DecoyBigger) |> Array.length |> float
-                            let fdr = expectedFP / targetCount
-                            fdr
-                    if qValMethod = Domain.QValueMethod.LogisticRegression then
+                    match qValMethod with
+                    |Domain.QValueMethod.LogisticRegression ->
+                        let fdr =
+                            let combWithNoMatch = Array.append reverseNoMatch inferenceResultScored
+                            match fdrMethod with
+                            |Conservative -> 1.
+                            |TargetDecoyRatio ->
+                                let decoyCount  = combWithNoMatch |> Array.filter (fun x -> x.DecoyBigger) |> Array.length |> float
+                                let targetCount = inferenceResultScored |> Array.filter (fun x -> not x.DecoyBigger) |> Array.length |> float
+                                (2. * decoyCount) / targetCount
+                            |MAYU ->
+                                let binnedProteins = FDRControl'.binProteinsLength combWithNoMatch proteinsDB 10
+                                let expectedFP = FDRControl'.expectedFP binnedProteins
+                                let targetCount = inferenceResultScored |> Array.filter (fun x -> not x.DecoyBigger) |> Array.length |> float
+                                let fdr = expectedFP / targetCount
+                                fdr
+                            |NoInitialEstimate -> failwith "FDR estimation is set to 'NoInitialEstimate'. Please set an estimation method for this q value calculation method"
                         ProteomIQon.FDRControl'.calculateQValueLogReg fdr inferenceResultScored reverseNoMatch
-                    else
+                    |Domain.QValueMethod.Storey ->
+                        match fdrMethod with
+                        |NoInitialEstimate -> ()
+                        |_ -> logger.Trace("FDR estimation is set to something else than 'NoInitialEstimate'. 
+                                           With the selected q value calculation method the fdr estimate isn't used, so this choice has no effect on the q values.")
                         ProteomIQon.FDRControl'.calculateQValueStorey inferenceResultScored reverseNoMatch
 
                 ProteinInference'.qValueHitsVisualization inferenceResultScoredQVal outFile
