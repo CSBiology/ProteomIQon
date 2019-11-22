@@ -233,6 +233,9 @@ module ProteinInference =
 
             // Assign q values to each protein (now also includes decoy only hits)
             let combinedScoredClassesQVal =
+                let decoyBiggerF = (fun (item: ProteinInference'.InferredProteinClassItemScored<'sequence>) -> item.DecoyBigger)
+                let targetScoreF = (fun (item: ProteinInference'.InferredProteinClassItemScored<'sequence>) -> item.TargetScore)
+                let decoyScoreF = (fun (item: ProteinInference'.InferredProteinClassItemScored<'sequence>) -> item.DecoyScore)
                 match qValMethod with
                 | Domain.QValueMethod.LogisticRegression ->
                     let fdr =
@@ -257,13 +260,23 @@ module ProteinInference =
                                     expectedFP / targetCount
                             fdr
                         |NoInitialEstimate -> failwith "FDR estimation is set to 'NoInitialEstimate'. Please set an estimation method for this q value calculation method"
-                    ProteomIQon.FDRControl'.calculateQValueLogReg fdr combinedScoredClasses reverseNoMatch
+                    let combWithReverse = Array.append combinedScoredClasses reverseNoMatch
+                    let qValueFunction = ProteomIQon.FDRControl'.calculateQValueLogReg fdr combWithReverse decoyBiggerF decoyScoreF targetScoreF
+                    let qValuesAssigned =
+                        combWithReverse
+                        |> Array.map (FDRControl'.assignQValueToIPCIS qValueFunction)
+                    qValuesAssigned
                 | Domain.QValueMethod.Storey ->
                     match fdrMethod with
                     |NoInitialEstimate -> ()
                     |_ -> logger.Trace("FDR estimation is set to something else than 'NoInitialEstimate'. 
                                        With the selected q value calculation method the fdr estimate isn't used, so this choice has no effect on the q values.")
-                    ProteomIQon.FDRControl'.calculateQValueStorey combinedScoredClasses reverseNoMatch 
+                    let combWithReverse = Array.append combinedScoredClasses reverseNoMatch
+                    let qValueFunction = ProteomIQon.FDRControl'.calculateQValueStorey combWithReverse decoyBiggerF decoyScoreF targetScoreF
+                    let qValuesAssigned =
+                       combWithReverse
+                       |> Array.map (FDRControl'.assignQValueToIPCIS qValueFunction)
+                    qValuesAssigned
 
             ProteinInference'.qValueHitsVisualization combinedScoredClassesQVal outDirectory
 
@@ -338,6 +351,9 @@ module ProteinInference =
 
                 // Assign q values to each protein (now also includes decoy only hits)
                 let inferenceResultScoredQVal =
+                    let decoyBiggerF = (fun (item: ProteinInference'.InferredProteinClassItemScored<'sequence>) -> item.DecoyBigger)
+                    let targetScoreF = (fun (item: ProteinInference'.InferredProteinClassItemScored<'sequence>) -> item.TargetScore)
+                    let decoyScoreF = (fun (item: ProteinInference'.InferredProteinClassItemScored<'sequence>) -> item.DecoyScore)
                     match qValMethod with
                     |Domain.QValueMethod.LogisticRegression ->
                         let fdr =
@@ -355,13 +371,23 @@ module ProteinInference =
                                 let fdr = expectedFP / targetCount
                                 fdr
                             |NoInitialEstimate -> failwith "FDR estimation is set to 'NoInitialEstimate'. Please set an estimation method for this q value calculation method"
-                        ProteomIQon.FDRControl'.calculateQValueLogReg fdr inferenceResultScored reverseNoMatch
+                        let combWithReverse = Array.append inferenceResultScored reverseNoMatch
+                        let qValueFunction = ProteomIQon.FDRControl'.calculateQValueLogReg fdr combWithReverse decoyBiggerF decoyScoreF targetScoreF
+                        let qValuesAssigned =
+                            combWithReverse
+                            |> Array.map (FDRControl'.assignQValueToIPCIS qValueFunction)
+                        qValuesAssigned
                     |Domain.QValueMethod.Storey ->
                         match fdrMethod with
                         |NoInitialEstimate -> ()
                         |_ -> logger.Trace("FDR estimation is set to something else than 'NoInitialEstimate'. 
                                            With the selected q value calculation method the fdr estimate isn't used, so this choice has no effect on the q values.")
-                        ProteomIQon.FDRControl'.calculateQValueStorey inferenceResultScored reverseNoMatch
+                        let combWithReverse = Array.append inferenceResultScored reverseNoMatch
+                        let qValueFunction = ProteomIQon.FDRControl'.calculateQValueStorey combWithReverse decoyBiggerF decoyScoreF targetScoreF
+                        let qValuesAssigned =
+                            combWithReverse
+                            |> Array.map (FDRControl'.assignQValueToIPCIS qValueFunction)
+                        qValuesAssigned
 
                 ProteinInference'.qValueHitsVisualization inferenceResultScoredQVal outFile
 
