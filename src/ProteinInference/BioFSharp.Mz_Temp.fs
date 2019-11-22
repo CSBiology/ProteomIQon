@@ -86,7 +86,6 @@ module Fitting' =
                 let midX,midY =
                     let point = maxY - yRange / 2.
                     let middleYData = findClosestPoint point yData
-                    printfn "%f" middleYData
                     Array.filter (fun (x,y) -> y = middleYData) combined
                     |> Array.averageBy fst, middleYData
                 steepnessRange
@@ -141,7 +140,8 @@ module SearchDB' =
         let selectCleavageIdxByPepSeqID   = Db.SQLiteQuery.prepareSelectCleavageIndexByPepSequenceID memoryDB tr
         let selectProteinByProtID         = DB'.SQLiteQuery'.prepareSelectProteinAccessionByID memoryDB tr
         let selectPeptideByPepSeqID       = DB'.SQLiteQuery'.prepareSelectPepSequenceByPepSequenceID memoryDB tr
-        (fun pepSequenceID ->
+        (
+            fun pepSequenceID ->
                 selectCleavageIdxByPepSeqID pepSequenceID
                 |> List.map (fun (_,protID,pepID,_,_,_) -> selectProteinByProtID protID, selectPeptideByPepSeqID pepID )
         )
@@ -152,11 +152,11 @@ module SearchDB' =
             let querystring = "SELECT Accession, Sequence FROM Protein"
             let cmd = new SQLiteCommand(querystring, cn)
             use reader = cmd.ExecuteReader()
-            (let rec loop (list: (string*string) list) =
-                match reader.Read() with
-                | false -> list |> List.rev
-                | true  -> loop ((reader.GetString(0), reader.GetString(1))::list)
-            loop []
+            (
+                [
+                    while reader.Read() do
+                        yield (reader.GetString(0), reader.GetString(1))
+                ]
             )
         selectProteins
 
@@ -670,30 +670,20 @@ module FDRControl' =
         )
         |> Array.sum
 
-    // Calculates a q-value for the indentified proteins
-    let calculateQValueLogReg fdrEstimate (targetDecoyMatch: ProteinInference'.InferredProteinClassItemScored<'sequence>[]) (decoyNoMatch: ProteinInference'.InferredProteinClassItemScored<'sequence>[]) =
+    /// Gives a function to calculate the q value for a score in a dataset using Lukas method and Levenberg Marguardt fitting
+    let calculateQValueLogReg fdrEstimate (data: 'a []) (isDecoy: 'a -> bool) (decoyScoreF: 'a -> float) (targetScoreF: 'a -> float) =
         // Input for q value calculation
         let createTargetDecoyInput =
-            targetDecoyMatch
-            |> Array.map (fun inferredProteinCIS ->
-                if inferredProteinCIS.DecoyBigger then
-                    ProteinInference'.createQValueInput inferredProteinCIS.DecoyScore true
+            data
+            |> Array.map (fun item ->
+                if isDecoy item then
+                    ProteinInference'.createQValueInput (decoyScoreF item) true
                 else
-                    ProteinInference'.createQValueInput inferredProteinCIS.TargetScore false
+                    ProteinInference'.createQValueInput (targetScoreF item) false
             )
-        let createDecoyNoMatchInput =
-            decoyNoMatch
-            |> Array.map (fun intermediateResult ->
-                ProteinInference'.createQValueInput intermediateResult.DecoyScore true
-            )
-        // Combined input for q value calculation
-        let combinedInput = Array.append createTargetDecoyInput createDecoyNoMatchInput
-
-        // Combined InferredProteinClassItemScored input, which gets assigned its corresponding q value
-        let combinedIPCISInput = Array.append targetDecoyMatch decoyNoMatch
 
         let scores,pep,qVal =
-            binningFunction 0.01 fdrEstimate (fun (x: ProteinInference'.QValueInput) -> x.Score) (fun (x: ProteinInference'.QValueInput) -> x.IsDecoy) combinedInput
+            binningFunction 0.01 fdrEstimate (fun (x: ProteinInference'.QValueInput) -> x.Score) (fun (x: ProteinInference'.QValueInput) -> x.IsDecoy) createTargetDecoyInput
             |> fun (scores,pep,qVal) -> scores.ToArray(), pep.ToArray(), qVal.ToArray()
 
         //Chart.Point (scores,qVal)
@@ -722,33 +712,18 @@ module FDRControl' =
             |> fst
 
         let logisticFunction = LogisticFunction.GetFunctionValue estimate
+        logisticFunction
 
-        //let qValues = FDRControl'.getQValueFunc fdrEstimate 0.01 (fun (x: QValueInput) -> x.Score) (fun (x: QValueInput) -> x.IsDecoy) combinedInput
-
-        // Create a new instance of InferredProteinClassItemScored with q values assigned
-        let combinedInputQVal =
-            combinedIPCISInput
-            |> Array.map (fun item ->
-                if item.Decoy then
-                    ProteinInference'.createInferredProteinClassItemScored item.GroupOfProteinIDs item.Class item.PeptideSequence item.TargetScore item.DecoyScore (logisticFunction item.DecoyScore) item.Decoy item.DecoyBigger true
-                // here, a protein that has a bigger decoy score gets a q value assigned to its target score
-                else
-                    ProteinInference'.createInferredProteinClassItemScored item.GroupOfProteinIDs item.Class item.PeptideSequence item.TargetScore item.DecoyScore (logisticFunction item.TargetScore) item.Decoy item.DecoyBigger true
-            )
-        combinedInputQVal
-
-    /// Calculates the q value using Storeys method and the paired target-decoy approach to determine target or decoy hits.
-    let calculateQValueStorey (targetDecoyMatch: ProteinInference'.InferredProteinClassItemScored<'sequence>[]) (decoyNoMatch: ProteinInference'.InferredProteinClassItemScored<'sequence>[]) =
-        // Combined input for q value calculation
-        let combinedInput = Array.append targetDecoyMatch decoyNoMatch
+    /// Gives a function to calculate the q value for a score in a dataset using Storeys method
+    let calculateQValueStorey (data: 'a[]) (isDecoy: 'a -> bool) (decoyScoreF: 'a -> float) (targetScoreF: 'a -> float) =
         // Gives an array of scores with the frequency of decoy and target hits at that score
         let scoreFrequencies =
-            combinedInput
+            data
             |> Array.map (fun x -> 
-                if x.DecoyBigger then
-                    x.DecoyScore, true
+                if isDecoy x then
+                    decoyScoreF x, true
                 else
-                    x.TargetScore, false
+                    targetScoreF x, false
             )
             // groups by score
             |> Array.groupBy fst
@@ -788,6 +763,8 @@ module FDRControl' =
 
         //Assures monotonicity by going through the list from the bottom to top and assigning the previous q value if it is smaller than the current one
         let score, monotoneQVal =
+            if reverseQVal.IsEmpty then
+                failwith "Reverse qvalues in Storey calculation are empty"
             let head::tail = reverseQVal
             tail
             |> List.fold (fun (acc: (float*float) list) (score, newQValue) ->
@@ -796,21 +773,19 @@ module FDRControl' =
                     (score, qValue)::acc
                 else
                     (score, newQValue)::acc
-
             )[head]
             |> Array.ofList
             |> Array.sortBy fst
             |> Array.unzip
         // Linear Interpolation
         let linearSplineCoeff = LinearSpline.initInterpolateSorted score monotoneQVal
+        // takes a score from the dataset and assigns it a q value
         let interpolation = LinearSpline.interpolate linearSplineCoeff
-        // Assigns q values based on scores with interpolation function
-        let combinedInputQVal =
-            combinedInput
-            |> Array.map (fun item ->
-                if item.Decoy then
-                    ProteinInference'.createInferredProteinClassItemScored item.GroupOfProteinIDs item.Class item.PeptideSequence item.TargetScore item.DecoyScore (interpolation item.DecoyScore) item.Decoy item.DecoyBigger true
-                else
-                    ProteinInference'.createInferredProteinClassItemScored item.GroupOfProteinIDs item.Class item.PeptideSequence item.TargetScore item.DecoyScore (interpolation item.TargetScore) item.Decoy item.DecoyBigger true
-            )
-        combinedInputQVal
+        interpolation
+
+    // Assigns a q value to an InferredProteinClassItemScored
+    let assignQValueToIPCIS (qValueF: float -> float) (item: ProteinInference'.InferredProteinClassItemScored<'sequence>) =
+        if item.Decoy then
+            ProteinInference'.createInferredProteinClassItemScored item.GroupOfProteinIDs item.Class item.PeptideSequence item.TargetScore item.DecoyScore (qValueF item.DecoyScore) item.Decoy item.DecoyBigger true
+        else
+            ProteinInference'.createInferredProteinClassItemScored item.GroupOfProteinIDs item.Class item.PeptideSequence item.TargetScore item.DecoyScore (qValueF item.TargetScore) item.Decoy item.DecoyBigger true
