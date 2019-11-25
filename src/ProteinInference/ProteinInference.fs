@@ -231,9 +231,9 @@ module ProteinInference =
 
             // Assign q values to each protein (now also includes decoy only hits)
             let combinedScoredClassesQVal =
-                let decoyBiggerF = (fun (item: ProteinInference'.InferredProteinClassItemScored<'sequence>) -> item.DecoyBigger)
-                let targetScoreF = (fun (item: ProteinInference'.InferredProteinClassItemScored<'sequence>) -> item.TargetScore)
-                let decoyScoreF = (fun (item: ProteinInference'.InferredProteinClassItemScored<'sequence>) -> item.DecoyScore)
+                let decoyBiggerF = (fun (item: ProteinInference'.InferredProteinClassItemScored) -> item.DecoyBigger)
+                let targetScoreF = (fun (item: ProteinInference'.InferredProteinClassItemScored) -> item.TargetScore)
+                let decoyScoreF = (fun (item: ProteinInference'.InferredProteinClassItemScored) -> item.DecoyScore)
                 let combWithReverse = Array.append combinedScoredClasses reverseNoMatch
                 match qValMethod with
                 | Domain.QValueMethod.LogisticRegression ->
@@ -347,9 +347,9 @@ module ProteinInference =
 
                 // Assign q values to each protein (now also includes decoy only hits)
                 let inferenceResultScoredQVal =
-                    let decoyBiggerF = (fun (item: ProteinInference'.InferredProteinClassItemScored<'sequence>) -> item.DecoyBigger)
-                    let targetScoreF = (fun (item: ProteinInference'.InferredProteinClassItemScored<'sequence>) -> item.TargetScore)
-                    let decoyScoreF = (fun (item: ProteinInference'.InferredProteinClassItemScored<'sequence>) -> item.DecoyScore)
+                    let decoyBiggerF = (fun (item: ProteinInference'.InferredProteinClassItemScored) -> item.DecoyBigger)
+                    let targetScoreF = (fun (item: ProteinInference'.InferredProteinClassItemScored) -> item.TargetScore)
+                    let decoyScoreF = (fun (item: ProteinInference'.InferredProteinClassItemScored) -> item.DecoyScore)
                     match qValMethod with
                     |Domain.QValueMethod.LogisticRegression ->
                         let fdr =
