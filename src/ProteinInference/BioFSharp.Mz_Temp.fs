@@ -187,10 +187,10 @@ module ProteinInference' =
     open Fitting'.NonLinearRegression'.LevenbergMarquardtConstrained'
 
     /// For a group of proteins, contains information about all peptides that might be used for its quantification and score calculated for it.
-    type InferredProteinClassItemScored<'sequence> =
+    type InferredProteinClassItemScored =
         {
             GroupOfProteinIDs: string
-            PeptideSequence  : 'sequence []
+            PeptideSequence  : string []
             Class            : PeptideEvidenceClass
             TargetScore      : float
             DecoyScore       : float
@@ -212,10 +212,10 @@ module ProteinInference' =
         }
 
     /// For a group of proteins, contains information about all peptides that might be used for its quantification and score / q-value calculated for it.
-    type InferredProteinClassItemQValue<'sequence> =
+    type InferredProteinClassItemQValue =
         {
             GroupOfProteinIDs: string
-            PeptideSequence  : 'sequence []
+            PeptideSequence  : string []
             Class            : PeptideEvidenceClass
             TargetScore      : float
             DecoyScore       : float
@@ -595,7 +595,7 @@ module FDRControl' =
     /// Returns proteins sorted into bins according to their size.
     /// proteins are the proteins which were found in either the reverse or forward proteininference, proteinsFromDB are the proteins with peptide sequence
     /// on which the inference was performed.
-    let binProteinsLength (proteins: ProteinInference'.InferredProteinClassItemScored<'sequence> []) (proteinsFromDB: (string*string)[]) binCount =
+    let binProteinsLength (proteins: ProteinInference'.InferredProteinClassItemScored []) (proteinsFromDB: (string*string)[]) binCount =
         // need to bin all proteins in the db, not only those with hit?
         let proteinsNotMatchedDB =
             let proteinsMatched =
@@ -671,7 +671,7 @@ module FDRControl' =
     // which causes a slight difference in the estimated protein FDR.
 
     /// Calculates the expected false positives for every protein bin and sums them up.
-    let expectedFP (proteinBin: ProteinInference'.InferredProteinClassItemScored<'sequence> []) =
+    let expectedFP (proteinBin: ProteinInference'.InferredProteinClassItemScored []) =
         let numberTarget =
             proteinBin
             |> Array.sumBy (fun protein ->
@@ -699,7 +699,7 @@ module FDRControl' =
         let fpInBin = estimatePi0HG total numberTarget numberDecoy
         fpInBin
 
-    let calculateFDRwithMAYU (data: ProteinInference'.InferredProteinClassItemScored<'sequence> []) (proteinsFromDB: (string*string)[]) =
+    let calculateFDRwithMAYU (data: ProteinInference'.InferredProteinClassItemScored []) (proteinsFromDB: (string*string)[]) =
         let proteinBins = binProteinsLength data proteinsFromDB 10.
         let estimatedFP =
             proteinBins
@@ -721,7 +721,7 @@ module FDRControl' =
         fdr
 
     /// Calculates Decoy/Target ratio
-    let calculateFDRwithDecoyTargetRatio (data: ProteinInference'.InferredProteinClassItemScored<'sequence> []) =
+    let calculateFDRwithDecoyTargetRatio (data: ProteinInference'.InferredProteinClassItemScored []) =
         // Should decoy Hits be doubled? : Target-decoy search strategy for increasedconfidence in large-scale proteinidentifications by mass spectrometry
         let decoyCount  =
             data
@@ -861,7 +861,7 @@ module FDRControl' =
         interpolation
 
     // Assigns a q value to an InferredProteinClassItemScored
-    let assignQValueToIPCIS (qValueF: float -> float) (item: ProteinInference'.InferredProteinClassItemScored<'sequence>) =
+    let assignQValueToIPCIS (qValueF: float -> float) (item: ProteinInference'.InferredProteinClassItemScored) =
         if item.Decoy then
             ProteinInference'.createInferredProteinClassItemQValue item.GroupOfProteinIDs item.Class item.PeptideSequence item.TargetScore item.DecoyScore (qValueF item.DecoyScore) item.Decoy item.DecoyBigger true
         else
