@@ -567,6 +567,9 @@ module FDRControl' =
         else
             expectation_value_FP_PID
 
+    /// Returns proteins sorted into bins according to their size.
+    /// proteins are the proteins which were found in either the reverse or forward proteininference, proteinsFromDB are the proteins with peptide sequence
+    /// on which the inference was performed.
     let binProteinsLength (proteins: ProteinInference'.InferredProteinClassItemScored<'sequence> []) (proteinsFromDB: (string*string)[]) binCount =
         // need to bin all proteins in the db, not only those with hit?
         let proteinsNotMatchedDB =
@@ -618,7 +621,7 @@ module FDRControl' =
             |> Array.map fst
         let bins =
             let binSize =
-                ceil (float sortLength.Length / float binCount)
+                ceil (float sortLength.Length / binCount)
             sortLength
             |> Array.chunkBySize (int binSize)
         bins
@@ -646,24 +649,70 @@ module FDRControl' =
     let expectedFP (proteinBin: ProteinInference'.InferredProteinClassItemScored<'sequence> []) =
         let numberTarget =
             proteinBin
-            |> Array.filter (fun protein -> not protein.DecoyBigger && protein.FoundInDB)
-            |> Array.length
-            |> float
+            |> Array.sumBy (fun protein ->
+                match not protein.DecoyBigger && protein.FoundInDB with
+                | true -> 1.
+                | false -> 0.
+            )
         let numberDecoy =
             proteinBin
-            |> Array.filter (fun protein -> protein.DecoyBigger && protein.FoundInDB)
-            |> Array.length
-            |> float
+             |> Array.sumBy (fun protein ->
+                 match protein.DecoyBigger && protein.FoundInDB with
+                 | true -> 1.
+                 | false -> 0.
+             )
         let total =
             let notFound =
                 proteinBin
-                |> Array.filter (fun protein -> not protein.FoundInDB)
-                |> Array.length
-                |> float
+                |> Array.sumBy (fun protein ->
+                    match not protein.FoundInDB with
+                    | true -> 1.
+                    | false -> 0.
+                )
             notFound + numberTarget + numberDecoy
         // MAYU rounds the number of expected false positives for every bin to the first decimal
         let fpInBin = estimatePi0HG total numberTarget numberDecoy
         fpInBin
+
+    let calculateFDRwithMAYU (data: ProteinInference'.InferredProteinClassItemScored<'sequence> []) (proteinsFromDB: (string*string)[]) =
+        let proteinBins = binProteinsLength data proteinsFromDB 10.
+        let estimatedFP =
+            proteinBins
+            |> Array.fold (fun acc proteinBin -> acc + expectedFP proteinBin) 0.
+        let targetCount = 
+            data
+            |> Array.sumBy (fun x ->
+            match x.DecoyBigger with
+            | true -> 0.
+            | false -> 1.
+            )
+        let fdr = 
+            if (isNan estimatedFP) || (isInf estimatedFP) || estimatedFP = 0. then
+                1.
+            elif (estimatedFP / targetCount < 0.) || (estimatedFP / targetCount > 1.) then
+                1.
+            else
+                estimatedFP / targetCount
+        fdr
+
+    /// Calculates Decoy/Target ratio
+    let calculateFDRwithDecoyTargetRatio (data: ProteinInference'.InferredProteinClassItemScored<'sequence> []) =
+        // Should decoy Hits be doubled? : Target-decoy search strategy for increasedconfidence in large-scale proteinidentifications by mass spectrometry
+        let decoyCount  =
+            data
+            |> Array.sumBy (fun x ->
+                match x.DecoyBigger with
+                | true -> 1.
+                | false -> 0.
+            )
+        let targetCount =
+            data
+            |> Array.sumBy (fun x ->
+                match x.DecoyBigger with
+                | true -> 0.
+                | false -> 1.
+            )
+        decoyCount/targetCount
 
     /// Gives a function to calculate the q value for a score in a dataset using Lukas method and Levenberg Marguardt fitting
     let calculateQValueLogReg fdrEstimate (data: 'a []) (isDecoy: 'a -> bool) (decoyScoreF: 'a -> float) (targetScoreF: 'a -> float) =
@@ -725,12 +774,20 @@ module FDRControl' =
             // counts occurences of targets and decoys at that score
             |> Array.map (fun (score,scoreDecoyInfo) ->
                 let decoyCount =
-                    Array.filter (fun (score, decoyInfo) -> decoyInfo = true) scoreDecoyInfo
-                    |> Array.length
+                    scoreDecoyInfo
+                    |> Array.sumBy (fun (score, decoyInfo) -> 
+                        match decoyInfo with
+                        | true -> 1.
+                        | false -> 0.
+                    )
                 let targetCount =
-                    Array.filter (fun (score, decoyInfo) -> decoyInfo = false) scoreDecoyInfo
-                    |> Array.length
-                ProteinInference'.createScoreTargetDecoyCount score (float decoyCount) (float targetCount)
+                    scoreDecoyInfo
+                    |> Array.sumBy (fun (score, decoyInfo) -> 
+                        match decoyInfo with
+                        | true -> 0.
+                        | false -> 1.
+                    )
+                ProteinInference'.createScoreTargetDecoyCount score decoyCount targetCount
             )
             |> Array.sortByDescending (fun x -> x.Score)
 

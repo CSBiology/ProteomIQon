@@ -248,7 +248,7 @@ module ProteinInference =
                             let targetCount = combinedScoredClasses |> Array.filter (fun x -> not x.DecoyBigger) |> Array.length |> float
                             ((*2. * *)decoyCount) / targetCount
                         |MAYU ->
-                            let binnedProteins = FDRControl'.binProteinsLength combWithReverse proteinsDB 10
+                            let binnedProteins = FDRControl'.binProteinsLength combWithReverse proteinsDB 10.
                             let expectedFP =
                                 binnedProteins
                                 |> Array.fold (fun acc proteinBin -> acc + FDRControl'.expectedFP proteinBin) 0.
@@ -365,7 +365,7 @@ module ProteinInference =
                                 let targetCount = inferenceResultScored |> Array.filter (fun x -> not x.DecoyBigger) |> Array.length |> float
                                 (2. * decoyCount) / targetCount
                             |MAYU ->
-                                let binnedProteins = FDRControl'.binProteinsLength combWithNoMatch proteinsDB 10
+                                let binnedProteins = FDRControl'.binProteinsLength combWithNoMatch proteinsDB 10.
                                 let expectedFP =
                                     binnedProteins
                                     |> Array.fold (fun acc proteinBin -> acc + FDRControl'.expectedFP proteinBin) 0.
