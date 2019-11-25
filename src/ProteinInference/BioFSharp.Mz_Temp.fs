@@ -186,8 +186,33 @@ module ProteinInference' =
     open FSharp.Plotly
     open Fitting'.NonLinearRegression'.LevenbergMarquardtConstrained'
 
-    /// For a group of proteins, contains information about all peptides that might be used for its quantification and score / q-value calculated for it.
+    /// For a group of proteins, contains information about all peptides that might be used for its quantification and score calculated for it.
     type InferredProteinClassItemScored<'sequence> =
+        {
+            GroupOfProteinIDs: string
+            PeptideSequence  : 'sequence []
+            Class            : PeptideEvidenceClass
+            TargetScore      : float
+            DecoyScore       : float
+            Decoy            : bool
+            DecoyBigger      : bool
+            FoundInDB        : bool
+        }
+
+    let createInferredProteinClassItemScored proteinIDs evidenceClass peptideSequences targetScore decoyScore isDecoy decoyBigger foundInDB =
+        {
+            GroupOfProteinIDs = proteinIDs
+            PeptideSequence   = peptideSequences
+            Class             = evidenceClass
+            TargetScore       = targetScore
+            DecoyScore        = decoyScore
+            Decoy             = isDecoy
+            DecoyBigger       = decoyBigger
+            FoundInDB         = foundInDB
+        }
+
+    /// For a group of proteins, contains information about all peptides that might be used for its quantification and score / q-value calculated for it.
+    type InferredProteinClassItemQValue<'sequence> =
         {
             GroupOfProteinIDs: string
             PeptideSequence  : 'sequence []
@@ -200,7 +225,7 @@ module ProteinInference' =
             FoundInDB        : bool
         }
 
-    let createInferredProteinClassItemScored proteinIDs evidenceClass peptideSequences targetScore decoyScore qValue isDecoy decoyBigger foundInDB =
+    let createInferredProteinClassItemQValue proteinIDs evidenceClass peptideSequences targetScore decoyScore qValue isDecoy decoyBigger foundInDB =
         {
             GroupOfProteinIDs = proteinIDs
             PeptideSequence   = peptideSequences
@@ -586,7 +611,7 @@ module FDRControl' =
                 if Set.contains proteinName proteinsMatched then
                     None
                 else
-                    Some ((ProteinInference'.createInferredProteinClassItemScored proteinName BioFSharp.PeptideClassification.PeptideEvidenceClass.Unknown [|peptideSequence|] (-1.) (-1.) (-1.) false false false),
+                    Some ((ProteinInference'.createInferredProteinClassItemScored proteinName BioFSharp.PeptideClassification.PeptideEvidenceClass.Unknown [|peptideSequence|] (-1.) (-1.) false false false),
                          float peptideSequence.Length)
             )
 
@@ -838,6 +863,6 @@ module FDRControl' =
     // Assigns a q value to an InferredProteinClassItemScored
     let assignQValueToIPCIS (qValueF: float -> float) (item: ProteinInference'.InferredProteinClassItemScored<'sequence>) =
         if item.Decoy then
-            ProteinInference'.createInferredProteinClassItemScored item.GroupOfProteinIDs item.Class item.PeptideSequence item.TargetScore item.DecoyScore (qValueF item.DecoyScore) item.Decoy item.DecoyBigger true
+            ProteinInference'.createInferredProteinClassItemQValue item.GroupOfProteinIDs item.Class item.PeptideSequence item.TargetScore item.DecoyScore (qValueF item.DecoyScore) item.Decoy item.DecoyBigger true
         else
-            ProteinInference'.createInferredProteinClassItemScored item.GroupOfProteinIDs item.Class item.PeptideSequence item.TargetScore item.DecoyScore (qValueF item.TargetScore) item.Decoy item.DecoyBigger true
+            ProteinInference'.createInferredProteinClassItemQValue item.GroupOfProteinIDs item.Class item.PeptideSequence item.TargetScore item.DecoyScore (qValueF item.TargetScore) item.Decoy item.DecoyBigger true

@@ -208,8 +208,6 @@ module ProteinInference =
                         inferredPCI.GroupOfProteinIDs inferredPCI.Class inferredPCI.PeptideSequence
                         peptideScore
                         decoyScore
-                        // Placeholder for q value
-                        -1.
                         false
                         (decoyScore > peptideScore)
                         true
@@ -228,7 +226,7 @@ module ProteinInference =
                     else
                         // peptides are the peptides which point to the reverse digested protein. This info is currently unused, since in cases where a partner was found this field still contains
                         // the peptides that point to the forward digested protein.
-                        Some (ProteomIQon.ProteinInference'.createInferredProteinClassItemScored protein PeptideEvidenceClass.Unknown peptides 0. score (-1.) true true true)
+                        Some (ProteomIQon.ProteinInference'.createInferredProteinClassItemScored protein PeptideEvidenceClass.Unknown peptides 0. score true true true)
                 )
 
             // Assign q values to each protein (now also includes decoy only hits)
@@ -294,7 +292,7 @@ module ProteinInference =
                         if filteredPepSet = [||] then
                             None
                         else
-                            Some (ProteomIQon.ProteinInference'.createInferredProteinClassItemScored ic.GroupOfProteinIDs ic.Class [|ProteinInference'.proteinGroupToString filteredPepSet|] ic.TargetScore ic.DecoyScore ic.QValue ic.Decoy ic.DecoyBigger true)
+                            Some (ProteomIQon.ProteinInference'.createInferredProteinClassItemQValue ic.GroupOfProteinIDs ic.Class [|ProteinInference'.proteinGroupToString filteredPepSet|] ic.TargetScore ic.DecoyScore ic.QValue ic.Decoy ic.DecoyBigger true)
                         )
 
                 combinedInferenceresult
@@ -328,8 +326,6 @@ module ProteinInference =
                             inferredPCI.GroupOfProteinIDs inferredPCI.Class inferredPCI.PeptideSequence
                             peptideScore
                             decoyScore
-                            // Placeholder for q value
-                            -1.
                             false
                             (decoyScore > peptideScore)
                             true
@@ -346,7 +342,7 @@ module ProteinInference =
                         if (proteinsPresent |> Array.contains protein) then
                             None
                         else
-                            Some (ProteomIQon.ProteinInference'.createInferredProteinClassItemScored protein PeptideEvidenceClass.Unknown peptides 0. score (-1.) true true true)
+                            Some (ProteomIQon.ProteinInference'.createInferredProteinClassItemScored protein PeptideEvidenceClass.Unknown peptides 0. score true true true)
                     )
 
                 // Assign q values to each protein (now also includes decoy only hits)
