@@ -236,20 +236,22 @@ module ProteinInference =
                 let decoyBiggerF = (fun (item: ProteinInference'.InferredProteinClassItemScored<'sequence>) -> item.DecoyBigger)
                 let targetScoreF = (fun (item: ProteinInference'.InferredProteinClassItemScored<'sequence>) -> item.TargetScore)
                 let decoyScoreF = (fun (item: ProteinInference'.InferredProteinClassItemScored<'sequence>) -> item.DecoyScore)
+                let combWithReverse = Array.append combinedScoredClasses reverseNoMatch
                 match qValMethod with
                 | Domain.QValueMethod.LogisticRegression ->
                     let fdr =
-                        let combWithNoMatch = Array.append reverseNoMatch combinedScoredClasses
                         match fdrMethod with
                         |Conservative -> 1.
                         |TargetDecoyRatio ->
                             // Decoy Hits Should be doubled : Target-decoy search strategy for increasedconfidence in large-scale proteinidentifications by mass spectrometry
-                            let decoyCount  = combWithNoMatch |> Array.filter (fun x -> x.DecoyBigger) |> Array.length |> float
+                            let decoyCount  = combWithReverse |> Array.filter (fun x -> x.DecoyBigger) |> Array.length |> float
                             let targetCount = combinedScoredClasses |> Array.filter (fun x -> not x.DecoyBigger) |> Array.length |> float
                             ((*2. * *)decoyCount) / targetCount
                         |MAYU ->
-                            let binnedProteins = FDRControl'.binProteinsLength combWithNoMatch proteinsDB 10
-                            let expectedFP = FDRControl'.expectedFP binnedProteins
+                            let binnedProteins = FDRControl'.binProteinsLength combWithReverse proteinsDB 10
+                            let expectedFP =
+                                binnedProteins
+                                |> Array.fold (fun acc proteinBin -> acc + FDRControl'.expectedFP proteinBin) 0.
                             let targetCount = combinedScoredClasses |> Array.filter (fun x -> not x.DecoyBigger) |> Array.length |> float
                             let fdr = 
                                 if (isNan expectedFP) || (isInf expectedFP) || expectedFP = 0. then
@@ -260,7 +262,6 @@ module ProteinInference =
                                     expectedFP / targetCount
                             fdr
                         |NoInitialEstimate -> failwith "FDR estimation is set to 'NoInitialEstimate'. Please set an estimation method for this q value calculation method"
-                    let combWithReverse = Array.append combinedScoredClasses reverseNoMatch
                     let qValueFunction = ProteomIQon.FDRControl'.calculateQValueLogReg fdr combWithReverse decoyBiggerF decoyScoreF targetScoreF
                     let qValuesAssigned =
                         combWithReverse
@@ -271,7 +272,6 @@ module ProteinInference =
                     |NoInitialEstimate -> ()
                     |_ -> logger.Trace("FDR estimation is set to something else than 'NoInitialEstimate'. 
                                        With the selected q value calculation method the fdr estimate isn't used, so this choice has no effect on the q values.")
-                    let combWithReverse = Array.append combinedScoredClasses reverseNoMatch
                     let qValueFunction = ProteomIQon.FDRControl'.calculateQValueStorey combWithReverse decoyBiggerF decoyScoreF targetScoreF
                     let qValuesAssigned =
                        combWithReverse
@@ -366,7 +366,9 @@ module ProteinInference =
                                 (2. * decoyCount) / targetCount
                             |MAYU ->
                                 let binnedProteins = FDRControl'.binProteinsLength combWithNoMatch proteinsDB 10
-                                let expectedFP = FDRControl'.expectedFP binnedProteins
+                                let expectedFP =
+                                    binnedProteins
+                                    |> Array.fold (fun acc proteinBin -> acc + FDRControl'.expectedFP proteinBin) 0.
                                 let targetCount = inferenceResultScored |> Array.filter (fun x -> not x.DecoyBigger) |> Array.length |> float
                                 let fdr = expectedFP / targetCount
                                 fdr

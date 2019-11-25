@@ -50,8 +50,6 @@ module Fitting' =
                 let yRange = ((yData |> Array.max) - (yData |> Array.min))
                 let maxY = yData |> Array.max
                 let combined = Array.map2 (fun x y -> x,y) xData yData
-                // Looks for the real point that is closest to the given point
-
                 // finds the point which is closest to the middle of the range on the y axis
                 let midX,midY =
                     let point = maxY - yRange / 2.
@@ -512,11 +510,12 @@ module FDRControl' =
         Array.map (scoreF >> f) data
 
     // FDR estimation using MAYU
+    // Code form 'stirlingLogFactorial' to 'estimatePi0HG' translated from percolator 'ProteinFDREstimator.cpp'
 
-    let private stirling_log_factorial (n: float) =
+    let private stirlingLogFacorial (n: float) =
         log(sqrt(2. * pi  *n)) + n * log(n) - n
 
-    let private exact_log_factorial (n: float) =
+    let private exactLogFactorial (n: float) =
         let rec loop i log_fact =
             if i > n then
                 log_fact
@@ -525,19 +524,19 @@ module FDRControl' =
                 loop (i + 1.) new_log_fact
         loop 2. 0.
 
-    let private log_factorial (n: float) =
+    let private logFactorial (n: float) =
         if n < 1000. then
-            exact_log_factorial n
+            exactLogFactorial n
         else
-            stirling_log_factorial n
+            stirlingLogFacorial n
 
-    let private log_binomial (n: float) (k: float) =
-        (log_factorial n) - (log_factorial k) - (log_factorial (n - k))
+    let private logBinomial (n: float) (k: float) =
+        (logFactorial n) - (logFactorial k) - (logFactorial (n - k))
 
     let private hypergeometric (x: float) (n: float) (w: float) (d: float) =
         //natural logarithm of the probability
         if (d > 0.) then
-            exp((log_binomial w x) + (log_binomial (n - w) (d - x)) - (log_binomial n d))
+            exp((logBinomial w x) + (logBinomial (n - w) (d - x)) - (logBinomial n d))
         else 0.
 
     /// Estimates the false positives given the total number of entries, the number of target hits and the number of decoy hits
@@ -644,31 +643,27 @@ module FDRControl' =
     // which causes a slight difference in the estimated protein FDR.
 
     /// Calculates the expected false positives for every protein bin and sums them up.
-    let expectedFP (proteinBins: ProteinInference'.InferredProteinClassItemScored<'sequence> [] []) =
-        proteinBins
-        |> Array.map (fun proteinBin ->
-            let numberTarget =
+    let expectedFP (proteinBin: ProteinInference'.InferredProteinClassItemScored<'sequence> []) =
+        let numberTarget =
+            proteinBin
+            |> Array.filter (fun protein -> not protein.DecoyBigger && protein.FoundInDB)
+            |> Array.length
+            |> float
+        let numberDecoy =
+            proteinBin
+            |> Array.filter (fun protein -> protein.DecoyBigger && protein.FoundInDB)
+            |> Array.length
+            |> float
+        let total =
+            let notFound =
                 proteinBin
-                |> Array.filter (fun protein -> not protein.DecoyBigger && protein.FoundInDB)
+                |> Array.filter (fun protein -> not protein.FoundInDB)
                 |> Array.length
                 |> float
-            let numberDecoy =
-                proteinBin
-                |> Array.filter (fun protein -> protein.DecoyBigger && protein.FoundInDB)
-                |> Array.length
-                |> float
-            let total =
-                let notFound =
-                    proteinBin
-                    |> Array.filter (fun protein -> not protein.FoundInDB)
-                    |> Array.length
-                    |> float
-                notFound + numberTarget + numberDecoy
-            let fpInBin = estimatePi0HG total numberTarget numberDecoy
-            // MAYU rounds the number of expected false positives for every bin to the first decimal
-            fpInBin
-        )
-        |> Array.sum
+            notFound + numberTarget + numberDecoy
+        // MAYU rounds the number of expected false positives for every bin to the first decimal
+        let fpInBin = estimatePi0HG total numberTarget numberDecoy
+        fpInBin
 
     /// Gives a function to calculate the q value for a score in a dataset using Lukas method and Levenberg Marguardt fitting
     let calculateQValueLogReg fdrEstimate (data: 'a []) (isDecoy: 'a -> bool) (decoyScoreF: 'a -> float) (targetScoreF: 'a -> float) =
