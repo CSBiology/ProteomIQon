@@ -10,7 +10,6 @@
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="BioFSharp.Mz_Temp.fs" />
     <Compile Include="ProteinInference.fs" />
     <Compile Include="CLIArgumentParsing.fs" />
     <Compile Include="Program.fs" />
