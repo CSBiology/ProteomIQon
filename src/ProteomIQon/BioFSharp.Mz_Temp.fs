@@ -426,7 +426,7 @@ module ProteinInference' =
         )
         |> Array.max
 
-    let qValueHitsVisualization inferredProteinClassItemScored path=
+    let qValueHitsVisualization inferredProteinClassItemScored path (groupFiles: bool) =
         let decoy, target = inferredProteinClassItemScored |> Array.partition (fun x -> x.DecoyBigger)
         // Histogram with relative abundance
         let freqTarget = FSharp.Stats.Distributions.Frequency.create 0.01 (target |> Array.map (fun x -> x.TargetScore))
@@ -476,7 +476,10 @@ module ProteinInference' =
         |> Chart.withY_AxisStyle("Absolute Frequency",Side=StyleParam.Side.Right,Id=2,Overlaying=StyleParam.AxisAnchorId.Y 1, MinMax = (0., float target.Length))
         |> Chart.withX_AxisStyle "Score"
         |> Chart.withSize (900., 900.)
-        |> Chart.SaveHtmlAs (path + @"\QValueGraph")
+        |> if groupFiles then
+            Chart.SaveHtmlAs (path + @"\QValueGraph")
+           else
+            Chart.SaveHtmlAs (path + @"_QValueGraph")
 
 module FDRControl' =
 

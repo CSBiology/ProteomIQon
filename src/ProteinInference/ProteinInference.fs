@@ -268,7 +268,7 @@ module ProteinInference =
                     |> Array.map (FDRControl'.assignQValueToIPCIS qValueFunction)
                 qValuesAssigned
 
-            ProteinInference'.qValueHitsVisualization combinedScoredClassesQVal outDirectory
+            ProteinInference'.qValueHitsVisualization combinedScoredClassesQVal outDirectory groupFiles
 
             // Assign results to files in which they can be found
             classifiedProteins
@@ -357,7 +357,7 @@ module ProteinInference =
                         |> Array.map (FDRControl'.assignQValueToIPCIS qValueFunction)
                     qValuesAssigned
 
-                ProteinInference'.qValueHitsVisualization inferenceResultScoredQVal outFile
+                ProteinInference'.qValueHitsVisualization inferenceResultScoredQVal outFile groupFiles
 
                 inferenceResultScoredQVal
                 |> Array.filter (fun inferredPCIS -> not inferredPCIS.Decoy)
