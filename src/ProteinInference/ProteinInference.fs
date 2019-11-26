@@ -25,6 +25,19 @@ module ProteinInference =
             Proteins : string []
         }
 
+    /// Calculates the fdr with the chosen fdr method
+    let initFDR (fdrMethod: FDRMethod) (data: ProteinInference'.InferredProteinClassItemScored[]) (proteinDB: (string*string)[]) =
+        match fdrMethod with
+        |Conservative     -> 1.
+        |MAYU             -> FDRControl'.calculateFDRwithMAYU data proteinDB
+        |DecoyTargetRatio -> FDRControl'.calculateFDRwithDecoyTargetRatio data
+
+    /// Calculates the q value with the chosen method
+    let initQValue (qValueMethod: QValueMethod) (data: ProteinInference'.InferredProteinClassItemScored[]) (proteinDB: (string*string)[]) =
+        match qValueMethod with
+        |Storey-> FDRControl'.calculateQValueStorey data
+        |LogisticRegression fdrMethod -> FDRControl'.calculateQValueLogReg (initFDR fdrMethod data proteinDB) data 
+
     /// Given a ggf3 and a fasta file, creates a collection of all theoretically possible peptides and the proteins they might
     /// originate from
     ///
@@ -128,7 +141,7 @@ module ProteinInference =
             printfn "\nERROR: Could not build classification map"
             failwithf "\t%s" err.Message
 
-    let readAndInferFile classItemCollection protein peptide groupFiles outDirectory rawFolderPath psmInputs (dbConnection: SQLiteConnection) (qValMethod: Domain.QValueFunction) =
+    let readAndInferFile classItemCollection protein peptide groupFiles outDirectory rawFolderPath psmInputs (dbConnection: SQLiteConnection) (qValMethod: Domain.QValueMethod) =
 
         let logger = Logging.createLogger "ProteinInference_readAndInferFile"
 
@@ -144,6 +157,8 @@ module ProteinInference =
 
         let dbParams = ProteomIQon.SearchDB'.getSDBParamsBy dbConnection
 
+        logger.Trace "Getting proteins with peptide sequence from db"
+
         let proteinsDB =
             ProteomIQon.SearchDB'.selectProteins dbConnection
             |> Array.ofList
@@ -151,6 +166,8 @@ module ProteinInference =
                 //is this the best way to get the protein names?
                 (protein |> String.split ' ').[0], peptideSequence
             )
+
+        logger.Trace "Perfom digestion on reversed proteins for decoy set"
 
         // Array of prtoein Accessions tupled with their reverse digested peptides
         let reverseProteins =
@@ -163,6 +180,7 @@ module ProteinInference =
                 )
 
         logger.Trace "Map peptide sequences to proteins"
+
         let classifiedProteins =
             List.map2 (fun psmInput (outFile: string) ->
                 try
@@ -183,16 +201,23 @@ module ProteinInference =
                 ) psmInputs outFiles
 
         if groupFiles then
+
             logger.Trace "Create combined list"
+
             let combinedClasses =
                 List.collect (fun (pepSeq,_) -> pepSeq) classifiedProteins
                 |> BioFSharp.Mz.ProteinInference.inferSequences protein peptide
 
+            logger.Trace "Create a map with peptide scores"
             // Peptide score Map
             let peptideScoreMap = ProteomIQon.ProteinInference'.createPeptideScoreMap psmInputs
 
+            logger.Trace "Assign scores to decoy set"
+
             // Assigns scores to reverse digested Proteins using the peptideScoreMap
             let reverseProteinScores = ProteomIQon.ProteinInference'.createReverseProteinScores reverseProteins peptideScoreMap
+
+            logger.Trace "Assign target and decoy scores inferred proteins"
 
             // Scores each inferred protein and assigns each protein where a reverted peptide was hit its score
             let combinedScoredClasses =
@@ -229,16 +254,15 @@ module ProteinInference =
                         Some (ProteomIQon.ProteinInference'.createInferredProteinClassItemScored protein PeptideEvidenceClass.Unknown peptides 0. score true true true)
                 )
 
+            logger.Trace "Calculate q values for all proteins"
+
             // Assign q values to each protein
             let combinedScoredClassesQVal =
                 let decoyBiggerF = (fun (item: ProteinInference'.InferredProteinClassItemScored) -> item.DecoyBigger)
                 let targetScoreF = (fun (item: ProteinInference'.InferredProteinClassItemScored) -> item.TargetScore)
                 let decoyScoreF  = (fun (item: ProteinInference'.InferredProteinClassItemScored) -> item.DecoyScore)
                 let combWithReverse = Array.append combinedScoredClasses reverseNoMatch
-                let qValueFunction =
-                    match qValMethod with
-                    |WithMAYU func    -> func combWithReverse proteinsDB decoyBiggerF decoyScoreF targetScoreF
-                    |WithoutMAYU func -> func combWithReverse decoyBiggerF decoyScoreF targetScoreF
+                let qValueFunction = initQValue qValMethod combWithReverse proteinsDB decoyBiggerF decoyScoreF targetScoreF
                 let qValuesAssigned =
                     combWithReverse
                     |> Array.map (FDRControl'.assignQValueToIPCIS qValueFunction)
@@ -250,7 +274,7 @@ module ProteinInference =
             classifiedProteins
             |> List.iter (fun (prots,outFile) ->
                 let pepSeqSet = prots |> List.map (fun x -> x.PeptideSequence) |> Set.ofList
-                logger.Trace (sprintf "Start with %s"(System.IO.Path.GetFileNameWithoutExtension outFile))
+                logger.Trace (sprintf "Writing now %s"(System.IO.Path.GetFileNameWithoutExtension outFile))
                 let combinedInferenceresult =
                     combinedScoredClassesQVal |> Array.filter (fun inferredPCIS -> not inferredPCIS.Decoy)
                     |> Seq.choose (fun ic ->
@@ -274,11 +298,17 @@ module ProteinInference =
                 logger.Trace (sprintf "start inferring %s" (System.IO.Path.GetFileNameWithoutExtension outFile))
                 let inferenceResult = BioFSharp.Mz.ProteinInference.inferSequences protein peptide sequences
 
+                logger.Trace "Create a map with peptide scores"
+
                 // Peptide Score Map
                 let peptideScoreMap = ProteomIQon.ProteinInference'.createPeptideScoreMap [psm]
 
+                logger.Trace "Assign scores to decoy set"
+
                 // Assigns scores to reverse digested Proteins using the peptideScoreMap
                 let reverseProteinScores = ProteomIQon.ProteinInference'.createReverseProteinScores reverseProteins peptideScoreMap
+
+                logger.Trace "Assign target and decoy scores inferred proteins"
 
                 // Scores each inferred protein and assigns each protein where a reverted peptide was hit its score
                 let inferenceResultScored =
@@ -313,16 +343,15 @@ module ProteinInference =
                             Some (ProteomIQon.ProteinInference'.createInferredProteinClassItemScored protein PeptideEvidenceClass.Unknown peptides 0. score true true true)
                     )
 
+                logger.Trace "Calculate q values for all proteins"
+
                 // Assign q values to each protein
                 let inferenceResultScoredQVal =
                     let decoyBiggerF = (fun (item: ProteinInference'.InferredProteinClassItemScored) -> item.DecoyBigger)
                     let targetScoreF = (fun (item: ProteinInference'.InferredProteinClassItemScored) -> item.TargetScore)
-                    let decoyScoreF = (fun (item: ProteinInference'.InferredProteinClassItemScored) -> item.DecoyScore)
+                    let decoyScoreF  = (fun (item: ProteinInference'.InferredProteinClassItemScored) -> item.DecoyScore)
                     let combWithReverse = Array.append inferenceResultScored reverseNoMatch
-                    let qValueFunction =
-                        match qValMethod with
-                        |WithMAYU func    -> func combWithReverse proteinsDB decoyBiggerF decoyScoreF targetScoreF
-                        |WithoutMAYU func -> func combWithReverse decoyBiggerF decoyScoreF targetScoreF
+                    let qValueFunction = initQValue qValMethod combWithReverse proteinsDB decoyBiggerF decoyScoreF targetScoreF
                     let qValuesAssigned =
                         combWithReverse
                         |> Array.map (FDRControl'.assignQValueToIPCIS qValueFunction)

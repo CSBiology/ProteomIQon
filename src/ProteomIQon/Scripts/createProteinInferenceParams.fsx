@@ -17,7 +17,7 @@ let defaultProteinInferenceParams: Dto.ProteinInferenceParams =
         Protein                = ProteinInference.IntegrationStrictness.Maximal
         Peptide                = ProteinInference.PeptideUsageForQuantification.Minimal
         GroupFiles             = true
-        GetQValue              = QValueMethod.LogisticRegression FDRMethod.Conservative
+        GetQValue              = QValueMethod.LogisticRegression FDRMethod.MAYU
     }
 
 let serialized = 
