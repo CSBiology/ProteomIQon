@@ -355,7 +355,7 @@ module ProteinInference' =
                         | Some proteinModel ->
                             proteinModel.Sequence
                             |> Seq.iter (fun pepSequence -> ppRelation.Add pepSequence proteinModel.ProteinModelInfo)
-                        | None                   -> ()
+                        | None -> ()
         )
         ppRelation
 
@@ -369,8 +369,7 @@ module ProteinInference' =
             // Depending on the type of lookup this map is used for, the modifications have to be removed.
             sequence,
             psmList
-            |> List.sortByDescending (fun psm -> psm.PercolatorScore)
-            |> List.head
+            |> List.maxBy (fun psm -> psm.PercolatorScore)
             |> fun psm -> psm.PercolatorScore
         )
         |> Map.ofList
