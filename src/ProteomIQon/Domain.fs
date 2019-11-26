@@ -126,15 +126,13 @@ module Domain =
             BaseLineCorrection           : BaseLineCorrection option
         }
 
-    type QValueMethod =
-        |Storey
-        |LogisticRegression
-
-    type FDRMethod =
-        |Conservative
-        |MAYU
-        |TargetDecoyRatio
-        |NoInitialEstimate
+    type QValueFunction =
+        |WithMAYU of    (ProteinInference'.InferredProteinClassItemScored[] -> (string*string)[] -> (ProteinInference'.InferredProteinClassItemScored -> bool)
+                        -> (ProteinInference'.InferredProteinClassItemScored -> float) -> (ProteinInference'.InferredProteinClassItemScored -> float)
+                        -> (float -> float))
+        |WithoutMAYU of (ProteinInference'.InferredProteinClassItemScored[] -> (ProteinInference'.InferredProteinClassItemScored -> bool)
+                        -> (ProteinInference'.InferredProteinClassItemScored -> float) -> (ProteinInference'.InferredProteinClassItemScored -> float)
+                        -> (float -> float))
 
     type ProteinInferenceParams = 
         {
@@ -142,7 +140,6 @@ module Domain =
             Protein                : ProteinInference.IntegrationStrictness
             Peptide                : ProteinInference.PeptideUsageForQuantification
             GroupFiles             : bool
-            QValueMethod           : QValueMethod
-            FDRMethod              : FDRMethod
+            GetQValue              : QValueFunction
         }
    
