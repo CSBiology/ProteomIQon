@@ -128,7 +128,7 @@ module ProteinInference =
             printfn "\nERROR: Could not build classification map"
             failwithf "\t%s" err.Message
 
-    let readAndInferFile classItemCollection protein peptide groupFiles outDirectory rawFolderPath psmInputs (dbConnection: SQLiteConnection) (qValMethod: QValueMethod) (fdrMethod: FDRMethod) =
+    let readAndInferFile classItemCollection protein peptide groupFiles outDirectory rawFolderPath psmInputs (dbConnection: SQLiteConnection) (qValMethod: Domain.QValueFunction) =
 
         let logger = Logging.createLogger "ProteinInference_readAndInferFile"
 
@@ -229,52 +229,20 @@ module ProteinInference =
                         Some (ProteomIQon.ProteinInference'.createInferredProteinClassItemScored protein PeptideEvidenceClass.Unknown peptides 0. score true true true)
                 )
 
-            // Assign q values to each protein (now also includes decoy only hits)
+            // Assign q values to each protein
             let combinedScoredClassesQVal =
                 let decoyBiggerF = (fun (item: ProteinInference'.InferredProteinClassItemScored) -> item.DecoyBigger)
                 let targetScoreF = (fun (item: ProteinInference'.InferredProteinClassItemScored) -> item.TargetScore)
-                let decoyScoreF = (fun (item: ProteinInference'.InferredProteinClassItemScored) -> item.DecoyScore)
+                let decoyScoreF  = (fun (item: ProteinInference'.InferredProteinClassItemScored) -> item.DecoyScore)
                 let combWithReverse = Array.append combinedScoredClasses reverseNoMatch
-                match qValMethod with
-                | Domain.QValueMethod.LogisticRegression ->
-                    let fdr =
-                        match fdrMethod with
-                        |Conservative -> 1.
-                        |TargetDecoyRatio ->
-                            // Decoy Hits Should be doubled : Target-decoy search strategy for increasedconfidence in large-scale proteinidentifications by mass spectrometry
-                            let decoyCount  = combWithReverse |> Array.filter (fun x -> x.DecoyBigger) |> Array.length |> float
-                            let targetCount = combinedScoredClasses |> Array.filter (fun x -> not x.DecoyBigger) |> Array.length |> float
-                            ((*2. * *)decoyCount) / targetCount
-                        |MAYU ->
-                            let binnedProteins = FDRControl'.binProteinsLength combWithReverse proteinsDB 10.
-                            let expectedFP =
-                                binnedProteins
-                                |> Array.fold (fun acc proteinBin -> acc + FDRControl'.expectedFP proteinBin) 0.
-                            let targetCount = combinedScoredClasses |> Array.filter (fun x -> not x.DecoyBigger) |> Array.length |> float
-                            let fdr = 
-                                if (isNan expectedFP) || (isInf expectedFP) || expectedFP = 0. then
-                                    1.
-                                elif (expectedFP / targetCount < 0.) || (expectedFP / targetCount > 1.) then
-                                    1.
-                                else
-                                    expectedFP / targetCount
-                            fdr
-                        |NoInitialEstimate -> failwith "FDR estimation is set to 'NoInitialEstimate'. Please set an estimation method for this q value calculation method"
-                    let qValueFunction = ProteomIQon.FDRControl'.calculateQValueLogReg fdr combWithReverse decoyBiggerF decoyScoreF targetScoreF
-                    let qValuesAssigned =
-                        combWithReverse
-                        |> Array.map (FDRControl'.assignQValueToIPCIS qValueFunction)
-                    qValuesAssigned
-                | Domain.QValueMethod.Storey ->
-                    match fdrMethod with
-                    |NoInitialEstimate -> ()
-                    |_ -> logger.Trace("FDR estimation is set to something else than 'NoInitialEstimate'. 
-                                       With the selected q value calculation method the fdr estimate isn't used, so this choice has no effect on the q values.")
-                    let qValueFunction = ProteomIQon.FDRControl'.calculateQValueStorey combWithReverse decoyBiggerF decoyScoreF targetScoreF
-                    let qValuesAssigned =
-                       combWithReverse
-                       |> Array.map (FDRControl'.assignQValueToIPCIS qValueFunction)
-                    qValuesAssigned
+                let qValueFunction =
+                    match qValMethod with
+                    |WithMAYU func    -> func combWithReverse proteinsDB decoyBiggerF decoyScoreF targetScoreF
+                    |WithoutMAYU func -> func combWithReverse decoyBiggerF decoyScoreF targetScoreF
+                let qValuesAssigned =
+                    combWithReverse
+                    |> Array.map (FDRControl'.assignQValueToIPCIS qValueFunction)
+                qValuesAssigned
 
             ProteinInference'.qValueHitsVisualization combinedScoredClassesQVal outDirectory
 
@@ -345,47 +313,20 @@ module ProteinInference =
                             Some (ProteomIQon.ProteinInference'.createInferredProteinClassItemScored protein PeptideEvidenceClass.Unknown peptides 0. score true true true)
                     )
 
-                // Assign q values to each protein (now also includes decoy only hits)
+                // Assign q values to each protein
                 let inferenceResultScoredQVal =
                     let decoyBiggerF = (fun (item: ProteinInference'.InferredProteinClassItemScored) -> item.DecoyBigger)
                     let targetScoreF = (fun (item: ProteinInference'.InferredProteinClassItemScored) -> item.TargetScore)
                     let decoyScoreF = (fun (item: ProteinInference'.InferredProteinClassItemScored) -> item.DecoyScore)
-                    match qValMethod with
-                    |Domain.QValueMethod.LogisticRegression ->
-                        let fdr =
-                            let combWithNoMatch = Array.append reverseNoMatch inferenceResultScored
-                            match fdrMethod with
-                            |Conservative -> 1.
-                            |TargetDecoyRatio ->
-                                let decoyCount  = combWithNoMatch |> Array.filter (fun x -> x.DecoyBigger) |> Array.length |> float
-                                let targetCount = inferenceResultScored |> Array.filter (fun x -> not x.DecoyBigger) |> Array.length |> float
-                                (2. * decoyCount) / targetCount
-                            |MAYU ->
-                                let binnedProteins = FDRControl'.binProteinsLength combWithNoMatch proteinsDB 10.
-                                let expectedFP =
-                                    binnedProteins
-                                    |> Array.fold (fun acc proteinBin -> acc + FDRControl'.expectedFP proteinBin) 0.
-                                let targetCount = inferenceResultScored |> Array.filter (fun x -> not x.DecoyBigger) |> Array.length |> float
-                                let fdr = expectedFP / targetCount
-                                fdr
-                            |NoInitialEstimate -> failwith "FDR estimation is set to 'NoInitialEstimate'. Please set an estimation method for this q value calculation method"
-                        let combWithReverse = Array.append inferenceResultScored reverseNoMatch
-                        let qValueFunction = ProteomIQon.FDRControl'.calculateQValueLogReg fdr combWithReverse decoyBiggerF decoyScoreF targetScoreF
-                        let qValuesAssigned =
-                            combWithReverse
-                            |> Array.map (FDRControl'.assignQValueToIPCIS qValueFunction)
-                        qValuesAssigned
-                    |Domain.QValueMethod.Storey ->
-                        match fdrMethod with
-                        |NoInitialEstimate -> ()
-                        |_ -> logger.Trace("FDR estimation is set to something else than 'NoInitialEstimate'. 
-                                           With the selected q value calculation method the fdr estimate isn't used, so this choice has no effect on the q values.")
-                        let combWithReverse = Array.append inferenceResultScored reverseNoMatch
-                        let qValueFunction = ProteomIQon.FDRControl'.calculateQValueStorey combWithReverse decoyBiggerF decoyScoreF targetScoreF
-                        let qValuesAssigned =
-                            combWithReverse
-                            |> Array.map (FDRControl'.assignQValueToIPCIS qValueFunction)
-                        qValuesAssigned
+                    let combWithReverse = Array.append inferenceResultScored reverseNoMatch
+                    let qValueFunction =
+                        match qValMethod with
+                        |WithMAYU func    -> func combWithReverse proteinsDB decoyBiggerF decoyScoreF targetScoreF
+                        |WithoutMAYU func -> func combWithReverse decoyBiggerF decoyScoreF targetScoreF
+                    let qValuesAssigned =
+                        combWithReverse
+                        |> Array.map (FDRControl'.assignQValueToIPCIS qValueFunction)
+                    qValuesAssigned
 
                 ProteinInference'.qValueHitsVisualization inferenceResultScoredQVal outFile
 
@@ -412,5 +353,4 @@ module ProteinInference =
         let classItemCollection, psmInputs = createClassItemCollection gff3Location memoryDB proteinInferenceParams.ProteinIdentifierRegex rawFolderPath
         logger.Trace "Classify and Infer Proteins"
         readAndInferFile classItemCollection proteinInferenceParams.Protein proteinInferenceParams.Peptide
-                         proteinInferenceParams.GroupFiles outDirectory rawFolderPath psmInputs dbConnection proteinInferenceParams.QValueMethod
-                         proteinInferenceParams.FDRMethod
+                         proteinInferenceParams.GroupFiles outDirectory rawFolderPath psmInputs dbConnection proteinInferenceParams.GetQValue

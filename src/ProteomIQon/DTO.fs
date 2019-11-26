@@ -378,15 +378,40 @@ module Dto =
         N15Minus1Params              : string
         }
 
+    type FDRMethod =
+        |Conservative
+        |MAYU
+        |DecoyTargetRatio
+
+    type QValueMethod =
+        |Storey
+        |LogisticRegression of FDRMethod
+
     type ProteinInferenceParams =
           {
               ProteinIdentifierRegex : string
               Protein                : ProteinInference.IntegrationStrictness
               Peptide                : ProteinInference.PeptideUsageForQuantification
               GroupFiles             : bool
-              QValueMethod           : Domain.QValueMethod
-              FDRMethod              : Domain.FDRMethod
+              GetQValue              : QValueMethod
           }
+
+    let matchQValueCalc (method: QValueMethod) =
+        match method with
+        |Storey ->
+            WithoutMAYU (fun data isDecoy decoyScoreF targetScoreF ->
+                FDRControl'.calculateQValueStorey data isDecoy decoyScoreF targetScoreF)
+        |LogisticRegression fdrMethod ->
+            match fdrMethod with
+            |DecoyTargetRatio ->
+                WithoutMAYU (fun data isDecoy decoyScoreF targetScoreF ->
+                    FDRControl'.calculateQValueLogReg (FDRControl'.calculateFDRwithDecoyTargetRatio data) data isDecoy decoyScoreF targetScoreF)
+            |Conservative ->
+                WithoutMAYU (fun data isDecoy decoyScoreF targetScoreF ->
+                    FDRControl'.calculateQValueLogReg 1. data isDecoy decoyScoreF targetScoreF)
+            |MAYU ->
+                WithMAYU (fun data db isDecoy decoyScoreF targetScoreF ->
+                        FDRControl'.calculateQValueLogReg (FDRControl'.calculateFDRwithMAYU data db) data isDecoy decoyScoreF targetScoreF)
 
     module ProteinInferenceParams =
 
@@ -396,6 +421,5 @@ module Dto =
                 Protein                = dtoProteinInferenceParams.Protein
                 Peptide                = dtoProteinInferenceParams.Peptide
                 GroupFiles             = dtoProteinInferenceParams.GroupFiles
-                QValueMethod           = dtoProteinInferenceParams.QValueMethod
-                FDRMethod              = dtoProteinInferenceParams.FDRMethod
+                GetQValue              = matchQValueCalc dtoProteinInferenceParams.GetQValue
             }

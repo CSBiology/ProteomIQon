@@ -1,1 +1,1 @@
-{"ProteinIdentifierRegex":"Cre\\S+","Protein":{"Case":"Maximal"},"Peptide":{"Case":"Minimal"},"GroupFiles":true,"QValueMethod":{"Case":"LogisticRegression"},"FDRMethod":{"Case":"TargetDecoyRatio"}}
+{"ProteinIdentifierRegex":"Cre\\S+","Protein":{"Case":"Maximal"},"Peptide":{"Case":"Minimal"},"GroupFiles":true,"GetQValue":{"Case":"LogisticRegression","Fields":[{"Case":"Conservative"}]}}

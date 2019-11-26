@@ -722,7 +722,7 @@ module FDRControl' =
 
     /// Calculates Decoy/Target ratio
     let calculateFDRwithDecoyTargetRatio (data: ProteinInference'.InferredProteinClassItemScored []) =
-        // Should decoy Hits be doubled? : Target-decoy search strategy for increasedconfidence in large-scale proteinidentifications by mass spectrometry
+        // Should decoy Hits be doubled?: Target-decoy search strategy for increasedconfidence in large-scale proteinidentifications by mass spectrometry
         let decoyCount  =
             data
             |> Array.sumBy (fun x ->
