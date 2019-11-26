@@ -234,6 +234,7 @@ module ProteinInference =
                         peptideScore
                         decoyScore
                         false
+                        // for the same score target "wins"
                         (decoyScore > peptideScore)
                         true
                     )
@@ -284,7 +285,8 @@ module ProteinInference =
                         if filteredPepSet = [||] then
                             None
                         else
-                            Some (ProteomIQon.ProteinInference'.createInferredProteinClassItemQValue ic.GroupOfProteinIDs ic.Class [|ProteinInference'.proteinGroupToString filteredPepSet|] ic.TargetScore ic.DecoyScore ic.QValue ic.Decoy ic.DecoyBigger true)
+                            Some (ProteomIQon.ProteinInference'.createInferredProteinClassItemOut
+                                ic.GroupOfProteinIDs ic.Class (ProteinInference'.proteinGroupToString filteredPepSet) ic.TargetScore ic.DecoyScore ic.QValue)
                         )
 
                 combinedInferenceresult
@@ -360,7 +362,11 @@ module ProteinInference =
                 ProteinInference'.qValueHitsVisualization inferenceResultScoredQVal outFile groupFiles
 
                 inferenceResultScoredQVal
-                |> Array.filter (fun inferredPCIS -> not inferredPCIS.Decoy)
+                |> Array.filter (fun inferredPCIQ -> not inferredPCIQ.Decoy)
+                |> Array.map (fun ic ->
+                    ProteomIQon.ProteinInference'.createInferredProteinClassItemOut 
+                        ic.GroupOfProteinIDs ic.Class (ProteinInference'.proteinGroupToString ic.PeptideSequence) ic.TargetScore ic.DecoyScore ic.QValue
+                )
                 |> FSharpAux.IO.SeqIO.Seq.CSV "\t" true true
                 |> Seq.write outFile
             ) psmInputs
