@@ -238,6 +238,27 @@ module ProteinInference' =
             FoundInDB         = foundInDB
         }
 
+    /// For a group of proteins, contains information about all peptides that are put into the output file.
+    type InferredProteinClassItemOut =
+        {
+            GroupOfProteinIDs: string
+            PeptideSequence  : string
+            Class            : PeptideEvidenceClass
+            TargetScore      : float
+            DecoyScore       : float
+            QValue           : float
+        }
+
+    let createInferredProteinClassItemOut proteinIDs evidenceClass peptideSequences targetScore decoyScore qValue =
+        {
+            GroupOfProteinIDs = proteinIDs
+            PeptideSequence   = peptideSequences
+            Class             = evidenceClass
+            TargetScore       = targetScore
+            DecoyScore        = decoyScore
+            QValue            = qValue
+        }
+
     type PSMInput =
         {
             [<FieldAttribute("PepSequenceID")>]
