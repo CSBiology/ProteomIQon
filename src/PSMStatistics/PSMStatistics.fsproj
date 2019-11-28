@@ -7,6 +7,10 @@
     <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <PostBuildEvent>
+      cd $(TargetDir)
+      del SQLite.Interop.dll
+    </PostBuildEvent>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="PSMStatistics.fs" />
