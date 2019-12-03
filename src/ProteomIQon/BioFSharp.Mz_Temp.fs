@@ -722,6 +722,7 @@ module FDRControl' =
         let fpInBin = estimatePi0HG total numberTarget numberDecoy
         fpInBin
 
+    /// Calculates the fdr of the data using the MAYU method. The proteinsFromDB is the DB that was used for the inference.
     let calculateFDRwithMAYU (data: ProteinInference'.InferredProteinClassItemScored []) (proteinsFromDB: (string*string)[]) =
         let proteinBins = binProteinsLength data proteinsFromDB 10.
         let estimatedFP =
