@@ -187,3 +187,4 @@ docs
 temp
 /.paket/load
 /src/ProteinInference/Test.fsx
+/src/PeptideSpectrumMatching/Test.fsx

@@ -43,7 +43,7 @@ module Core =
             let getReader (instrumentOutput:string) = 
                 match System.IO.Path.GetExtension instrumentOutput with 
                 | ".wiff" -> 
-                    let wiffReader = new Wiff.WiffFileReader(instrumentOutput,licenseFilePath = @"C:\Users\d_zimmer\AppData\Local\IOMIQS\Clearcore2\Licensing\Clearcore2.license.xml") 
+                    let wiffReader = new Wiff.WiffFileReader(instrumentOutput) 
                     wiffReader :> IMzIODataReader
                 | ".d"    -> 
                     let bafPath = Path.Combine[|instrumentOutput;"analysis.baf"|]
