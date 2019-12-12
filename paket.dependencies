@@ -32,6 +32,12 @@ git https://github.com/CSBiology/BioFSharp.Mz.git nuget Packages: /
 
 nuget BioFSharp.Mz 
 
+source lib/ThermoFisher
+nuget ThermoFisher.CommonCore.BackgroundSubtraction
+nuget ThermoFisher.CommonCore.Data
+nuget ThermoFisher.CommonCore.MassPrecisionEstimator
+nuget ThermoFisher.CommonCore.RawFileReader
+
 git https://github.com/CSBiology/MzIO.git nuget Packages: /
 
 nuget MzIO
@@ -40,6 +46,7 @@ nuget MzIO.SQL
 nuget MzIO.Bruker 
 nuget MzIO.Wiff
 nuget MzIO.MzML
+nuget MzIO.Thermo
 
 clitool dotnet-fake
 
