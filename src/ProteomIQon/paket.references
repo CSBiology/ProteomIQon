@@ -6,6 +6,7 @@ BioFSharp.IO
 FSharpAux
 FSharpAux.IO
 FSharp.Stats
+FSharp.Plotly
 BioFSharp.Mz
 MzIO
 MzIO.Processing

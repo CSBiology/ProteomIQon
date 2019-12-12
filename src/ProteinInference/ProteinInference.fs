@@ -1,35 +1,21 @@
 namespace ProteomIQon
 
 open BioFSharp
+open System.Data.SQLite
+open BioFSharp.Mz
+open BioFSharp.Mz.SearchDB
 open BioFSharp.Mz.ProteinInference
 open BioFSharp.IO
 open FSharpAux
-open System.Text.RegularExpressions
 open PeptideClassification
+open ProteomIQon
 open FSharpAux.IO
-open FSharpAux.IO.SchemaReader
 open FSharpAux.IO.SchemaReader.Csv
-open FSharpAux.IO.SchemaReader.Attribute
-open GFF3
 open Domain
+open FSharp.Plotly
+open FSharp.Stats
 
 module ProteinInference =
-
-    /// This type represents one element of the final output. It's the protein, with all the peptides that were measured and are pointing to it.
-    type OutputProtein =
-        {
-            ProteinID        : string
-            EvidenceClass    : PeptideEvidenceClass
-            PeptideSequences : string
-        }
-
-    /// Packages info into one element of the final output. It's the protein, with all the peptides that were measured and are pointing to it.
-        static member createOutputProtein protID evidenceClass sequences =
-            {
-                ProteinID        = protID
-                EvidenceClass    = evidenceClass
-                PeptideSequences = sequences
-            }
 
     /// Represents one peptide-entry with its evidence class and the proteins it points to.
     type ClassInfo =
@@ -39,67 +25,18 @@ module ProteinInference =
             Proteins : string []
         }
 
-    ///checks if GFF line describes gene
-    let isGene (item: GFFLine<seq<char>>) =
-        match item with
-        | GFFEntryLine x -> x.Feature = "gene"
-        | _ -> false
+    /// Calculates the fdr with the chosen fdr method
+    let initFDR (fdrMethod: FDRMethod) (data: ProteinInference'.InferredProteinClassItemScored[]) (proteinDB: (string*string)[]) =
+        match fdrMethod with
+        |Conservative     -> 1.
+        |MAYU             -> FDRControl'.calculateFDRwithMAYU data proteinDB
+        |DecoyTargetRatio -> FDRControl'.calculateFDRwithDecoyTargetRatio data
 
-    ///checks if GFF line describes rna
-    let isRNA (item: GFFLine<seq<char>>) =
-        match item with
-        | GFFEntryLine x -> if x.Feature = "mRNA" then Some x else None
-        | _ -> None
-
-    /// Reads geographical information about protein from gff entry and builds the modelinfo of it
-    /// This function takes an RNA gff3 entry and therefore will contain the splice variant id of the gene in its result.
-    /// This splice variant id should be the same in the given FastA-file.
-    let createProteinModelInfoFromEntry i locus (entry:GFFEntry) =
-        let attributes = entry.Attributes
-        /// Same as in FastA file
-        let spliceVariantID =
-            match Map.tryFind "Name" attributes with
-            | Some res ->
-                res.Head
-            | None ->
-                failwithf "could not find spliceVariantId for locus %s" locus
-        let chromosomeID = entry.Seqid
-
-        let direction =
-            match entry.Strand with
-            |'+' -> PeptideClassification.StrandDirection.Forward
-            |'-' -> PeptideClassification.StrandDirection.Reverse
-
-        PeptideClassification.createProteinModelInfo spliceVariantID chromosomeID direction locus i Seq.empty Seq.empty
-
-    /// By reading GFF creates the protein models (relationships of proteins to each other) which basically means grouping the rnas over the gene loci
-    /// TODO: Don't group over order but rather group over id
-    let assignTranscriptsToGenes regexPattern (gffLines: seq<GFF3.GFFLine<seq<char>>>)  =
-        gffLines
-        // transcripts are grouped by the gene they originate from
-        |> Seq.groupWhen isGene
-        |> Seq.map (fun group ->
-            match Seq.head group with
-            | GFFEntryLine x ->
-                let locus = x.Attributes.["ID"].Head // =genename, this value is used to assign mRNAs of the same gene together
-                group
-                |> Seq.choose isRNA //the transcripts of the gene are chosen
-                |> Seq.mapi (fun i element ->
-                    // every transcript of gene gets its own number i and other info is collected from element and used for info of protein
-                    let modelInfo = createProteinModelInfoFromEntry i locus element
-                    let r = System.Text.RegularExpressions.Regex.Match(modelInfo.Id,regexPattern)
-                    // the gff3 id has to be matched with the sequence in the fasta file. therefore the regexpattern is used
-                    if r.Success then
-                        r.Value,
-                        modelInfo
-                    else
-                        failwithf "could not match gff3 entry id %s with regexpattern %s. Either gff3 file is corrupt or regexpattern is not correct" modelInfo.Id regexPattern
-                    )
-
-            | _ -> Seq.empty
-            )
-        |> Seq.concat
-        |> Map.ofSeq
+    /// Calculates the q value with the chosen method
+    let initQValue (qValueMethod: QValueMethod) (data: ProteinInference'.InferredProteinClassItemScored[]) (proteinDB: (string*string)[]) =
+        match qValueMethod with
+        |Storey-> FDRControl'.calculateQValueStorey data
+        |LogisticRegression fdrMethod -> FDRControl'.calculateQValueLogReg (initFDR fdrMethod data proteinDB) data 
 
     /// Given a ggf3 and a fasta file, creates a collection of all theoretically possible peptides and the proteins they might
     /// originate from
@@ -108,25 +45,40 @@ module ProteinInference =
     /// its evidence class.
     ///
     /// No experimental data
-    let createClassItemCollection gff3Path fastAPath regexPattern outDirectory =
+    let createClassItemCollection gff3Path (memoryDB: SQLiteConnection) regexPattern rawFolderPath=
 
         let logger = Logging.createLogger "ProteinInference_createClassItemCollection"
 
         logger.Trace (sprintf "Regex pattern: %s" regexPattern)
 
-        logger.Trace "Reading FastA sequence"
-        let fastASequences =
-            try
-                //fileDir + "Chlamy_Cp.fastA"
-                fastAPath
-                |> FastA.fromFile BioArray.ofAminoAcidString
-                |> Seq.map (fun item ->
-                    item.Header
-                    ,item.Sequence)
-            with
-            | err ->
-                printfn "Could not read FastA file %s"fastAPath
-                failwithf "%s" err.Message
+        let rawFilePaths = System.IO.Directory.GetFiles (rawFolderPath, "*.qpsm")
+                           |> List.ofArray
+
+        // retrieves peptide sequences and IDs from input files
+        let psmInputs =
+            rawFilePaths
+            |> List.map (fun filePath ->
+                Seq.fromFileWithCsvSchema<ProteomIQon.ProteinInference'.PSMInput>(filePath, '\t', true,schemaMode = SchemaModes.Fill)
+                |> Seq.toList
+                )
+
+         //gets distinct IDs of all peptides represented in the raw files
+        let inputPepSeqIDs =
+            psmInputs
+            |> List.collect (fun psmArray ->
+                psmArray
+                |> List.map (fun psm -> psm.PepSequenceID)
+                )
+            |> List.distinct
+
+        //list of proteins tupled with list of possible peptides found in psm
+        let accessionSequencePairs =
+            let preparedProtPepFunc = ProteomIQon.SearchDB'.getProteinPeptideLookUpFromFileBy memoryDB
+            inputPepSeqIDs
+            |> List.map (fun pepID -> preparedProtPepFunc pepID)
+            |> List.concat
+            |> List.groupBy (fun (protein, _)-> protein)
+            |> List.map (fun (protein, pepList) -> protein, (pepList |> List.map (fun (_,pep)-> BioArray.ofAminoAcidString pep)))
 
         /// Create proteinModelInfos: Group all genevariants (RNA) for the gene loci (gene)
         ///
@@ -135,7 +87,7 @@ module ProteinInference =
         let proteinModelInfos =
            try
                 GFF3.fromFileWithoutFasta gff3Path
-                |> assignTranscriptsToGenes regexPattern
+                |> ProteomIQon.ProteinInference'.assignTranscriptsToGenes regexPattern
             with
             | err ->
                 printfn "ERROR: Could not read gff3 file %s" gff3Path
@@ -145,7 +97,7 @@ module ProteinInference =
         /// Assigned fasta sequences to model Infos
         let proteinModels =
             try
-                fastASequences
+                accessionSequencePairs
                 |> Seq.mapi (fun i (header,sequence) ->
                     let regMatch = System.Text.RegularExpressions.Regex.Match(header,regexPattern)
                     if regMatch.Success then
@@ -166,13 +118,7 @@ module ProteinInference =
                 failwithf "%s" err.Message
         logger.Trace "Build classification map"
         try
-            let ppRelationModel =
-                let digest sequence =
-                    Digestion.BioArray.digest (Digestion.Table.getProteaseBy "Trypsin") 0 sequence
-                    |> Digestion.BioArray.concernMissCleavages 0 3
-                    |> Seq.map (fun p -> p.PepSequence |> List.toArray) // TODO not |> List.toArray
-
-                PeptideClassification.createPeptideProteinRelation digest proteinModels
+            let ppRelationModel = ProteomIQon.ProteinInference'.createPeptideProteinRelation proteinModels
 
             let spliceVariantCount = PeptideClassification.createLocusSpliceVariantCount ppRelationModel
 
@@ -189,105 +135,257 @@ module ProteinInference =
                     }
                     )
 
-            classified |> Array.map (fun ci -> ci.Sequence,(createProteinClassItem ci.Proteins ci.Class ci.Sequence)) |> Map.ofArray
+            classified |> Array.map (fun ci -> ci.Sequence,(createProteinClassItem ci.Proteins ci.Class ci.Sequence)) |> Map.ofArray, psmInputs
         with
         | err ->
             printfn "\nERROR: Could not build classification map"
             failwithf "\t%s" err.Message
 
-    type PSMInput =
-        {
-            //TO-DO: is this reversion still needed?
-            [<FieldAttribute("StringSequence")>]//[<SeqConverter>]
-            Seq:string
-        }
-
-    let removeModification pepSeq =
-        String.filter (fun c -> System.Char.IsLower c |> not && c <> '[' && c <> ']') pepSeq
-
-    let proteinGroupToString (proteinGroup:string[]) =
-        Array.reduce (fun x y ->  x + ";" + y) proteinGroup
-
-    let readAndInferFile classItemCollection protein peptide groupFiles outDirectory rawFolderPath =
+    let readAndInferFile classItemCollection protein peptide groupFiles outDirectory rawFolderPath psmInputs (dbConnection: SQLiteConnection) (qValMethod: Domain.QValueMethod) =
 
         let logger = Logging.createLogger "ProteinInference_readAndInferFile"
 
         let rawFilePaths = System.IO.Directory.GetFiles (rawFolderPath, "*.qpsm")
                            |> Array.toList
-        logger.Trace "Map peptide sequences to proteins"
-        let classifiedProteins =
+
+        let outFiles: string list =
             rawFilePaths
             |> List.map (fun filePath ->
+                let foldername = (rawFolderPath.Split ([|"\\"|], System.StringSplitOptions.None))
+                outDirectory + @"\" + foldername.[foldername.Length - 1] + "\\" + (System.IO.Path.GetFileNameWithoutExtension filePath) + ".prot"
+                )
+
+        let dbParams = ProteomIQon.SearchDB'.getSDBParamsBy dbConnection
+
+        logger.Trace "Getting proteins with peptide sequence from db"
+
+        let proteinsDB =
+            ProteomIQon.SearchDB'.selectProteins dbConnection
+            |> Array.ofList
+            |> Array.map (fun (protein, peptideSequence) ->
+                //is this the best way to get the protein names?
+                (protein |> String.split ' ').[0], peptideSequence
+            )
+
+        logger.Trace "Perfom digestion on reversed proteins for decoy set"
+
+        // Array of prtoein Accessions tupled with their reverse digested peptides
+        let reverseProteins =
+            proteinsDB
+            |> Array.map (fun (name, sequence) ->
+                name,
+                Digestion.BioArray.digest dbParams.Protease 0 ((sequence |> String.rev) |> BioArray.ofAminoAcidString)
+                |> Digestion.BioArray.concernMissCleavages dbParams.MinMissedCleavages dbParams.MaxMissedCleavages
+                |> fun x -> x |> Array.map (fun y -> y.PepSequence |> List.toArray |> BioArray.toString)
+                )
+
+        logger.Trace "Map peptide sequences to proteins"
+
+        let classifiedProteins =
+            List.map2 (fun psmInput (outFile: string) ->
                 try
-                    let out =
-                        let foldername = (rawFolderPath.Split ([|"\\"|], System.StringSplitOptions.None))
-                        outDirectory + @"\" + foldername.[foldername.Length - 1] + "\\" + (System.IO.Path.GetFileNameWithoutExtension filePath) + ".prot"
-                    let psmInputs =
-                        Seq.fromFileWithCsvSchema<PSMInput>(filePath, '\t', true,schemaMode = SchemaModes.Fill)
-                        |> Seq.toList
-                    filePath,
-                    psmInputs
-                    |> List.map (fun s ->
+                    psmInput
+                    |> List.map (fun (s: ProteomIQon.ProteinInference'.PSMInput) ->
                         let s =
                             s.Seq
 
-                        match Map.tryFind (removeModification s) classItemCollection with
+                        match Map.tryFind (ProteinInference'.removeModification s) classItemCollection with
                         | Some (x:ProteinClassItem<'sequence>) -> createProteinClassItem x.GroupOfProteinIDs x.Class s
-                        | None ->
-                            failwithf "Could not find sequence %s in classItemCollection"  s
+                        | None -> failwithf "Could not find sequence %s in classItemCollection" s
                         ),
-                        out
+                        outFile
                 with
                 | err ->
-                    printfn "Could not map sequences of file %s to proteins:" filePath
+                    printfn "Could not map sequences of file %s to proteins:" (System.IO.Path.GetFileNameWithoutExtension outFile)
                     failwithf "%s" err.Message
-                )
+                ) psmInputs outFiles
 
         if groupFiles then
+
             logger.Trace "Create combined list"
+
             let combinedClasses =
-                List.collect (fun (_,pepSeq,_) -> pepSeq) classifiedProteins
+                List.collect (fun (pepSeq,_) -> pepSeq) classifiedProteins
                 |> BioFSharp.Mz.ProteinInference.inferSequences protein peptide
-            classifiedProteins
-            |> List.iter (fun (inp,prots,out) ->
-                let pepSeqSet = prots |> List.map (fun x -> x.PeptideSequence) |> Set.ofList
-                logger.Trace (sprintf "Start with %s" inp)
+
+            logger.Trace "Create a map with peptide scores"
+            // Peptide score Map
+            let peptideScoreMap = ProteomIQon.ProteinInference'.createPeptideScoreMap psmInputs
+
+            logger.Trace "Assign scores to decoy set"
+
+            // Assigns scores to reverse digested Proteins using the peptideScoreMap
+            let reverseProteinScores = ProteomIQon.ProteinInference'.createReverseProteinScores reverseProteins peptideScoreMap
+
+            logger.Trace "Assign target and decoy scores inferred proteins"
+
+            // Scores each inferred protein and assigns each protein where a reverted peptide was hit its score
+            let combinedScoredClasses =
                 combinedClasses
-                |> Seq.choose (fun ic ->
-                    let filteredPepSet =
-                        ic.PeptideSequence
-                        |> Array.filter (fun pep -> Set.contains pep pepSeqSet)
-                    if filteredPepSet = [||] then
+                |> Array.ofSeq
+                |> Array.map (fun inferredPCI ->
+                    // Looks up all peptides assigned to the protein and sums up their score
+                    let peptideScore = (ProteomIQon.ProteinInference'.assignPeptideScores inferredPCI.PeptideSequence peptideScoreMap)
+                    // Looks if the reverse protein has been randomly matched and assigns the score
+                    let decoyScore = (ProteomIQon.ProteinInference'.assignDecoyScoreToTargetScore inferredPCI.GroupOfProteinIDs reverseProteinScores)
+
+                    ProteomIQon.ProteinInference'.createInferredProteinClassItemScored
+                        inferredPCI.GroupOfProteinIDs inferredPCI.Class inferredPCI.PeptideSequence
+                        peptideScore
+                        decoyScore
+                        false
+                        // for the same score target "wins"
+                        (decoyScore > peptideScore)
+                        true
+                    )
+
+            // creates InferredProteinClassItemScored type for decoy proteins that have no match
+            let reverseNoMatch =
+                let proteinsPresent =
+                    combinedScoredClasses
+                    |> Array.collect (fun prots -> prots.GroupOfProteinIDs |> String.split ';')
+                reverseProteinScores
+                |> Map.toArray
+                |> Array.choose (fun (protein, (score, peptides)) ->
+                    if (proteinsPresent |> Array.contains protein) then
                         None
                     else
-                        Some (ic.Class,ic.GroupOfProteinIDs,proteinGroupToString filteredPepSet)
-                    )
-                |> Seq.map (fun (c,prots,pep) -> OutputProtein.createOutputProtein prots c pep)
-                |> FSharpAux.IO.SeqIO.Seq.toCSV "\t" true
-                |> Seq.write out
-                logger.Trace (sprintf "File written to %s" out)
+                        // peptides are the peptides which point to the reverse digested protein. This info is currently unused, since in cases where a partner was found this field still contains
+                        // the peptides that point to the forward digested protein.
+                        Some (ProteomIQon.ProteinInference'.createInferredProteinClassItemScored protein PeptideEvidenceClass.Unknown peptides 0. score true true true)
+                )
+
+            logger.Trace "Calculate q values for all proteins"
+
+            // Assign q values to each protein
+            let combinedScoredClassesQVal =
+                let decoyBiggerF = (fun (item: ProteinInference'.InferredProteinClassItemScored) -> item.DecoyBigger)
+                let targetScoreF = (fun (item: ProteinInference'.InferredProteinClassItemScored) -> item.TargetScore)
+                let decoyScoreF  = (fun (item: ProteinInference'.InferredProteinClassItemScored) -> item.DecoyScore)
+                let combWithReverse = Array.append combinedScoredClasses reverseNoMatch
+                let qValueFunction = initQValue qValMethod combWithReverse proteinsDB decoyBiggerF decoyScoreF targetScoreF
+                let qValuesAssigned =
+                    combWithReverse
+                    |> Array.map (FDRControl'.assignQValueToIPCIS qValueFunction)
+                qValuesAssigned
+
+            ProteinInference'.qValueHitsVisualization combinedScoredClassesQVal outDirectory groupFiles
+
+            // Assign results to files in which they can be found
+            classifiedProteins
+            |> List.iter (fun (prots,outFile) ->
+                let pepSeqSet = prots |> List.map (fun x -> x.PeptideSequence) |> Set.ofList
+                logger.Trace (sprintf "Writing now %s"(System.IO.Path.GetFileNameWithoutExtension outFile))
+                let combinedInferenceresult =
+                    combinedScoredClassesQVal |> Array.filter (fun inferredPCIS -> not inferredPCIS.Decoy)
+                    |> Seq.choose (fun ic ->
+                        let filteredPepSet =
+                            ic.PeptideSequence
+                            |> Array.filter (fun pep -> Set.contains pep pepSeqSet)
+                        if filteredPepSet = [||] then
+                            None
+                        else
+                            Some (ProteomIQon.ProteinInference'.createInferredProteinClassItemOut
+                                ic.GroupOfProteinIDs ic.Class (ProteinInference'.proteinGroupToString filteredPepSet) ic.TargetScore ic.DecoyScore ic.QValue)
+                        )
+
+                combinedInferenceresult
+                |> FSharpAux.IO.SeqIO.Seq.CSV "\t" true true
+                |> Seq.write outFile
+                logger.Trace (sprintf "File written to %s" outFile)
             )
         else
             classifiedProteins
-            |> List.iter (fun (inp,sequences,out) ->
-                logger.Trace (sprintf "start inferring %s" inp)
-                BioFSharp.Mz.ProteinInference.inferSequences protein peptide sequences
-                |> Seq.map (fun x -> OutputProtein.createOutputProtein x.GroupOfProteinIDs x.Class (proteinGroupToString x.PeptideSequence))
-                |> FSharpAux.IO.SeqIO.Seq.toCSV "\t" true
-                |> Seq.write out
-            )
+            |> List.iter2 (fun psm (sequences,outFile) ->
+                logger.Trace (sprintf "start inferring %s" (System.IO.Path.GetFileNameWithoutExtension outFile))
+                let inferenceResult = BioFSharp.Mz.ProteinInference.inferSequences protein peptide sequences
 
-    let inferProteins gff3Location fastaLocation (proteinInferenceParams: ProteinInferenceParams) outDirectory rawFolderPath =
+                logger.Trace "Create a map with peptide scores"
+
+                // Peptide Score Map
+                let peptideScoreMap = ProteomIQon.ProteinInference'.createPeptideScoreMap [psm]
+
+                logger.Trace "Assign scores to decoy set"
+
+                // Assigns scores to reverse digested Proteins using the peptideScoreMap
+                let reverseProteinScores = ProteomIQon.ProteinInference'.createReverseProteinScores reverseProteins peptideScoreMap
+
+                logger.Trace "Assign target and decoy scores inferred proteins"
+
+                // Scores each inferred protein and assigns each protein where a reverted peptide was hit its score
+                let inferenceResultScored =
+                    inferenceResult
+                    |> Array.ofSeq
+                    |> Array.map (fun inferredPCI ->
+                        // Looks up all peptides assigned to the protein and sums up their score
+                        let peptideScore = (ProteomIQon.ProteinInference'.assignPeptideScores inferredPCI.PeptideSequence peptideScoreMap)
+                        // Looks if the reverse protein has been randomly matched and assigns the score
+                        let decoyScore = (ProteomIQon.ProteinInference'.assignDecoyScoreToTargetScore inferredPCI.GroupOfProteinIDs reverseProteinScores)
+
+                        ProteomIQon.ProteinInference'.createInferredProteinClassItemScored
+                            inferredPCI.GroupOfProteinIDs inferredPCI.Class inferredPCI.PeptideSequence
+                            peptideScore
+                            decoyScore
+                            false
+                            (decoyScore > peptideScore)
+                            true
+                        )
+
+                // creates InferredProteinClassItemScored type for decoy proteins that have no match
+                let reverseNoMatch =
+                    let proteinsPresent =
+                        inferenceResultScored
+                        |> Array.collect (fun prots -> prots.GroupOfProteinIDs |> String.split ';')
+                    reverseProteinScores
+                    |> Map.toArray
+                    |> Array.choose (fun (protein, (score, peptides)) ->
+                        if (proteinsPresent |> Array.contains protein) then
+                            None
+                        else
+                            Some (ProteomIQon.ProteinInference'.createInferredProteinClassItemScored protein PeptideEvidenceClass.Unknown peptides 0. score true true true)
+                    )
+
+                logger.Trace "Calculate q values for all proteins"
+
+                // Assign q values to each protein
+                let inferenceResultScoredQVal =
+                    let decoyBiggerF = (fun (item: ProteinInference'.InferredProteinClassItemScored) -> item.DecoyBigger)
+                    let targetScoreF = (fun (item: ProteinInference'.InferredProteinClassItemScored) -> item.TargetScore)
+                    let decoyScoreF  = (fun (item: ProteinInference'.InferredProteinClassItemScored) -> item.DecoyScore)
+                    let combWithReverse = Array.append inferenceResultScored reverseNoMatch
+                    let qValueFunction = initQValue qValMethod combWithReverse proteinsDB decoyBiggerF decoyScoreF targetScoreF
+                    let qValuesAssigned =
+                        combWithReverse
+                        |> Array.map (FDRControl'.assignQValueToIPCIS qValueFunction)
+                    qValuesAssigned
+
+                ProteinInference'.qValueHitsVisualization inferenceResultScoredQVal outFile groupFiles
+
+                inferenceResultScoredQVal
+                |> Array.filter (fun inferredPCIQ -> not inferredPCIQ.Decoy)
+                |> Array.map (fun ic ->
+                    ProteomIQon.ProteinInference'.createInferredProteinClassItemOut 
+                        ic.GroupOfProteinIDs ic.Class (ProteinInference'.proteinGroupToString ic.PeptideSequence) ic.TargetScore ic.DecoyScore ic.QValue
+                )
+                |> FSharpAux.IO.SeqIO.Seq.CSV "\t" true true
+                |> Seq.write outFile
+            ) psmInputs
+
+    let inferProteins gff3Location dbConnection (proteinInferenceParams: ProteinInferenceParams) outDirectory rawFolderPath =
 
         let logger = Logging.createLogger "ProteinInference_inferProteins"
 
         logger.Trace (sprintf "InputFilePath = %s" rawFolderPath)
-        logger.Trace (sprintf "InputFastAPath = %s" fastaLocation)
         logger.Trace (sprintf "InputGFF3Path = %s" gff3Location)
         logger.Trace (sprintf "OutputFilePath = %s" outDirectory)
         logger.Trace (sprintf "Protein inference parameters = %A" proteinInferenceParams)
 
+        logger.Trace "Copy peptide DB into Memory."
+        let memoryDB = SearchDB.copyDBIntoMemory dbConnection
+        logger.Trace "Copy peptide DB into Memory: finished."
+
         logger.Trace "Start building ClassItemCollection"
-        let classItemCollection = createClassItemCollection gff3Location fastaLocation proteinInferenceParams.ProteinIdentifierRegex outDirectory
+        let classItemCollection, psmInputs = createClassItemCollection gff3Location memoryDB proteinInferenceParams.ProteinIdentifierRegex rawFolderPath
         logger.Trace "Classify and Infer Proteins"
-        readAndInferFile classItemCollection proteinInferenceParams.Protein proteinInferenceParams.Peptide proteinInferenceParams.GroupFiles outDirectory rawFolderPath
+        readAndInferFile classItemCollection proteinInferenceParams.Protein proteinInferenceParams.Peptide
+                         proteinInferenceParams.GroupFiles outDirectory rawFolderPath psmInputs dbConnection proteinInferenceParams.GetQValue
