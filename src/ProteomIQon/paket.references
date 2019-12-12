@@ -13,6 +13,7 @@ MzIO.Processing
 MzIO.SQL 
 MzIO.Bruker 
 MzIO.Wiff
+MzIO.Thermo
 
 group Logging
     NLog

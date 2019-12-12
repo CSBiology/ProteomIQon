@@ -11,6 +11,7 @@ open MzIO.Processing
 open MzIO.Bruker
 open MzIO.IO
 open MzIO.MzSQL
+open MzIO.Thermo
 open Core.MzIO
 open Core.MzIO.Reader
 
