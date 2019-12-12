@@ -126,6 +126,14 @@ module Domain =
             BaseLineCorrection           : BaseLineCorrection option
         }
 
+    type FDRMethod =
+        |Conservative
+        |MAYU
+        |DecoyTargetRatio
+
+    type QValueMethod =
+        |Storey
+        |LogisticRegression of FDRMethod
 
     type ProteinInferenceParams = 
         {
@@ -133,5 +141,6 @@ module Domain =
             Protein                : ProteinInference.IntegrationStrictness
             Peptide                : ProteinInference.PeptideUsageForQuantification
             GroupFiles             : bool
+            GetQValue              : QValueMethod
         }
    
