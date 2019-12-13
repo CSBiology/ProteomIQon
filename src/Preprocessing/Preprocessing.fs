@@ -14,6 +14,7 @@ open MzIO.MzSQL
 open MzIO.Thermo
 open Core.MzIO
 open Core.MzIO.Reader
+open MzIO.Model
 
 module Preprocessing =
 
@@ -99,11 +100,12 @@ module Preprocessing =
                         BioFSharp.Mz.SignalDetection.Wavelet.toCentroidWithRicker2D waveletParameters mzData intensityData
         | _ as r , PeakPicking.Centroid CentroidizationMode.Manufacturer ->
             failwith "Manufacturer peak picking is only supported for .baf (Bruker) files."
-
+  
     ///
     let insertSprectrum (compress:BinaryDataCompressionType) (outReader: MzSQL.MzSQL) (runID:string)
         (ms1PeakPicking: MassSpectrum -> float [] * float []) (ms2PeakPicking: MassSpectrum -> float [] * float [])
             (spectrum: MassSpectrum) =
+
         match MassSpectrum.getMsLevel spectrum with
         | 1 ->
             let mzData,intensityData =

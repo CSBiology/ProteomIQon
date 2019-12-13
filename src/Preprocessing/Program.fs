@@ -66,6 +66,5 @@ module console1 =
             | ex -> printfn "%A" ex
         else
             failwith "The given path to the instrument output is neither a valid file path nor a valid directory path."
-        logger.Info "Hit any key to exit."
-        System.Console.ReadKey() |> ignore
+        logger.Info "Done"
         0

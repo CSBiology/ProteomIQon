@@ -25,8 +25,7 @@ module console1 =
             let processParams =
                 Json.ReadAndDeserialize<Dto.PeptideDBParams> p
                 |> Dto.PeptideDBParams.toDomain
+            
             PeptideDB.createPeptideDB processParams o
         | _ -> failwith "params are not guut"
-        printfn "Hit any key to exit."
-        System.Console.ReadKey() |> ignore
         0

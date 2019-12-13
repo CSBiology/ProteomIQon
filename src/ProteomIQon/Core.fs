@@ -52,12 +52,12 @@ module Core =
                 | ".mzlite" -> 
                     let mzLiteReader = new MzSQL.MzSQL(instrumentOutput)
                     mzLiteReader :> IMzIODataReader
-                //| ".raw" -> 
-                //    let rawReader = new Thermo.ThermoRawFileReader(instrumentOutput)
-                //    rawReader :> IMzIODataReader
-                //| ".RAW" -> 
-                //    let rawReader = new Thermo.ThermoRawFileReader(instrumentOutput)
-                //    rawReader :> IMzIODataReader
+                | ".raw" -> 
+                    let rawReader = new Thermo.ThermoRawFileReader(instrumentOutput)
+                    rawReader :> IMzIODataReader
+                | ".RAW" -> 
+                    let rawReader = new Thermo.ThermoRawFileReader(instrumentOutput)
+                    rawReader :> IMzIODataReader
                 | _       ->  
                     failwith "Reader could not be opened. Only the formats .wiff (ABSciex), baf (Bruker), .raw (Thermo) or .mzlite (CSBiology) are supported." 
             
@@ -67,8 +67,8 @@ module Core =
                 | :? WiffFileReader as r        -> "sample=0" 
                 | :? BafFileReader as r         -> "run_1" 
                 //| :? ThermoRawFileReader as r   -> "run_1"
-                | :? MzSQL as r             -> "sample=0"
-                | _                             -> failwith "There is no known default RunID for the given Reader"
+                | :? MzSQL as r                 -> "sample=0"
+                | :? Thermo.ThermoRawFileReader as r -> "run_1"
             /// Initializes a transaction scope.
             let beginTransaction (mzReader:IMzIODataReader) =
                 mzReader.BeginTransaction()
