@@ -188,3 +188,7 @@ temp
 /.paket/load
 /src/ProteinInference/Test.fsx
 /src/PeptideSpectrumMatching/Test.fsx
+/lib/ThermoFisher/ThermoFisher.CommonCore.RawFileReader.4.0.107.nupkg
+/lib/ThermoFisher/ThermoFisher.CommonCore.MassPrecisionEstimator.4.0.107.nupkg
+/lib/ThermoFisher/ThermoFisher.CommonCore.Data.4.0.107.nupkg
+/lib/ThermoFisher/ThermoFisher.CommonCore.BackgroundSubtraction.4.0.107.nupkg
