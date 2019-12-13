@@ -58,6 +58,5 @@ module console1 =
         else 
             failwith "The given path to the PSMs is neither a valid file path nor a valid directory path."
 
-        logger.Info "Hit any key to exit."
-        System.Console.ReadKey() |> ignore
+        logger.Info "Done"
         0

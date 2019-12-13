@@ -39,6 +39,5 @@ module console1 =
                 Json.ReadAndDeserialize<Dto.ProteinInferenceParams> p
                 |> Dto.ProteinInferenceParams.toDomain
         ProteinInference.inferProteins gff3 dbConnection proteinInferenceParams o i
-        logger.Info "Hit any key to exit."
-        System.Console.ReadKey() |> ignore
+        logger.Info "Done"
         0
