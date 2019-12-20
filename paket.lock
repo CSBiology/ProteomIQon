@@ -387,7 +387,7 @@ NUGET
       FSharpAux.IO
       Newtonsoft.Json (>= 11.0.2)
   remote: paket-files/github.com/CSBiology/BioFSharp.Mz
-    BioFSharp.Mz (0.1.0)
+    BioFSharp.Mz (0.1.2)
       BioFSharp
       BioFSharp.IO
       FSharp.Core
@@ -401,48 +401,48 @@ NUGET
     FSharpAux (0.0.15)
     FSharpAux.IO (0.0.15)
   remote: paket-files/github.com/CSBiology/MzIO
-    MzIO (0.0.9.7)
+    MzIO (0.0.9.8)
       EntityFramework
       FSharp.Core (4.5.2)
       Newtonsoft.Json
       System.Xml.Linq
-    MzIO.Bruker (0.0.9.7)
+    MzIO.Bruker (0.0.9.8)
       EntityFramework
       FSharp.Core (4.5.2)
-      MzIO (>= 0.0.9.7)
-      Newtonsoft.Json
-      System.Data.SQLite
-      System.Data.SQLite.Core
-      System.Data.SQLite.EF6
-      System.Data.SQLite.Linq
-      System.Xml.Linq
-    MzIO.MzML (0.0.9.7)
-      EntityFramework
-      FSharp.Core (4.5.2)
-      MzIO (>= 0.0.9.7)
-      MzIO.Processing (>= 0.0.9.7)
-      Newtonsoft.Json
-      System.Xml.Linq
-    MzIO.Processing (0.0.9.7)
-      EntityFramework
-      FSharp.Core (4.5.2)
-      MzIO (>= 0.0.9.7)
-      Newtonsoft.Json
-      System.Xml.Linq
-    MzIO.SQL (0.0.9.7)
-      EntityFramework
-      FSharp.Core (4.5.2)
-      MzIO (>= 0.0.9.7)
+      MzIO (>= 0.0.9.8)
       Newtonsoft.Json
       System.Data.SQLite
       System.Data.SQLite.Core
       System.Data.SQLite.EF6
       System.Data.SQLite.Linq
       System.Xml.Linq
-    MzIO.Thermo (0.0.9.7)
+    MzIO.MzML (0.0.9.8)
       EntityFramework
       FSharp.Core (4.5.2)
-      MzIO (>= 0.0.9.7)
+      MzIO (>= 0.0.9.8)
+      MzIO.Processing (>= 0.0.9.8)
+      Newtonsoft.Json
+      System.Xml.Linq
+    MzIO.Processing (0.0.9.8)
+      EntityFramework
+      FSharp.Core (4.5.2)
+      MzIO (>= 0.0.9.8)
+      Newtonsoft.Json
+      System.Xml.Linq
+    MzIO.SQL (0.0.9.8)
+      EntityFramework
+      FSharp.Core (4.5.2)
+      MzIO (>= 0.0.9.8)
+      Newtonsoft.Json
+      System.Data.SQLite
+      System.Data.SQLite.Core
+      System.Data.SQLite.EF6
+      System.Data.SQLite.Linq
+      System.Xml.Linq
+    MzIO.Thermo (0.0.9.8)
+      EntityFramework
+      FSharp.Core (4.5.2)
+      MzIO (>= 0.0.9.8)
       Newtonsoft.Json
       System.Data.SQLite
       System.Data.SQLite.Core
@@ -453,11 +453,11 @@ NUGET
       ThermoFisher.CommonCore.Data
       ThermoFisher.CommonCore.MassPrecisionEstimator
       ThermoFisher.CommonCore.RawFileReader
-    MzIO.Wiff (0.0.9.7)
+    MzIO.Wiff (0.0.9.8)
       EntityFramework
       FSharp.Core (4.5.2)
-      MzIO (>= 0.0.9.7)
-      MzIO.Processing (>= 0.0.9.7)
+      MzIO (>= 0.0.9.8)
+      MzIO.Processing (>= 0.0.9.8)
       Newtonsoft.Json
       System.Xml.Linq
   remote: lib/ThermoFisher
@@ -476,10 +476,10 @@ GIT
      (f10f6fa500f451cf01a8a8107ec286c440beaed6)
       path: /
   remote: https://github.com/CSBiology/BioFSharp.Mz.git
-     (e0f21ca2a3563e06060b9f5bcfe74cdc97fbbc5c)
+     (986d1415c19b6acef8fa652fe4b82ff667f40694)
       path: /
   remote: https://github.com/CSBiology/MzIO.git
-     (286c07f2025340a9d9f4988b12ec8cb70f32784a)
+     (87bc96da710264b937d25424b42b53ca5af52322)
       path: /
 GROUP FakeBuild
 STORAGE: NONE
@@ -488,140 +488,163 @@ NUGET
     BlackFox.VsWhere (1.0) - restriction: || (>= net462) (>= netstandard2.0)
       FSharp.Core (>= 4.0.0.1) - restriction: >= net45
       FSharp.Core (>= 4.2.3) - restriction: && (< net45) (>= netstandard2.0)
-    Fake.Api.GitHub (5.18.3)
+    Fake.Api.GitHub (5.19)
       FSharp.Core (>= 4.7) - restriction: || (>= net462) (>= netstandard2.0)
       Octokit (>= 0.36) - restriction: || (>= net462) (>= netstandard2.0)
-    Fake.Core.CommandLineParsing (5.18.3) - restriction: || (>= net462) (>= netstandard2.0)
+      System.ValueTuple (>= 4.4) - restriction: >= net462
+    Fake.Core.CommandLineParsing (5.19) - restriction: || (>= net462) (>= netstandard2.0)
       FParsec (>= 1.0.3) - restriction: || (>= net462) (>= netstandard2.0)
       FSharp.Core (>= 4.7) - restriction: || (>= net462) (>= netstandard2.0)
-    Fake.Core.Context (5.18.3) - restriction: || (>= net462) (>= netstandard2.0)
+      System.ValueTuple (>= 4.4) - restriction: >= net462
+    Fake.Core.Context (5.19) - restriction: || (>= net462) (>= netstandard2.0)
       FSharp.Core (>= 4.7) - restriction: || (>= net462) (>= netstandard2.0)
-    Fake.Core.Environment (5.18.3) - restriction: || (>= net462) (>= netstandard2.0)
+      System.ValueTuple (>= 4.4) - restriction: >= net462
+    Fake.Core.Environment (5.19) - restriction: || (>= net462) (>= netstandard2.0)
       FSharp.Core (>= 4.7) - restriction: || (>= net462) (>= netstandard2.0)
-    Fake.Core.FakeVar (5.18.3) - restriction: || (>= net462) (>= netstandard2.0)
-      Fake.Core.Context (>= 5.18.3) - restriction: || (>= net462) (>= netstandard2.0)
+      System.ValueTuple (>= 4.4) - restriction: >= net462
+    Fake.Core.FakeVar (5.19) - restriction: || (>= net462) (>= netstandard2.0)
+      Fake.Core.Context (>= 5.19) - restriction: || (>= net462) (>= netstandard2.0)
       FSharp.Core (>= 4.7) - restriction: || (>= net462) (>= netstandard2.0)
-    Fake.Core.Process (5.18.3) - restriction: || (>= net462) (>= netstandard2.0)
-      Fake.Core.Environment (>= 5.18.3) - restriction: || (>= net462) (>= netstandard2.0)
-      Fake.Core.FakeVar (>= 5.18.3) - restriction: || (>= net462) (>= netstandard2.0)
-      Fake.Core.String (>= 5.18.3) - restriction: || (>= net462) (>= netstandard2.0)
-      Fake.Core.Trace (>= 5.18.3) - restriction: || (>= net462) (>= netstandard2.0)
-      Fake.IO.FileSystem (>= 5.18.3) - restriction: || (>= net462) (>= netstandard2.0)
+      System.ValueTuple (>= 4.4) - restriction: >= net462
+    Fake.Core.Process (5.19) - restriction: || (>= net462) (>= netstandard2.0)
+      Fake.Core.Environment (>= 5.19) - restriction: || (>= net462) (>= netstandard2.0)
+      Fake.Core.FakeVar (>= 5.19) - restriction: || (>= net462) (>= netstandard2.0)
+      Fake.Core.String (>= 5.19) - restriction: || (>= net462) (>= netstandard2.0)
+      Fake.Core.Trace (>= 5.19) - restriction: || (>= net462) (>= netstandard2.0)
+      Fake.IO.FileSystem (>= 5.19) - restriction: || (>= net462) (>= netstandard2.0)
       FSharp.Core (>= 4.7) - restriction: || (>= net462) (>= netstandard2.0)
       System.Diagnostics.Process (>= 4.3) - restriction: || (>= net462) (>= netstandard2.0)
-    Fake.Core.ReleaseNotes (5.18.3)
-      Fake.Core.SemVer (>= 5.18.3) - restriction: || (>= net462) (>= netstandard2.0)
-      Fake.Core.String (>= 5.18.3) - restriction: || (>= net462) (>= netstandard2.0)
+      System.ValueTuple (>= 4.4) - restriction: >= net462
+    Fake.Core.ReleaseNotes (5.19)
+      Fake.Core.SemVer (>= 5.19) - restriction: || (>= net462) (>= netstandard2.0)
+      Fake.Core.String (>= 5.19) - restriction: || (>= net462) (>= netstandard2.0)
       FSharp.Core (>= 4.7) - restriction: || (>= net462) (>= netstandard2.0)
-    Fake.Core.SemVer (5.18.3) - restriction: || (>= net462) (>= netstandard2.0)
+      System.ValueTuple (>= 4.4) - restriction: >= net462
+    Fake.Core.SemVer (5.19) - restriction: || (>= net462) (>= netstandard2.0)
       FSharp.Core (>= 4.7) - restriction: || (>= net462) (>= netstandard2.0)
       System.Runtime.Numerics (>= 4.3) - restriction: || (>= net462) (>= netstandard2.0)
-    Fake.Core.String (5.18.3) - restriction: || (>= net462) (>= netstandard2.0)
+      System.ValueTuple (>= 4.4) - restriction: >= net462
+    Fake.Core.String (5.19) - restriction: || (>= net462) (>= netstandard2.0)
       FSharp.Core (>= 4.7) - restriction: || (>= net462) (>= netstandard2.0)
-    Fake.Core.Target (5.18.3)
-      Fake.Core.CommandLineParsing (>= 5.18.3) - restriction: || (>= net462) (>= netstandard2.0)
-      Fake.Core.Context (>= 5.18.3) - restriction: || (>= net462) (>= netstandard2.0)
-      Fake.Core.Environment (>= 5.18.3) - restriction: || (>= net462) (>= netstandard2.0)
-      Fake.Core.FakeVar (>= 5.18.3) - restriction: || (>= net462) (>= netstandard2.0)
-      Fake.Core.Process (>= 5.18.3) - restriction: || (>= net462) (>= netstandard2.0)
-      Fake.Core.String (>= 5.18.3) - restriction: || (>= net462) (>= netstandard2.0)
-      Fake.Core.Trace (>= 5.18.3) - restriction: || (>= net462) (>= netstandard2.0)
+      System.ValueTuple (>= 4.4) - restriction: >= net462
+    Fake.Core.Target (5.19)
+      Fake.Core.CommandLineParsing (>= 5.19) - restriction: || (>= net462) (>= netstandard2.0)
+      Fake.Core.Context (>= 5.19) - restriction: || (>= net462) (>= netstandard2.0)
+      Fake.Core.Environment (>= 5.19) - restriction: || (>= net462) (>= netstandard2.0)
+      Fake.Core.FakeVar (>= 5.19) - restriction: || (>= net462) (>= netstandard2.0)
+      Fake.Core.Process (>= 5.19) - restriction: || (>= net462) (>= netstandard2.0)
+      Fake.Core.String (>= 5.19) - restriction: || (>= net462) (>= netstandard2.0)
+      Fake.Core.Trace (>= 5.19) - restriction: || (>= net462) (>= netstandard2.0)
       FSharp.Control.Reactive (>= 4.2) - restriction: || (>= net462) (>= netstandard2.0)
       FSharp.Core (>= 4.7) - restriction: || (>= net462) (>= netstandard2.0)
-      System.Reactive.Compatibility (>= 4.2) - restriction: || (>= net462) (>= netstandard2.0)
-    Fake.Core.Tasks (5.18.3) - restriction: || (>= net462) (>= netstandard2.0)
-      Fake.Core.Trace (>= 5.18.3) - restriction: || (>= net462) (>= netstandard2.0)
+      System.Reactive.Compatibility (>= 4.3.1) - restriction: || (>= net462) (>= netstandard2.0)
+    Fake.Core.Tasks (5.19) - restriction: || (>= net462) (>= netstandard2.0)
+      Fake.Core.Trace (>= 5.19) - restriction: || (>= net462) (>= netstandard2.0)
       FSharp.Core (>= 4.7) - restriction: || (>= net462) (>= netstandard2.0)
-    Fake.Core.Trace (5.18.3) - restriction: || (>= net462) (>= netstandard2.0)
-      Fake.Core.Environment (>= 5.18.3) - restriction: || (>= net462) (>= netstandard2.0)
-      Fake.Core.FakeVar (>= 5.18.3) - restriction: || (>= net462) (>= netstandard2.0)
+      System.ValueTuple (>= 4.4) - restriction: >= net462
+    Fake.Core.Trace (5.19) - restriction: || (>= net462) (>= netstandard2.0)
+      Fake.Core.Environment (>= 5.19) - restriction: || (>= net462) (>= netstandard2.0)
+      Fake.Core.FakeVar (>= 5.19) - restriction: || (>= net462) (>= netstandard2.0)
       FSharp.Core (>= 4.7) - restriction: || (>= net462) (>= netstandard2.0)
-    Fake.Core.Xml (5.18.3) - restriction: || (>= net462) (>= netstandard2.0)
-      Fake.Core.String (>= 5.18.3) - restriction: || (>= net462) (>= netstandard2.0)
+      System.ValueTuple (>= 4.4) - restriction: >= net462
+    Fake.Core.Xml (5.19) - restriction: || (>= net462) (>= netstandard2.0)
+      Fake.Core.String (>= 5.19) - restriction: || (>= net462) (>= netstandard2.0)
       FSharp.Core (>= 4.7) - restriction: || (>= net462) (>= netstandard2.0)
+      System.ValueTuple (>= 4.4) - restriction: >= net462
       System.Xml.ReaderWriter (>= 4.3.1) - restriction: && (< net462) (>= netstandard2.0)
       System.Xml.XDocument (>= 4.3) - restriction: && (< net462) (>= netstandard2.0)
       System.Xml.XPath (>= 4.3) - restriction: || (>= net462) (>= netstandard2.0)
       System.Xml.XPath.XDocument (>= 4.3) - restriction: || (>= net462) (>= netstandard2.0)
       System.Xml.XPath.XmlDocument (>= 4.3) - restriction: || (>= net462) (>= netstandard2.0)
-    Fake.DotNet.AssemblyInfoFile (5.18.3)
-      Fake.Core.Environment (>= 5.18.3) - restriction: || (>= net462) (>= netstandard2.0)
-      Fake.Core.String (>= 5.18.3) - restriction: || (>= net462) (>= netstandard2.0)
-      Fake.Core.Trace (>= 5.18.3) - restriction: || (>= net462) (>= netstandard2.0)
-      Fake.IO.FileSystem (>= 5.18.3) - restriction: || (>= net462) (>= netstandard2.0)
+    Fake.DotNet.AssemblyInfoFile (5.19)
+      Fake.Core.Environment (>= 5.19) - restriction: || (>= net462) (>= netstandard2.0)
+      Fake.Core.String (>= 5.19) - restriction: || (>= net462) (>= netstandard2.0)
+      Fake.Core.Trace (>= 5.19) - restriction: || (>= net462) (>= netstandard2.0)
+      Fake.IO.FileSystem (>= 5.19) - restriction: || (>= net462) (>= netstandard2.0)
       FSharp.Core (>= 4.7) - restriction: || (>= net462) (>= netstandard2.0)
-    Fake.DotNet.Cli (5.18.3)
-      Fake.Core.Environment (>= 5.18.3) - restriction: || (>= net462) (>= netstandard2.0)
-      Fake.Core.Process (>= 5.18.3) - restriction: || (>= net462) (>= netstandard2.0)
-      Fake.Core.String (>= 5.18.3) - restriction: || (>= net462) (>= netstandard2.0)
-      Fake.Core.Trace (>= 5.18.3) - restriction: || (>= net462) (>= netstandard2.0)
-      Fake.DotNet.MSBuild (>= 5.18.3) - restriction: || (>= net462) (>= netstandard2.0)
-      Fake.DotNet.NuGet (>= 5.18.3) - restriction: || (>= net462) (>= netstandard2.0)
-      Fake.IO.FileSystem (>= 5.18.3) - restriction: || (>= net462) (>= netstandard2.0)
+      System.ValueTuple (>= 4.4) - restriction: >= net462
+    Fake.DotNet.Cli (5.19)
+      Fake.Core.Environment (>= 5.19) - restriction: || (>= net462) (>= netstandard2.0)
+      Fake.Core.Process (>= 5.19) - restriction: || (>= net462) (>= netstandard2.0)
+      Fake.Core.String (>= 5.19) - restriction: || (>= net462) (>= netstandard2.0)
+      Fake.Core.Trace (>= 5.19) - restriction: || (>= net462) (>= netstandard2.0)
+      Fake.DotNet.MSBuild (>= 5.19) - restriction: || (>= net462) (>= netstandard2.0)
+      Fake.DotNet.NuGet (>= 5.19) - restriction: || (>= net462) (>= netstandard2.0)
+      Fake.IO.FileSystem (>= 5.19) - restriction: || (>= net462) (>= netstandard2.0)
       FSharp.Core (>= 4.7) - restriction: || (>= net462) (>= netstandard2.0)
       Mono.Posix.NETStandard (>= 1.0) - restriction: || (>= net462) (>= netstandard2.0)
-      Newtonsoft.Json (>= 12.0.2) - restriction: || (>= net462) (>= netstandard2.0)
-    Fake.DotNet.FSFormatting (5.18.3)
-      Fake.Core.Process (>= 5.18.3) - restriction: || (>= net462) (>= netstandard2.0)
-      Fake.IO.FileSystem (>= 5.18.3) - restriction: || (>= net462) (>= netstandard2.0)
+      Newtonsoft.Json (>= 12.0.3) - restriction: || (>= net462) (>= netstandard2.0)
+      System.ValueTuple (>= 4.4) - restriction: >= net462
+    Fake.DotNet.FSFormatting (5.19)
+      Fake.Core.Process (>= 5.19) - restriction: || (>= net462) (>= netstandard2.0)
+      Fake.IO.FileSystem (>= 5.19) - restriction: || (>= net462) (>= netstandard2.0)
       FSharp.Core (>= 4.7) - restriction: || (>= net462) (>= netstandard2.0)
-    Fake.DotNet.MSBuild (5.18.3)
+      System.ValueTuple (>= 4.4) - restriction: >= net462
+    Fake.DotNet.MSBuild (5.19)
       BlackFox.VsWhere (>= 1.0) - restriction: || (>= net462) (>= netstandard2.0)
-      Fake.Core.Environment (>= 5.18.3) - restriction: || (>= net462) (>= netstandard2.0)
-      Fake.Core.Process (>= 5.18.3) - restriction: || (>= net462) (>= netstandard2.0)
-      Fake.Core.String (>= 5.18.3) - restriction: || (>= net462) (>= netstandard2.0)
-      Fake.Core.Trace (>= 5.18.3) - restriction: || (>= net462) (>= netstandard2.0)
-      Fake.IO.FileSystem (>= 5.18.3) - restriction: || (>= net462) (>= netstandard2.0)
+      Fake.Core.Environment (>= 5.19) - restriction: || (>= net462) (>= netstandard2.0)
+      Fake.Core.Process (>= 5.19) - restriction: || (>= net462) (>= netstandard2.0)
+      Fake.Core.String (>= 5.19) - restriction: || (>= net462) (>= netstandard2.0)
+      Fake.Core.Trace (>= 5.19) - restriction: || (>= net462) (>= netstandard2.0)
+      Fake.IO.FileSystem (>= 5.19) - restriction: || (>= net462) (>= netstandard2.0)
       FSharp.Core (>= 4.7) - restriction: || (>= net462) (>= netstandard2.0)
-      MSBuild.StructuredLogger (>= 2.0.110) - restriction: || (>= net462) (>= netstandard2.0)
-    Fake.DotNet.NuGet (5.18.3) - restriction: || (>= net462) (>= netstandard2.0)
-      Fake.Core.Environment (>= 5.18.3) - restriction: || (>= net462) (>= netstandard2.0)
-      Fake.Core.Process (>= 5.18.3) - restriction: || (>= net462) (>= netstandard2.0)
-      Fake.Core.SemVer (>= 5.18.3) - restriction: || (>= net462) (>= netstandard2.0)
-      Fake.Core.String (>= 5.18.3) - restriction: || (>= net462) (>= netstandard2.0)
-      Fake.Core.Tasks (>= 5.18.3) - restriction: || (>= net462) (>= netstandard2.0)
-      Fake.Core.Trace (>= 5.18.3) - restriction: || (>= net462) (>= netstandard2.0)
-      Fake.Core.Xml (>= 5.18.3) - restriction: || (>= net462) (>= netstandard2.0)
-      Fake.IO.FileSystem (>= 5.18.3) - restriction: || (>= net462) (>= netstandard2.0)
-      Fake.Net.Http (>= 5.18.3) - restriction: || (>= net462) (>= netstandard2.0)
+      MSBuild.StructuredLogger (>= 2.0.152) - restriction: || (>= net462) (>= netstandard2.0)
+      System.ValueTuple (>= 4.4) - restriction: >= net462
+    Fake.DotNet.NuGet (5.19) - restriction: || (>= net462) (>= netstandard2.0)
+      Fake.Core.Environment (>= 5.19) - restriction: || (>= net462) (>= netstandard2.0)
+      Fake.Core.Process (>= 5.19) - restriction: || (>= net462) (>= netstandard2.0)
+      Fake.Core.SemVer (>= 5.19) - restriction: || (>= net462) (>= netstandard2.0)
+      Fake.Core.String (>= 5.19) - restriction: || (>= net462) (>= netstandard2.0)
+      Fake.Core.Tasks (>= 5.19) - restriction: || (>= net462) (>= netstandard2.0)
+      Fake.Core.Trace (>= 5.19) - restriction: || (>= net462) (>= netstandard2.0)
+      Fake.Core.Xml (>= 5.19) - restriction: || (>= net462) (>= netstandard2.0)
+      Fake.IO.FileSystem (>= 5.19) - restriction: || (>= net462) (>= netstandard2.0)
+      Fake.Net.Http (>= 5.19) - restriction: || (>= net462) (>= netstandard2.0)
       FSharp.Core (>= 4.7) - restriction: || (>= net462) (>= netstandard2.0)
-      Newtonsoft.Json (>= 12.0.2) - restriction: || (>= net462) (>= netstandard2.0)
+      Newtonsoft.Json (>= 12.0.3) - restriction: || (>= net462) (>= netstandard2.0)
       NuGet.Protocol (>= 4.9.4) - restriction: || (>= net462) (>= netstandard2.0)
       System.Net.Http (>= 4.3.4) - restriction: || (>= net462) (>= netstandard2.0)
-    Fake.DotNet.Paket (5.18.3)
-      Fake.Core.Process (>= 5.18.3) - restriction: || (>= net462) (>= netstandard2.0)
-      Fake.Core.String (>= 5.18.3) - restriction: || (>= net462) (>= netstandard2.0)
-      Fake.Core.Trace (>= 5.18.3) - restriction: || (>= net462) (>= netstandard2.0)
-      Fake.DotNet.Cli (>= 5.18.3) - restriction: || (>= net462) (>= netstandard2.0)
-      Fake.IO.FileSystem (>= 5.18.3) - restriction: || (>= net462) (>= netstandard2.0)
+      System.ValueTuple (>= 4.4) - restriction: >= net462
+    Fake.DotNet.Paket (5.19)
+      Fake.Core.Process (>= 5.19) - restriction: || (>= net462) (>= netstandard2.0)
+      Fake.Core.String (>= 5.19) - restriction: || (>= net462) (>= netstandard2.0)
+      Fake.Core.Trace (>= 5.19) - restriction: || (>= net462) (>= netstandard2.0)
+      Fake.DotNet.Cli (>= 5.19) - restriction: || (>= net462) (>= netstandard2.0)
+      Fake.IO.FileSystem (>= 5.19) - restriction: || (>= net462) (>= netstandard2.0)
       FSharp.Core (>= 4.7) - restriction: || (>= net462) (>= netstandard2.0)
-    Fake.DotNet.Testing.Expecto (5.18.3)
-      Fake.Core.Process (>= 5.18.3) - restriction: || (>= net462) (>= netstandard2.0)
-      Fake.Core.String (>= 5.18.3) - restriction: || (>= net462) (>= netstandard2.0)
-      Fake.Core.Trace (>= 5.18.3) - restriction: || (>= net462) (>= netstandard2.0)
-      Fake.IO.FileSystem (>= 5.18.3) - restriction: || (>= net462) (>= netstandard2.0)
-      Fake.Testing.Common (>= 5.18.3) - restriction: || (>= net462) (>= netstandard2.0)
+      System.ValueTuple (>= 4.4) - restriction: >= net462
+    Fake.DotNet.Testing.Expecto (5.19)
+      Fake.Core.Process (>= 5.19) - restriction: || (>= net462) (>= netstandard2.0)
+      Fake.Core.String (>= 5.19) - restriction: || (>= net462) (>= netstandard2.0)
+      Fake.Core.Trace (>= 5.19) - restriction: || (>= net462) (>= netstandard2.0)
+      Fake.IO.FileSystem (>= 5.19) - restriction: || (>= net462) (>= netstandard2.0)
+      Fake.Testing.Common (>= 5.19) - restriction: || (>= net462) (>= netstandard2.0)
       FSharp.Core (>= 4.7) - restriction: || (>= net462) (>= netstandard2.0)
-    Fake.IO.FileSystem (5.18.3)
-      Fake.Core.String (>= 5.18.3) - restriction: || (>= net462) (>= netstandard2.0)
+      System.ValueTuple (>= 4.4) - restriction: >= net462
+    Fake.IO.FileSystem (5.19)
+      Fake.Core.String (>= 5.19) - restriction: || (>= net462) (>= netstandard2.0)
       FSharp.Core (>= 4.7) - restriction: || (>= net462) (>= netstandard2.0)
       System.Diagnostics.FileVersionInfo (>= 4.3) - restriction: || (>= net462) (>= netstandard2.0)
       System.IO.FileSystem.Watcher (>= 4.3) - restriction: || (>= net462) (>= netstandard2.0)
-    Fake.Net.Http (5.18.3) - restriction: || (>= net462) (>= netstandard2.0)
-      Fake.Core.Trace (>= 5.18.3) - restriction: || (>= net462) (>= netstandard2.0)
+      System.ValueTuple (>= 4.4) - restriction: >= net462
+    Fake.Net.Http (5.19) - restriction: || (>= net462) (>= netstandard2.0)
+      Fake.Core.Trace (>= 5.19) - restriction: || (>= net462) (>= netstandard2.0)
       FSharp.Core (>= 4.7) - restriction: || (>= net462) (>= netstandard2.0)
       System.Net.Http (>= 4.3.4) - restriction: || (>= net462) (>= netstandard2.0)
-    Fake.Testing.Common (5.18.3) - restriction: || (>= net462) (>= netstandard2.0)
-      Fake.Core.Trace (>= 5.18.3) - restriction: || (>= net462) (>= netstandard2.0)
+      System.ValueTuple (>= 4.4) - restriction: >= net462
+    Fake.Testing.Common (5.19) - restriction: || (>= net462) (>= netstandard2.0)
+      Fake.Core.Trace (>= 5.19) - restriction: || (>= net462) (>= netstandard2.0)
       FSharp.Core (>= 4.7) - restriction: || (>= net462) (>= netstandard2.0)
-    Fake.Tools.Git (5.18.3)
-      Fake.Core.Environment (>= 5.18.3) - restriction: || (>= net462) (>= netstandard2.0)
-      Fake.Core.Process (>= 5.18.3) - restriction: || (>= net462) (>= netstandard2.0)
-      Fake.Core.SemVer (>= 5.18.3) - restriction: || (>= net462) (>= netstandard2.0)
-      Fake.Core.String (>= 5.18.3) - restriction: || (>= net462) (>= netstandard2.0)
-      Fake.Core.Trace (>= 5.18.3) - restriction: || (>= net462) (>= netstandard2.0)
-      Fake.IO.FileSystem (>= 5.18.3) - restriction: || (>= net462) (>= netstandard2.0)
+      System.ValueTuple (>= 4.4) - restriction: >= net462
+    Fake.Tools.Git (5.19)
+      Fake.Core.Environment (>= 5.19) - restriction: || (>= net462) (>= netstandard2.0)
+      Fake.Core.Process (>= 5.19) - restriction: || (>= net462) (>= netstandard2.0)
+      Fake.Core.SemVer (>= 5.19) - restriction: || (>= net462) (>= netstandard2.0)
+      Fake.Core.String (>= 5.19) - restriction: || (>= net462) (>= netstandard2.0)
+      Fake.Core.Trace (>= 5.19) - restriction: || (>= net462) (>= netstandard2.0)
+      Fake.IO.FileSystem (>= 5.19) - restriction: || (>= net462) (>= netstandard2.0)
       FSharp.Core (>= 4.7) - restriction: || (>= net462) (>= netstandard2.0)
+      System.ValueTuple (>= 4.4) - restriction: >= net462
     FParsec (1.0.3) - restriction: || (>= net462) (>= netstandard2.0)
       FSharp.Core (>= 4.0.0.1) - restriction: >= net40
       FSharp.Core (>= 4.2.3) - restriction: && (< net40) (>= netstandard1.6)

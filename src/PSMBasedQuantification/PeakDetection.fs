@@ -311,13 +311,14 @@ module SignalDetectionTemp =
                 labeledDataTmp.[indexOfI] <- {Meta=Extrema.Negative; Data = xData.[indexOfI],yData.[indexOfI]}
         |] 
         |> Array.distinct
-                                                                                                                                                 
+        
+    /// 
     let divideAndOdd polOrder x =
         let tmp = 
             let x = x / 2
             if x % 2 = 0 then (x - 1) else x
-        if tmp <= polOrder && polOrder % 2 = 0 then polOrder + 1
-        elif tmp <= polOrder && polOrder % 2 <> 0 then polOrder + 2
+        if tmp <= polOrder + 1 && polOrder % 2 = 0 then polOrder + 3
+        elif tmp <= polOrder + 1 && polOrder % 2 <> 0 then polOrder + 4
         else tmp 
 
     ///    
