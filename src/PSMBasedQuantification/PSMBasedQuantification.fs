@@ -15,14 +15,37 @@ open FSharp.Plotly
 open BioFSharp
 open BioFSharp.Mz.Quantification
 open MzIO.Processing
+open BioFSharp.Mz.SearchDB
+open System.Data
+open System.Data.SQLite
 
 module PSMBasedQuantification =
+
+    /// Returns SearchDbParams of a existing database by filePath
+    let getSDBParamsBy (cn :SQLiteConnection)=
+        let cn =
+            match cn.State with
+            | ConnectionState.Open ->
+                cn
+            | ConnectionState.Closed ->
+                cn.Open()
+                cn
+            | _ as x -> failwith "Data base is busy."
+        match Db.SQLiteQuery.selectSearchDbParams cn with
+        | Some (iD,name,fo,fp,pr,minmscl,maxmscl,mass,minpL,maxpL,isoL,mMode,fMods,vMods,vThr) ->
+            createSearchDbParams
+                name fo fp id (Digestion.Table.getProteaseBy pr) minmscl maxmscl mass minpL maxpL
+                    (Newtonsoft.Json.JsonConvert.DeserializeObject<SearchInfoIsotopic list>(isoL)) (Newtonsoft.Json.JsonConvert.DeserializeObject<MassMode>(mMode)) (massFBy (Newtonsoft.Json.JsonConvert.DeserializeObject<MassMode>(mMode)))
+                        (Newtonsoft.Json.JsonConvert.DeserializeObject<SearchModification list>(fMods)) (Newtonsoft.Json.JsonConvert.DeserializeObject<SearchModification list>(vMods)) vThr
+        | None ->
+            failwith "This database does not contain any SearchParameters. It is not recommended to work with this file."
 
     ///
     let setIndexOnModSequenceAndGlobalMod (cn:SQLiteConnection) =
         let querystring = "CREATE INDEX IF NOT EXISTS SequenceAndGlobalModIndex ON ModSequence (Sequence,GlobalMod)"
         let cmd = new SQLiteCommand(querystring, cn)
         cmd.ExecuteNonQuery()
+
 
     /// Prepares statement to select a ModSequence entry by Massrange (Between selected Mass -/+ the selected toleranceWidth)
     let prepareSelectMassByModSequenceAndGlobalMod (cn:SQLiteConnection) =
@@ -37,6 +60,32 @@ module PSMBasedQuantification =
         match reader.Read() with
         | true  -> Some (reader.GetDouble(0))
         | false -> Option.None)
+
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    /// Prepares statement to select a ModSequence entry by ModSequenceID
+    let prepareSelectModsequenceByModSequenceID (cn:SQLiteConnection) =
+        let querystring = "SELECT * FROM ModSequence WHERE ID=@id"
+        let cmd = new SQLiteCommand(querystring, cn) 
+        cmd.Parameters.Add("@id", Data.DbType.Int64) |> ignore       
+        (fun (id:int)  ->        
+            cmd.Parameters.["@id"].Value <- id
+
+            use reader = cmd.ExecuteReader()            
+            match reader.Read() with
+            | true ->  (reader.GetInt32(0), reader.GetInt32(1),reader.GetDouble(2), reader.GetInt64(3), reader.GetString(4), reader.GetInt32(5))
+            | false -> -1,-1,nan,-1L,"",-1
+        )
+
+    /// Returns a LookUpResult list
+    let getThreadSafePeptideLookUpFromFileBy (cn:SQLiteConnection) sdbParams = 
+        let parseAAString = initOfModAminoAcidString sdbParams.IsotopicMod (sdbParams.FixedMods@sdbParams.VariableMods)
+        let selectModsequenceByID = prepareSelectModsequenceByModSequenceID cn 
+        (fun id -> 
+                selectModsequenceByID id
+                |> (createLookUpResultBy parseAAString)
+        )   
+
+        
 
     type averagePSM = {
         MeanPrecMz   : float
@@ -63,12 +112,10 @@ module PSMBasedQuantification =
         sum / n
 
     let substractBaseLine (logger: NLog.Logger) (baseLineParams:Domain.BaseLineCorrection) (yData:float []) =
-        if yData.Length > 300 then
-            logger.Trace "xic Length > 300"
+        if yData.Length > 500 then
             yData
         else
-            logger.Trace "xic Length < 300"
-            let baseLine = FSharp.Stats.Signal.Baseline.baselineAls baseLineParams.MaxIterations baseLineParams.Lambda baseLineParams.P yData |> Array.ofSeq
+            let baseLine = FSharp.Stats.Signal.Baseline.baselineAls' baseLineParams.MaxIterations baseLineParams.Lambda baseLineParams.P yData |> Array.ofSeq
             Array.map2 (fun y b ->
                            let c = y - b
                            if c < 0. then 0. else c
@@ -123,10 +170,24 @@ module PSMBasedQuantification =
                 weightedMean weights scanTimes
             createAveragePSM meanPrecMz meanScanTime weightedAvgScanTime meanScore retData itzDataCorrected ItzDataUncorrected
 
+    let average' getXic (psms:(PSMStatisticsResult*float) []) =
+            let meanPrecMz   = psms |> Seq.meanBy (fun (psm,m) -> psm.PrecursorMZ)
+            let meanScanTime = psms |> Seq.meanBy (fun (psm,m) -> psm.ScanTime)
+            let meanScore = psms |> Seq.averageBy (fun (psm,m) -> psm.PercolatorScore)
+            let psms' = 
+                let tmp = Array.sortByDescending (fun (psm,m) -> m) psms
+                if tmp.Length > 3 then tmp.[..2] else tmp 
+            let weightedAvgScanTime =
+                let scanTimes = psms' |> Array.map (fun (psm,m) -> psm.ScanTime)
+                let weights = psms' |> Array.map snd
+                weightedMean weights scanTimes
+            let (retData,itzDataCorrected,ItzDataUncorrected) = getXic weightedAvgScanTime meanPrecMz
+            createAveragePSM meanPrecMz meanScanTime weightedAvgScanTime meanScore retData itzDataCorrected ItzDataUncorrected
+
     type InferredPeak = {
         Area                     :float
         StandardErrorOfPrediction:float
-        MeasuredApexIntensity:float
+        MeasuredApexIntensity    :float
         EstimatedParams          :float[]
         xXic                     :float[]
         yXic                     :float[]
@@ -135,11 +196,37 @@ module PSMBasedQuantification =
         }
 
     let quantifyInferredPeak minSNR polOrder estWindowSize getXic targetMz targetScanTime =
-        let (retData,itzData,uncorrectedItzData)   =
-            getXic targetScanTime targetMz
-        let  windowSize = estWindowSize uncorrectedItzData
-        let peaks          = SignalDetectionTemp.getPeaks minSNR polOrder windowSize retData itzData
-        if Array.isEmpty peaks then
+        try
+            let (retData,itzData,uncorrectedItzData)   =
+                getXic targetScanTime targetMz
+            let  windowSize = estWindowSize uncorrectedItzData
+            let peaks          = SignalDetectionTemp.getPeaks minSNR polOrder windowSize retData itzData
+            if Array.isEmpty peaks then
+                {
+                    Area                      = nan
+                    StandardErrorOfPrediction = nan
+                    MeasuredApexIntensity     = nan
+                    EstimatedParams           = [||]
+                    xXic                      = [||]
+                    yXic                      = [||]
+                    xPeak                     = [||]
+                    yFitted                   = [||]
+                }
+            else
+                let peakToQuantify = BioFSharp.Mz.Quantification.HULQ.getPeakBy peaks targetScanTime
+                let quantP         = BioFSharp.Mz.Quantification.HULQ.quantifyPeak peakToQuantify
+                {
+                    Area                      = quantP.Area
+                    StandardErrorOfPrediction = quantP.StandardErrorOfPrediction
+                    MeasuredApexIntensity     = quantP.MeasuredApexIntensity
+                    EstimatedParams           = quantP.EstimatedParams
+                    xXic                      = retData
+                    yXic                      = itzData
+                    xPeak                     = peakToQuantify.XData
+                    yFitted                   = quantP.YPredicted
+                }
+        with
+        | _ -> 
             {
                 Area                      = nan
                 StandardErrorOfPrediction = nan
@@ -149,19 +236,6 @@ module PSMBasedQuantification =
                 yXic                      = [||]
                 xPeak                     = [||]
                 yFitted                   = [||]
-            }
-        else
-            let peakToQuantify = BioFSharp.Mz.Quantification.HULQ.getPeakBy peaks targetScanTime
-            let quantP         = BioFSharp.Mz.Quantification.HULQ.quantifyPeak peakToQuantify
-            {
-                Area                      = quantP.Area
-                StandardErrorOfPrediction = quantP.StandardErrorOfPrediction
-                MeasuredApexIntensity     = quantP.MeasuredApexIntensity
-                EstimatedParams           = quantP.EstimatedParams
-                xXic                      = retData
-                yXic                      = itzData
-                xPeak                     = peakToQuantify.XData
-                yFitted                   = quantP.YPredicted
             }
     let saveChart windowWidth sequence globalMod ch (xXic:float[]) (yXic:float[]) ms2s avgScanTime (xToQuantify:float[]) (ypToQuantify:float[]) (fitY:float[])
             (xXicInferred:float[]) (yXicinferred:float[]) (xInferred:float[]) (inferredFit:float[]) plotDirectory =
@@ -209,19 +283,15 @@ module PSMBasedQuantification =
     let quantifyPeptides (processParams:Domain.QuantificationParams) (outputDir:string) (cn:SQLiteConnection) (instrumentOutput:string) (scoredPSMs:string)  =
 
         let logger = Logging.createLogger (Path.GetFileNameWithoutExtension scoredPSMs)
-
         logger.Trace (sprintf "Input file: %s" instrumentOutput)
         logger.Trace (sprintf "Output directory: %s" outputDir)
         logger.Trace (sprintf "Parameters: %A" processParams)
-
         logger.Trace (sprintf "Now performing Quantification using: %s and %s, Results will be written to: %s" instrumentOutput scoredPSMs outputDir)
-
         // initialize Reader and Transaction
         let outFilePath =
             let fileName = (Path.GetFileNameWithoutExtension instrumentOutput) + ".quant"
             Path.Combine [|outputDir;fileName|]
         logger.Trace (sprintf "outFilePath:%s" outFilePath)
-
         //
         let plotDirectory =
             let fileName = sprintf "%s_plots" (Path.GetFileNameWithoutExtension instrumentOutput)
@@ -238,7 +308,11 @@ module PSMBasedQuantification =
         logger.Trace "Copy peptide DB into Memory: finished"
 
         logger.Trace "Get peptide lookUp function"
+        let dBParams     = getSDBParamsBy memoryDB
         let massLookUp = prepareSelectMassByModSequenceAndGlobalMod memoryDB
+        let peptideLookUp = getThreadSafePeptideLookUpFromFileBy memoryDB dBParams
+        let calcIonSeries aal  =
+            Fragmentation.Series.fragmentMasses Fragmentation.Series.bOfBioList Fragmentation.Series.yOfBioList dBParams.MassFunction aal
         logger.Trace "Get peptide lookUp function: finished"
 
         // initialize Reader and Transaction
@@ -247,10 +321,33 @@ module PSMBasedQuantification =
         let inRunID  = Core.MzIO.Reader.getDefaultRunID inReader
         let inTr = inReader.BeginTransaction()
 
+        let countMatchedMasses (psms: PSMStatisticsResult []) =
+            psms
+            |> Array.map (fun psm -> 
+                let sequence = peptideLookUp psm.ModSequenceID
+                let frag = 
+                    let ionSeries = (calcIonSeries sequence.BioSequence).TargetMasses
+                    [1. .. 2.]
+                    |> List.map (fun ch -> 
+                        ionSeries 
+                        |> List.map (fun x -> x.MainPeak.Mass)
+                        |> List.map (fun x -> Mass.toMZ x ch)
+                    )
+                    |> List.concat                    
+                let spec = inReader.ReadSpectrumPeaks psm.PSMId
+                let sum = 
+                    spec.Peaks 
+                    |> Seq.filter (fun peak -> 
+                        frag
+                        |> List.exists (fun ion -> abs (ion - peak.Mz) <= (Mass.deltaMassByPpm 100. peak.Mz))
+                    )
+                    |> Seq.sumBy (fun x -> x.Intensity)
+                psm,sum
+            )
+
         logger.Trace "Create RetentionTime index"
         let retTimeIdxed = Query.getMS1RTIdx inReader inRunID
         logger.Trace "Create RetentionTime index:finished"
-
         logger.Trace "Read scored PSMs."
         ///
         let peptides =
@@ -263,7 +360,7 @@ module PSMBasedQuantification =
             match processParams.XicExtraction.WindowSize with
             | Domain.WindowSize.Fixed w  -> fun yData -> w
             | Domain.WindowSize.Estimate ->
-                logger.Trace "Estimate noise autocorrelation"
+                //logger.Trace "Estimate noise autocorrelation"
                 try
                 let noiseAutoCorr =
                     let gpeptides =
@@ -277,9 +374,11 @@ module PSMBasedQuantification =
                     |> Array.take n
                     |> Array.choose (fun ((sequence,ch,globMod),psms) ->
                                     try
-                                    logger.Trace (sprintf "sequence = %s,ch = %i,globMod = %i " sequence ch globMod)
-                                    let psmsWithScanTime = psms |> Array.map (fun x -> x, MassSpectrum.getScanTime (inReader.ReadMassSpectrum(x.PSMId)))
-                                    logger.Trace "quantify target"
+                                    //logger.Trace (sprintf "sequence = %s,ch = %i,globMod = %i " sequence ch globMod)
+                                    let psmsWithScanTime = 
+                                        psms 
+                                        |> Array.map (fun res -> res, MassSpectrum.getScanTime (inReader.ReadMassSpectrum(res.PSMId)))
+                                    //logger.Trace "quantify target"
                                     let averagePSM = average getXIC psmsWithScanTime
                                     let peaks          = SignalDetectionTemp.getPeaks 0.1 2 11 averagePSM.X_Xic averagePSM.Y_Xic_uncorrected
                                     let NoNoise = peaks |> Array.map (fun x -> x.XData) |> Array.concat |> Set.ofArray
@@ -311,21 +410,22 @@ module PSMBasedQuantification =
         |> Array.groupBy (fun x -> x.StringSequence,x.Charge,x.GlobalMod)
         |> Array.mapi (fun i ((sequence,ch,globMod),psms) ->
                         try
-                        logger.Trace (sprintf "%i,sequence = %s,ch = %i,globMod =%i " i sequence ch globMod)
+                        //logger.Trace (sprintf "%i,sequence = %s,ch = %i,globMod =%i " i sequence ch globMod)
                         let bestQValue,bestPepValue,prots = psms |> Array.minBy (fun x -> x.QValue) |> fun x -> x.QValue, x.PEPValue,x.ProteinNames
-                        let psmsWithScanTime = psms |> Array.map (fun x -> x, MassSpectrum.getScanTime (inReader.ReadMassSpectrum(x.PSMId)))
-                        let ms2s = psmsWithScanTime |> Array.map (fun (psm, scanTime) -> scanTime,psm.PercolatorScore)
-                        logger.Trace "quantify target"
-                        let averagePSM = average getXIC psmsWithScanTime
+                        let psmsWithMatchedSums = countMatchedMasses psms 
+                        let ms2s = psmsWithMatchedSums |> Array.map (fun (psm,m) -> psm.ScanTime,m)
+                        //logger.Trace "quantify target"
+                        let averagePSM = average' getXIC psmsWithMatchedSums
                         let avgMass = Mass.ofMZ (averagePSM.MeanPrecMz) (ch |> float)
                         let windowWidth = getWindowWidth averagePSM.Y_Xic_uncorrected
-                        let peaks          = SignalDetectionTemp.getPeaks processParams.XicExtraction.MinSNR processParams.XicExtraction.PolynomOrder windowWidth averagePSM.X_Xic averagePSM.Y_Xic
-                        if Array.isEmpty peaks then None
+                        let peaks = SignalDetectionTemp.getPeaks processParams.XicExtraction.MinSNR processParams.XicExtraction.PolynomOrder windowWidth averagePSM.X_Xic averagePSM.Y_Xic
+                        if Array.isEmpty peaks then 
+                            None
                         else
                         let peakToQuantify = BioFSharp.Mz.Quantification.HULQ.getPeakBy peaks averagePSM.WeightedAvgScanTime
                         let quantP = BioFSharp.Mz.Quantification.HULQ.quantifyPeak peakToQuantify
                         let searchScanTime =
-                            if quantP.EstimatedParams |> Array.isEmpty then
+                            if Array.isEmpty quantP.EstimatedParams then
                                 averagePSM.WeightedAvgScanTime
                             elif abs (quantP.EstimatedParams.[1] - averagePSM.WeightedAvgScanTime) >  processParams.XicExtraction.ScanTimeWindow then
                                 averagePSM.WeightedAvgScanTime
@@ -335,15 +435,13 @@ module PSMBasedQuantification =
                         let labeledMass    = massLookUp sequence 1
                         if globMod = 0 then
                             let n15mz          = Mass.toMZ (labeledMass.Value) (ch|> float)
-                            logger.Trace "quantify inferred"
+                            //logger.Trace "quantify inferred"
                             let n15Inferred    = quantifyInferredPeak processParams.XicExtraction.MinSNR processParams.XicExtraction.PolynomOrder getWindowWidth getXIC n15mz searchScanTime
-                            logger.Trace "quantify n15Minus 1"
+                            //logger.Trace "quantify n15Minus 1"
                             let n15Minus1Mz    = n15mz - (Mass.Table.NMassInU / (ch|> float))
                             let n15Minus1Inferred = quantifyInferredPeak processParams.XicExtraction.MinSNR processParams.XicExtraction.PolynomOrder getWindowWidth getXIC n15Minus1Mz searchScanTime
-
                             let chart = saveChart windowWidth sequence globMod ch averagePSM.X_Xic averagePSM.Y_Xic ms2s averagePSM.WeightedAvgScanTime
                                                 peakToQuantify.XData peakToQuantify.YData quantP.YPredicted n15Inferred.xXic n15Inferred.yXic n15Inferred.xPeak n15Inferred.yFitted plotDirectory
-
                             {
                             StringSequence            = sequence
                             GlobalMod                 = globMod
@@ -373,18 +471,15 @@ module PSMBasedQuantification =
                             N15Minus1Params           = n15Minus1Inferred.EstimatedParams  |> Array.fold (fun acc x -> acc + " " + x.ToString() + ";") ""
                             }
                             |> Option.Some
-
                         else
                             let n14mz          = Mass.toMZ (unlabeledMass.Value) (ch|> float)
-                            logger.Trace "quantify inferred"
+                            //logger.Trace "quantify inferred"
                             let n14Inferred    = quantifyInferredPeak processParams.XicExtraction.MinSNR processParams.XicExtraction.PolynomOrder getWindowWidth getXIC n14mz searchScanTime
-                            logger.Trace "quantify n15Minus 1"
+                            //logger.Trace "quantify n15Minus 1"
                             let n15Minus1Mz    = averagePSM.MeanPrecMz - (Mass.Table.NMassInU / (ch|> float))
                             let n15Minus1Inferred = quantifyInferredPeak processParams.XicExtraction.MinSNR processParams.XicExtraction.PolynomOrder getWindowWidth getXIC n15Minus1Mz searchScanTime
-
                             let chart = saveChart windowWidth sequence globMod ch averagePSM.X_Xic averagePSM.Y_Xic ms2s averagePSM.WeightedAvgScanTime
                                                 peakToQuantify.XData peakToQuantify.YData quantP.YPredicted n14Inferred.xXic n14Inferred.yXic n14Inferred.xPeak n14Inferred.yFitted plotDirectory
-
                             {
                             StringSequence            = sequence
                             GlobalMod                 = globMod
@@ -421,5 +516,5 @@ module PSMBasedQuantification =
                        )
         |> Array.filter Option.isSome
         |> Array.map (fun x -> x.Value)
-        |> FSharpAux.IO.SeqIO.Seq.toCSV "\t" true
+        |> FSharpAux.IO.SeqIO.Seq.CSV "\t" true true
         |> FSharpAux.IO.SeqIO.Seq.writeOrAppend (outFilePath)
