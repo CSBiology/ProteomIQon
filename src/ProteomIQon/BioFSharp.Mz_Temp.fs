@@ -793,11 +793,11 @@ module FDRControl' =
                 if initial.InitialParamGuess.Length > 3 then failwith "Invalid initial param guess for Logistic Function"
                 let lowerBound =
                     initial.InitialParamGuess
-                    |> Array.map (fun param -> param - param * 0.1)
+                    |> Array.map (fun param -> param - (abs param) * 0.1)
                     |> vector
                 let upperBound =
                     initial.InitialParamGuess
-                    |> Array.map (fun param -> param + param * 0.1)
+                    |> Array.map (fun param -> param + (abs param) * 0.1)
                     |> vector
                 estimatedParamsWithRSS LogisticFunction initial 0.001 10.0 lowerBound upperBound scores qVal
             )
