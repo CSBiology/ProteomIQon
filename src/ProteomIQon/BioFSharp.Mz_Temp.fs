@@ -728,14 +728,14 @@ module FDRControl' =
         let estimatedFP =
             proteinBins
             |> Array.fold (fun acc proteinBin -> acc + expectedFP proteinBin) 0.
-        let targetCount = 
+        let targetCount =
             data
             |> Array.sumBy (fun x ->
             match x.DecoyBigger with
             | true -> 0.
             | false -> 1.
             )
-        let fdr = 
+        let fdr =
             if (isNan estimatedFP) || (isInf estimatedFP) || estimatedFP = 0. then
                 1.
             elif (estimatedFP / targetCount < 0.) || (estimatedFP / targetCount > 1.) then
@@ -812,7 +812,7 @@ module FDRControl' =
         // Gives an array of scores with the frequency of decoy and target hits at that score
         let scoreFrequencies =
             data
-            |> Array.map (fun x -> 
+            |> Array.map (fun x ->
                 if isDecoy x then
                     decoyScoreF x, true
                 else
@@ -824,14 +824,14 @@ module FDRControl' =
             |> Array.map (fun (score,scoreDecoyInfo) ->
                 let decoyCount =
                     scoreDecoyInfo
-                    |> Array.sumBy (fun (score, decoyInfo) -> 
+                    |> Array.sumBy (fun (score, decoyInfo) ->
                         match decoyInfo with
                         | true -> 1.
                         | false -> 0.
                     )
                 let targetCount =
                     scoreDecoyInfo
-                    |> Array.sumBy (fun (score, decoyInfo) -> 
+                    |> Array.sumBy (fun (score, decoyInfo) ->
                         match decoyInfo with
                         | true -> 0.
                         | false -> 1.
@@ -890,3 +890,50 @@ module FDRControl' =
             ProteinInference'.createInferredProteinClassItemQValue item.GroupOfProteinIDs item.Class item.PeptideSequence item.TargetScore item.DecoyScore (qValueF item.DecoyScore) item.Decoy item.DecoyBigger true
         else
             ProteinInference'.createInferredProteinClassItemQValue item.GroupOfProteinIDs item.Class item.PeptideSequence item.TargetScore item.DecoyScore (qValueF item.TargetScore) item.Decoy item.DecoyBigger true
+
+module Fragmentation' =
+
+    type LadderedTaggedMass (iontype:Ions.IonTypeFlag,mass:float, number:int, charge: float) =
+        member this.Iontype = iontype
+        member this.MassOverCharge = mass
+        member this.Number = number
+        member this.Charge = charge
+
+    type LadderedPeakFamily<'a, 'b> = {
+        MainPeak       : 'a
+        DependentPeaks : 'b list
+    }
+
+    let createLadderedPeakFamily mainPeak dependentPeaks = {
+        MainPeak       = mainPeak
+        DependentPeaks = dependentPeaks
+    }
+
+    let ladderAndChargeElement (chargeList: float list) (sortedList: Mz.PeakFamily<Mz.TaggedMass.TaggedMass> list) =
+        sortedList
+        |> List.mapi (fun i taggedMass ->
+            chargeList
+            |> List.map (fun charge ->
+                let mainPeak = taggedMass.MainPeak
+                let dependentPeaks = taggedMass.DependentPeaks
+                let newMainPeak = new LadderedTaggedMass(mainPeak.Iontype, Mass.toMZ mainPeak.Mass charge, i + 1, charge)
+                let newDependentPeaks =
+                    dependentPeaks
+                    |> List.map (fun dependentPeak ->
+                        new LadderedTaggedMass(dependentPeak.Iontype, Mass.toMZ dependentPeak.Mass charge, i + 1, charge)
+                    )
+                let newPeakFamily =
+                    createLadderedPeakFamily newMainPeak newDependentPeaks
+                newPeakFamily
+            )
+        )
+        |> List.concat
+
+    let ladderElement (ionList: Mz.PeakFamily<Mz.TaggedMass.TaggedMass> list) (chargeList: float list) =
+        let groupedList =
+            ionList
+            |> List.groupBy ( fun x -> x.MainPeak.Iontype)
+            |> List.map snd
+            |> List.map List.sort
+        groupedList
+        |> List.collect (ladderAndChargeElement chargeList)
