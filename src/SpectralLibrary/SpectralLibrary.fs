@@ -91,7 +91,7 @@ module SpectralLibrary =
 
         let inReader = Core.MzIO.Reader.getReader instrumentOutput
         let inRunID = Core.MzIO.Reader.getDefaultRunID inReader
-        inReader.BeginTransaction()
+        let inTr = inReader.BeginTransaction()
 
         let psmFile =
             Seq.fromFileWithCsvSchema<PSMStatisticsResult>(scoredPSMs, '\t', false,schemaMode = FSharpAux.IO.SchemaReader.Csv.SchemaModes.Fill, skipLines = 1)
