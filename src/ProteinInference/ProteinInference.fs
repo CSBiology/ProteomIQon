@@ -33,10 +33,15 @@ module ProteinInference =
         |DecoyTargetRatio -> FDRControl'.calculateFDRwithDecoyTargetRatio data
 
     /// Calculates the q value with the chosen method
-    let initQValue (qValueMethod: QValueMethod) (data: ProteinInference'.InferredProteinClassItemScored[]) (proteinDB: (string*string)[]) =
+    let initQValue (qValueMethod: QValueMethod) bandwidth (data: ProteinInference'.InferredProteinClassItemScored[]) (proteinDB: (string*string)[]) =
         match qValueMethod with
         |Storey-> FDRControl'.calculateQValueStorey data
-        |LogisticRegression fdrMethod -> FDRControl'.calculateQValueLogReg (initFDR fdrMethod data proteinDB) data 
+        |LogisticRegression fdrMethod ->
+            let fdr = initFDR fdrMethod data proteinDB
+
+            printfn "FDR: %f" fdr
+            printfn "Bandwidth: %f" bandwidth
+            FDRControl'.calculateQValueLogReg fdr bandwidth data 
 
     /// Given a ggf3 and a fasta file, creates a collection of all theoretically possible peptides and the proteins they might
     /// originate from
@@ -257,19 +262,30 @@ module ProteinInference =
 
             logger.Trace "Calculate q values for all proteins"
 
+            let combWithReverse = Array.append combinedScoredClasses reverseNoMatch
+
+            let bandwidth =
+                let dataLengthSqrt = ceil (sqrt (combWithReverse.Length |> float))
+                let min, max = 
+                    let sorted =
+                        combWithReverse
+                        |> Array.sortBy ( fun x -> x.TargetScore)
+                    (sorted |> Array.head).TargetScore, (sorted |> Array.last).TargetScore
+                (max-min)/dataLengthSqrt
+                0.1
+
             // Assign q values to each protein
             let combinedScoredClassesQVal =
                 let decoyBiggerF = (fun (item: ProteinInference'.InferredProteinClassItemScored) -> item.DecoyBigger)
                 let targetScoreF = (fun (item: ProteinInference'.InferredProteinClassItemScored) -> item.TargetScore)
                 let decoyScoreF  = (fun (item: ProteinInference'.InferredProteinClassItemScored) -> item.DecoyScore)
-                let combWithReverse = Array.append combinedScoredClasses reverseNoMatch
-                let qValueFunction = initQValue qValMethod combWithReverse proteinsDB decoyBiggerF decoyScoreF targetScoreF
+                let qValueFunction = initQValue qValMethod bandwidth combWithReverse proteinsDB decoyBiggerF decoyScoreF targetScoreF
                 let qValuesAssigned =
                     combWithReverse
                     |> Array.map (FDRControl'.assignQValueToIPCIS qValueFunction)
                 qValuesAssigned
 
-            ProteinInference'.qValueHitsVisualization combinedScoredClassesQVal outDirectory groupFiles
+            ProteinInference'.qValueHitsVisualization bandwidth combinedScoredClassesQVal outDirectory groupFiles
 
             // Assign results to files in which they can be found
             classifiedProteins
@@ -347,19 +363,29 @@ module ProteinInference =
 
                 logger.Trace "Calculate q values for all proteins"
 
+                let combWithReverse = Array.append inferenceResultScored reverseNoMatch
+
+                let bandwidth =
+                    let dataLengthSqrt = ceil (sqrt (combWithReverse.Length |> float))
+                    let min, max = 
+                        let sorted =
+                            combWithReverse
+                            |> Array.sortBy ( fun x -> x.TargetScore)
+                        (sorted |> Array.head).TargetScore, (sorted |> Array.last).TargetScore
+                    (max-min)/dataLengthSqrt
+
                 // Assign q values to each protein
                 let inferenceResultScoredQVal =
                     let decoyBiggerF = (fun (item: ProteinInference'.InferredProteinClassItemScored) -> item.DecoyBigger)
                     let targetScoreF = (fun (item: ProteinInference'.InferredProteinClassItemScored) -> item.TargetScore)
                     let decoyScoreF  = (fun (item: ProteinInference'.InferredProteinClassItemScored) -> item.DecoyScore)
-                    let combWithReverse = Array.append inferenceResultScored reverseNoMatch
-                    let qValueFunction = initQValue qValMethod combWithReverse proteinsDB decoyBiggerF decoyScoreF targetScoreF
+                    let qValueFunction = initQValue qValMethod bandwidth combWithReverse proteinsDB decoyBiggerF decoyScoreF targetScoreF
                     let qValuesAssigned =
                         combWithReverse
                         |> Array.map (FDRControl'.assignQValueToIPCIS qValueFunction)
                     qValuesAssigned
 
-                ProteinInference'.qValueHitsVisualization inferenceResultScoredQVal outFile groupFiles
+                ProteinInference'.qValueHitsVisualization bandwidth inferenceResultScoredQVal outFile groupFiles
 
                 inferenceResultScoredQVal
                 |> Array.filter (fun inferredPCIQ -> not inferredPCIQ.Decoy)
