@@ -507,6 +507,7 @@ module FDRControl' =
     open FSharp.Plotly
     open Fitting'.NonLinearRegression'.LevenbergMarquardtConstrained'
     open FSharp.Stats.Interpolation
+    open FSharpAux.IO
 
     /// for given data, creates a logistic regression model and returns a mapping function for this model
     let getLogisticRegressionFunction (x:vector) (y:vector) epsilon =
@@ -547,15 +548,15 @@ module FDRControl' =
         |> Array.unzip3
         |> fun (score,pep,q) -> vector score, vector pep, vector q
 
-    /// Calculates q value mapping funtion for target/decoy dataset
-    let getQValueFunc pi0 bw (scoreF: 'A -> float) (isDecoyF: 'A -> bool) (data:'A[]) =
-        let (scores,_,q) = FDRControl.binningFunction bw pi0 scoreF isDecoyF data
-        FDRControl.getLogisticRegressionFunction scores q 0.0000001
+    ///// Calculates q value mapping funtion for target/decoy dataset
+    //let getQValueFunc pi0 bw (scoreF: 'A -> float) (isDecoyF: 'A -> bool) (data:'A[]) =
+    //    let (scores,_,q) = FDRControl.binningFunction bw pi0 scoreF isDecoyF data
+    //    FDRControl.getLogisticRegressionFunction scores q 0.0000001
 
-    /// Calculates q values for target/decoy dataset
-    let getQValues pi0 (scoreF: 'A -> float) (isDecoyF: 'A -> bool) (data:'A[]) =
-        let f = getQValueFunc pi0 0.01 scoreF isDecoyF data
-        Array.map (scoreF >> f) data
+    ///// Calculates q values for target/decoy dataset
+    //let getQValues pi0 (scoreF: 'A -> float) (isDecoyF: 'A -> bool) (data:'A[]) =
+    //    let f = getQValueFunc pi0 0.01 scoreF isDecoyF data
+    //    Array.map (scoreF >> f) data
 
     // FDR estimation using MAYU
     // Code form 'stirlingLogFactorial' to 'estimatePi0HG' translated from percolator 'ProteinFDREstimator.cpp'
@@ -801,6 +802,7 @@ module FDRControl' =
                     |> vector
                 estimatedParamsWithRSS LogisticFunction initial 0.001 10.0 lowerBound upperBound scores qVal
             )
+            |> Array.filter (fun (param,rss) -> not (param |> Vector.exists System.Double.IsNaN))
             |> Array.minBy snd
             |> fst
 
