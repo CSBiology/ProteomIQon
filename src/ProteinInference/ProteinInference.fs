@@ -38,9 +38,6 @@ module ProteinInference =
         |Storey-> FDRControl'.calculateQValueStorey data
         |LogisticRegression fdrMethod ->
             let fdr = initFDR fdrMethod data proteinDB
-
-            printfn "FDR: %f" fdr
-            printfn "Bandwidth: %f" bandwidth
             FDRControl'.calculateQValueLogReg fdr bandwidth data 
 
     /// Given a ggf3 and a fasta file, creates a collection of all theoretically possible peptides and the proteins they might
@@ -265,14 +262,15 @@ module ProteinInference =
             let combWithReverse = Array.append combinedScoredClasses reverseNoMatch
 
             let bandwidth =
-                let dataLengthSqrt = ceil (sqrt (combWithReverse.Length |> float))
-                let min, max = 
-                    let sorted =
-                        combWithReverse
-                        |> Array.sortBy ( fun x -> x.TargetScore)
-                    (sorted |> Array.head).TargetScore, (sorted |> Array.last).TargetScore
-                (max-min)/dataLengthSqrt
-                0.1
+                let data = 
+                    combWithReverse
+                    |> Array.map (fun x ->
+                        if x.DecoyBigger then
+                            x.DecoyScore
+                        else
+                            x.TargetScore
+                    )
+                FSharp.Stats.Distributions.Bandwidth.nrd0 data
 
             // Assign q values to each protein
             let combinedScoredClassesQVal =
@@ -366,13 +364,15 @@ module ProteinInference =
                 let combWithReverse = Array.append inferenceResultScored reverseNoMatch
 
                 let bandwidth =
-                    let dataLengthSqrt = ceil (sqrt (combWithReverse.Length |> float))
-                    let min, max = 
-                        let sorted =
-                            combWithReverse
-                            |> Array.sortBy ( fun x -> x.TargetScore)
-                        (sorted |> Array.head).TargetScore, (sorted |> Array.last).TargetScore
-                    (max-min)/dataLengthSqrt
+                    let data = 
+                        combWithReverse
+                        |> Array.map (fun x ->
+                            if x.DecoyBigger then
+                                x.DecoyScore
+                            else
+                                x.TargetScore
+                        )
+                    FSharp.Stats.Distributions.Bandwidth.nrd0 data
 
                 // Assign q values to each protein
                 let inferenceResultScoredQVal =
