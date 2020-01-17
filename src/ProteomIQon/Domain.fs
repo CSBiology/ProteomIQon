@@ -143,4 +143,10 @@ module Domain =
             GroupFiles             : bool
             GetQValue              : QValueMethod
         }
+
+    type SpectralLibraryParams =
+        {
+            ChargeList          : float list
+            MatchingTolerancePPM: float
+        }
    
