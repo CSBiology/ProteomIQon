@@ -447,19 +447,19 @@ module ProteinInference' =
         )
         |> Array.max
 
-    let qValueHitsVisualization inferredProteinClassItemScored path (groupFiles: bool) =
+    let qValueHitsVisualization bandwidth inferredProteinClassItemScored path (groupFiles: bool) =
         let decoy, target = inferredProteinClassItemScored |> Array.partition (fun x -> x.DecoyBigger)
         // Histogram with relative abundance
-        let freqTarget = FSharp.Stats.Distributions.Frequency.create 0.01 (target |> Array.map (fun x -> x.TargetScore))
+        let freqTarget = FSharp.Stats.Distributions.Frequency.create bandwidth (target |> Array.map (fun x -> x.TargetScore))
                             |> Map.toArray
                             |> Array.map (fun x -> fst x, (float (snd x)) / (float target.Length))
-        let freqDecoy  = FSharp.Stats.Distributions.Frequency.create 0.01 (decoy |> Array.map (fun x -> x.DecoyScore))
+        let freqDecoy  = FSharp.Stats.Distributions.Frequency.create bandwidth (decoy |> Array.map (fun x -> x.DecoyScore))
                             |> Map.toArray
                             |> Array.map (fun x -> fst x, (float (snd x)) / (float target.Length))
         // Histogram with absolute values
-        let freqTarget1 = FSharp.Stats.Distributions.Frequency.create 0.01 (target |> Array.map (fun x -> x.TargetScore))
+        let freqTarget1 = FSharp.Stats.Distributions.Frequency.create bandwidth (target |> Array.map (fun x -> x.TargetScore))
                             |> Map.toArray
-        let freqDecoy1  = FSharp.Stats.Distributions.Frequency.create 0.01 (decoy |> Array.map (fun x -> x.DecoyScore))
+        let freqDecoy1  = FSharp.Stats.Distributions.Frequency.create bandwidth (decoy |> Array.map (fun x -> x.DecoyScore))
                             |> Map.toArray
         let histogram =
             [
@@ -507,6 +507,7 @@ module FDRControl' =
     open FSharp.Plotly
     open Fitting'.NonLinearRegression'.LevenbergMarquardtConstrained'
     open FSharp.Stats.Interpolation
+    open FSharpAux.IO
 
     /// for given data, creates a logistic regression model and returns a mapping function for this model
     let getLogisticRegressionFunction (x:vector) (y:vector) epsilon =
@@ -547,15 +548,15 @@ module FDRControl' =
         |> Array.unzip3
         |> fun (score,pep,q) -> vector score, vector pep, vector q
 
-    /// Calculates q value mapping funtion for target/decoy dataset
-    let getQValueFunc pi0 bw (scoreF: 'A -> float) (isDecoyF: 'A -> bool) (data:'A[]) =
-        let (scores,_,q) = FDRControl.binningFunction bw pi0 scoreF isDecoyF data
-        FDRControl.getLogisticRegressionFunction scores q 0.0000001
+    ///// Calculates q value mapping funtion for target/decoy dataset
+    //let getQValueFunc pi0 bw (scoreF: 'A -> float) (isDecoyF: 'A -> bool) (data:'A[]) =
+    //    let (scores,_,q) = FDRControl.binningFunction bw pi0 scoreF isDecoyF data
+    //    FDRControl.getLogisticRegressionFunction scores q 0.0000001
 
-    /// Calculates q values for target/decoy dataset
-    let getQValues pi0 (scoreF: 'A -> float) (isDecoyF: 'A -> bool) (data:'A[]) =
-        let f = getQValueFunc pi0 0.01 scoreF isDecoyF data
-        Array.map (scoreF >> f) data
+    ///// Calculates q values for target/decoy dataset
+    //let getQValues pi0 (scoreF: 'A -> float) (isDecoyF: 'A -> bool) (data:'A[]) =
+    //    let f = getQValueFunc pi0 0.01 scoreF isDecoyF data
+    //    Array.map (scoreF >> f) data
 
     // FDR estimation using MAYU
     // Code form 'stirlingLogFactorial' to 'estimatePi0HG' translated from percolator 'ProteinFDREstimator.cpp'
@@ -764,7 +765,7 @@ module FDRControl' =
         decoyCount/targetCount
 
     /// Gives a function to calculate the q value for a score in a dataset using Lukas method and Levenberg Marguardt fitting
-    let calculateQValueLogReg fdrEstimate (data: 'a []) (isDecoy: 'a -> bool) (decoyScoreF: 'a -> float) (targetScoreF: 'a -> float) =
+    let calculateQValueLogReg fdrEstimate bandwidth (data: 'a []) (isDecoy: 'a -> bool) (decoyScoreF: 'a -> float) (targetScoreF: 'a -> float) =
         // Input for q value calculation
         let createTargetDecoyInput =
             data
@@ -776,7 +777,7 @@ module FDRControl' =
             )
 
         let scores,pep,qVal =
-            binningFunction 0.01 fdrEstimate (fun (x: ProteinInference'.QValueInput) -> x.Score) (fun (x: ProteinInference'.QValueInput) -> x.IsDecoy) createTargetDecoyInput
+            binningFunction bandwidth fdrEstimate (fun (x: ProteinInference'.QValueInput) -> x.Score) (fun (x: ProteinInference'.QValueInput) -> x.IsDecoy) createTargetDecoyInput
             |> fun (scores,pep,qVal) -> scores.ToArray(), pep.ToArray(), qVal.ToArray()
 
         //Chart.Point (scores,qVal)
@@ -801,6 +802,7 @@ module FDRControl' =
                     |> vector
                 estimatedParamsWithRSS LogisticFunction initial 0.001 10.0 lowerBound upperBound scores qVal
             )
+            |> Array.filter (fun (param,rss) -> not (param |> Vector.exists System.Double.IsNaN))
             |> Array.minBy snd
             |> fst
 

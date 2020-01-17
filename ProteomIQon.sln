@@ -73,6 +73,8 @@ Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "PSMBasedQuantification", "s
 EndProject
 Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "ProteinInference", "src\ProteinInference\ProteinInference.fsproj", "{05F0A998-5079-4538-9E40-07DB279C1467}"
 EndProject
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "SpectralLibrary", "src\SpectralLibrary\SpectralLibrary.fsproj", "{BE399297-D833-4646-B996-7C018332F540}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -111,6 +113,10 @@ Global
 		{05F0A998-5079-4538-9E40-07DB279C1467}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{05F0A998-5079-4538-9E40-07DB279C1467}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{05F0A998-5079-4538-9E40-07DB279C1467}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BE399297-D833-4646-B996-7C018332F540}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BE399297-D833-4646-B996-7C018332F540}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BE399297-D833-4646-B996-7C018332F540}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BE399297-D833-4646-B996-7C018332F540}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
