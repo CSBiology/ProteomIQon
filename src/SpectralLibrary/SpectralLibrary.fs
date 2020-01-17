@@ -93,8 +93,8 @@ module SpectralLibrary =
 
         let inReader = Core.MzIO.Reader.getReader instrumentOutput
         //let inRunID = Core.MzIO.Reader.getDefaultRunID inReader
-        let inTr = inReader.BeginTransaction()
 
+        let inTr = inReader.BeginTransaction()
         let psmFile =
             Seq.fromFileWithCsvSchema<PSMStatisticsResult>(scoredPSMs, '\t', false,schemaMode = FSharpAux.IO.SchemaReader.Csv.SchemaModes.Fill, skipLines = 1)
             |> Seq.toArray
@@ -122,7 +122,6 @@ module SpectralLibrary =
                     )
                 assigned
             )
-
 
         let ionInformations =
             assignIntensitiesToMasses psmFile spectralLibraryParams.ChargeList spectralLibraryParams.MatchingTolerancePPM

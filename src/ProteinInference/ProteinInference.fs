@@ -153,8 +153,8 @@ module ProteinInference =
         let outFiles: string list =
             rawFilePaths
             |> List.map (fun filePath ->
-                let foldername = (rawFolderPath.Split ([|"\\"|], System.StringSplitOptions.None))
-                outDirectory + @"\" + foldername.[foldername.Length - 1] + "\\" + (System.IO.Path.GetFileNameWithoutExtension filePath) + ".prot"
+                //let foldername = (rawFolderPath.Split ([|"\\"|], System.StringSplitOptions.None))
+                outDirectory + @"\" (*+ foldername.[foldername.Length - 1]*) + "\\" + (System.IO.Path.GetFileNameWithoutExtension filePath) + ".prot"
                 )
 
         let dbParams = ProteomIQon.SearchDB'.getSDBParamsBy dbConnection
