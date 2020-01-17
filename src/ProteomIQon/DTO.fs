@@ -457,30 +457,27 @@ module Dto =
               GetQValue              : QValueMethod
           }
 
-    //let matchQValueCalc (method: QValueMethod) =
-    //    match method with
-    //    |Storey ->
-    //        WithoutMAYU (fun data isDecoy decoyScoreF targetScoreF ->
-    //            FDRControl'.calculateQValueStorey data isDecoy decoyScoreF targetScoreF)
-    //    |LogisticRegression fdrMethod ->
-    //        match fdrMethod with
-    //        |DecoyTargetRatio ->
-    //            WithoutMAYU (fun data isDecoy decoyScoreF targetScoreF ->
-    //                FDRControl'.calculateQValueLogReg (FDRControl'.calculateFDRwithDecoyTargetRatio data) data isDecoy decoyScoreF targetScoreF)
-    //        |Conservative ->
-    //            WithoutMAYU (fun data isDecoy decoyScoreF targetScoreF ->
-    //                FDRControl'.calculateQValueLogReg 1. data isDecoy decoyScoreF targetScoreF)
-    //        |MAYU ->
-    //            WithMAYU (fun data db isDecoy decoyScoreF targetScoreF ->
-    //                    FDRControl'.calculateQValueLogReg (FDRControl'.calculateFDRwithMAYU data db) data isDecoy decoyScoreF targetScoreF)
-
     module ProteinInferenceParams =
 
-        let toDomain (dtoProteinInferenceParams : ProteinInferenceParams): Domain.ProteinInferenceParams =
+        let toDomain (dtoProteinInferenceParams: ProteinInferenceParams): Domain.ProteinInferenceParams =
             {
                 ProteinIdentifierRegex = dtoProteinInferenceParams.ProteinIdentifierRegex
                 Protein                = dtoProteinInferenceParams.Protein
                 Peptide                = dtoProteinInferenceParams.Peptide
                 GroupFiles             = dtoProteinInferenceParams.GroupFiles
                 GetQValue              = dtoProteinInferenceParams.GetQValue
+            }
+
+    type SpectralLibraryParams =
+        {
+            ChargeList          : float list
+            MatchingTolerancePPM: float
+        }
+
+    module SpectralLibraryParams =
+
+        let toDomain (dtoSpectralLibraryParams: SpectralLibraryParams): Domain.SpectralLibraryParams =
+            {
+                ChargeList           = dtoSpectralLibraryParams.ChargeList
+                MatchingTolerancePPM = dtoSpectralLibraryParams.MatchingTolerancePPM
             }
