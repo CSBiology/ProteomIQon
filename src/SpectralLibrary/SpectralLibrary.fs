@@ -10,11 +10,10 @@ open System.Data.SQLite
 open System.Data
 open ProteomIQon
 
-
 module SpectralLibrary =
-    
+
     /// Holds information about ion and in which spectrum it is found.
-    type IonInformation = 
+    type IonInformation =
         {
             Charge        : float
             Iontype       : Ions.IonTypeFlag
@@ -24,7 +23,7 @@ module SpectralLibrary =
             ModSequenceID : int
             PSMId         : string
         }
-    
+
     let createIonInformation charge iontype mOverZ number intensity modSeqID psmID =
         {
             Charge         = charge
@@ -58,31 +57,34 @@ module SpectralLibrary =
     /// Prepares statement to select a ModSequence entry by ModSequenceID
     let prepareSelectModsequenceByModSequenceID (cn:SQLiteConnection) =
         let querystring = "SELECT * FROM ModSequence WHERE ID=@id"
-        let cmd = new SQLiteCommand(querystring, cn) 
-        cmd.Parameters.Add("@id", DbType.Int64) |> ignore       
-        (fun (id:int)  ->        
+        let cmd = new SQLiteCommand(querystring, cn)
+        cmd.Parameters.Add("@id", DbType.Int64) |> ignore
+        (fun (id:int)  ->
             cmd.Parameters.["@id"].Value <- id
-    
-            use reader = cmd.ExecuteReader()            
+
+            use reader = cmd.ExecuteReader()
             match reader.Read() with
             | true ->  (reader.GetInt32(0), reader.GetInt32(1),reader.GetDouble(2), reader.GetInt64(3), reader.GetString(4), reader.GetInt32(5))
             | false -> -1,-1,nan,-1L,"",-1
         )
 
     /// Returns a LookUpResult list
-    let getThreadSafePeptideLookUpFromFileBy (cn:SQLiteConnection) sdbParams = 
+    let getThreadSafePeptideLookUpFromFileBy (cn:SQLiteConnection) sdbParams =
         let parseAAString = initOfModAminoAcidString sdbParams.IsotopicMod (sdbParams.FixedMods@sdbParams.VariableMods)
-        let selectModsequenceByID = prepareSelectModsequenceByModSequenceID cn 
-        (fun id -> 
+        let selectModsequenceByID = prepareSelectModsequenceByModSequenceID cn
+        (fun id ->
                 selectModsequenceByID id
                 |> (createLookUpResultBy parseAAString)
         )
 
-    let createSpectralLibrary (chargeList: float list) (matchingTolerance: float) (cn: SQLiteConnection) (instrumentOutput: string) (scoredPSMs: string)=
+    let createSpectralLibrary (outDir: string) (spectralLibraryParams: Domain.SpectralLibraryParams) (cn: SQLiteConnection) (instrumentOutputAndScoredPSMs: string*string)  =
 
+        let instrumentOutput, scoredPSMs = instrumentOutputAndScoredPSMs
         let cn = SearchDB.getDBConnection @"C:\Users\jonat\source\repos\davedata\PSMStatisticsTest\Chlamy15N.db"
         let memoryDB = SearchDB.copyDBIntoMemory cn
         let dBParams = getSDBParamsBy memoryDB
+
+        let outFile = sprintf @"%s%s.sl" outDir (System.IO.Path.GetFileNameWithoutExtension scoredPSMs)
 
         let peptideLookUp = getThreadSafePeptideLookUpFromFileBy memoryDB dBParams
 
@@ -90,7 +92,7 @@ module SpectralLibrary =
             Fragmentation.Series.fragmentMasses Fragmentation.Series.bOfBioList Fragmentation.Series.yOfBioList dBParams.MassFunction aal
 
         let inReader = Core.MzIO.Reader.getReader instrumentOutput
-        let inRunID = Core.MzIO.Reader.getDefaultRunID inReader
+        //let inRunID = Core.MzIO.Reader.getDefaultRunID inReader
         let inTr = inReader.BeginTransaction()
 
         let psmFile =
@@ -99,15 +101,15 @@ module SpectralLibrary =
 
         let assignIntensitiesToMasses (psms: PSMStatisticsResult []) (chargeList: float list) (matchingTolerance: float) =
             psms
-            |> Array.map (fun psm -> 
+            |> Array.map (fun psm ->
                 let sequence = peptideLookUp psm.ModSequenceID
-                let frag = 
+                let frag =
                     let ionSeries = (calcIonSeries sequence.BioSequence).TargetMasses
                     ProteomIQon.Fragmentation'.ladderElement ionSeries chargeList
                     |> List.map (fun frag -> frag.MainPeak::frag.DependentPeaks)
                     |> List.concat
                 let spec = inReader.ReadSpectrumPeaks psm.PSMId
-                let assigned = 
+                let assigned =
                     spec.Peaks
                     |> Seq.collect (fun (peak: MzIO.Binary.Peak1D) ->
                         frag
@@ -121,4 +123,9 @@ module SpectralLibrary =
                 assigned
             )
 
-        assignIntensitiesToMasses psmFile chargeList matchingTolerance
+        let ionInformations =
+            assignIntensitiesToMasses psmFile spectralLibraryParams.ChargeList spectralLibraryParams.MatchingTolerancePPM
+
+        ionInformations
+        |> FSharpAux.IO.SeqIO.Seq.CSV "\t" false false
+        |> Seq.write outFile
