@@ -84,7 +84,7 @@ module SpectralLibrary =
         let memoryDB = SearchDB.copyDBIntoMemory cn
         let dBParams = getSDBParamsBy memoryDB
 
-        let outFile = sprintf @"%s%s.sl" outDir (System.IO.Path.GetFileNameWithoutExtension scoredPSMs)
+        let outFile = sprintf @"%s\%s.sl" outDir (System.IO.Path.GetFileNameWithoutExtension scoredPSMs)
 
         let peptideLookUp = getThreadSafePeptideLookUpFromFileBy memoryDB dBParams
 
@@ -101,7 +101,7 @@ module SpectralLibrary =
 
         let assignIntensitiesToMasses (psms: PSMStatisticsResult []) (chargeList: float list) (matchingTolerance: float) =
             psms
-            |> Array.map (fun psm ->
+            |> Seq.collect (fun psm ->
                 let sequence = peptideLookUp psm.ModSequenceID
                 let frag =
                     let ionSeries = (calcIonSeries sequence.BioSequence).TargetMasses
@@ -113,7 +113,7 @@ module SpectralLibrary =
                     spec.Peaks
                     |> Seq.collect (fun (peak: MzIO.Binary.Peak1D) ->
                         frag
-                        |> List.choose (fun ion ->
+                        |> Seq.choose (fun ion ->
                             if (abs (ion.MassOverCharge - peak.Mz)) <= (Mass.deltaMassByPpm matchingTolerance peak.Mz) then
                                 Some (createIonInformation ion.Charge ion.Iontype ion.MassOverCharge ion.Number peak.Intensity psm.ModSequenceID psm.PSMId)
                             else
@@ -123,9 +123,10 @@ module SpectralLibrary =
                 assigned
             )
 
+
         let ionInformations =
             assignIntensitiesToMasses psmFile spectralLibraryParams.ChargeList spectralLibraryParams.MatchingTolerancePPM
 
         ionInformations
-        |> FSharpAux.IO.SeqIO.Seq.CSV "\t" false false
+        |> FSharpAux.IO.SeqIO.Seq.CSV "\t" true true
         |> Seq.write outFile
