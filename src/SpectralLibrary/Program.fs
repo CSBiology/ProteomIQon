@@ -73,5 +73,5 @@ module console1 =
             failwith "Both, instrument output and PSMStatistics result must be either a path or a folder."
         else 
             failwith "The given paths to the instrument output and PSMStatistics result are neither valid file paths nor valid directory paths."
-        System.Console.ReadKey() |> ignore
+        logger.Info "Done"
         0
