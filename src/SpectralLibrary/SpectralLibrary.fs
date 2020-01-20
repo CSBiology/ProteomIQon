@@ -80,7 +80,6 @@ module SpectralLibrary =
     let createSpectralLibrary (outDir: string) (spectralLibraryParams: Domain.SpectralLibraryParams) (cn: SQLiteConnection) (instrumentOutputAndScoredPSMs: string*string)  =
 
         let instrumentOutput, scoredPSMs = instrumentOutputAndScoredPSMs
-        let cn = SearchDB.getDBConnection @"C:\Users\jonat\source\repos\davedata\PSMStatisticsTest\Chlamy15N.db"
         let memoryDB = SearchDB.copyDBIntoMemory cn
         let dBParams = getSDBParamsBy memoryDB
 
