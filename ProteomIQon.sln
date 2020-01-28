@@ -75,6 +75,8 @@ Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "ProteinInference", "src\Pro
 EndProject
 Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "SpectralLibrary", "src\SpectralLibrary\SpectralLibrary.fsproj", "{BE399297-D833-4646-B996-7C018332F540}"
 EndProject
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "ConsensusSpectralLibrary", "src\ConsensusSpectralLibrary\ConsensusSpectralLibrary.fsproj", "{27D46B9F-885C-4F89-813A-93290D4E85B4}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -117,6 +119,10 @@ Global
 		{BE399297-D833-4646-B996-7C018332F540}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{BE399297-D833-4646-B996-7C018332F540}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{BE399297-D833-4646-B996-7C018332F540}.Release|Any CPU.Build.0 = Release|Any CPU
+		{27D46B9F-885C-4F89-813A-93290D4E85B4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{27D46B9F-885C-4F89-813A-93290D4E85B4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{27D46B9F-885C-4F89-813A-93290D4E85B4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{27D46B9F-885C-4F89-813A-93290D4E85B4}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
