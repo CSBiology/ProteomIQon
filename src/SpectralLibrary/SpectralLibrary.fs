@@ -22,9 +22,11 @@ module SpectralLibrary =
             Intensity     : float
             ModSequenceID : int
             PSMId         : string
+            PrecursorMZ   : float
+            ScanTime      : float
         }
 
-    let createIonInformation charge iontype mOverZ number intensity modSeqID psmID =
+    let createIonInformation charge iontype mOverZ number intensity modSeqID psmID precMZ scanTime =
         {
             Charge         = charge
             Iontype        = iontype
@@ -33,6 +35,8 @@ module SpectralLibrary =
             Intensity      = intensity
             ModSequenceID  = modSeqID
             PSMId          = psmID
+            PrecursorMZ    = precMZ
+            ScanTime       = scanTime
         }
 
     /// Returns SearchDbParams of a existing database by filePath
@@ -79,9 +83,14 @@ module SpectralLibrary =
 
     let createSpectralLibrary (outDir: string) (spectralLibraryParams: Domain.SpectralLibraryParams) (cn: SQLiteConnection) (instrumentOutputAndScoredPSMs: string*string)  =
 
+
         let instrumentOutput, scoredPSMs = instrumentOutputAndScoredPSMs
+        let logger = Logging.createLogger (System.IO.Path.GetFileNameWithoutExtension scoredPSMs)
+        logger.Trace "Copy DB into memory"
         let memoryDB = SearchDB.copyDBIntoMemory cn
         let dBParams = getSDBParamsBy memoryDB
+
+        logger.Trace (sprintf "Creating Library using the following files:\n%s\n%s" instrumentOutput scoredPSMs)
 
         let outFile = sprintf @"%s\%s.sl" outDir (System.IO.Path.GetFileNameWithoutExtension scoredPSMs)
 
@@ -92,12 +101,13 @@ module SpectralLibrary =
 
         let inReader = Core.MzIO.Reader.getReader instrumentOutput
         //let inRunID = Core.MzIO.Reader.getDefaultRunID inReader
-
+        logger.Trace "Reading instrument output"
         let inTr = inReader.BeginTransaction()
+        logger.Trace "Reading psm file"
         let psmFile =
             Seq.fromFileWithCsvSchema<PSMStatisticsResult>(scoredPSMs, '\t', false,schemaMode = FSharpAux.IO.SchemaReader.Csv.SchemaModes.Fill, skipLines = 1)
             |> Seq.toArray
-
+        logger.Trace "Creating library"
         let assignIntensitiesToMasses (psms: PSMStatisticsResult []) (chargeList: float list) (matchingTolerance: float) =
             psms
             |> Seq.collect (fun psm ->
@@ -114,7 +124,7 @@ module SpectralLibrary =
                         frag
                         |> Seq.choose (fun ion ->
                             if (abs (ion.MassOverCharge - peak.Mz)) <= (Mass.deltaMassByPpm matchingTolerance peak.Mz) then
-                                Some (createIonInformation ion.Charge ion.Iontype ion.MassOverCharge ion.Number peak.Intensity psm.ModSequenceID psm.PSMId)
+                                Some (createIonInformation ion.Charge ion.Iontype ion.MassOverCharge ion.Number peak.Intensity psm.ModSequenceID psm.PSMId psm.PrecursorMZ psm.ScanTime)
                             else
                                 None
                         )
