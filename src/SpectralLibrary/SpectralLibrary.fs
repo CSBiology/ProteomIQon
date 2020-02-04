@@ -126,7 +126,7 @@ module SpectralLibrary =
                         frag
                         |> Seq.choose (fun ion ->
                             if (abs (ion.MassOverCharge - peak.Mz)) <= (Mass.deltaMassByPpm matchingTolerance peak.Mz) then
-                                Some (createIonInformation ion.Charge ion.Iontype ion.MassOverCharge ion.Number peak.Intensity psm.ModSequenceID psm.PSMId psm.PrecursorMZ psm.ScanTime sequence.StringSequence)
+                                Some (createIonInformation ion.Charge ion.Iontype ion.MassOverCharge ion.Number peak.Intensity psm.ModSequenceID psm.PSMId psm.TheoMass psm.ScanTime sequence.StringSequence)
                             else
                                 None
                         )
