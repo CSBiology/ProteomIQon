@@ -149,4 +149,10 @@ module Domain =
             ChargeList          : float list
             MatchingTolerancePPM: float
         }
+
+    type ConsensusSpectralLibraryParams =
+        {
+            RTTolerance: float
+            iRTPeptides: string list
+        }
    
