@@ -11,7 +11,6 @@ module console1 =
 
         let parser = ArgumentParser.Create<CLIArguments>(programName =  (System.Reflection.Assembly.GetExecutingAssembly().GetName().Name))
         let results = parser.Parse argv
-        ConsensusSpectralLibrary.printParams (results.GetAllResults())
         printfn "Hit any key to exit."
         System.Console.ReadKey() |> ignore
         0
