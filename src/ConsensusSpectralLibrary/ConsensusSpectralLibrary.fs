@@ -75,7 +75,7 @@ module ConsensusSpectralLibrary =
         |> Array.map snd
 
 
-    let buildConsens (paths: string []) tolerance =
+    let buildConsens (paths: string []) tolerance (outPath: string)=
         let head =
             Seq.fromFileWithCsvSchema<IonInformation>(paths.[0], '\t', true,schemaMode = FSharpAux.IO.SchemaReader.Csv.SchemaModes.Fill)
             |> Seq.toArray
@@ -144,4 +144,4 @@ module ConsensusSpectralLibrary =
         loop 1 head
         |> Array.concat
         |> FSharpAux.IO.SeqIO.Seq.CSV "\t" true true
-        |> Seq.write @"C:\Users\jonat\source\repos\SWATHTest\SpectralLibrary\test\test.csl"
+        |> Seq.write (sprintf @"%s/Consens.csl"outPath)

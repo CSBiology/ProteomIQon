@@ -27,13 +27,13 @@ module console1 =
         if File.Exists i then
             logger.Info (sprintf "single file")
             logger.Trace (sprintf "Generating consensus library for %s.\nIt is recommended to use at least two libraries for a consensus library" i)
-            buildConsens [|i|] p.RTTolerance
+            buildConsens [|i|] p.RTTolerance o
         elif Directory.Exists i then
             logger.Info (sprintf "multiple files")
             let libraryFiles =
-                Directory.GetFiles(i,("*.mzlite"))
+                Directory.GetFiles(i,("*.sl"))
             logger.Trace (sprintf "Generating consensus library for: %A" libraryFiles)
-            buildConsens libraryFiles p.RTTolerance
+            buildConsens libraryFiles p.RTTolerance o
         else
             failwith "The given paths to the instrument output and PSMStatistics result are neither valid file paths nor valid directory paths."
         logger.Info "Done"
