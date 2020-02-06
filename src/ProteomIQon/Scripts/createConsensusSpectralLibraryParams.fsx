@@ -16,7 +16,7 @@ let serialized =
     defaultConsensusSpectralLibraryParams
     |> Json.serialize
 
-System.IO.File.WriteAllText(__SOURCE_DIRECTORY__ + @"/../defaultParams\SpectralLibraryParams.json",serialized)
+System.IO.File.WriteAllText(__SOURCE_DIRECTORY__ + @"/../defaultParams\ConsensusSpectralLibraryParams.json",serialized)
 
 let deserialized = 
     System.IO.File.ReadAllText(__SOURCE_DIRECTORY__ + @"/../defaultParams\SpectralLibraryParams.json")

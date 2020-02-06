@@ -934,7 +934,8 @@ module Fragmentation' =
     let ladderElement (ionList: Mz.PeakFamily<Mz.TaggedMass.TaggedMass> list) (chargeList: float list) =
         let groupedList =
             ionList
-            |> List.groupBy ( fun x -> x.MainPeak.Iontype)
+            |> List.groupBy ( fun x -> 
+                x.MainPeak.Iontype)
             |> List.map snd
             |> List.map List.sort
         groupedList
