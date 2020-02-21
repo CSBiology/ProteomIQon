@@ -30,4 +30,3 @@ let deserialized =
     System.IO.File.ReadAllText(__SOURCE_DIRECTORY__ + @"/../defaultParams\ProteinInferenceParams.json")
     |> Json.deserialize<Dto.ProteinInferenceParams>
     |> ProteinInferenceParams.toDomain
-
