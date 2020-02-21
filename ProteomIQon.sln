@@ -30,6 +30,12 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "content", "content", "{8E6D5255-776D-4B61-85F9-73C37AA1FB9A}"
 	ProjectSection(SolutionItems) = preProject
 		docsrc\content\index.fsx = docsrc\content\index.fsx
+		docsrc\content\PeptideDB.fsx = docsrc\content\PeptideDB.fsx
+		docsrc\content\PeptideSpectrumMatching.fsx = docsrc\content\PeptideSpectrumMatching.fsx
+		docsrc\content\Preprocessing.fsx = docsrc\content\Preprocessing.fsx
+		docsrc\content\ProteinInference.fsx = docsrc\content\ProteinInference.fsx
+		docsrc\content\PSMBasedQuantification.fsx = docsrc\content\PSMBasedQuantification.fsx
+		docsrc\content\PSMSatistics.fsx = docsrc\content\PSMSatistics.fsx
 		docsrc\content\tutorial.fsx = docsrc\content\tutorial.fsx
 	EndProjectSection
 EndProject
@@ -73,6 +79,8 @@ Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "PSMBasedQuantification", "s
 EndProject
 Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "ProteinInference", "src\ProteinInference\ProteinInference.fsproj", "{05F0A998-5079-4538-9E40-07DB279C1467}"
 EndProject
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "SpectralLibrary", "src\SpectralLibrary\SpectralLibrary.fsproj", "{BE399297-D833-4646-B996-7C018332F540}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -111,6 +119,10 @@ Global
 		{05F0A998-5079-4538-9E40-07DB279C1467}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{05F0A998-5079-4538-9E40-07DB279C1467}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{05F0A998-5079-4538-9E40-07DB279C1467}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BE399297-D833-4646-B996-7C018332F540}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BE399297-D833-4646-B996-7C018332F540}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BE399297-D833-4646-B996-7C018332F540}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BE399297-D833-4646-B996-7C018332F540}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
