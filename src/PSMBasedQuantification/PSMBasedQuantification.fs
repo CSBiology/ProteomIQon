@@ -185,6 +185,7 @@ module PSMBasedQuantification =
             createAveragePSM meanPrecMz meanScanTime weightedAvgScanTime meanScore retData itzDataCorrected ItzDataUncorrected
 
     type InferredPeak = {
+        Model                    :HULQ.PeakModel option
         Area                     :float
         StandardErrorOfPrediction:float
         MeasuredApexIntensity    :float
@@ -195,7 +196,7 @@ module PSMBasedQuantification =
         yFitted                  :float[]
         }
 
-    let quantifyInferredPeak minSNR polOrder estWindowSize getXic targetMz targetScanTime =
+    let quantifyInferredPeak minSNR polOrder estWindowSize getXic targetMz targetScanTime inferredScanTime =
         try
             let (retData,itzData,uncorrectedItzData)   =
                 getXic targetScanTime targetMz
@@ -203,6 +204,7 @@ module PSMBasedQuantification =
             let peaks          = SignalDetectionTemp.getPeaks minSNR polOrder windowSize retData itzData
             if Array.isEmpty peaks then
                 {
+                    Model                     = None 
                     Area                      = nan
                     StandardErrorOfPrediction = nan
                     MeasuredApexIntensity     = nan
@@ -213,9 +215,10 @@ module PSMBasedQuantification =
                     yFitted                   = [||]
                 }
             else
-                let peakToQuantify = BioFSharp.Mz.Quantification.HULQ.getPeakBy peaks targetScanTime
+                let peakToQuantify = BioFSharp.Mz.Quantification.HULQ.getPeakBy peaks inferredScanTime
                 let quantP         = BioFSharp.Mz.Quantification.HULQ.quantifyPeak peakToQuantify
                 {
+                    Model                     = quantP.Model 
                     Area                      = quantP.Area
                     StandardErrorOfPrediction = quantP.StandardErrorOfPrediction
                     MeasuredApexIntensity     = quantP.MeasuredApexIntensity
@@ -228,6 +231,7 @@ module PSMBasedQuantification =
         with
         | _ -> 
             {
+                Model                     = None
                 Area                      = nan
                 StandardErrorOfPrediction = nan
                 MeasuredApexIntensity     = nan
@@ -275,10 +279,33 @@ module PSMBasedQuantification =
             |> fst
         optimizedWindowWidth
 
+    ///
     let initGetWindowWidth (windowEst:Domain.WindowSize) polynomOrder (windowWidthToTest:int[]) noiseAutoCorrelationMedian =
         match windowEst with
         | Domain.WindowSize.Fixed w  -> fun yData -> w
         | Domain.WindowSize.Estimate -> fun yData -> optimizeWindowWidth polynomOrder windowWidthToTest noiseAutoCorrelationMedian yData
+   
+    ///
+    let calcCorrelation (xValues:float []) (quantifiedPeak:HULQ.QuantifiedPeak) (inferredPeak:InferredPeak) = 
+        let getValue (model:HULQ.PeakModel) estParams =
+            match model with
+            | HULQ.PeakModel.Gaussian m -> 
+                m.GetFunctionValue (vector estParams)
+            | HULQ.PeakModel.EMG m -> 
+                m.GetFunctionValue (vector estParams)
+        match quantifiedPeak.Model, inferredPeak.Model with 
+        | Some q , Some i -> 
+            let xValuesBW = 
+                [|for i = 1 to xValues.Length-1 do abs(xValues.[i] - xValues.[i-1])|]
+                |> Array.median
+            let xValues = [|xValues.[0] .. xValuesBW/2. .. xValues.[xValues.Length-1]|]
+            let fQ = getValue q quantifiedPeak.EstimatedParams
+            let yQ = xValues |> Array.map fQ
+            let fI = getValue i inferredPeak.EstimatedParams
+            let yI = xValues |> Array.map fI
+            FSharp.Stats.Correlation.Seq.pearson yQ yI
+        | _ -> nan
+
     ///
     let quantifyPeptides (processParams:Domain.QuantificationParams) (outputDir:string) (cn:SQLiteConnection) (instrumentOutput:string) (scoredPSMs:string)  =
 
@@ -420,11 +447,15 @@ module PSMBasedQuantification =
                         let windowWidth = getWindowWidth averagePSM.Y_Xic_uncorrected
                         let peaks = SignalDetectionTemp.getPeaks processParams.XicExtraction.MinSNR processParams.XicExtraction.PolynomOrder windowWidth averagePSM.X_Xic averagePSM.Y_Xic
                         if Array.isEmpty peaks then 
+                            Chart.Point(averagePSM.X_Xic, averagePSM.Y_Xic)
+                            |> Chart.withTitle(sprintf "Sequence= %s,globalMod = %i, WindowWidth = %i _notQuantified" sequence globMod windowWidth)
+                            |> Chart.withSize(1500.,800.)
+                            |> Chart.SaveHtmlAs(Path.Combine[|plotDirectory; ((sequence |> String.filter (fun x -> x <> '*')) + "_GMod_" + globMod.ToString() + "Ch" + ch.ToString() + "_notQuantified")|])
                             None
                         else
                         let peakToQuantify = BioFSharp.Mz.Quantification.HULQ.getPeakBy peaks averagePSM.WeightedAvgScanTime
-                        let quantP = BioFSharp.Mz.Quantification.HULQ.quantifyPeak peakToQuantify
-                        let searchScanTime =
+                        let quantP = BioFSharp.Mz.Quantification.HULQ.quantifyPeak peakToQuantify                        
+                        let inferredScanTime =
                             if Array.isEmpty quantP.EstimatedParams then
                                 averagePSM.WeightedAvgScanTime
                             elif abs (quantP.EstimatedParams.[1] - averagePSM.WeightedAvgScanTime) >  processParams.XicExtraction.ScanTimeWindow then
@@ -436,10 +467,11 @@ module PSMBasedQuantification =
                         if globMod = 0 then
                             let n15mz          = Mass.toMZ (labeledMass.Value) (ch|> float)
                             //logger.Trace "quantify inferred"
-                            let n15Inferred    = quantifyInferredPeak processParams.XicExtraction.MinSNR processParams.XicExtraction.PolynomOrder getWindowWidth getXIC n15mz searchScanTime
+                            let n15Inferred    = quantifyInferredPeak processParams.XicExtraction.MinSNR processParams.XicExtraction.PolynomOrder getWindowWidth getXIC n15mz averagePSM.WeightedAvgScanTime inferredScanTime
                             //logger.Trace "quantify n15Minus 1"
                             let n15Minus1Mz    = n15mz - (Mass.Table.NMassInU / (ch|> float))
-                            let n15Minus1Inferred = quantifyInferredPeak processParams.XicExtraction.MinSNR processParams.XicExtraction.PolynomOrder getWindowWidth getXIC n15Minus1Mz searchScanTime
+                            let n15Minus1Inferred = quantifyInferredPeak processParams.XicExtraction.MinSNR processParams.XicExtraction.PolynomOrder getWindowWidth getXIC n15Minus1Mz averagePSM.WeightedAvgScanTime inferredScanTime
+                            let corrN14N15       = calcCorrelation averagePSM.X_Xic quantP n15Inferred  
                             let chart = saveChart windowWidth sequence globMod ch averagePSM.X_Xic averagePSM.Y_Xic ms2s averagePSM.WeightedAvgScanTime
                                                 peakToQuantify.XData peakToQuantify.YData quantP.YPredicted n15Inferred.xXic n15Inferred.yXic n15Inferred.xPeak n15Inferred.yFitted plotDirectory
                             {
@@ -469,15 +501,18 @@ module PSMBasedQuantification =
                             N15Minus1MeasuredApex     = n15Minus1Inferred.MeasuredApexIntensity
                             N15Minus1Seo              = n15Minus1Inferred.StandardErrorOfPrediction
                             N15Minus1Params           = n15Minus1Inferred.EstimatedParams  |> Array.fold (fun acc x -> acc + " " + x.ToString() + ";") ""
+                            N14N15Correlation         = corrN14N15
+                            QuantificationSource      = QuantificationSource.PSM
                             }
                             |> Option.Some
                         else
                             let n14mz          = Mass.toMZ (unlabeledMass.Value) (ch|> float)
                             //logger.Trace "quantify inferred"
-                            let n14Inferred    = quantifyInferredPeak processParams.XicExtraction.MinSNR processParams.XicExtraction.PolynomOrder getWindowWidth getXIC n14mz searchScanTime
+                            let n14Inferred    = quantifyInferredPeak processParams.XicExtraction.MinSNR processParams.XicExtraction.PolynomOrder getWindowWidth getXIC n14mz averagePSM.WeightedAvgScanTime inferredScanTime
                             //logger.Trace "quantify n15Minus 1"
                             let n15Minus1Mz    = averagePSM.MeanPrecMz - (Mass.Table.NMassInU / (ch|> float))
-                            let n15Minus1Inferred = quantifyInferredPeak processParams.XicExtraction.MinSNR processParams.XicExtraction.PolynomOrder getWindowWidth getXIC n15Minus1Mz searchScanTime
+                            let n15Minus1Inferred = quantifyInferredPeak processParams.XicExtraction.MinSNR processParams.XicExtraction.PolynomOrder getWindowWidth getXIC n15Minus1Mz averagePSM.WeightedAvgScanTime inferredScanTime
+                            let corrN14N15       = calcCorrelation averagePSM.X_Xic quantP n14Inferred
                             let chart = saveChart windowWidth sequence globMod ch averagePSM.X_Xic averagePSM.Y_Xic ms2s averagePSM.WeightedAvgScanTime
                                                 peakToQuantify.XData peakToQuantify.YData quantP.YPredicted n14Inferred.xXic n14Inferred.yXic n14Inferred.xPeak n14Inferred.yFitted plotDirectory
                             {
@@ -507,6 +542,8 @@ module PSMBasedQuantification =
                             N15Minus1MeasuredApex     = n15Minus1Inferred.MeasuredApexIntensity
                             N15Minus1Seo              = n15Minus1Inferred.StandardErrorOfPrediction
                             N15Minus1Params           = n15Minus1Inferred.EstimatedParams  |> Array.fold (fun acc x -> acc + " " + x.ToString() + ";") ""
+                            N14N15Correlation         = corrN14N15
+                            QuantificationSource      = QuantificationSource.PSM
                             }
                             |> Option.Some
                         with
