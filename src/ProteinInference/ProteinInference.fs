@@ -147,8 +147,9 @@ module ProteinInference =
 
         let logger = Logging.createLogger "ProteinInference_readAndInferFile"
 
-        let rawFilePaths = System.IO.Directory.GetFiles (rawFolderPath, "*.qpsm")
-                           |> Array.toList
+        let rawFilePaths = 
+            System.IO.Directory.GetFiles (rawFolderPath, "*.qpsm")
+            |> Array.toList
 
         let outFiles: string list =
             rawFilePaths
