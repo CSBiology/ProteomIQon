@@ -15,10 +15,13 @@
   </PropertyGroup>
   <ItemGroup>
     <None Include="App.config" />
+    <Compile Include="Wavelet.fs" />
     <Compile Include="PeakDetection.fs" />
     <Compile Include="PSMBasedQuantification.fs" />
     <Compile Include="CLIArgumentParsing.fs" />
     <Compile Include="Program.fs" />
+    <None Include="testing.fsx" />
+    <None Include="testing_wavelet_3.fsx" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\ProteomIQon\ProteomIQon.fsproj">

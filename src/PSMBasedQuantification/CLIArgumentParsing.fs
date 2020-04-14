@@ -5,9 +5,6 @@ open Argu
 module CLIArgumentParsing = 
     open System.IO
     
-    type IOType =
-        | Directory of string
-        | Path      of string
 
     type CLIArguments =
         | [<Mandatory>] [<AltCommandLine("-i")>]  InstrumentOutput of path:string

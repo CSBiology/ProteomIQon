@@ -149,6 +149,26 @@ module PSMBasedQuantification =
         | None ->
             retData',itzData',itzData'
 
+    let initGetIsotopicEnvelope reader idx scanTimeWindow mzWindow_Da ch meanScanTime meanPrecMz =
+        let rtQuery   = Query.createRangeQuery meanScanTime scanTimeWindow
+        let mzQueries = 
+            [|
+                for i = 0 to 2 do 
+                    let mz = meanPrecMz + (float i) * (Mass.Table.PMassInU / (ch|> float)) 
+                    Query.createRangeQuery mz mzWindow_Da 
+            |]
+            |> Array.filter (fun x ->  abs (meanPrecMz-x.LockValue) < 1.)                 
+        let retData',itzData' =
+            let query = Query.getXICs reader idx rtQuery mzQueries 
+            [|
+                for i = 0 to query.[*,0].Length-1 do 
+                let tmp = query.[i,*]
+                yield (tmp.[0].Rt,tmp |> Array.sumBy (fun p -> p.Intensity))
+
+            |]
+            |> Array.unzip 
+        retData',itzData'
+
     let average getXic (psms:(PSMStatisticsResult*float) []) =
             let psms    =
                 let tmp = psms |> Array.map snd
@@ -201,7 +221,8 @@ module PSMBasedQuantification =
             let (retData,itzData,uncorrectedItzData)   =
                 getXic targetScanTime targetMz
             let  windowSize = estWindowSize uncorrectedItzData
-            let peaks          = SignalDetectionTemp.getPeaks minSNR polOrder windowSize retData itzData
+            //let peaks          = SignalDetectionTemp.getPeaks minSNR polOrder windowSize retData itzData
+            let peaks = Wavelet.identify retData itzData
             if Array.isEmpty peaks then
                 {
                     Model                     = None 
@@ -241,8 +262,9 @@ module PSMBasedQuantification =
                 xPeak                     = [||]
                 yFitted                   = [||]
             }
+
     let saveChart windowWidth sequence globalMod ch (xXic:float[]) (yXic:float[]) ms2s avgScanTime (xToQuantify:float[]) (ypToQuantify:float[]) (fitY:float[])
-            (xXicInferred:float[]) (yXicinferred:float[]) (xInferred:float[]) (inferredFit:float[]) plotDirectory =
+            (xXicInferred:float[]) (yXicinferred:float[]) (xInferred:float[]) (inferredFit:float[]) (xEnvelopeSum:float[]) (yEnvelopeSum:float[]) plotDirectory =
         [
         Chart.Point(xXic, yXic)                     |> Chart.withTraceName "Target XIC"
         Chart.Point(ms2s)                           |> Chart.withTraceName "MS2s with scores"
@@ -251,6 +273,7 @@ module PSMBasedQuantification =
         Chart.Line(xToQuantify,fitY)                |> Chart.withTraceName "Fit of target Peak"
         Chart.Point(xXicInferred, yXicinferred)     |> Chart.withTraceName "Inferred XIC"
         Chart.Line(xInferred,inferredFit)           |> Chart.withTraceName "Fit of inferred Peak"
+        Chart.Point(xEnvelopeSum, yEnvelopeSum)     |> Chart.withTraceName "Target Envelope Sum"
 
         ]
         |> Chart.Combine
@@ -382,7 +405,8 @@ module PSMBasedQuantification =
             |> Array.ofSeq
 
         let getXIC = initGetProcessedXIC logger processParams.BaseLineCorrection inReader retTimeIdxed processParams.XicExtraction.ScanTimeWindow processParams.XicExtraction.MzWindow_Da
-
+        let getEnvelopeSum = initGetIsotopicEnvelope inReader retTimeIdxed processParams.XicExtraction.ScanTimeWindow processParams.XicExtraction.MzWindow_Da
+         
         let getWindowWidth  =
             match processParams.XicExtraction.WindowSize with
             | Domain.WindowSize.Fixed w  -> fun yData -> w
@@ -401,11 +425,9 @@ module PSMBasedQuantification =
                     |> Array.take n
                     |> Array.choose (fun ((sequence,ch,globMod),psms) ->
                                     try
-                                    //logger.Trace (sprintf "sequence = %s,ch = %i,globMod = %i " sequence ch globMod)
                                     let psmsWithScanTime = 
                                         psms 
                                         |> Array.map (fun res -> res, MassSpectrum.getScanTime (inReader.ReadMassSpectrum(res.PSMId)))
-                                    //logger.Trace "quantify target"
                                     let averagePSM = average getXIC psmsWithScanTime
                                     let peaks          = SignalDetectionTemp.getPeaks 0.1 2 11 averagePSM.X_Xic averagePSM.Y_Xic_uncorrected
                                     let NoNoise = peaks |> Array.map (fun x -> x.XData) |> Array.concat |> Set.ofArray
@@ -413,7 +435,6 @@ module PSMBasedQuantification =
                                         Array.zip averagePSM.X_Xic averagePSM.Y_Xic
                                         |> Array.filter (fun (ret,intensity) -> NoNoise.Contains ret |> not)
                                         |> Array.map snd
-
                                     let corr = Correlation.Vector.autoCorrelation 1 (noiseArr |> vector)
                                     if nan.Equals corr then Some 0. else Some corr
                                     with
@@ -433,124 +454,203 @@ module PSMBasedQuantification =
                     printfn "%A" ex
                     fun yData -> optimizeWindowWidth processParams.XicExtraction.PolynomOrder [|5 .. 2 .. 60|] 0.5 yData
 
-        peptides
+        let labledQuantification sequence ch globMod (psms:PSMStatisticsResult []) = 
+            try
+            //logger.Trace (sprintf "%i,sequence = %s,ch = %i,globMod =%i " i sequence ch globMod)
+            let bestQValue,bestPepValue,prots = psms |> Array.minBy (fun x -> x.QValue) |> fun x -> x.QValue, x.PEPValue,x.ProteinNames
+            let psmsWithMatchedSums = countMatchedMasses psms 
+            let ms2s = psmsWithMatchedSums |> Array.map (fun (psm,m) -> psm.ScanTime,m)
+            //logger.Trace "quantify target"
+            let averagePSM = average' getXIC psmsWithMatchedSums
+            let avgMass = Mass.ofMZ (averagePSM.MeanPrecMz) (ch |> float)
+            let windowWidth = getWindowWidth averagePSM.Y_Xic_uncorrected
+            let envelopeSumX,envelopeSumY = getEnvelopeSum ch averagePSM.WeightedAvgScanTime averagePSM.MeanPrecMz 
+            //let peaks = SignalDetectionTemp.getPeaks processParams.XicExtraction.MinSNR processParams.XicExtraction.PolynomOrder windowWidth averagePSM.X_Xic averagePSM.Y_Xic
+            let peaks = Wavelet.identify averagePSM.X_Xic averagePSM.Y_Xic
+            if Array.isEmpty peaks then 
+                Chart.Point(averagePSM.X_Xic, averagePSM.Y_Xic)
+                |> Chart.withTitle(sprintf "Sequence= %s,globalMod = %i, WindowWidth = %i _noPeaks" sequence globMod windowWidth)
+                |> Chart.withSize(1500.,800.)
+                |> Chart.SaveHtmlAs(Path.Combine[|plotDirectory; ((sequence |> String.filter (fun x -> x <> '*')) + "_GMod_" + globMod.ToString() + "Ch" + ch.ToString() + "_notQuantified")|])
+                None
+            else
+            let peakToQuantify = BioFSharp.Mz.Quantification.HULQ.getPeakBy peaks averagePSM.WeightedAvgScanTime
+            let quantP = BioFSharp.Mz.Quantification.HULQ.quantifyPeak peakToQuantify                        
+            let inferredScanTime =
+                if Array.isEmpty quantP.EstimatedParams then
+                    averagePSM.WeightedAvgScanTime
+                elif abs (quantP.EstimatedParams.[1] - averagePSM.WeightedAvgScanTime) >  processParams.XicExtraction.ScanTimeWindow then
+                    averagePSM.WeightedAvgScanTime
+                else
+                    quantP.EstimatedParams.[1]
+            let unlabeledMass  = massLookUp sequence 0
+            let labeledMass    = massLookUp sequence 1
+            if globMod = 0 then
+                let n15mz          = Mass.toMZ (labeledMass.Value) (ch|> float)
+                //logger.Trace "quantify inferred"
+                let n15Inferred    = quantifyInferredPeak processParams.XicExtraction.MinSNR processParams.XicExtraction.PolynomOrder getWindowWidth getXIC n15mz averagePSM.WeightedAvgScanTime inferredScanTime
+                //logger.Trace "quantify n15Minus 1"
+                let n15Minus1Mz    = n15mz - (Mass.Table.NMassInU / (ch|> float))
+                let n15Minus1Inferred = quantifyInferredPeak processParams.XicExtraction.MinSNR processParams.XicExtraction.PolynomOrder getWindowWidth getXIC n15Minus1Mz averagePSM.WeightedAvgScanTime inferredScanTime
+                let corrN14N15       = calcCorrelation averagePSM.X_Xic quantP n15Inferred  
+                let chart = saveChart windowWidth sequence globMod ch averagePSM.X_Xic averagePSM.Y_Xic ms2s averagePSM.WeightedAvgScanTime
+                                    peakToQuantify.XData peakToQuantify.YData quantP.YPredicted n15Inferred.xXic n15Inferred.yXic n15Inferred.xPeak n15Inferred.yFitted envelopeSumX envelopeSumY plotDirectory
+                {
+                StringSequence            = sequence
+                GlobalMod                 = globMod
+                Charge                    = ch
+                PrecursorMZ               = averagePSM.MeanPrecMz
+                MeasuredMass              = avgMass
+                TheoMass                  = unlabeledMass.Value
+                AbsDeltaMass              = abs(avgMass-unlabeledMass.Value)
+                MeanPercolatorScore       = averagePSM.MeanScore
+                QValue                    = bestQValue
+                PEPValue                  = bestPepValue
+                ProteinNames              = prots
+                N14QuantMz                = averagePSM.MeanPrecMz
+                N14Quant                  = quantP.Area
+                N14MeasuredApex           = quantP.MeasuredApexIntensity
+                N14Seo                    = quantP.StandardErrorOfPrediction
+                N14Params                 = quantP.EstimatedParams |> Array.map string |> String.concat ";"
+                N15QuantMz                = n15mz
+                N15Quant                  = n15Inferred.Area
+                N15MeasuredApex           = n15Inferred.MeasuredApexIntensity
+                N15Seo                    = n15Inferred.StandardErrorOfPrediction
+                N15Params                 = n15Inferred.EstimatedParams |> Array.map string |> String.concat ";"
+                N15Minus1QuantMz          = n15Minus1Mz
+                N15Minus1Quant            = n15Minus1Inferred.Area
+                N15Minus1MeasuredApex     = n15Minus1Inferred.MeasuredApexIntensity
+                N15Minus1Seo              = n15Minus1Inferred.StandardErrorOfPrediction
+                N15Minus1Params           = n15Minus1Inferred.EstimatedParams  |> Array.map string |> String.concat ";"
+                N14N15Correlation         = corrN14N15
+                QuantificationSource      = QuantificationSource.PSM
+                }
+                |> Option.Some
+            else
+                let n14mz          = Mass.toMZ (unlabeledMass.Value) (ch|> float)
+                //logger.Trace "quantify inferred"
+                let n14Inferred    = quantifyInferredPeak processParams.XicExtraction.MinSNR processParams.XicExtraction.PolynomOrder getWindowWidth getXIC n14mz averagePSM.WeightedAvgScanTime inferredScanTime
+                //logger.Trace "quantify n15Minus 1"
+                let n15Minus1Mz    = averagePSM.MeanPrecMz - (Mass.Table.NMassInU / (ch|> float))
+                let n15Minus1Inferred = quantifyInferredPeak processParams.XicExtraction.MinSNR processParams.XicExtraction.PolynomOrder getWindowWidth getXIC n15Minus1Mz averagePSM.WeightedAvgScanTime inferredScanTime
+                let corrN14N15       = calcCorrelation averagePSM.X_Xic quantP n14Inferred
+                let chart = saveChart windowWidth sequence globMod ch averagePSM.X_Xic averagePSM.Y_Xic ms2s averagePSM.WeightedAvgScanTime
+                                    peakToQuantify.XData peakToQuantify.YData quantP.YPredicted n14Inferred.xXic n14Inferred.yXic n14Inferred.xPeak n14Inferred.yFitted envelopeSumX envelopeSumY plotDirectory
+                {
+                StringSequence            = sequence
+                GlobalMod                 = globMod
+                Charge                    = ch
+                PrecursorMZ               = averagePSM.MeanPrecMz
+                MeasuredMass              = avgMass
+                TheoMass                  = labeledMass.Value
+                AbsDeltaMass              = abs(avgMass-labeledMass.Value)
+                MeanPercolatorScore       = averagePSM.MeanScore
+                QValue                    = bestQValue
+                PEPValue                  = bestPepValue
+                ProteinNames              = prots
+                N14QuantMz                = n14mz
+                N14Quant                  = n14Inferred.Area
+                N14MeasuredApex           = n14Inferred.MeasuredApexIntensity
+                N14Seo                    = n14Inferred.StandardErrorOfPrediction
+                N14Params                 = n14Inferred.EstimatedParams |> Array.map string |> String.concat ";"
+                N15QuantMz                = averagePSM.MeanPrecMz
+                N15Quant                  = quantP.Area
+                N15MeasuredApex           = quantP.MeasuredApexIntensity
+                N15Seo                    = quantP.StandardErrorOfPrediction
+                N15Params                 = quantP.EstimatedParams |> Array.map string |> String.concat ";"
+                N15Minus1QuantMz          = n15Minus1Mz
+                N15Minus1Quant            = n15Minus1Inferred.Area
+                N15Minus1MeasuredApex     = n15Minus1Inferred.MeasuredApexIntensity
+                N15Minus1Seo              = n15Minus1Inferred.StandardErrorOfPrediction
+                N15Minus1Params           = n15Minus1Inferred.EstimatedParams |> Array.map string |> String.concat ";"
+                N14N15Correlation         = corrN14N15
+                QuantificationSource      = QuantificationSource.PSM
+                }
+                |> Option.Some
+            with
+            | ex ->
+                
+                logger.Trace (sprintf "Quantfailed: %A" ex)
+                printfn "%A" ex
+                Option.None
+
+        let lableFreeQuantification sequence ch globMod (psms:PSMStatisticsResult []) = 
+            try
+            if globMod <> 0 then None 
+            else
+            //logger.Trace (sprintf "%i,sequence = %s,ch = %i,globMod =%i " i sequence ch globMod)
+            let bestQValue,bestPepValue,prots = psms |> Array.minBy (fun x -> x.QValue) |> fun x -> x.QValue, x.PEPValue,x.ProteinNames
+            let psmsWithMatchedSums = countMatchedMasses psms 
+            let ms2s = psmsWithMatchedSums |> Array.map (fun (psm,m) -> psm.ScanTime,m)
+            //logger.Trace "quantify target"
+            let averagePSM = average' getXIC psmsWithMatchedSums
+            let avgMass = Mass.ofMZ (averagePSM.MeanPrecMz) (ch |> float)
+            let windowWidth = getWindowWidth averagePSM.Y_Xic_uncorrected
+            //let peaks = SignalDetectionTemp.getPeaks processParams.XicExtraction.MinSNR processParams.XicExtraction.PolynomOrder windowWidth averagePSM.X_Xic averagePSM.Y_Xic
+            let peaks = 
+                try
+                    Wavelet.identify averagePSM.X_Xic averagePSM.Y_Xic
+                with 
+                | ex ->
+                    logger.Trace (sprintf "Quantfailed: %A" ex)
+                    printfn "%A" ex
+                    [||]
+            if Array.isEmpty peaks then 
+                Chart.Point(averagePSM.X_Xic, averagePSM.Y_Xic)
+                |> Chart.withTitle(sprintf "Sequence= %s,globalMod = %i, WindowWidth = %i _notQuantified" sequence globMod windowWidth)
+                |> Chart.withSize(1500.,800.)
+                |> Chart.SaveHtmlAs(Path.Combine[|plotDirectory; ((sequence |> String.filter (fun x -> x <> '*')) + "_GMod_" + globMod.ToString() + "Ch" + ch.ToString() + "_notQuantified")|])
+                None
+            else
+            let peakToQuantify = BioFSharp.Mz.Quantification.HULQ.getPeakBy peaks averagePSM.WeightedAvgScanTime
+            let quantP = BioFSharp.Mz.Quantification.HULQ.quantifyPeak peakToQuantify                        
+            let unlabeledMass  = massLookUp sequence 0
+            let chart = saveChart windowWidth sequence globMod ch averagePSM.X_Xic averagePSM.Y_Xic ms2s averagePSM.WeightedAvgScanTime
+                                peakToQuantify.XData peakToQuantify.YData quantP.YPredicted [||] [||] [||] [||] [||] [||]plotDirectory
+            {
+            StringSequence            = sequence
+            GlobalMod                 = globMod
+            Charge                    = ch
+            PrecursorMZ               = averagePSM.MeanPrecMz
+            MeasuredMass              = avgMass
+            TheoMass                  = unlabeledMass.Value
+            AbsDeltaMass              = abs(avgMass-unlabeledMass.Value)
+            MeanPercolatorScore       = averagePSM.MeanScore
+            QValue                    = bestQValue
+            PEPValue                  = bestPepValue
+            ProteinNames              = prots
+            N14QuantMz                = averagePSM.MeanPrecMz
+            N14Quant                  = quantP.Area
+            N14MeasuredApex           = quantP.MeasuredApexIntensity
+            N14Seo                    = quantP.StandardErrorOfPrediction
+            N14Params                 = quantP.EstimatedParams |> Array.map string |> String.concat ";"
+            N15QuantMz                = nan
+            N15Quant                  = nan
+            N15MeasuredApex           = nan
+            N15Seo                    = nan
+            N15Params                 = ""
+            N15Minus1QuantMz          = nan
+            N15Minus1Quant            = nan
+            N15Minus1MeasuredApex     = nan
+            N15Minus1Seo              = nan
+            N15Minus1Params           = ""
+            N14N15Correlation         = nan
+            QuantificationSource      = QuantificationSource.PSM
+            }
+            |> Option.Some
+            with
+            | ex ->
+                logger.Trace (sprintf "Quantfailed: %A" ex)
+                printfn "%A" ex
+                Option.None
+        peptides        
         |> Array.groupBy (fun x -> x.StringSequence,x.Charge,x.GlobalMod)
-        |> Array.mapi (fun i ((sequence,ch,globMod),psms) ->
-                        try
-                        //logger.Trace (sprintf "%i,sequence = %s,ch = %i,globMod =%i " i sequence ch globMod)
-                        let bestQValue,bestPepValue,prots = psms |> Array.minBy (fun x -> x.QValue) |> fun x -> x.QValue, x.PEPValue,x.ProteinNames
-                        let psmsWithMatchedSums = countMatchedMasses psms 
-                        let ms2s = psmsWithMatchedSums |> Array.map (fun (psm,m) -> psm.ScanTime,m)
-                        //logger.Trace "quantify target"
-                        let averagePSM = average' getXIC psmsWithMatchedSums
-                        let avgMass = Mass.ofMZ (averagePSM.MeanPrecMz) (ch |> float)
-                        let windowWidth = getWindowWidth averagePSM.Y_Xic_uncorrected
-                        let peaks = SignalDetectionTemp.getPeaks processParams.XicExtraction.MinSNR processParams.XicExtraction.PolynomOrder windowWidth averagePSM.X_Xic averagePSM.Y_Xic
-                        if Array.isEmpty peaks then 
-                            Chart.Point(averagePSM.X_Xic, averagePSM.Y_Xic)
-                            |> Chart.withTitle(sprintf "Sequence= %s,globalMod = %i, WindowWidth = %i _notQuantified" sequence globMod windowWidth)
-                            |> Chart.withSize(1500.,800.)
-                            |> Chart.SaveHtmlAs(Path.Combine[|plotDirectory; ((sequence |> String.filter (fun x -> x <> '*')) + "_GMod_" + globMod.ToString() + "Ch" + ch.ToString() + "_notQuantified")|])
-                            None
-                        else
-                        let peakToQuantify = BioFSharp.Mz.Quantification.HULQ.getPeakBy peaks averagePSM.WeightedAvgScanTime
-                        let quantP = BioFSharp.Mz.Quantification.HULQ.quantifyPeak peakToQuantify                        
-                        let inferredScanTime =
-                            if Array.isEmpty quantP.EstimatedParams then
-                                averagePSM.WeightedAvgScanTime
-                            elif abs (quantP.EstimatedParams.[1] - averagePSM.WeightedAvgScanTime) >  processParams.XicExtraction.ScanTimeWindow then
-                                averagePSM.WeightedAvgScanTime
-                            else
-                                quantP.EstimatedParams.[1]
-                        let unlabeledMass  = massLookUp sequence 0
-                        let labeledMass    = massLookUp sequence 1
-                        if globMod = 0 then
-                            let n15mz          = Mass.toMZ (labeledMass.Value) (ch|> float)
-                            //logger.Trace "quantify inferred"
-                            let n15Inferred    = quantifyInferredPeak processParams.XicExtraction.MinSNR processParams.XicExtraction.PolynomOrder getWindowWidth getXIC n15mz averagePSM.WeightedAvgScanTime inferredScanTime
-                            //logger.Trace "quantify n15Minus 1"
-                            let n15Minus1Mz    = n15mz - (Mass.Table.NMassInU / (ch|> float))
-                            let n15Minus1Inferred = quantifyInferredPeak processParams.XicExtraction.MinSNR processParams.XicExtraction.PolynomOrder getWindowWidth getXIC n15Minus1Mz averagePSM.WeightedAvgScanTime inferredScanTime
-                            let corrN14N15       = calcCorrelation averagePSM.X_Xic quantP n15Inferred  
-                            let chart = saveChart windowWidth sequence globMod ch averagePSM.X_Xic averagePSM.Y_Xic ms2s averagePSM.WeightedAvgScanTime
-                                                peakToQuantify.XData peakToQuantify.YData quantP.YPredicted n15Inferred.xXic n15Inferred.yXic n15Inferred.xPeak n15Inferred.yFitted plotDirectory
-                            {
-                            StringSequence            = sequence
-                            GlobalMod                 = globMod
-                            Charge                    = ch
-                            PrecursorMZ               = averagePSM.MeanPrecMz
-                            MeasuredMass              = avgMass
-                            TheoMass                  = unlabeledMass.Value
-                            AbsDeltaMass              = abs(avgMass-unlabeledMass.Value)
-                            MeanPercolatorScore       = averagePSM.MeanScore
-                            QValue                    = bestQValue
-                            PEPValue                  = bestPepValue
-                            ProteinNames              = prots
-                            N14QuantMz                = averagePSM.MeanPrecMz
-                            N14Quant                  = quantP.Area
-                            N14MeasuredApex           = quantP.MeasuredApexIntensity
-                            N14Seo                    = quantP.StandardErrorOfPrediction
-                            N14Params                 = quantP.EstimatedParams |> Array.map (fun x -> x.ToString()) |> String.concat "; "
-                            N15QuantMz                = n15mz
-                            N15Quant                  = n15Inferred.Area
-                            N15MeasuredApex           = n15Inferred.MeasuredApexIntensity
-                            N15Seo                    = n15Inferred.StandardErrorOfPrediction
-                            N15Params                 = n15Inferred.EstimatedParams |> Array.map (fun x -> x.ToString()) |> String.concat "; "
-                            N15Minus1QuantMz          = n15Minus1Mz
-                            N15Minus1Quant            = n15Minus1Inferred.Area
-                            N15Minus1MeasuredApex     = n15Minus1Inferred.MeasuredApexIntensity
-                            N15Minus1Seo              = n15Minus1Inferred.StandardErrorOfPrediction
-                            N15Minus1Params           = n15Minus1Inferred.EstimatedParams  |> Array.fold (fun acc x -> acc + " " + x.ToString() + ";") ""
-                            N14N15Correlation         = corrN14N15
-                            QuantificationSource      = QuantificationSource.PSM
-                            }
-                            |> Option.Some
-                        else
-                            let n14mz          = Mass.toMZ (unlabeledMass.Value) (ch|> float)
-                            //logger.Trace "quantify inferred"
-                            let n14Inferred    = quantifyInferredPeak processParams.XicExtraction.MinSNR processParams.XicExtraction.PolynomOrder getWindowWidth getXIC n14mz averagePSM.WeightedAvgScanTime inferredScanTime
-                            //logger.Trace "quantify n15Minus 1"
-                            let n15Minus1Mz    = averagePSM.MeanPrecMz - (Mass.Table.NMassInU / (ch|> float))
-                            let n15Minus1Inferred = quantifyInferredPeak processParams.XicExtraction.MinSNR processParams.XicExtraction.PolynomOrder getWindowWidth getXIC n15Minus1Mz averagePSM.WeightedAvgScanTime inferredScanTime
-                            let corrN14N15       = calcCorrelation averagePSM.X_Xic quantP n14Inferred
-                            let chart = saveChart windowWidth sequence globMod ch averagePSM.X_Xic averagePSM.Y_Xic ms2s averagePSM.WeightedAvgScanTime
-                                                peakToQuantify.XData peakToQuantify.YData quantP.YPredicted n14Inferred.xXic n14Inferred.yXic n14Inferred.xPeak n14Inferred.yFitted plotDirectory
-                            {
-                            StringSequence            = sequence
-                            GlobalMod                 = globMod
-                            Charge                    = ch
-                            PrecursorMZ               = averagePSM.MeanPrecMz
-                            MeasuredMass              = avgMass
-                            TheoMass                  = labeledMass.Value
-                            AbsDeltaMass              = abs(avgMass-labeledMass.Value)
-                            MeanPercolatorScore       = averagePSM.MeanScore
-                            QValue                    = bestQValue
-                            PEPValue                  = bestPepValue
-                            ProteinNames              = prots
-                            N14QuantMz                = n14mz
-                            N14Quant                  = n14Inferred.Area
-                            N14MeasuredApex           = n14Inferred.MeasuredApexIntensity
-                            N14Seo                    = n14Inferred.StandardErrorOfPrediction
-                            N14Params                 = n14Inferred.EstimatedParams |> Array.fold (fun acc x -> acc + " " + x.ToString() + ";") ""
-                            N15QuantMz                = averagePSM.MeanPrecMz
-                            N15Quant                  = quantP.Area
-                            N15MeasuredApex           = quantP.MeasuredApexIntensity
-                            N15Seo                    = quantP.StandardErrorOfPrediction
-                            N15Params                 = quantP.EstimatedParams |> Array.fold (fun acc x -> acc + " " + x.ToString() + ";") ""
-                            N15Minus1QuantMz          = n15Minus1Mz
-                            N15Minus1Quant            = n15Minus1Inferred.Area
-                            N15Minus1MeasuredApex     = n15Minus1Inferred.MeasuredApexIntensity
-                            N15Minus1Seo              = n15Minus1Inferred.StandardErrorOfPrediction
-                            N15Minus1Params           = n15Minus1Inferred.EstimatedParams  |> Array.fold (fun acc x -> acc + " " + x.ToString() + ";") ""
-                            N14N15Correlation         = corrN14N15
-                            QuantificationSource      = QuantificationSource.PSM
-                            }
-                            |> Option.Some
-                        with
-                        | ex ->
-                            printfn "%A" ex
-                            Option.None
-                       )
+        |> Array.mapi (fun i ((sequence,ch,globMod),psms) -> 
+            if processParams.PerformLabeledQuantification then 
+                labledQuantification sequence ch globMod psms
+            else
+                lableFreeQuantification sequence ch globMod psms
+            )
         |> Array.filter Option.isSome
         |> Array.map (fun x -> x.Value)
         |> FSharpAux.IO.SeqIO.Seq.CSV "\t" true true
