@@ -44,7 +44,7 @@ let defaultPreprocessingParams :Dto.PreprocessingParams =
         } 
          
     {
-        Compress                    = MzIO.Binary.BinaryDataCompressionType.NumPressZLib
+        Compress                    = MzIO.Binary.BinaryDataCompressionType.NoCompression
         StartRetentionTime          = None
         EndRetentionTime            = None 
         MS1PeakPicking              = PeakPicking.Centroid (CentroidizationMode.Wavelet ms1PeakPickingParams)
