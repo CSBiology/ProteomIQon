@@ -353,100 +353,103 @@ module Dto =
         | Alignment
 
 
-    ///
-    type QuantificationResult = {
-        StringSequence               : string
-        GlobalMod                    : int
-        Charge                       : int
-        //QuantificationSource         : QuantificationSource
-        PrecursorMZ                  : float
-        MeasuredMass                 : float 
-        TheoMass                     : float
-        AbsDeltaMass                 : float
-        MeanPercolatorScore          : float
-        QValue                       : float
-        PEPValue                     : float
-        ProteinNames                 : string
-        N14QuantMz                   : float
-        N14Quant                     : float
-        N14MeasuredApex              : float 
-        N14Seo                       : float
-        N14Params                    : string
-        N15QuantMz                   : float
-        N15Quant                     : float
-        N15MeasuredApex              : float
-        N15Seo                       : float
-        N15Params                    : string
-        N15Minus1QuantMz             : float
-        N15Minus1Quant               : float
-        N15Minus1MeasuredApex        : float
-        N15Minus1Seo                 : float
-        N15Minus1Params              : string
-        //Felder for correlation
-        //Feld for alignmentoderPSM
-
-        }
-
     /////
     //type QuantificationResult = {
-    //    [<FieldAttribute(0)>]
     //    StringSequence               : string
-    //    [<FieldAttribute(1)>]
     //    GlobalMod                    : int
-    //    [<FieldAttribute(2)>]
     //    Charge                       : int
-    //    [<FieldAttribute(2)>]
-    //    QuantificationSource         : QuantificationSource
-    //    [<FieldAttribute(3)>]
+    //    //QuantificationSource         : QuantificationSource
     //    PrecursorMZ                  : float
-    //    [<FieldAttribute(4)>]
     //    MeasuredMass                 : float 
-    //    [<FieldAttribute(5)>]
     //    TheoMass                     : float
-    //    [<FieldAttribute(6)>]
     //    AbsDeltaMass                 : float
-    //    [<FieldAttribute(7)>]
     //    MeanPercolatorScore          : float
-    //    [<FieldAttribute(8)>]
     //    QValue                       : float
-    //    [<FieldAttribute(9)>]
     //    PEPValue                     : float
-    //    [<FieldAttribute(10)>]
     //    ProteinNames                 : string
-    //    [<FieldAttribute(11)>]
     //    N14QuantMz                   : float
-    //    [<FieldAttribute(12)>]
     //    N14Quant                     : float
-    //    [<FieldAttribute(13)>]
     //    N14MeasuredApex              : float 
-    //    [<FieldAttribute(14)>]
     //    N14Seo                       : float
-    //    [<FieldAttribute(15)>]
     //    N14Params                    : string
-    //    [<FieldAttribute(16)>]
     //    N15QuantMz                   : float
-    //    [<FieldAttribute(17)>]
     //    N15Quant                     : float
-    //    [<FieldAttribute(18)>]
     //    N15MeasuredApex              : float
-    //    [<FieldAttribute(19)>]
     //    N15Seo                       : float
-    //    [<FieldAttribute(20)>]
     //    N15Params                    : string
-    //    [<FieldAttribute(21)>]
     //    N15Minus1QuantMz             : float
-    //    [<FieldAttribute(22)>]
     //    N15Minus1Quant               : float
-    //    [<FieldAttribute(23)>]
     //    N15Minus1MeasuredApex        : float
-    //    [<FieldAttribute(24)>]
     //    N15Minus1Seo                 : float
-    //    [<FieldAttribute(25)>]
     //    N15Minus1Params              : string
     //    //Felder for correlation
     //    //Feld for alignmentoderPSM
 
     //    }
+
+    ///
+    type QuantificationResult = {
+        [<FieldAttribute(0)>]
+        StringSequence               : string
+        [<FieldAttribute(1)>]
+        GlobalMod                    : int
+        [<FieldAttribute(2)>]
+        Charge                       : int
+        [<FieldAttribute(3)>]
+        PrecursorMZ                  : float
+        [<FieldAttribute(4)>]
+        MeasuredMass                 : float 
+        [<FieldAttribute(5)>]
+        TheoMass                     : float
+        [<FieldAttribute(6)>]
+        AbsDeltaMass                 : float
+        [<FieldAttribute(7)>]
+        MeanPercolatorScore          : float
+        [<FieldAttribute(8)>]
+        QValue                       : float
+        [<FieldAttribute(9)>]
+        PEPValue                     : float
+        [<FieldAttribute(10)>]
+        ProteinNames                 : string
+        [<FieldAttribute(11)>]
+        N14QuantMz                   : float
+        [<FieldAttribute(12)>]
+        N14Quant                     : float
+        [<FieldAttribute(13)>]
+        N14MeasuredApex              : float 
+        [<FieldAttribute(14)>]
+        N14Seo                       : float
+        [<FieldAttribute(15)>]
+        N14Params                    : string
+        [<FieldAttribute(16)>]
+        N15QuantMz                   : float
+        [<FieldAttribute(17)>]
+        N15Quant                     : float
+        [<FieldAttribute(18)>]
+        N15MeasuredApex              : float
+        [<FieldAttribute(19)>]
+        N15Seo                       : float
+        [<FieldAttribute(20)>]
+        N15Params                    : string
+        [<FieldAttribute(21)>]
+        N15Minus1QuantMz             : float
+        [<FieldAttribute(22)>]
+        N15Minus1Quant               : float
+        [<FieldAttribute(23)>]
+        N15Minus1MeasuredApex        : float
+        [<FieldAttribute(24)>]
+        N15Minus1Seo                 : float
+        [<FieldAttribute(25)>]
+        N15Minus1Params              : string
+        [<FieldAttribute(26)>]
+        N14N15Correlation            : float
+        [<FieldAttribute(27)>]
+        QuantificationSource         : QuantificationSource
+
+        //Felder for correlation
+        //Feld for alignmentoderPSM
+
+        }
 
     type ProteinInferenceParams =
           {
