@@ -158,6 +158,6 @@ module Domain =
    
     type SWATHAnalysisParams =
         {
-            PeptideList         : string list option
+            PeptideList         : string [] option
             MatchingTolerancePPM: float
         }
