@@ -498,3 +498,17 @@ module Dto =
                 RTTolerance = dtoConsensusSpectralLibraryParams.RTTolerance
                 iRTPeptides = dtoConsensusSpectralLibraryParams.iRTPeptides
             }
+
+    type SWATHAnalysisParams =
+        {
+            PeptideList         : string list option
+            MatchingTolerancePPM: float
+        }
+
+    module SWATHAnalysisParams =
+
+        let toDomain (dtoSWATHAnalysisParams: SWATHAnalysisParams): Domain.SWATHAnalysisParams =
+            {
+                PeptideList          = dtoSWATHAnalysisParams.PeptideList
+                MatchingTolerancePPM = dtoSWATHAnalysisParams.MatchingTolerancePPM
+            }
