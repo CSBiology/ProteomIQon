@@ -156,3 +156,8 @@ module Domain =
             iRTPeptides: string list
         }
    
+    type SWATHAnalysisParams =
+        {
+            PeptideList         : string list option
+            MatchingTolerancePPM: float
+        }
