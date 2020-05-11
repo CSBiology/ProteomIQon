@@ -9,7 +9,7 @@ module CLIArgumentParsing =
         | [<Mandatory>] [<AltCommandLine("-i")>] InstrumentOutput of path:string
         | [<Mandatory>] [<AltCommandLine("-o")>] OutputDirectory  of path:string 
         | [<Mandatory>] [<AltCommandLine("-p")>] ParamFile of path:string
-        | [<Mandatory>] [<AltCommandLine("-l")>] Library of path:string
+        | [<Mandatory>] [<AltCommandLine("-lib")>] Library of path:string
         | [<Unique>]    [<AltCommandLine("-c")>] Parallelism_Level of level:int
         | [<Unique>]    [<AltCommandLine("-l")>] Log_Level of level:int
         | [<Unique>]    [<AltCommandLine("-v")>] Verbosity_Level of level:int
