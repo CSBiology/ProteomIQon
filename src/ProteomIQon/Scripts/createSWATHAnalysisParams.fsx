@@ -16,9 +16,9 @@ let serialized =
     defaultSWATHAnalysisParams
     |> Json.serialize
 
-System.IO.File.WriteAllText(__SOURCE_DIRECTORY__ + @"/../defaultParams\defaultSWATHAnalysisParams.json",serialized)
+System.IO.File.WriteAllText(__SOURCE_DIRECTORY__ + @"/../defaultParams\SWATHAnalysisParams.json",serialized)
 
 let deserialized = 
-    System.IO.File.ReadAllText(__SOURCE_DIRECTORY__ + @"/../defaultParams\defaultSWATHAnalysisParams.json")
+    System.IO.File.ReadAllText(__SOURCE_DIRECTORY__ + @"/../defaultParams\SWATHAnalysisParams.json")
     |> Json.deserialize<Dto.SWATHAnalysisParams>
     |> SWATHAnalysisParams.toDomain
