@@ -81,8 +81,8 @@ module SWATHAnalysis =
     let getRTProfiles (swathIndexer: SwathIndexer.SwathIndexer) (reader: IMzIODataReader) (swathQuery: SwathQuery) =
         swathIndexer.GetRTProfiles(reader, swathQuery, false, getClosestMz)
 
-    let quantify (library: string) (swathAnalysisParams: Domain.SWATHAnalysisParams) (instrumentOutput: string) (outFolder: string)=
-        
+    let quantify (library: string) (swathAnalysisParams: Domain.SWATHAnalysisParams) (instrumentOutput: string) (outFolder: string) =
+        let outFilePath = outFolder + "/" + (System.IO.Path.GetFileNameWithoutExtension instrumentOutput) + ".squant"
         let consensusLibrary =
             Seq.fromFileWithCsvSchema<LibraryEntry>(library, '\t', true,schemaMode = FSharpAux.IO.SchemaReader.Csv.SchemaModes.Fill)
             |> Seq.toArray
@@ -91,7 +91,7 @@ module SWATHAnalysis =
         let tr = inReader.BeginTransaction()
         let runID = Core.MzIO.Reader.getDefaultRunID inReader
         let swathIdx = SwathIndexer.SwathIndexer.Create(inReader, runID)
-
+        printfn "2"
         let peptideList =
             match swathAnalysisParams.PeptideList with
             | Some x -> x
@@ -99,36 +99,44 @@ module SWATHAnalysis =
                 consensusLibrary
                 |> Array.map (fun x -> x.Sequence)
                 |> Array.distinct
-
         let queries =
             peptideList
             |> Array.map (fun peptide -> peptide, createPeptideQuery peptide consensusLibrary swathAnalysisParams.MatchingTolerancePPM)
-
         let quant =
             queries
-            |> Array.map (fun (peptide,(rt,query)) ->
-                let rtProfiles =
-                    getRTProfiles swathIdx inReader query
-                    |> Array2D.toJaggedArray
-                    |> Array.map (fun peak2DArr -> 
-                        peak2DArr
-                        |> Array.map (fun peak2D ->
-                            peak2D.Rt, peak2D.Intensity
+            |> Array.choose (fun (peptide,(rt,query)) ->
+                let profile = getRTProfiles swathIdx inReader query
+                // Match to look if RTProfile was found. If none was found, quantification is skipped.
+                match profile with
+                | Some rtProfile ->
+                    let rtProfiles =
+                        rtProfile
+                        |> Array2D.toJaggedArray
+                        |> Array.map (fun peak2DArr ->
+                            peak2DArr
+                            |> Array.map (fun peak2D ->
+                                peak2D.Rt, peak2D.Intensity
+                            )
                         )
-                    )
-                let quants = 
-                    rtProfiles
-                    |> Array.map (fun retInt ->
-                        retInt
-                        |> Array.unzip
-                        |> fun (ret, intensity) ->
-                            FSharp.Stats.Signal.PeakDetection.SecondDerivative.getPeaks 0.1 2 13 ret intensity
-                        |> fun peaks ->
-                            BioFSharp.Mz.Quantification.HULQ.getPeakBy peaks rt
-                        |> BioFSharp.Mz.Quantification.HULQ.quantifyPeak
-                        |> fun x -> x.Area
-                    )
-                {|Peptide = peptide; Area = (quants |> Array.sum)|}
+                    let quants = 
+                        rtProfiles
+                        |> Array.choose (fun retInt ->
+                            retInt
+                            |> Array.unzip
+                            |> fun (ret, intensity) ->
+                                FSharp.Stats.Signal.PeakDetection.SecondDerivative.getPeaks 0.1 2 13 ret intensity
+                            |> fun peaks ->
+                                match peaks with
+                                | [||] -> None
+                                | _    -> Some (BioFSharp.Mz.Quantification.HULQ.getPeakBy peaks rt)
+                        )
+                        |> Array.map (fun peak ->
+                            BioFSharp.Mz.Quantification.HULQ.quantifyPeak peak
+                            |> fun x -> x.Area
+                        )
+                    Some {|Peptide = peptide; Area = (quants |> Array.sum)|}
+                | None -> None
             )
+        tr.Dispose()
         FSharpAux.IO.SeqIO.Seq.CSV "\t" true false quant
-        |> FSharpAux.IO.SeqIO.Seq.writeOrAppend (outFolder + "/" + (System.IO.Path.GetFileNameWithoutExtension instrumentOutput) + ".swath")
+        |> FSharpAux.IO.SeqIO.Seq.writeOrAppend outFilePath
