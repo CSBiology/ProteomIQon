@@ -12,6 +12,9 @@
       del SQLite.Interop.dll
     </PostBuildEvent>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net47|AnyCPU'">
+    <PlatformTarget>AnyCPU</PlatformTarget>
+  </PropertyGroup>
   <ItemGroup>
     <Compile Include="PeptideDB.fs" />
     <Compile Include="CLIArgumentParsing.fs" />
