@@ -36,7 +36,7 @@ module Wavelet =
         }
 
     type Parameters = {
-        Borderpadding           : int 
+        Borderpadding           : int option
         BorderPadMethod         : Padding.BorderPaddingMethod 
         InternalPaddingMethod   : Padding.InternalPaddingMethod 
         HugeGapPaddingMethod    : Padding.HugeGapPaddingMethod 
@@ -120,15 +120,24 @@ module Wavelet =
             {Start=min;End=max;Data=xy;Fits=bestGroup;SumTrace=sumTrace;Convolved=true}
              
     ///        
-    let identifyPeaksBy (borderpadding:int) (borderPadMethod:Padding.BorderPaddingMethod) (internalPaddingMethod:Padding.InternalPaddingMethod) (hugeGapPaddingMethod:Padding.HugeGapPaddingMethod) 
+    let identifyPeaksBy (borderpadding:int option) (borderPadMethod:Padding.BorderPaddingMethod) (internalPaddingMethod:Padding.InternalPaddingMethod) (hugeGapPaddingMethod:Padding.HugeGapPaddingMethod) 
         (maxDistance:float) minPeakLength maxPeakLength minPeakDistance noiseQuantile minSNR (trace:(float*float)[]) =
         let minScale = 
             match minPeakLength with 
             | Option.Some v -> v / 6.
             | Option.None -> 0.
+        let maxPeakLength = 
+            let min = trace |> Array.minBy fst |> fst
+            let max = trace |> Array.maxBy fst |> fst
+            let delta = max-min
+            Math.Min(delta,maxPeakLength) 
         let maxScale = maxPeakLength / 6.
         let averageDistance = Padding.HelperFunctions.getMedianSpacing trace (-)
         let minDistancePadding = averageDistance / 2. 
+        let borderpadding =
+            match borderpadding with 
+            | Some nPoint -> nPoint
+            | None        -> Math.Min(((maxPeakLength / minDistancePadding) * 2.)|> int,trace.Length*3)                 
         let paddedData = Padding.pad trace minDistancePadding maxDistance (-) (+) borderpadding borderPadMethod internalPaddingMethod hugeGapPaddingMethod
         let minPeakDistance = 
             match minPeakDistance with 
@@ -253,8 +262,9 @@ module Wavelet =
             let rec loop (acc:ResizeArray<(WaveletPeak*Gaussian)list>) currentFam peaksLeft =
                 match peaksLeft with 
                 | [] -> 
-                    currentFam 
-                    |> acc.Add 
+                    currentFam
+                    |> List.chunkBySize 15
+                    |> List.iter acc.Add 
                     acc |> Seq.toList
                 | cP::t ->
                     match currentFam with 
@@ -265,7 +275,8 @@ module Wavelet =
                         match overlapping with 
                         | [],rest   -> 
                             cf 
-                            |> acc.Add 
+                            |> List.chunkBySize 15
+                            |> List.iter acc.Add 
                             loop acc [] rest
                         | newPeaks,rest -> 
                             let cf' = newPeaks@cf
@@ -279,7 +290,6 @@ module Wavelet =
         let fits = 
             groupedPeaks
             |> List.filter  (List.isEmpty >> not)
-            /// powerset explosion
             |> List.map (fun x -> x)
             |> List.map (optimizeWaveletFits origData)
             |> List.sortBy (fun x -> x.Start)
@@ -356,14 +366,14 @@ module Wavelet =
     ///
     let p = 
         {
-            Borderpadding           = 5000    
+            Borderpadding           = None    
             BorderPadMethod         = Padding.BorderPaddingMethod.Random 
             InternalPaddingMethod   = Padding.InternalPaddingMethod.LinearInterpolation 
             HugeGapPaddingMethod    = Padding.HugeGapPaddingMethod.Zero
             HugeGapPaddingDistance  = 100.
             MinPeakDistance         = None
-            MinPeakLength           = Some 0.3
-            MaxPeakLength           = 2.5 
+            MinPeakLength           = Some 0.1
+            MaxPeakLength           = 1.5 
             NoiseQuantile           = 0.01 
             MinSNR                  = 0.01  
         }

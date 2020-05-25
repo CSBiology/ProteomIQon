@@ -1,0 +1,45 @@
+{
+    "PerformLabeledQuantification": true,
+    "XicExtraction": {
+        "ScanTimeWindow": 2.0,
+        "MzWindow_Da": 0.07,
+        "XicProcessing": {
+            "Case": "Wavelet",
+            "Fields": [
+                {
+                    "Borderpadding": null,
+                    "BorderPadMethod": {
+                        "Case": "Random"
+                    },
+                    "InternalPaddingMethod": {
+                        "Case": "LinearInterpolation"
+                    },
+                    "HugeGapPaddingMethod": {
+                        "Case": "Zero"
+                    },
+                    "HugeGapPaddingDistance": 100.0,
+                    "MinPeakDistance": null,
+                    "MinPeakLength": {
+                        "Case": "Some",
+                        "Fields": [
+                            0.1
+                        ]
+                    },
+                    "MaxPeakLength": 1.5,
+                    "NoiseQuantile": 0.01,
+                    "MinSNR": 0.01
+                }
+            ]
+        }
+    },
+    "BaseLineCorrection": {
+        "Case": "Some",
+        "Fields": [
+            {
+                "MaxIterations": 10,
+                "Lambda": 6,
+                "P": 0.05
+            }
+        ]
+    }
+}
