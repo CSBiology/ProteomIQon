@@ -348,107 +348,82 @@ module Dto =
                 BaseLineCorrection           = dtoQuantificationParams.BaseLineCorrection
             }
 
+    ///
     type QuantificationSource = 
         | PSM
         | Alignment
 
-
-    /////
-    //type QuantificationResult = {
-    //    StringSequence               : string
-    //    GlobalMod                    : int
-    //    Charge                       : int
-    //    //QuantificationSource         : QuantificationSource
-    //    PrecursorMZ                  : float
-    //    MeasuredMass                 : float 
-    //    TheoMass                     : float
-    //    AbsDeltaMass                 : float
-    //    MeanPercolatorScore          : float
-    //    QValue                       : float
-    //    PEPValue                     : float
-    //    ProteinNames                 : string
-    //    N14QuantMz                   : float
-    //    N14Quant                     : float
-    //    N14MeasuredApex              : float 
-    //    N14Seo                       : float
-    //    N14Params                    : string
-    //    N15QuantMz                   : float
-    //    N15Quant                     : float
-    //    N15MeasuredApex              : float
-    //    N15Seo                       : float
-    //    N15Params                    : string
-    //    N15Minus1QuantMz             : float
-    //    N15Minus1Quant               : float
-    //    N15Minus1MeasuredApex        : float
-    //    N15Minus1Seo                 : float
-    //    N15Minus1Params              : string
-    //    //Felder for correlation
-    //    //Feld for alignmentoderPSM
-
-    //    }
-
+    type QuantSourceConverter() = 
+        inherit ConverterAttribute()
+        override this.convertToObj = 
+            Converter.Single(fun (str : string) -> 
+                if (str) = "PSM" then QuantificationSource.PSM else QuantificationSource.Alignment 
+                |> box
+                )
     ///
     type QuantificationResult = {
         [<FieldAttribute(0)>]
-        StringSequence               : string
+        StringSequence                              : string
         [<FieldAttribute(1)>]
-        GlobalMod                    : int
+        GlobalMod                                   : int
         [<FieldAttribute(2)>]
-        Charge                       : int
+        Charge                                      : int
         [<FieldAttribute(3)>]
-        PrecursorMZ                  : float
+        PepSequenceID                               : int
         [<FieldAttribute(4)>]
-        MeasuredMass                 : float 
+        ModSequenceID                               : int
         [<FieldAttribute(5)>]
-        TheoMass                     : float
+        PrecursorMZ                                 : float
         [<FieldAttribute(6)>]
-        AbsDeltaMass                 : float
+        MeasuredMass                                : float 
         [<FieldAttribute(7)>]
-        MeanPercolatorScore          : float
+        TheoMass                                    : float
         [<FieldAttribute(8)>]
-        QValue                       : float
+        AbsDeltaMass                                : float
         [<FieldAttribute(9)>]
-        PEPValue                     : float
+        MeanPercolatorScore                         : float
         [<FieldAttribute(10)>]
-        ProteinNames                 : string
+        QValue                                      : float
         [<FieldAttribute(11)>]
-        N14QuantMz                   : float
+        PEPValue                                    : float
         [<FieldAttribute(12)>]
-        N14Quant                     : float
+        ProteinNames                                : string
         [<FieldAttribute(13)>]
-        N14MeasuredApex              : float 
+        QuantMz_Light                               : float
         [<FieldAttribute(14)>]
-        N14Seo                       : float
+        Quant_Light                                 : float
         [<FieldAttribute(15)>]
-        N14Params                    : string
+        MeasuredApex_Light                          : float 
         [<FieldAttribute(16)>]
-        N15QuantMz                   : float
+        Seo_Light                                   : float
         [<FieldAttribute(17)>]
-        N15Quant                     : float
+        Params_Light                                : string
         [<FieldAttribute(18)>]
-        N15MeasuredApex              : float
+        Difference_SearchRT_FittedRT_Light          : float
         [<FieldAttribute(19)>]
-        N15Seo                       : float
+        KLDiv_Observed_Theoretical_Light            : float
         [<FieldAttribute(20)>]
-        N15Params                    : string
+        KLDiv_CorrectedObserved_Theoretical_Light   : float
         [<FieldAttribute(21)>]
-        N15Minus1QuantMz             : float
+        QuantMz_Heavy                               : float
         [<FieldAttribute(22)>]
-        N15Minus1Quant               : float
+        Quant_Heavy                                 : float
         [<FieldAttribute(23)>]
-        N15Minus1MeasuredApex        : float
+        MeasuredApex_Heavy                          : float
         [<FieldAttribute(24)>]
-        N15Minus1Seo                 : float
+        Seo_Heavy                                   : float
         [<FieldAttribute(25)>]
-        N15Minus1Params              : string
+        Params_Heavy                                : string        
         [<FieldAttribute(26)>]
-        N14N15Correlation            : float
+        Difference_SearchRT_FittedRT_Heavy          : float
         [<FieldAttribute(27)>]
-        QuantificationSource         : QuantificationSource
-
-        //Felder for correlation
-        //Feld for alignmentoderPSM
-
+        KLDiv_Observed_Theoretical_Heavy            : float
+        [<FieldAttribute(28)>]
+        KLDiv_CorrectedObserved_Theoretical_Heavy   : float
+        [<FieldAttribute(29)>]
+        Correlation_Light_Heavy                     : float
+        [<FieldAttribute(30)>][<QuantSourceConverter>]
+        QuantificationSource                        : QuantificationSource
         }
 
     type ProteinInferenceParams =
