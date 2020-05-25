@@ -24,9 +24,9 @@ module console1 =
         logger.Info (sprintf "ParamFilePath -p = %s" p)
         logger.Trace (sprintf "CLIArguments: %A" results)
         Directory.CreateDirectory(o) |> ignore
-        let p =
-            Json.ReadAndDeserialize<Dto.QuantificationParams> p
-            |> Dto.QuantificationParams.toDomain
+        //let p =
+        //    Json.ReadAndDeserialize<Dto.QuantificationParams> p
+        //    |> Dto.QuantificationParams.toDomain
         if File.Exists i then
             logger.Info "single file detected"
             failwithf "%s is a file path, please specify a directory containing .quant files" i
@@ -34,13 +34,13 @@ module console1 =
             logger.Info "directory found"
             let quantfiles =
                 Directory.GetFiles(i,("*.quant"))
-            logger.Trace (sprintf "PEP files : %A" quantfiles)
+            logger.Trace (sprintf ".quant files : %A" quantfiles)
             let c =
                 match results.TryGetResult Parallelism_Level with
                 | Some c    -> c
                 | None      -> 1
             logger.Trace (sprintf "Program is running on %i cores" c)
-            printParams 
+            alignFiles logger {Placeholder=true} o i
             |> ignore
         else
             failwith "The given path to the instrument output is neither a valid file path nor a valid directory path."
