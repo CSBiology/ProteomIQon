@@ -15,6 +15,8 @@ nuget Newtonsoft.Json
 nuget FSharp.Plotly
 nuget Microsoft.ML ~> 1.5.0-preview
 nuget Microsoft.ML.FastTree ~> 1.5.0-preview
+nuget Deedle
+
 git https://github.com/CSBiology/FSharpAux.git nuget Packages: /
 
 nuget FSharpAux
