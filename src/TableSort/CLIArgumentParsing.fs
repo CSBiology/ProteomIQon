@@ -6,17 +6,16 @@ module CLIArgumentParsing =
     open System.IO
   
     type CLIArguments =
-        | [<AltCommandLine("-i")>] InstrumentOutput of path:string
-        | [<AltCommandLine("-o")>] OutputDirectory  of path:string 
-        | [<AltCommandLine("-p")>] ParamFile of path:string
-        | [<AltCommandLine("-l")>] Log_Level of level:int
-        | [<AltCommandLine("-v")>] Verbosity_Level of level:int
+        | [<AltCommandLine("-iq")>] QuantFile of path:string
+        | [<AltCommandLine("-ip")>] ProtFile of path:string
+        | [<AltCommandLine("-o")>]  OutputDirectory of path:string 
+        | [<AltCommandLine("-p")>]  ParamFile of path:string
     with
         interface IArgParserTemplate with
             member s.Usage =
                 match s with
-                | InstrumentOutput _ -> "specify mass spectrometry Output"
+                | QuantFile _        -> "specify Quant file directory"
+                | ProtFile _         -> "specify Prot file directory"
                 | OutputDirectory  _ -> "specify output directory"
-                | ParamFile _        -> "specify param file For centroidization"
-                | Log_Level _        -> "set the log level."
-                | Verbosity_Level _  -> "set the verbosity level."
+                | ParamFile _        -> "specify param file for TableSort"
+
