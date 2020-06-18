@@ -43,7 +43,7 @@ module TableSort =
             |> Array.choose id
             |> Array.median)
 
-    let sortTables (quantFiles: string[]) (protFiles: string[]) =
+    let sortTables (quantFiles: string[]) (protFiles: string[]) outDirectory =
 
         // creates a schema that sets the column type of every column containing values to float
         let quantColumnTypes =
@@ -130,3 +130,4 @@ module TableSort =
                 f .GetRowAt<float> 0
             )
             |> Frame.expandAllCols 1
+        |> fun frame -> frame.SaveCsv (path=(outDirectory+(@"\TableSort.tab")), separator='\t')
