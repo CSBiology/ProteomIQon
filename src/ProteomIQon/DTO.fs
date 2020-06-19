@@ -459,3 +459,27 @@ module Dto =
                 ChargeList           = dtoSpectralLibraryParams.ChargeList
                 MatchingTolerancePPM = dtoSpectralLibraryParams.MatchingTolerancePPM
             }
+
+    type TableSortParams =
+        {
+            Separator              : string
+            QuantFieldsToFilterOn  : FilterOnField[]
+            ProtFieldsToFilterOn   : FilterOnField[]
+            QuantColumnsOfInterest : string[]
+            ProtColumnsOfInterest  : string[]
+            AggregatorFunction     : AggregationMethod
+            Tukey                  : bool
+        }
+
+    module TableSortParams =
+        
+        let toDomain (dtoTableSortParams: TableSortParams): Domain.TableSortParams =
+            {
+                Separator              = dtoTableSortParams.Separator
+                QuantFieldsToFilterOn  = dtoTableSortParams.QuantFieldsToFilterOn
+                ProtFieldsToFilterOn   = dtoTableSortParams.ProtFieldsToFilterOn
+                QuantColumnsOfInterest = dtoTableSortParams.QuantColumnsOfInterest
+                ProtColumnsOfInterest  = dtoTableSortParams.ProtColumnsOfInterest
+                AggregatorFunction     = dtoTableSortParams.AggregatorFunction
+                Tukey                  = dtoTableSortParams.Tukey
+            }
