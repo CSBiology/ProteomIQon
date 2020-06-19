@@ -20,6 +20,7 @@
     <Compile Include="DTO.fs" />
     <Compile Include="Json.fs" />
     <Compile Include="Core.fs" />
+    <None Include="Scripts\createTableSortParams.fsx" />
     <None Include="Scripts\createPreprocessingParamsThermo.fsx" />
     <None Include="Scripts\createSpectralLibraryParams.fsx" />
     <None Include="Scripts\createProteinInferenceParams.fsx" />

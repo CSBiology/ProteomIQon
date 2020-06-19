@@ -1,0 +1,1 @@
+{"Separator":"\t","QuantFieldsToFilterOn":[],"ProtFieldsToFilterOn":[],"QuantColumnsOfInterest":["N14Quant","N15Quant"],"ProtColumnsOfInterest":["QValue"],"AggregatorFunction":{"Case":"Mean"},"Tukey":false}

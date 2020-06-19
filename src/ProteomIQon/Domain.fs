@@ -160,4 +160,27 @@ module Domain =
             ChargeList          : float list
             MatchingTolerancePPM: float
         }
+
+    type FilterOnField =
+        {
+            FieldName  : string
+            UpperBound : float
+            LowerBound : float
+        }
+
+    type AggregationMethod =
+        |Sum
+        |Mean
+        |Median
+
+    type TableSortParams =
+        {
+            Separator              : string
+            QuantFieldsToFilterOn  : FilterOnField[]
+            ProtFieldsToFilterOn   : FilterOnField[]
+            QuantColumnsOfInterest : string[]
+            ProtColumnsOfInterest  : string[]
+            AggregatorFunction     : AggregationMethod
+            Tukey                  : bool
+        }
    
