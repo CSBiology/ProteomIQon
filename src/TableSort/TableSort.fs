@@ -43,7 +43,7 @@ module TableSort =
             |> Array.choose id
             |> Array.median)
 
-    let sortTables (quantFiles: string[]) (protFiles: string[]) outDirectory (param: Domain.TableSortParams<'a>) =
+    let sortTables (quantFiles: string[]) (protFiles: string[]) outDirectory (param: Domain.TableSortParams) =
 
         // creates a schema that sets the column type of every column containing values to float
         let quantColumnTypes =

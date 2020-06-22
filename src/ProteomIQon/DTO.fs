@@ -460,11 +460,11 @@ module Dto =
                 MatchingTolerancePPM = dtoSpectralLibraryParams.MatchingTolerancePPM
             }
 
-    type TableSortParams<'a> =
+    type TableSortParams =
         {
             Separator                   : string
-            QuantFieldsToFilterOn       : FilterOnField<'a>[]
-            ProtFieldsToFilterOn        : FilterOnField<'a>[]
+            QuantFieldsToFilterOn       : FilterOnField[]
+            ProtFieldsToFilterOn        : FilterOnField[]
             QuantColumnsOfInterest      : string[]
             ProtColumnsOfInterest       : string[]
             AggregatorFunction          : AggregationMethod
@@ -474,7 +474,7 @@ module Dto =
 
     module TableSortParams =
         
-        let toDomain (dtoTableSortParams: TableSortParams<'a>): Domain.TableSortParams<'a> =
+        let inline toDomain (dtoTableSortParams: TableSortParams): Domain.TableSortParams =
             {
                 Separator                   = dtoTableSortParams.Separator
                 QuantFieldsToFilterOn       = dtoTableSortParams.QuantFieldsToFilterOn

@@ -161,23 +161,32 @@ module Domain =
             MatchingTolerancePPM: float
         }
 
-    type FilterOnField<'a> =
+    type FilterOnField =
         {
             FieldName  : string
-            UpperBound : 'a
-            LowerBound : 'a
+            UpperBound : float option
+            LowerBound : float option
         }
+
+    module FilterOnField =
+
+        let create fieldName upperBound lowerBound =
+            {
+                FieldName  = fieldName
+                UpperBound = upperBound
+                LowerBound = lowerBound
+            }
 
     type AggregationMethod =
         |Sum
         |Mean
         |Median
 
-    type TableSortParams<'a> =
+    type TableSortParams =
         {
             Separator                   : string
-            QuantFieldsToFilterOn       : FilterOnField<'a>[]
-            ProtFieldsToFilterOn        : FilterOnField<'a>[]
+            QuantFieldsToFilterOn       : FilterOnField[]
+            ProtFieldsToFilterOn        : FilterOnField[]
             QuantColumnsOfInterest      : string[]
             ProtColumnsOfInterest       : string[]
             AggregatorFunction          : AggregationMethod
