@@ -25,6 +25,9 @@ module console1 =
         logger.Info (sprintf "InputParameterPath -p = %s" p)
         logger.Trace (sprintf "CLIArguments: %A" results)
         Directory.CreateDirectory(o) |> ignore
+        let p =
+            Json.ReadAndDeserialize<Dto.TableSortParams<'a>> p
+            |> Dto.TableSortParams.toDomain
         if Directory.Exists quant && Directory.Exists prot then
             logger.Info (sprintf "multiple files")
             let quantFiles =
@@ -44,7 +47,7 @@ module console1 =
                 )
             matchedFiles
             |> Array.unzip
-            |> fun (quant, prot) -> sortTables quant prot o
+            |> fun (quant, prot) -> sortTables quant prot o p
             |> ignore
         elif (File.Exists quant) || (File.Exists prot) then
             failwith "Both, quant file path and prot file path, must be a folder."

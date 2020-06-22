@@ -460,26 +460,28 @@ module Dto =
                 MatchingTolerancePPM = dtoSpectralLibraryParams.MatchingTolerancePPM
             }
 
-    type TableSortParams =
+    type TableSortParams<'a> =
         {
-            Separator              : string
-            QuantFieldsToFilterOn  : FilterOnField[]
-            ProtFieldsToFilterOn   : FilterOnField[]
-            QuantColumnsOfInterest : string[]
-            ProtColumnsOfInterest  : string[]
-            AggregatorFunction     : AggregationMethod
-            Tukey                  : bool
+            Separator                   : string
+            QuantFieldsToFilterOn       : FilterOnField<'a>[]
+            ProtFieldsToFilterOn        : FilterOnField<'a>[]
+            QuantColumnsOfInterest      : string[]
+            ProtColumnsOfInterest       : string[]
+            AggregatorFunction          : AggregationMethod
+            AggregatorFunctionIntensity : AggregationMethod
+            Tukey                       : float option
         }
 
     module TableSortParams =
         
-        let toDomain (dtoTableSortParams: TableSortParams): Domain.TableSortParams =
+        let toDomain (dtoTableSortParams: TableSortParams<'a>): Domain.TableSortParams<'a> =
             {
-                Separator              = dtoTableSortParams.Separator
-                QuantFieldsToFilterOn  = dtoTableSortParams.QuantFieldsToFilterOn
-                ProtFieldsToFilterOn   = dtoTableSortParams.ProtFieldsToFilterOn
-                QuantColumnsOfInterest = dtoTableSortParams.QuantColumnsOfInterest
-                ProtColumnsOfInterest  = dtoTableSortParams.ProtColumnsOfInterest
-                AggregatorFunction     = dtoTableSortParams.AggregatorFunction
-                Tukey                  = dtoTableSortParams.Tukey
+                Separator                   = dtoTableSortParams.Separator
+                QuantFieldsToFilterOn       = dtoTableSortParams.QuantFieldsToFilterOn
+                ProtFieldsToFilterOn        = dtoTableSortParams.ProtFieldsToFilterOn
+                QuantColumnsOfInterest      = dtoTableSortParams.QuantColumnsOfInterest
+                ProtColumnsOfInterest       = dtoTableSortParams.ProtColumnsOfInterest
+                AggregatorFunction          = dtoTableSortParams.AggregatorFunction
+                AggregatorFunctionIntensity = dtoTableSortParams.AggregatorFunctionIntensity
+                Tukey                       = dtoTableSortParams.Tukey
             }
