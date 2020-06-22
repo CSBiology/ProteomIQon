@@ -26,7 +26,7 @@ module console1 =
         logger.Trace (sprintf "CLIArguments: %A" results)
         Directory.CreateDirectory(o) |> ignore
         let p =
-            Json.ReadAndDeserialize<Dto.TableSortParams<'a>> p
+            Json.ReadAndDeserialize<Dto.TableSortParams> p
             |> Dto.TableSortParams.toDomain
         if Directory.Exists quant && Directory.Exists prot then
             logger.Info (sprintf "multiple files")
