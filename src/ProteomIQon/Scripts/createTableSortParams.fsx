@@ -13,13 +13,14 @@ open BioFSharp.Mz
 
 let defaultTableSortParams: Dto.TableSortParams =
     {
-        Separator              = "\t"
-        QuantFieldsToFilterOn  = [||]
-        ProtFieldsToFilterOn   = [||]
-        QuantColumnsOfInterest = [|"N14Quant";"N15Quant"|]
-        ProtColumnsOfInterest  = [|"QValue"|]
-        AggregatorFunction     = AggregationMethod.Mean
-        Tukey                  = false
+        Separator                   = "\t"
+        QuantFieldsToFilterOn       = [||]
+        ProtFieldsToFilterOn        = [||]
+        QuantColumnsOfInterest      = [|"N14Quant";"N15Quant"|]
+        ProtColumnsOfInterest       = [|"QValue"|]
+        AggregatorFunction          = AggregationMethod.Mean
+        AggregatorFunctionIntensity = AggregationMethod.Mean
+        Tukey                       = false
     }
 
 let serialized = 
