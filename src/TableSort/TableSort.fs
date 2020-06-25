@@ -4,6 +4,7 @@ open Deedle
 open FSharpAux.IO
 open FSharpAux
 open FSharp.Stats
+open BioFSharp
 
 module TableSort =
 
@@ -43,6 +44,52 @@ module TableSort =
             |> Array.choose id
             |> Array.median)
 
+    let peptideEvidenceClassToFloat (ec: string) =
+        match ec with
+        | "Unknown" -> 0.
+        | "C1a" -> 1.
+        | "C1b" -> 2.
+        | "C2a" -> 3.
+        | "C2b" -> 4.
+        | "C3a" -> 5.
+        | "C3b" -> 6.
+        | _ -> failwith "invalid peptide evidence class"
+
+    let filterFrame (filterOn: Domain.FilterOnField[]) (frame: Frame<'a,string>) =
+        let rec filterLoop (i: int) (frameAcc: Frame<'a,string>) =
+            if i = filterOn.Length then
+                printfn "2"
+                frameAcc
+            else
+                let frame' =
+                    let currentField = filterOn.[i]
+                    printfn "1"
+                    frameAcc
+                    |> Frame.filterRowValues (fun s ->
+                        if currentField.FieldName = "EvidenceClass" then
+                            match s.TryGetAs<string>(currentField.FieldName) with
+                            | OptionalValue.Missing -> failwith "EvidenceClass can not be missing"
+                            | OptionalValue.Present v ->
+                                match (currentField.UpperBound, currentField.LowerBound) with
+                                | None, None -> true
+                                | Some uB, None -> (peptideEvidenceClassToFloat v) < uB
+                                | None, Some lB -> (peptideEvidenceClassToFloat v) > lB
+                                | Some uB, Some lB ->
+                                    (peptideEvidenceClassToFloat v) < uB && (peptideEvidenceClassToFloat v) > lB
+                        else
+                            match s.TryGetAs<float>(currentField.FieldName) with
+                            | OptionalValue.Missing -> true
+                            | OptionalValue.Present v ->
+                                match (currentField.UpperBound, currentField.LowerBound) with
+                                | None, None -> true
+                                | Some uB, None -> v < uB
+                                | None, Some lB -> v > lB
+                                | Some uB, Some lB -> v < uB && v > lB
+                    )
+                printfn "3"
+                filterLoop (i+1) frame'
+        filterLoop 0 frame
+
     let sortTables (quantFiles: string[]) (protFiles: string[]) outDirectory (param: Domain.TableSortParams) =
 
         // creates a schema that sets the column type of every column containing values to float
@@ -56,22 +103,28 @@ module TableSort =
                 let protTable : Frame<string,string> =
                     Frame.ReadCsv(path=protFile ,separators="\t")
                     |> Frame.indexRowsString "ProteinID"
+                let quantTableFiltered: Frame<int,string> =
+                    quantTable
+                    |> filterFrame param.QuantFieldsToFilterOn
+                let protTableFiltered: Frame<string,string> =
+                    protTable
+                    |> filterFrame param.ProtFieldsToFilterOn
                 // set of all columns from the quant table that are not needed for the final table
                 let quantColsNotNeeded =
                     Set.difference (quantTable.ColumnKeys |> Set.ofSeq) ((Array.append neededQuantColsIdentifiers neededQuantColsWithValues) |> Set.ofSeq)
                     |> Set.toArray
                 // drops all in 'quantColsNotNeeded' saved columns from the quant table
-                let filteredQuantTable =
-                    quantTable
+                let droppedQuantTable =
+                    quantTableFiltered
                     |> dropCols quantColsNotNeeded
                 let quantTableWithRatios =
                     // calculate 14N/15N ratios based on the corresponding fields from the quant table
                     let ratios =
-                        let n14 = filteredQuantTable.GetColumn<float>"N14Quant"
-                        let n15 = filteredQuantTable.GetColumn<float>"N15Quant"
+                        let n14 = droppedQuantTable.GetColumn<float>"N14Quant"
+                        let n15 = droppedQuantTable.GetColumn<float>"N15Quant"
                         n14/n15
 
-                    filteredQuantTable
+                    droppedQuantTable
                     // add the calculated ratios to the quant table
                     |> Frame.addCol "Ratio" ratios
                     // group all rows based on the peptide sequence. This groups different charges and global modifications of the same peptide
@@ -94,12 +147,12 @@ module TableSort =
                 let peptidesPresent = quantTableWithRatios.RowKeys |> Set.ofSeq
                 // table containing every peptide that is mapped to a protein group. The row keys are the protein groups and the PeptideSequences column contains a string array with all peptides mapping to them.
                 let peptidesMapped =
-                    protTable
+                    protTableFiltered
                     |> Frame.getCol "PeptideSequences"
                     |> Series.mapValues (fun (s : string)-> s.Split(';'))
                 // calculates count of peptides mapped to each protein group
                 let distinctPeptideCount =
-                    protTable
+                    protTableFiltered
                     |> Frame.getCol "PeptideSequences"
                     |> Series.map (fun _ x ->
                         x
@@ -108,7 +161,7 @@ module TableSort =
                     )
                 // an "empty" table based on the prot table. It only contains the row keys with the protein groups.
                 let baseTable =
-                    protTable
+                    protTableFiltered
                     |> dropCols [|"EvidenceClass"; "PeptideSequences"|]
                     |> Frame.addCol "DistinctPeptideCount" distinctPeptideCount
                 // the columns in the array are selected in the filtered quant table and compared to the protein groups. If the peptide is mapping to a protein group, then

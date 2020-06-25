@@ -14,7 +14,7 @@ open BioFSharp.Mz
 let defaultTableSortParams: Dto.TableSortParams =
     {
         Separator                   = "\t"
-        QuantFieldsToFilterOn       = [|(FilterOnField.create "PEPValue" (None) (Some 0.05))|]
+        QuantFieldsToFilterOn       = [|(FilterOnField.create "PEPValue" (None) (Some 0.005))|]
         ProtFieldsToFilterOn        = [|(FilterOnField.create "EvidenceClass" None (Some 1.))|]
         QuantColumnsOfInterest      = [|"N14Quant";"N15Quant"|]
         ProtColumnsOfInterest       = [|"QValue"|]
@@ -30,6 +30,6 @@ let serialized =
 System.IO.File.WriteAllText(__SOURCE_DIRECTORY__ + @"/../defaultParams\TableSortParams.json",serialized)
 
 let deserialized = 
-    System.IO.File.ReadAllText(__SOURCE_DIRECTORY__ + @"/../defaultParams\ProteinInferenceParams.json")
+    System.IO.File.ReadAllText(__SOURCE_DIRECTORY__ + @"/../defaultParams\TableSortParams.json")
     |> Json.deserialize<Dto.TableSortParams>
     |> TableSortParams.toDomain

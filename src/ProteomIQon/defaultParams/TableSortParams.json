@@ -1,18 +1,1 @@
-{
-  "Separator": "\t",
-  "QuantFieldsToFilterOn": [
-  ],
-  "ProtFieldsToFilterOn": [
-  ],
-  "QuantColumnsOfInterest": [
-    "N14Quant",
-    "N15Quant"
-  ],
-  "ProtColumnsOfInterest": [
-    "QValue"
-  ],
-  "AggregatorFunction": {
-    "Case": "Mean"
-  },
-  "Tukey": false
-}
+{"Separator":"\t","QuantFieldsToFilterOn":[{"FieldName":"PEPValue","UpperBound":null,"LowerBound":{"Case":"Some","Fields":[0.005]}}],"ProtFieldsToFilterOn":[{"FieldName":"EvidenceClass","UpperBound":null,"LowerBound":{"Case":"Some","Fields":[1.0]}}],"QuantColumnsOfInterest":["N14Quant","N15Quant"],"ProtColumnsOfInterest":["QValue"],"AggregatorFunction":{"Case":"Mean"},"AggregatorFunctionIntensity":{"Case":"Mean"},"Tukey":{"Case":"Some","Fields":[2.0]}}
