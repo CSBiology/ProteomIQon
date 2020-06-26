@@ -8,10 +8,6 @@ open BioFSharp
 
 module TableSort =
 
-    let neededQuantColsWithValues = [|"PEPValue";"N14Quant";"N15Quant"|]
-
-    let neededQuantColsIdentifiers = [|"StringSequence";"GlobalMod";"Charge"|]
-
     let createSchema (fieldType: string) (fields: string[]) =
         fields
         |> Array.map (fun s -> sprintf "%s=%s"s fieldType)
@@ -93,8 +89,18 @@ module TableSort =
     let sortTables (quantFiles: string[]) (protFiles: string[]) outDirectory (param: Domain.TableSortParams) =
 
         // creates a schema that sets the column type of every column containing values to float
+        let quantColsWithValues =
+            Array.append param.QuantColumnsOfInterest (param.QuantFieldsToFilterOn |> Array.map (fun x -> x.FieldName))
+            |> Array.distinct
         let quantColumnTypes =
-            createSchema "float" neededQuantColsWithValues
+            createSchema "float" quantColsWithValues
+        let quantColumnsOfInterest =
+            if param.Labeled then 
+                param.QuantColumnsOfInterest
+                // appends "Ratio" column since it's not included in the original columns with values
+                |> Array.append [|"Ratio"|]
+            else
+                param.QuantColumnsOfInterest
         let tables =
             Array.map2 ( fun quantFile protFile ->
                 // reads quant and prot table
@@ -109,42 +115,30 @@ module TableSort =
                 let protTableFiltered: Frame<string,string> =
                     protTable
                     |> filterFrame param.ProtFieldsToFilterOn
-                // set of all columns from the quant table that are not needed for the final table
-                let quantColsNotNeeded =
-                    Set.difference (quantTable.ColumnKeys |> Set.ofSeq) ((Array.append neededQuantColsIdentifiers neededQuantColsWithValues) |> Set.ofSeq)
-                    |> Set.toArray
-                // drops all in 'quantColsNotNeeded' saved columns from the quant table
-                let droppedQuantTable =
-                    quantTableFiltered
-                    |> dropCols quantColsNotNeeded
-                let quantTableWithRatios =
+                let quantTableAggregated =
                     // calculate 14N/15N ratios based on the corresponding fields from the quant table
-                    let ratios =
-                        let n14 = droppedQuantTable.GetColumn<float>"N14Quant"
-                        let n15 = droppedQuantTable.GetColumn<float>"N15Quant"
-                        n14/n15
+                    if param.Labeled then
+                        let ratios =
+                            let n14 = quantTableFiltered.GetColumn<float>"N14Quant"
+                            let n15 = quantTableFiltered.GetColumn<float>"N15Quant"
+                            n14/n15
+                        quantTableFiltered.AddColumn ("Ratio", ratios)
 
-                    droppedQuantTable
-                    // add the calculated ratios to the quant table
-                    |> Frame.addCol "Ratio" ratios
+                    quantTableFiltered
                     // group all rows based on the peptide sequence. This groups different charges and global modifications of the same peptide
                     |> Frame.groupRowsUsing (fun k ser -> (ser.GetAs<string>("StringSequence")))
                     // makes sure only columns with values are present (i.e. charge/global mod are removed)
                     |> Frame.filterCols (fun ck _ -> 
                         (
-                            (
-                                neededQuantColsWithValues
-                                // appends "Ratio" column since it's not included in the original columns with values
-                                |> Array.append [|"Ratio"|]
-                            )
+                            quantColumnsOfInterest
                             |> Set.ofArray
                         ).Contains(ck)
                     )
                     // aggregates the columns over the peptide sequence with a defined method (i.e. average,median,...)
                     |> Frame.applyLevel (fun (sequence,index) -> sequence) Stats.mean
-                    |> Frame.dropCol "PEPValue"
+                    //|> Frame.dropCol "PEPValue"
                 // set of every peptide present in the quant table based on the row keys
-                let peptidesPresent = quantTableWithRatios.RowKeys |> Set.ofSeq
+                let peptidesPresent = quantTableAggregated.RowKeys |> Set.ofSeq
                 // table containing every peptide that is mapped to a protein group. The row keys are the protein groups and the PeptideSequences column contains a string array with all peptides mapping to them.
                 let peptidesMapped =
                     protTableFiltered
@@ -162,13 +156,18 @@ module TableSort =
                 // an "empty" table based on the prot table. It only contains the row keys with the protein groups.
                 let baseTable =
                     protTableFiltered
-                    |> dropCols [|"EvidenceClass"; "PeptideSequences"|]
                     |> Frame.addCol "DistinctPeptideCount" distinctPeptideCount
+                    |> Frame.filterCols (fun ck _ -> 
+                        (
+                            param.ProtColumnsOfInterest
+                            |> Set.ofArray
+                        ).Contains(ck)
+                    )
                 // the columns in the array are selected in the filtered quant table and compared to the protein groups. If the peptide is mapping to a protein group, then
                 // an entry is added to the base table at the corresponding protein group.
-                [|"Ratio";"N14Quant";"N15Quant"|]
+                quantColumnsOfInterest
                 |> Array.map (fun name ->
-                    baseTable.AddColumn (name, getAggregatedPeptidesVals peptidesPresent peptidesMapped quantTableWithRatios name)
+                    baseTable.AddColumn (name, getAggregatedPeptidesVals peptidesPresent peptidesMapped quantTableAggregated name)
                 ) |> ignore
                 baseTable
                 |> Frame.mapRowKeys (fun key -> key, System.IO.Path.GetFileNameWithoutExtension protFile)

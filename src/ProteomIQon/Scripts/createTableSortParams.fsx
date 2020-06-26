@@ -16,11 +16,12 @@ let defaultTableSortParams: Dto.TableSortParams =
         Separator                   = "\t"
         QuantFieldsToFilterOn       = [|(FilterOnField.create "PEPValue" (None) (Some 0.005))|]
         ProtFieldsToFilterOn        = [|(FilterOnField.create "EvidenceClass" None (Some 1.))|]
-        QuantColumnsOfInterest      = [|"N14Quant";"N15Quant"|]
-        ProtColumnsOfInterest       = [|"QValue"|]
+        QuantColumnsOfInterest      = [|"N14Quant";"N15Quant"; "PEPValue"|]
+        ProtColumnsOfInterest       = [|"DistinctPeptideCount"|]
         AggregatorFunction          = AggregationMethod.Mean
         AggregatorFunctionIntensity = AggregationMethod.Mean
-        Tukey                       = Some 2.
+        Tukey                       = [|Some ("a", 2.)|]
+        Labeled                     = true
     }
 
 let serialized = 
