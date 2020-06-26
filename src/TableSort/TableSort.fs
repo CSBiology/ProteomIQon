@@ -13,17 +13,6 @@ module TableSort =
         |> Array.map (fun s -> sprintf "%s=%s"s fieldType)
         |> String.concat ","
 
-    let dropCols (columns: string[]) (frame: Frame<'a,string>): Frame<'a,string> =
-        let rec loop i (frameAcc: Frame<'a,string>) =
-            if i < columns.Length then
-                let newFrame =
-                    frameAcc
-                    |> Frame.dropCol columns.[i]
-                loop (i + 1) newFrame
-            else
-                frameAcc
-        loop 0 frame
-
     let getAggregatedPeptidesVals (peptidesPresent: Set<string>) (peptidesMapped:Series<string,string[]>) (data: Frame<string,string>) (columnName:string): Series<string,float> =
         peptidesMapped
         |> Series.mapValues (fun peptides ->
