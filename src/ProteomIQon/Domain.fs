@@ -191,6 +191,7 @@ module Domain =
             ProtColumnsOfInterest       : string[]
             AggregatorFunction          : AggregationMethod
             AggregatorFunctionIntensity : AggregationMethod
-            Tukey                       : float option
+            Tukey                       : (string*float) option []
+            Labeled                     : bool
         }
    

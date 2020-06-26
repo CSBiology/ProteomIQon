@@ -469,7 +469,8 @@ module Dto =
             ProtColumnsOfInterest       : string[]
             AggregatorFunction          : AggregationMethod
             AggregatorFunctionIntensity : AggregationMethod
-            Tukey                       : float option
+            Tukey                       : (string*float) option []
+            Labeled                     : bool
         }
 
     module TableSortParams =
@@ -484,4 +485,5 @@ module Dto =
                 AggregatorFunction          = dtoTableSortParams.AggregatorFunction
                 AggregatorFunctionIntensity = dtoTableSortParams.AggregatorFunctionIntensity
                 Tukey                       = dtoTableSortParams.Tukey
+                Labeled                     = dtoTableSortParams.Labeled
             }
