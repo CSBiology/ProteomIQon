@@ -19,8 +19,8 @@ let defaultTableSortParams: Dto.TableSortParams =
         QuantColumnsOfInterest      = [|"N14Quant";"N15Quant"; "PEPValue"|]
         ProtColumnsOfInterest       = [|"DistinctPeptideCount"|]
         AggregatorFunction          = AggregationMethod.Mean
-        AggregatorFunctionIntensity = AggregationMethod.Mean
-        Tukey                       = [|Some ("a", 2.)|]
+        AggregatorFunctionIntensity = AggregationMethod.Sum
+        Tukey                       = [|("N14Quant", 2.)|]
         Labeled                     = true
     }
 
