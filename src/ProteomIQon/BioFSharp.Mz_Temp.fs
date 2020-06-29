@@ -13,7 +13,69 @@ open ModificationInfo
 open System
 open FSharp.Stats.Signal
 
+module SeqIO' = 
+    open FSharpAux.IO.SeqIO
 
+
+    ///Returns a function to format a given value as string
+    let inline stringFunction (separator: string) (flatten: bool) (input: 'a) =
+        let o = box input
+        match o with
+        //match string first so that it doesn't get treated as a char array
+        | :? string ->
+            fun (x: obj) ->
+                let sb = new System.Text.StringBuilder()
+                sb.Append x |> ignore
+                let res = sb.ToString()
+                sb.Clear() |> ignore
+                res
+        | :? System.Collections.IEnumerable ->
+            if flatten then
+                fun x ->
+                    let sb = new System.Text.StringBuilder()
+                    let a = x :?> System.Collections.IEnumerable
+                    //iterates over Collections.IEnumerable to get entries as objects for the string builder
+                    let b = [for i in a do yield box i]
+                    b
+                    |> Seq.iteri (fun i x ->
+                        if i = 0 then
+                            sb.AppendFormat("{0}", x) |> ignore
+                        else
+                            sb.AppendFormat(sprintf "%s{0}" separator, x) |> ignore
+                        )
+                    let res = sb.ToString()
+                    sb.Clear() |> ignore
+                    res
+            else
+                fun x -> 
+                    let standardSeparators = [";";"\t";","]
+                    let separator = 
+                        standardSeparators
+                        |> List.find (fun sep -> sep <> separator)
+                    let sb = new System.Text.StringBuilder()
+                    let a = x :?> System.Collections.IEnumerable
+                    //iterates over Collections.IEnumerable to get entries as objects for the string builder
+                    let b = [for i in a do yield box i]
+                    b
+                    |> Seq.iteri (fun i x ->
+                        if i = 0 then
+                            sb.AppendFormat("{0}", x) |> ignore
+                        else
+                            sb.AppendFormat(sprintf "%s{0}" separator, x) |> ignore
+                        )
+                    let res = sb.ToString()
+                    sb.Clear() |> ignore
+                    res            
+        | _ ->
+            fun (x: obj) ->
+                let sb = new System.Text.StringBuilder()
+                sb.Append x |> ignore
+                let res = sb.ToString()
+                sb.Clear() |> ignore
+                res
+
+    let csv separator header flatten data = Seq.CSVwith Seq.valueFunction stringFunction separator header flatten data 
+    
 module FSharpStats' = 
 
     module Wavelet =
