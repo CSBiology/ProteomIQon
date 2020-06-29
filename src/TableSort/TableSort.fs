@@ -109,6 +109,12 @@ module TableSort =
                 tukeyLoop (i+1) frame'
         tukeyLoop 0 frame
 
+    let aggregationMethod (agMethod: Domain.AggregationMethod): Series<'K0,'V1> -> float =
+        match agMethod with
+        | Domain.AggregationMethod.Sum    -> Stats.sum
+        | Domain.AggregationMethod.Mean   -> Stats.mean
+        | Domain.AggregationMethod.Median -> Stats.median
+
     let sortTables (quantFiles: string[]) (protFiles: string[]) outDirectory (param: Domain.TableSortParams) =
 
         // creates a schema that sets the column type of every column containing values to float
@@ -145,7 +151,6 @@ module TableSort =
                 let protTableFiltered: Frame<string,string> =
                     protTable
                     |> filterFrame param.ProtFieldsToFilterOn
-                    |> filterFrameTukey param.Tukey
                 let quantTableAggregated =
                     // calculate 14N/15N ratios based on the corresponding fields from the quant table
                     if param.Labeled then
@@ -160,14 +165,9 @@ module TableSort =
                     //|> Frame.groupRowsUsing (fun k ser -> (ser.GetAs<string>("StringSequence")))
                     |> Frame.groupRowsBy "StringSequence"
                     // makes sure only columns with values are present (i.e. charge/global mod are removed)
-                    |> Frame.filterCols (fun ck _ -> 
-                        (
-                            quantColumnsOfInterest
-                            |> Set.ofArray
-                        ).Contains(ck)
-                    )
+                    |> Frame.filterCols (fun ck _ -> isQuantColumnOfInterest ck)
                     // aggregates the columns over the peptide sequence with a defined method (i.e. average,median,...)
-                    |> applyLevelWithException (fun (sequence,index) -> sequence) [|"N14Quant";"N15Quant"|] Stats.mean Stats.sum
+                    |> applyLevelWithException (fun (sequence,index) -> sequence) [|"N14Quant";"N15Quant"|] (aggregationMethod param.AggregatorFunction) (aggregationMethod param.AggregatorFunctionIntensity)
                     //|> Frame.dropCol "PEPValue"
                 // set of every peptide present in the quant table based on the row keys
                 let peptidesPresent = quantTableAggregated.RowKeys |> Set.ofSeq
