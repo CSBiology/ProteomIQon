@@ -6,6 +6,7 @@ open FSharpAux
 open FSharp.Stats
 open BioFSharp
 
+
 module TableSort =
 
     let createSchema (fieldType: string) (fields: string[]) =
@@ -28,6 +29,17 @@ module TableSort =
             x
             |> Array.choose id
             |> Array.median)
+
+    let applyLevelWithException (levelSel:_ -> 'K) (ex: 'C[]) (op:_ -> 'T) (exOp:_ -> 'T) (frame:Frame<'R, 'C>) =
+        let indexBuilder = Deedle.Indices.Linear.LinearIndexBuilder.Instance
+        let vectorBuilder = Deedle.Vectors.ArrayVector.ArrayVectorBuilder.Instance
+        frame.GetColumns<'T>()
+        |> Series.map (fun c s ->
+                if (Array.contains c ex) then
+                    Series.applyLevel levelSel exOp s
+                else
+                    Series.applyLevel levelSel op s)
+        |> FrameUtils.fromColumns indexBuilder vectorBuilder
 
     let peptideEvidenceClassToFloat (ec: string) =
         match ec with
@@ -112,6 +124,11 @@ module TableSort =
                 |> Array.append [|"Ratio"|]
             else
                 param.QuantColumnsOfInterest
+
+        let isQuantColumnOfInterest = 
+            let s = quantColumnsOfInterest |> Set.ofArray
+            fun x -> s.Contains x
+
         let tables =
             Array.map2 ( fun quantFile protFile ->
                 // reads quant and prot table
@@ -140,7 +157,8 @@ module TableSort =
 
                     quantTableFiltered
                     // group all rows based on the peptide sequence. This groups different charges and global modifications of the same peptide
-                    |> Frame.groupRowsUsing (fun k ser -> (ser.GetAs<string>("StringSequence")))
+                    //|> Frame.groupRowsUsing (fun k ser -> (ser.GetAs<string>("StringSequence")))
+                    |> Frame.groupRowsBy "StringSequence"
                     // makes sure only columns with values are present (i.e. charge/global mod are removed)
                     |> Frame.filterCols (fun ck _ -> 
                         (
@@ -149,7 +167,7 @@ module TableSort =
                         ).Contains(ck)
                     )
                     // aggregates the columns over the peptide sequence with a defined method (i.e. average,median,...)
-                    |> Frame.applyLevel (fun (sequence,index) -> sequence) Stats.mean
+                    |> applyLevelWithException (fun (sequence,index) -> sequence) [|"N14Quant";"N15Quant"|] Stats.mean Stats.sum
                     //|> Frame.dropCol "PEPValue"
                 // set of every peptide present in the quant table based on the row keys
                 let peptidesPresent = quantTableAggregated.RowKeys |> Set.ofSeq
