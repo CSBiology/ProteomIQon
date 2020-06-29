@@ -360,6 +360,20 @@ module Dto =
                 if (str) = "PSM" then QuantificationSource.PSM else QuantificationSource.Alignment 
                 |> box
                 )
+
+    type TraceConverter() = 
+        inherit ConverterAttribute()
+        override this.convertToObj = 
+            Converter.Single(fun (str : string) -> 
+                let tmp = (str |> String.filter (fun x -> x <> '|' && x <> '[' && x <> ']' )).Trim() 
+                if tmp = "" then 
+                    [||]
+                else
+                    tmp.Split(';')
+                    |> Array.map float
+                |> box 
+                )
+                
     ///
     type QuantificationResult = {
         [<FieldAttribute(0)>]
@@ -396,14 +410,15 @@ module Dto =
         MeasuredApex_Light                          : float 
         [<FieldAttribute(16)>]
         Seo_Light                                   : float
-        [<FieldAttribute(17)>]
-        Params_Light                                : string
+        [<FieldAttribute(17)>][<TraceConverter>]
+        Params_Light                                : float []
         [<FieldAttribute(18)>]
         Difference_SearchRT_FittedRT_Light          : float
         [<FieldAttribute(19)>]
         KLDiv_Observed_Theoretical_Light            : float
         [<FieldAttribute(20)>]
         KLDiv_CorrectedObserved_Theoretical_Light   : float
+
         [<FieldAttribute(21)>]
         QuantMz_Heavy                               : float
         [<FieldAttribute(22)>]
@@ -412,19 +427,49 @@ module Dto =
         MeasuredApex_Heavy                          : float
         [<FieldAttribute(24)>]
         Seo_Heavy                                   : float
-        [<FieldAttribute(25)>]
-        Params_Heavy                                : string        
+        [<FieldAttribute(25)>][<TraceConverter>]
+        Params_Heavy                                : float []        
         [<FieldAttribute(26)>]
         Difference_SearchRT_FittedRT_Heavy          : float
         [<FieldAttribute(27)>]
         KLDiv_Observed_Theoretical_Heavy            : float
         [<FieldAttribute(28)>]
         KLDiv_CorrectedObserved_Theoretical_Heavy   : float
+
+
         [<FieldAttribute(29)>]
         Correlation_Light_Heavy                     : float
         [<FieldAttribute(30)>][<QuantSourceConverter>]
         QuantificationSource                        : QuantificationSource
+
+        [<FieldAttribute(31)>][<TraceConverter>]
+        IsotopicPatternMz_Light                     : float []
+        [<FieldAttribute(32)>][<TraceConverter>]
+        IsotopicPatternIntensity_Observed_Light     : float []
+        [<FieldAttribute(33)>][<TraceConverter>]
+        IsotopicPatternIntensity_Corrected_Light    : float []
+        [<FieldAttribute(34)>][<TraceConverter>]
+        RtTrace_Light                               : float []
+        [<FieldAttribute(35)>][<TraceConverter>]
+        IntensityTrace_Observed_Light               : float []
+        [<FieldAttribute(36)>][<TraceConverter>]
+        IntensityTrace_Corrected_Light              : float []
+
+        [<FieldAttribute(37)>][<TraceConverter>]
+        IsotopicPatternMz_Heavy                     : float []
+        [<FieldAttribute(38)>][<TraceConverter>]
+        IsotopicPatternIntensity_Observed_Heavy     : float []
+        [<FieldAttribute(39)>][<TraceConverter>]
+        IsotopicPatternIntensity_Corrected_Heavy    : float []
+        [<FieldAttribute(10)>][<TraceConverter>]
+        RtTrace_Heavy                               : float []
+        [<FieldAttribute(41)>][<TraceConverter>]
+        IntensityTrace_Observed_Heavy               : float []
+        [<FieldAttribute(42)>][<TraceConverter>]
+        IntensityTrace_Corrected_Heavy              : float []
         }
+
+
 
     type ProteinInferenceParams =
           {

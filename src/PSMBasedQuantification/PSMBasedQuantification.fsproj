@@ -18,8 +18,6 @@
   </PropertyGroup>
   <ItemGroup>
     <None Include="App.config" />
-    <Compile Include="Wavelet.fs" />
-    <Compile Include="PeakDetection.fs" />
     <Compile Include="PSMBasedQuantification.fs" />
     <Compile Include="CLIArgumentParsing.fs" />
     <Compile Include="Program.fs" />

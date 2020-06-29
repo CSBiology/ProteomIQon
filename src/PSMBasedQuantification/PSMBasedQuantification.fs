@@ -410,7 +410,7 @@ module PSMBasedQuantification =
             let getWindowWidth = initGetWindowWidth parameters.WindowSize parameters.PolynomOrder [|5 .. 2 .. 60|] 
             (fun xData yData -> 
                 let  windowSize = getWindowWidth yData
-                SignalDetectionTemp.getPeaks parameters.MinSNR parameters.PolynomOrder windowSize xData yData
+                FSharp.Stats.Signal.PeakDetection.SecondDerivative.getPeaks parameters.MinSNR parameters.PolynomOrder windowSize xData yData
                 )
         | Domain.XicProcessing.Wavelet parameters ->
             (fun xData yData -> 
@@ -661,7 +661,7 @@ module PSMBasedQuantification =
                 Quant_Light                                 = quantP.Area
                 MeasuredApex_Light                          = quantP.MeasuredApexIntensity
                 Seo_Light                                   = quantP.StandardErrorOfPrediction
-                Params_Light                                = quantP.EstimatedParams |> Array.map string |> String.concat ";"                
+                Params_Light                                = quantP.EstimatedParams            
                 Difference_SearchRT_FittedRT_Light          = searchRTMinusFittedRT
                 KLDiv_Observed_Theoretical_Light            = clusterComparison_Target.KLDiv_UnCorrected
                 KLDiv_CorrectedObserved_Theoretical_Light   = clusterComparison_Target.KLDiv_Corrected
@@ -669,12 +669,26 @@ module PSMBasedQuantification =
                 Quant_Heavy                                 = inferred_Heavy.Area
                 MeasuredApex_Heavy                          = inferred_Heavy.MeasuredApexIntensity
                 Seo_Heavy                                   = inferred_Heavy.StandardErrorOfPrediction
-                Params_Heavy                                = inferred_Heavy.EstimatedParams |> Array.map string |> String.concat ";"
+                Params_Heavy                                = inferred_Heavy.EstimatedParams 
                 Difference_SearchRT_FittedRT_Heavy          = searchRTMinusFittedRT_Heavy
                 KLDiv_Observed_Theoretical_Heavy            = clusterComparison_Heavy.KLDiv_UnCorrected
                 KLDiv_CorrectedObserved_Theoretical_Heavy   = clusterComparison_Heavy.KLDiv_Corrected
                 Correlation_Light_Heavy                     = corrLightHeavy
                 QuantificationSource                        = QuantificationSource.PSM
+
+                IsotopicPatternMz_Light                     = clusterComparison_Target.PeakComparisons |> Array.map (fun x -> x.Mz)
+                IsotopicPatternIntensity_Observed_Light     = clusterComparison_Target.PeakComparisons |> Array.map (fun x -> x.MeasuredIntensity)
+                IsotopicPatternIntensity_Corrected_Light    = clusterComparison_Target.PeakComparisons |> Array.map (fun x -> x.MeasuredIntensityCorrected)
+                RtTrace_Light                               = averagePSM.X_Xic 
+                IntensityTrace_Observed_Light               = averagePSM.Y_Xic_uncorrected
+                IntensityTrace_Corrected_Light              = averagePSM.Y_Xic
+                IsotopicPatternMz_Heavy                     = clusterComparison_Heavy.PeakComparisons |> Array.map (fun x -> x.Mz)
+                IsotopicPatternIntensity_Observed_Heavy     = clusterComparison_Heavy.PeakComparisons |> Array.map (fun x -> x.MeasuredIntensity)
+                IsotopicPatternIntensity_Corrected_Heavy    = clusterComparison_Heavy.PeakComparisons |> Array.map (fun x -> x.MeasuredIntensityCorrected)
+                RtTrace_Heavy                               = inferred_Heavy.X_Xic 
+                IntensityTrace_Observed_Heavy               = inferred_Heavy.Y_Xic_uncorrected
+                IntensityTrace_Corrected_Heavy              = inferred_Heavy.Y_Xic
+
                 }
                 |> Option.Some
             else
@@ -703,7 +717,7 @@ module PSMBasedQuantification =
                 Quant_Light                                 = inferred_Light.Area
                 MeasuredApex_Light                          = inferred_Light.MeasuredApexIntensity
                 Seo_Light                                   = inferred_Light.StandardErrorOfPrediction
-                Params_Light                                = inferred_Light.EstimatedParams |> Array.map string |> String.concat ";"
+                Params_Light                                = inferred_Light.EstimatedParams 
                 Difference_SearchRT_FittedRT_Light          = searchRTMinusFittedRT_Light
                 KLDiv_Observed_Theoretical_Light            = clusterComparison_Light.KLDiv_UnCorrected
                 KLDiv_CorrectedObserved_Theoretical_Light   = clusterComparison_Light.KLDiv_Corrected
@@ -711,12 +725,26 @@ module PSMBasedQuantification =
                 Quant_Heavy                                 = quantP.Area
                 MeasuredApex_Heavy                          = quantP.MeasuredApexIntensity
                 Seo_Heavy                                   = quantP.StandardErrorOfPrediction
-                Params_Heavy                                = quantP.EstimatedParams |> Array.map string |> String.concat ";"
+                Params_Heavy                                = quantP.EstimatedParams 
                 Difference_SearchRT_FittedRT_Heavy          = searchRTMinusFittedRT
                 KLDiv_Observed_Theoretical_Heavy            = clusterComparison_Target.KLDiv_UnCorrected
                 KLDiv_CorrectedObserved_Theoretical_Heavy   = clusterComparison_Target.KLDiv_Corrected
                 Correlation_Light_Heavy                     = corrLightHeavy
                 QuantificationSource                        = QuantificationSource.PSM
+
+                IsotopicPatternMz_Light                     = clusterComparison_Light.PeakComparisons |> Array.map (fun x -> x.Mz)
+                IsotopicPatternIntensity_Observed_Light     = clusterComparison_Light.PeakComparisons |> Array.map (fun x -> x.MeasuredIntensity)
+                IsotopicPatternIntensity_Corrected_Light    = clusterComparison_Light.PeakComparisons |> Array.map (fun x -> x.MeasuredIntensityCorrected)
+                RtTrace_Light                               = inferred_Light.X_Xic 
+                IntensityTrace_Observed_Light               = inferred_Light.Y_Xic_uncorrected
+                IntensityTrace_Corrected_Light              = inferred_Light.Y_Xic
+                IsotopicPatternMz_Heavy                     = clusterComparison_Target.PeakComparisons |> Array.map (fun x -> x.Mz)
+                IsotopicPatternIntensity_Observed_Heavy     = clusterComparison_Target.PeakComparisons |> Array.map (fun x -> x.MeasuredIntensity)
+                IsotopicPatternIntensity_Corrected_Heavy    = clusterComparison_Target.PeakComparisons |> Array.map (fun x -> x.MeasuredIntensityCorrected)
+                RtTrace_Heavy                               = averagePSM.X_Xic 
+                IntensityTrace_Observed_Heavy               = averagePSM.Y_Xic_uncorrected
+                IntensityTrace_Corrected_Heavy              = averagePSM.Y_Xic
+
                 }
                 |> Option.Some
             with
@@ -775,7 +803,7 @@ module PSMBasedQuantification =
             Quant_Light                                 = quantP.Area
             MeasuredApex_Light                          = quantP.MeasuredApexIntensity
             Seo_Light                                   = quantP.StandardErrorOfPrediction
-            Params_Light                                = quantP.EstimatedParams |> Array.map string |> String.concat ";"
+            Params_Light                                = quantP.EstimatedParams 
             Difference_SearchRT_FittedRT_Light          = searchRTMinusFittedRT
             KLDiv_Observed_Theoretical_Light            = clusterComparison_Target.KLDiv_UnCorrected
             KLDiv_CorrectedObserved_Theoretical_Light   = clusterComparison_Target.KLDiv_Corrected
@@ -783,12 +811,26 @@ module PSMBasedQuantification =
             Quant_Heavy                                 = nan
             MeasuredApex_Heavy                          = nan
             Seo_Heavy                                   = nan
-            Params_Heavy                                = ""
+            Params_Heavy                                = [||]
             Difference_SearchRT_FittedRT_Heavy          = nan
             KLDiv_Observed_Theoretical_Heavy            = nan
             KLDiv_CorrectedObserved_Theoretical_Heavy   = nan
             Correlation_Light_Heavy                     = nan
             QuantificationSource                        = QuantificationSource.PSM
+
+            IsotopicPatternMz_Light                     = clusterComparison_Target.PeakComparisons|> Array.map (fun x -> x.Mz)
+            IsotopicPatternIntensity_Observed_Light     = clusterComparison_Target.PeakComparisons|> Array.map (fun x -> x.MeasuredIntensity)
+            IsotopicPatternIntensity_Corrected_Light    = clusterComparison_Target.PeakComparisons|> Array.map (fun x -> x.MeasuredIntensityCorrected)
+            RtTrace_Light                               = averagePSM.X_Xic 
+            IntensityTrace_Observed_Light               = averagePSM.Y_Xic_uncorrected
+            IntensityTrace_Corrected_Light              = averagePSM.Y_Xic
+            IsotopicPatternMz_Heavy                     = [||]
+            IsotopicPatternIntensity_Observed_Heavy     = [||]
+            IsotopicPatternIntensity_Corrected_Heavy    = [||]
+            RtTrace_Heavy                               = [||]
+            IntensityTrace_Observed_Heavy               = [||]
+            IntensityTrace_Corrected_Heavy              = [||]
+
             }
             |> Option.Some
             with
@@ -817,7 +859,7 @@ module PSMBasedQuantification =
             )
         |> Array.filter Option.isSome
         |> Array.map (fun x -> x.Value)
-        |> FSharpAux.IO.SeqIO.Seq.CSV "\t" true true
+        |> SeqIO'.csv "\t" true false
         |> FSharpAux.IO.SeqIO.Seq.writeOrAppend (outFilePath)
         logger.Trace "executing quantification:finished"
         
