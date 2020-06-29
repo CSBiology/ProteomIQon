@@ -46,8 +46,8 @@ module TableSort =
                 printfn "2"
                 frameAcc
             else
+                let currentField = filterOn.[i]
                 let frame' =
-                    let currentField = filterOn.[i]
                     printfn "1"
                     frameAcc
                     |> Frame.filterRowValues (fun s ->
@@ -75,6 +75,28 @@ module TableSort =
                 filterLoop (i+1) frame'
         filterLoop 0 frame
 
+    let filterFrameTukey (tukeyFields: (string*float)[]) (frame: Frame<'a,string>) =
+        let rec tukeyLoop (i: int) (frameAcc: Frame<'a,string>) =
+            if i = tukeyFields.Length then
+                frameAcc
+            else
+                let tukeyC = snd tukeyFields.[i]
+                let field = fst tukeyFields.[i]
+                let vals = Frame.getCol field frame
+                let borders =
+                    vals
+                    |> Series.values
+                    |> Array.ofSeq
+                    |> fun x -> FSharp.Stats.Testing.Outliers.tukey tukeyC x
+                let frame' =
+                    frameAcc
+                    |> Frame.filterRowValues (fun s ->
+                        match s.TryGetAs<float>(field) with
+                        | OptionalValue.Missing -> true
+                        | OptionalValue.Present v -> v <  borders.Upper && v > borders.Lower)
+                tukeyLoop (i+1) frame'
+        tukeyLoop 0 frame
+
     let sortTables (quantFiles: string[]) (protFiles: string[]) outDirectory (param: Domain.TableSortParams) =
 
         // creates a schema that sets the column type of every column containing values to float
@@ -101,9 +123,12 @@ module TableSort =
                 let quantTableFiltered: Frame<int,string> =
                     quantTable
                     |> filterFrame param.QuantFieldsToFilterOn
+                    // is it okay to apply tukey outlier detection after filtering?
+                    |> filterFrameTukey param.Tukey
                 let protTableFiltered: Frame<string,string> =
                     protTable
                     |> filterFrame param.ProtFieldsToFilterOn
+                    |> filterFrameTukey param.Tukey
                 let quantTableAggregated =
                     // calculate 14N/15N ratios based on the corresponding fields from the quant table
                     if param.Labeled then
