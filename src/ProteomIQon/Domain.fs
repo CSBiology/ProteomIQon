@@ -184,14 +184,17 @@ module Domain =
 
     type TableSortParams =
         {
-            Separator                   : string
+            SeparatorIn                 : string
+            SeparatorOut                : string
             QuantFieldsToFilterOn       : FilterOnField[]
             ProtFieldsToFilterOn        : FilterOnField[]
             QuantColumnsOfInterest      : string[]
             ProtColumnsOfInterest       : string[]
             AggregatorFunction          : AggregationMethod
             AggregatorFunctionIntensity : AggregationMethod
-            Tukey                       : (string*float) []
+            AggregatorPepToProt         : AggregationMethod
+            TukeyQuant                  : (string*float) []
+            TukeyProt                   : (string*float) []
             Labeled                     : bool
         }
    

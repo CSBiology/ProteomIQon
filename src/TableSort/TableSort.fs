@@ -14,7 +14,19 @@ module TableSort =
         |> Array.map (fun s -> sprintf "%s=%s"s fieldType)
         |> String.concat ","
 
-    let getAggregatedPeptidesVals (peptidesPresent: Set<string>) (peptidesMapped:Series<string,string[]>) (data: Frame<string,string>) (columnName:string): Series<string,float> =
+    let aggregationMethod (agMethod: Domain.AggregationMethod): Series<'K0,'V1> -> float =
+        match agMethod with
+        | Domain.AggregationMethod.Sum    -> Stats.sum
+        | Domain.AggregationMethod.Mean   -> Stats.mean
+        | Domain.AggregationMethod.Median -> Stats.median
+
+    let aggregationMethodPepToProt (agMethod: Domain.AggregationMethod): float[] -> float =
+        match agMethod with
+        | Domain.AggregationMethod.Sum    -> Array.sum
+        | Domain.AggregationMethod.Mean   -> Array.average
+        | Domain.AggregationMethod.Median -> Array.median
+
+    let getAggregatedPeptidesVals (peptidesPresent: Set<string>) (peptidesMapped:Series<string,string[]>) (data: Frame<string,string>) (columnName:string) (agMethod: Domain.AggregationMethod): Series<string,float> =
         peptidesMapped
         |> Series.mapValues (fun peptides ->
             peptides
@@ -28,7 +40,7 @@ module TableSort =
         |> Series.mapValues (fun x ->
             x
             |> Array.choose id
-            |> Array.median)
+            |> (aggregationMethodPepToProt agMethod))
 
     let applyLevelWithException (levelSel:_ -> 'K) (ex: 'C[]) (op:_ -> 'T) (exOp:_ -> 'T) (frame:Frame<'R, 'C>) =
         let indexBuilder = Deedle.Indices.Linear.LinearIndexBuilder.Instance
@@ -109,12 +121,6 @@ module TableSort =
                 tukeyLoop (i+1) frame'
         tukeyLoop 0 frame
 
-    let aggregationMethod (agMethod: Domain.AggregationMethod): Series<'K0,'V1> -> float =
-        match agMethod with
-        | Domain.AggregationMethod.Sum    -> Stats.sum
-        | Domain.AggregationMethod.Mean   -> Stats.mean
-        | Domain.AggregationMethod.Median -> Stats.median
-
     let sortTables (quantFiles: string[]) (protFiles: string[]) outDirectory (param: Domain.TableSortParams) =
 
         // creates a schema that sets the column type of every column containing values to float
@@ -144,22 +150,24 @@ module TableSort =
                     Frame.ReadCsv(path=protFile ,separators="\t")
                     |> Frame.indexRowsString "ProteinID"
                 let quantTableFiltered: Frame<int,string> =
+                    // calculate 14N/15N ratios based on the corresponding fields from the quant table
+                    // Ratio gets added before filtering, so that it can also be filtered on
+                    if param.Labeled then
+                        let ratios =
+                            let n14 = quantTable.GetColumn<float>"N14Quant"
+                            let n15 = quantTable.GetColumn<float>"N15Quant"
+                            n14/n15
+                        quantTable.AddColumn ("Ratio", ratios)
+
                     quantTable
                     |> filterFrame param.QuantFieldsToFilterOn
                     // is it okay to apply tukey outlier detection after filtering?
-                    |> filterFrameTukey param.Tukey
+                    |> filterFrameTukey param.TukeyQuant
                 let protTableFiltered: Frame<string,string> =
                     protTable
                     |> filterFrame param.ProtFieldsToFilterOn
+                    |> filterFrameTukey param.TukeyProt
                 let quantTableAggregated =
-                    // calculate 14N/15N ratios based on the corresponding fields from the quant table
-                    if param.Labeled then
-                        let ratios =
-                            let n14 = quantTableFiltered.GetColumn<float>"N14Quant"
-                            let n15 = quantTableFiltered.GetColumn<float>"N15Quant"
-                            n14/n15
-                        quantTableFiltered.AddColumn ("Ratio", ratios)
-
                     quantTableFiltered
                     // group all rows based on the peptide sequence. This groups different charges and global modifications of the same peptide
                     //|> Frame.groupRowsUsing (fun k ser -> (ser.GetAs<string>("StringSequence")))
@@ -167,7 +175,8 @@ module TableSort =
                     // makes sure only columns with values are present (i.e. charge/global mod are removed)
                     |> Frame.filterCols (fun ck _ -> isQuantColumnOfInterest ck)
                     // aggregates the columns over the peptide sequence with a defined method (i.e. average,median,...)
-                    |> applyLevelWithException (fun (sequence,index) -> sequence) [|"N14Quant";"N15Quant"|] (aggregationMethod param.AggregatorFunction) (aggregationMethod param.AggregatorFunctionIntensity)
+                    |> applyLevelWithException (fun (sequence,index) -> sequence) [|"N14Quant";"N15Quant"|]
+                        (aggregationMethod param.AggregatorFunction) (aggregationMethod param.AggregatorFunctionIntensity)
                     //|> Frame.dropCol "PEPValue"
                 // set of every peptide present in the quant table based on the row keys
                 let peptidesPresent = quantTableAggregated.RowKeys |> Set.ofSeq
@@ -199,7 +208,7 @@ module TableSort =
                 // an entry is added to the base table at the corresponding protein group.
                 quantColumnsOfInterest
                 |> Array.map (fun name ->
-                    baseTable.AddColumn (name, getAggregatedPeptidesVals peptidesPresent peptidesMapped quantTableAggregated name)
+                    baseTable.AddColumn (name, getAggregatedPeptidesVals peptidesPresent peptidesMapped quantTableAggregated name param.AggregatorPepToProt)
                 ) |> ignore
                 baseTable
                 |> Frame.mapRowKeys (fun key -> key, System.IO.Path.GetFileNameWithoutExtension protFile)
