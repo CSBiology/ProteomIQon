@@ -15,7 +15,7 @@ let defaultTableSortParams: Dto.TableSortParams =
     {
         SeparatorIn                 = "\t"
         SeparatorOut                = '\t'
-        QuantFieldsToFilterOn       = [|(*(FilterOnField.create "PEPValue" (None) (Some 0.005))*)|]
+        QuantFieldsToFilterOn       = [|(FilterOnField.create "N14Quant" (None) (Some 0.)); (FilterOnField.create "N15Quant" (None) (Some 0.))|]
         ProtFieldsToFilterOn        = [|(*(FilterOnField.create "EvidenceClass" None (Some 1.))*)|]
         QuantColumnsOfInterest      = [|"N14Quant";"N15Quant"|]
         ProtColumnsOfInterest       = [|"DistinctPeptideCount"|]
