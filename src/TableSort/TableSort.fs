@@ -22,9 +22,18 @@ module TableSort =
 
     let aggregationMethodPepToProt (agMethod: Domain.AggregationMethod): float[] -> float =
         match agMethod with
-        | Domain.AggregationMethod.Sum    -> Array.sum
-        | Domain.AggregationMethod.Mean   -> Array.average
-        | Domain.AggregationMethod.Median -> Array.median
+        | Domain.AggregationMethod.Sum ->
+            fun (x: float[]) ->
+                if x.Length = 0 then nan
+                else Array.sum x
+        | Domain.AggregationMethod.Mean ->
+            fun (x: float[]) ->
+                if x.Length = 0 then nan
+                else Array.average x
+        | Domain.AggregationMethod.Median ->
+            fun (x: float[]) ->
+                if x.Length = 0 then nan
+                else Array.median x
 
     let getAggregatedPeptidesVals (peptidesPresent: Set<string>) (peptidesMapped:Series<string,string[]>) (data: Frame<string,string>) (columnName:string) (agMethod: Domain.AggregationMethod): Series<string,float> =
         peptidesMapped
