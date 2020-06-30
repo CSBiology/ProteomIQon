@@ -375,8 +375,7 @@ module PSMBasedQuantification =
         |> Chart.withSize(2500.,800.)
         |> Chart.SaveHtmlAs(Path.Combine[|plotDirectory; ((sequence |> String.filter (fun x -> x <> '*')) + "_GMod_" + globalMod.ToString() + "Ch" + ch.ToString())|])
             
-            
-
+           
     // Method is based on: https://doi.org/10.1021/ac0600196
     /// Estimates the autocorrelation at lag 1 of a blank signal (containing only noise). Subsequently, the signal of interest is smoothed
     /// several times by a savitzky golay filter using constant polynomial order and variing windowWidth. For each iteration, the deviation
@@ -573,8 +572,7 @@ module PSMBasedQuantification =
             Csv.CsvReader<PSMStatisticsResult>(SchemaMode=Csv.Fill).ReadFile(scoredPSMs,'\t',false,1)
             |> Array.ofSeq
         logger.Trace "Read scored PSMs:finished"
-
-        
+ 
         logger.Trace "Estimate ms1 mz accuracy"
         ///
         let ms1AccuracyEstimate = 
@@ -675,7 +673,6 @@ module PSMBasedQuantification =
                 KLDiv_CorrectedObserved_Theoretical_Heavy   = clusterComparison_Heavy.KLDiv_Corrected
                 Correlation_Light_Heavy                     = corrLightHeavy
                 QuantificationSource                        = QuantificationSource.PSM
-
                 IsotopicPatternMz_Light                     = clusterComparison_Target.PeakComparisons |> Array.map (fun x -> x.Mz)
                 IsotopicPatternIntensity_Observed_Light     = clusterComparison_Target.PeakComparisons |> Array.map (fun x -> x.MeasuredIntensity)
                 IsotopicPatternIntensity_Corrected_Light    = clusterComparison_Target.PeakComparisons |> Array.map (fun x -> x.MeasuredIntensityCorrected)
@@ -688,7 +685,6 @@ module PSMBasedQuantification =
                 RtTrace_Heavy                               = inferred_Heavy.X_Xic 
                 IntensityTrace_Observed_Heavy               = inferred_Heavy.Y_Xic_uncorrected
                 IntensityTrace_Corrected_Heavy              = inferred_Heavy.Y_Xic
-
                 }
                 |> Option.Some
             else
@@ -731,7 +727,6 @@ module PSMBasedQuantification =
                 KLDiv_CorrectedObserved_Theoretical_Heavy   = clusterComparison_Target.KLDiv_Corrected
                 Correlation_Light_Heavy                     = corrLightHeavy
                 QuantificationSource                        = QuantificationSource.PSM
-
                 IsotopicPatternMz_Light                     = clusterComparison_Light.PeakComparisons |> Array.map (fun x -> x.Mz)
                 IsotopicPatternIntensity_Observed_Light     = clusterComparison_Light.PeakComparisons |> Array.map (fun x -> x.MeasuredIntensity)
                 IsotopicPatternIntensity_Corrected_Light    = clusterComparison_Light.PeakComparisons |> Array.map (fun x -> x.MeasuredIntensityCorrected)
@@ -783,7 +778,7 @@ module PSMBasedQuantification =
             let quantP = BioFSharp.Mz.Quantification.HULQ.quantifyPeak peakToQuantify
             let searchRTMinusFittedRT = quantP.EstimatedParams.[1] - averagePSM.WeightedAvgScanTime
             let chart = saveChart pepIon.Sequence pepIon.GlobalMod pepIon.Charge averagePSM.X_Xic averagePSM.Y_Xic ms2s averagePSM.WeightedAvgScanTime
-                                peakToQuantify.XData peakToQuantify.YData quantP.YPredicted (*[||] [||]*) [||] [||] [||] [||] peaks [||] plotDirectory
+                                peakToQuantify.XData peakToQuantify.YData quantP.YPredicted  [||] [||] [||] [||] peaks [||] plotDirectory
             let clusterComparison_Target = comparePredictedAndMeasuredIsotopicCluster averagePSM.X_Xic averagePSM.Y_Xic averagePSM.Y_Xic_uncorrected pepIon.Charge unlabledPeptide.BioSequence quantP.EstimatedParams.[1] averagePSM.MeanPrecMz
             {
             StringSequence                              = pepIon.Sequence
@@ -817,7 +812,6 @@ module PSMBasedQuantification =
             KLDiv_CorrectedObserved_Theoretical_Heavy   = nan
             Correlation_Light_Heavy                     = nan
             QuantificationSource                        = QuantificationSource.PSM
-
             IsotopicPatternMz_Light                     = clusterComparison_Target.PeakComparisons|> Array.map (fun x -> x.Mz)
             IsotopicPatternIntensity_Observed_Light     = clusterComparison_Target.PeakComparisons|> Array.map (fun x -> x.MeasuredIntensity)
             IsotopicPatternIntensity_Corrected_Light    = clusterComparison_Target.PeakComparisons|> Array.map (fun x -> x.MeasuredIntensityCorrected)
