@@ -463,7 +463,7 @@ module Dto =
     type TableSortParams =
         {
             SeparatorIn                 : string
-            SeparatorOut                : string
+            SeparatorOut                : char
             QuantFieldsToFilterOn       : FilterOnField[]
             ProtFieldsToFilterOn        : FilterOnField[]
             QuantColumnsOfInterest      : string[]
