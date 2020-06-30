@@ -186,6 +186,8 @@ module TableSort =
                     // aggregates the columns over the peptide sequence with a defined method (i.e. average,median,...)
                     |> applyLevelWithException (fun (sequence,index) -> sequence) [|"N14Quant";"N15Quant"|]
                         (aggregationMethod param.AggregatorFunction) (aggregationMethod param.AggregatorFunctionIntensity)
+                    // drop sparse rows to prevent missing 14n/15n quant values, which will later complicate aggregation of peptides to proteins
+                    |> Frame.dropSparseRows
                     //|> Frame.dropCol "PEPValue"
                 // set of every peptide present in the quant table based on the row keys
                 let peptidesPresent = quantTableAggregated.RowKeys |> Set.ofSeq
