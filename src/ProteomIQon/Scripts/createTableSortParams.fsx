@@ -14,15 +14,15 @@ open BioFSharp.Mz
 let defaultTableSortParams: Dto.TableSortParams =
     {
         SeparatorIn                 = "\t"
-        SeparatorOut                = "\t"
-        QuantFieldsToFilterOn       = [|(FilterOnField.create "PEPValue" (None) (Some 0.005))|]
-        ProtFieldsToFilterOn        = [|(FilterOnField.create "EvidenceClass" None (Some 1.))|]
-        QuantColumnsOfInterest      = [|"N14Quant";"N15Quant"; "PEPValue"|]
+        SeparatorOut                = '\t'
+        QuantFieldsToFilterOn       = [|(*(FilterOnField.create "PEPValue" (None) (Some 0.005))*)|]
+        ProtFieldsToFilterOn        = [|(*(FilterOnField.create "EvidenceClass" None (Some 1.))*)|]
+        QuantColumnsOfInterest      = [|"N14Quant";"N15Quant"|]
         ProtColumnsOfInterest       = [|"DistinctPeptideCount"|]
         AggregatorFunction          = AggregationMethod.Mean
         AggregatorFunctionIntensity = AggregationMethod.Mean
         AggregatorPepToProt         = AggregationMethod.Mean
-        TukeyQuant                  = [|("N14Quant", 2.)|]
+        TukeyQuant                  = [|(*("N14Quant", 2.); ("N15Quant", 2.)*)|]
         TukeyProt                   = [||]
         Labeled                     = true
     }

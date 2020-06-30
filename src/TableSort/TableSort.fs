@@ -154,9 +154,9 @@ module TableSort =
             Array.map2 ( fun quantFile protFile ->
                 // reads quant and prot table
                 let quantTable: Frame<int,string> =
-                    Frame.ReadCsv(path=quantFile ,separators="\t", schema=quantColumnTypes)
+                    Frame.ReadCsv(path=quantFile ,separators=param.SeparatorIn, schema=quantColumnTypes)
                 let protTable : Frame<string,string> =
-                    Frame.ReadCsv(path=protFile ,separators="\t")
+                    Frame.ReadCsv(path=protFile ,separators=param.SeparatorIn)
                     |> Frame.indexRowsString "ProteinID"
                 let quantTableFiltered: Frame<int,string> =
                     // calculate 14N/15N ratios based on the corresponding fields from the quant table
@@ -225,11 +225,14 @@ module TableSort =
             ) quantFiles protFiles
         tables
         |> Frame.mergeAll
-        |> Frame.pivotTable
-            (fun (proteinGroup, experiment) os -> proteinGroup)
-            (fun (proteinGroup, experiment) os -> experiment)
-            (fun f ->
-                f .GetRowAt<float> 0
-            )
-            |> Frame.expandAllCols 1
-        |> fun frame -> frame.SaveCsv (path=(outDirectory+(@"\TableSort.tab")), separator='\t')
+        |> fun frame ->
+            frame.SaveCsv (path=(outDirectory+(@"\TableSort.tab")), separator=(param.SeparatorOut))
+            frame
+            |> Frame.pivotTable
+                (fun (proteinGroup, experiment) os -> proteinGroup)
+                (fun (proteinGroup, experiment) os -> experiment)
+                (fun f ->
+                    f .GetRowAt<float> 0
+                )
+                |> Frame.expandAllCols 1
+            |> fun framePiv -> framePiv.SaveCsv (path=(outDirectory+(@"\TableSort_horizontal.tab")), separator=param.SeparatorOut)
