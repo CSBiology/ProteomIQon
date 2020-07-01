@@ -84,7 +84,7 @@ module TableSort =
                     printfn "1"
                     frameAcc
                     |> Frame.filterRowValues (fun s ->
-                        if currentField.FieldName = "EvidenceClass" then
+                        if currentField.FieldName = "Class" then
                             match s.TryGetAs<string>(currentField.FieldName) with
                             | OptionalValue.Missing -> failwith "EvidenceClass can not be missing"
                             | OptionalValue.Present v ->
@@ -157,14 +157,14 @@ module TableSort =
                     Frame.ReadCsv(path=quantFile ,separators=param.SeparatorIn, schema=quantColumnTypes)
                 let protTable : Frame<string,string> =
                     Frame.ReadCsv(path=protFile ,separators=param.SeparatorIn)
-                    |> Frame.indexRowsString "ProteinID"
+                    |> Frame.indexRowsString "GroupOfProteinIDs"
                 let quantTableFiltered: Frame<int,string> =
                     // calculate 14N/15N ratios based on the corresponding fields from the quant table
                     // Ratio gets added before filtering, so that it can also be filtered on
                     if param.Labeled then
                         let ratios =
-                            let n14 = quantTable.GetColumn<float>"N14Quant"
-                            let n15 = quantTable.GetColumn<float>"N15Quant"
+                            let n14 = quantTable.GetColumn<float>"Quant_Light"
+                            let n15 = quantTable.GetColumn<float>"Quant_Heavy"
                             n14/n15
                         quantTable.AddColumn ("Ratio", ratios)
 
@@ -184,7 +184,7 @@ module TableSort =
                     // makes sure only columns with values are present (i.e. charge/global mod are removed)
                     |> Frame.filterCols (fun ck _ -> isQuantColumnOfInterest ck)
                     // aggregates the columns over the peptide sequence with a defined method (i.e. average,median,...)
-                    |> applyLevelWithException (fun (sequence,index) -> sequence) [|"N14Quant";"N15Quant"|]
+                    |> applyLevelWithException (fun (sequence,index) -> sequence) [|"Quant_Light";"Quant_Heavy"|]
                         (aggregationMethod param.AggregatorFunction) (aggregationMethod param.AggregatorFunctionIntensity)
                     // drop sparse rows to prevent missing 14n/15n quant values, which will later complicate aggregation of peptides to proteins
                     |> Frame.dropSparseRows
@@ -194,12 +194,12 @@ module TableSort =
                 // table containing every peptide that is mapped to a protein group. The row keys are the protein groups and the PeptideSequences column contains a string array with all peptides mapping to them.
                 let peptidesMapped =
                     protTableFiltered
-                    |> Frame.getCol "PeptideSequences"
+                    |> Frame.getCol "PeptideSequence"
                     |> Series.mapValues (fun (s : string)-> s.Split(';'))
                 // calculates count of peptides mapped to each protein group
                 let distinctPeptideCount =
                     protTableFiltered
-                    |> Frame.getCol "PeptideSequences"
+                    |> Frame.getCol "PeptideSequence"
                     |> Series.map (fun _ x ->
                         x
                         |> String.split ';'
