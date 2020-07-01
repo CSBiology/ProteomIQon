@@ -15,14 +15,14 @@ let defaultTableSortParams: Dto.TableSortParams =
     {
         SeparatorIn                 = "\t"
         SeparatorOut                = '\t'
-        QuantFieldsToFilterOn       = [|(FilterOnField.create "N14Quant" (None) (Some 0.)); (FilterOnField.create "N15Quant" (None) (Some 0.))|]
+        QuantFieldsToFilterOn       = [|(FilterOnField.create "Quant_Light" (None) (Some 0.)); (FilterOnField.create "Quant_Heavy" (None) (Some 0.))|]
         ProtFieldsToFilterOn        = [|(*(FilterOnField.create "EvidenceClass" None (Some 1.))*)|]
-        QuantColumnsOfInterest      = [|"N14Quant";"N15Quant"|]
-        ProtColumnsOfInterest       = [|"DistinctPeptideCount"|]
-        AggregatorFunction          = AggregationMethod.Mean
-        AggregatorFunctionIntensity = AggregationMethod.Mean
-        AggregatorPepToProt         = AggregationMethod.Mean
-        TukeyQuant                  = [|(*("N14Quant", 2.); ("N15Quant", 2.)*)|]
+        QuantColumnsOfInterest      = [|"Quant_Light";"Quant_Heavy"|]
+        ProtColumnsOfInterest       = [|"DistinctPeptideCount"; "QValue"; "TargetScore"|]
+        AggregatorFunction          = AggregationMethod.Median
+        AggregatorFunctionIntensity = AggregationMethod.Median
+        AggregatorPepToProt         = AggregationMethod.Median
+        TukeyQuant                  = [|("Quant_Light", 2.); ("Quant_Heavy", 2.)|]
         TukeyProt                   = [||]
         Labeled                     = true
     }
