@@ -41,13 +41,14 @@ module TableSort =
             peptides
             |> Array.map (fun peptide ->
                 if peptidesPresent.Contains(peptide) then
-                    Some (data.Item(columnName).Item(peptide))
+                    Some (try Some (data.Item(columnName).Item(peptide)) with _ -> None)
                 else
                     None
             )
         )
         |> Series.mapValues (fun x ->
             x
+            |> Array.choose id
             |> Array.choose id
             |> (aggregationMethodPepToProt agMethod))
 
