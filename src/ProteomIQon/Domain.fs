@@ -177,6 +177,26 @@ module Domain =
                 LowerBound = lowerBound
             }
 
+    type EssentialFields =
+        {
+            Light       : string
+            Heavy       : string option
+            ProteinIDs  : string
+            PepSequence : string
+            PepSequences: string
+        }
+
+    module EssentialFields =
+
+        let create light heavy proteinIDs pepSequence pepSequences =
+            {
+                Light       = light
+                Heavy       = heavy
+                ProteinIDs  = proteinIDs
+                PepSequence = pepSequence
+                PepSequences= pepSequences
+            }
+
     type AggregationMethod =
         |Sum
         |Mean
@@ -186,6 +206,7 @@ module Domain =
         {
             SeparatorIn                 : string
             SeparatorOut                : char
+            EssentialFields             : EssentialFields
             QuantFieldsToFilterOn       : FilterOnField[]
             ProtFieldsToFilterOn        : FilterOnField[]
             QuantColumnsOfInterest      : string[]
@@ -195,6 +216,5 @@ module Domain =
             AggregatorPepToProt         : AggregationMethod
             TukeyQuant                  : (string*float) []
             TukeyProt                   : (string*float) []
-            Labeled                     : bool
         }
    

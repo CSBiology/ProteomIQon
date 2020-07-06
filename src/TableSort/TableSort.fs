@@ -77,12 +77,10 @@ module TableSort =
     let filterFrame (filterOn: Domain.FilterOnField[]) (frame: Frame<'a,string>) =
         let rec filterLoop (i: int) (frameAcc: Frame<'a,string>) =
             if i = filterOn.Length then
-                printfn "2"
                 frameAcc
             else
                 let currentField = filterOn.[i]
                 let frame' =
-                    printfn "1"
                     frameAcc
                     |> Frame.filterRowValues (fun s ->
                         if currentField.FieldName = "Class" then
@@ -105,7 +103,6 @@ module TableSort =
                                 | None, Some lB -> v > lB
                                 | Some uB, Some lB -> v < uB && v > lB
                     )
-                printfn "3"
                 filterLoop (i+1) frame'
         filterLoop 0 frame
 
@@ -139,8 +136,9 @@ module TableSort =
             |> Array.distinct
         let quantColumnTypes =
             createSchema "float" quantColsWithValues
+        let labeled = param.EssentialFields.Heavy.IsSome
         let quantColumnsOfInterest =
-            if param.Labeled then 
+            if labeled then 
                 param.QuantColumnsOfInterest
                 // appends "Ratio" column since it's not included in the original columns with values
                 |> Array.append [|"Ratio"|]
@@ -158,14 +156,14 @@ module TableSort =
                     Frame.ReadCsv(path=quantFile ,separators=param.SeparatorIn, schema=quantColumnTypes)
                 let protTable : Frame<string,string> =
                     Frame.ReadCsv(path=protFile ,separators=param.SeparatorIn)
-                    |> Frame.indexRowsString "GroupOfProteinIDs"
+                    |> Frame.indexRowsString param.EssentialFields.ProteinIDs
                 let quantTableFiltered: Frame<int,string> =
                     // calculate 14N/15N ratios based on the corresponding fields from the quant table
                     // Ratio gets added before filtering, so that it can also be filtered on
-                    if param.Labeled then
+                    if labeled then
                         let ratios =
-                            let n14 = quantTable.GetColumn<float>"Quant_Light"
-                            let n15 = quantTable.GetColumn<float>"Quant_Heavy"
+                            let n14 = quantTable.GetColumn<float>param.EssentialFields.Light
+                            let n15 = quantTable.GetColumn<float>param.EssentialFields.Heavy.Value
                             n14/n15
                         quantTable.AddColumn ("Ratio", ratios)
 
@@ -181,11 +179,11 @@ module TableSort =
                     quantTableFiltered
                     // group all rows based on the peptide sequence. This groups different charges and global modifications of the same peptide
                     //|> Frame.groupRowsUsing (fun k ser -> (ser.GetAs<string>("StringSequence")))
-                    |> Frame.groupRowsBy "StringSequence"
+                    |> Frame.groupRowsBy param.EssentialFields.PepSequence
                     // makes sure only columns with values are present (i.e. charge/global mod are removed)
                     |> Frame.filterCols (fun ck _ -> isQuantColumnOfInterest ck)
                     // aggregates the columns over the peptide sequence with a defined method (i.e. average,median,...)
-                    |> applyLevelWithException (fun (sequence,index) -> sequence) [|"Quant_Light";"Quant_Heavy"|]
+                    |> applyLevelWithException (fun (sequence,index) -> sequence) ([|Some param.EssentialFields.Light;param.EssentialFields.Heavy|] |> Array.choose id)
                         (aggregationMethod param.AggregatorFunction) (aggregationMethod param.AggregatorFunctionIntensity)
                     // drop sparse rows to prevent missing 14n/15n quant values, which will later complicate aggregation of peptides to proteins
                     |> Frame.dropSparseRows
@@ -195,12 +193,12 @@ module TableSort =
                 // table containing every peptide that is mapped to a protein group. The row keys are the protein groups and the PeptideSequences column contains a string array with all peptides mapping to them.
                 let peptidesMapped =
                     protTableFiltered
-                    |> Frame.getCol "PeptideSequence"
+                    |> Frame.getCol param.EssentialFields.PepSequences
                     |> Series.mapValues (fun (s : string)-> s.Split(';'))
                 // calculates count of peptides mapped to each protein group
                 let distinctPeptideCount =
                     protTableFiltered
-                    |> Frame.getCol "PeptideSequence"
+                    |> Frame.getCol param.EssentialFields.PepSequences
                     |> Series.map (fun _ x ->
                         x
                         |> String.split ';'
