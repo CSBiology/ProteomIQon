@@ -464,6 +464,7 @@ module Dto =
         {
             SeparatorIn                 : string
             SeparatorOut                : char
+            EssentialFields             : EssentialFields
             QuantFieldsToFilterOn       : FilterOnField[]
             ProtFieldsToFilterOn        : FilterOnField[]
             QuantColumnsOfInterest      : string[]
@@ -473,7 +474,6 @@ module Dto =
             AggregatorPepToProt         : AggregationMethod
             TukeyQuant                  : (string*float) []
             TukeyProt                   : (string*float) []
-            Labeled                     : bool
         }
 
     module TableSortParams =
@@ -482,6 +482,7 @@ module Dto =
             {
                 SeparatorIn                 = dtoTableSortParams.SeparatorIn
                 SeparatorOut                = dtoTableSortParams.SeparatorOut
+                EssentialFields             = dtoTableSortParams.EssentialFields
                 QuantFieldsToFilterOn       = dtoTableSortParams.QuantFieldsToFilterOn
                 ProtFieldsToFilterOn        = dtoTableSortParams.ProtFieldsToFilterOn
                 QuantColumnsOfInterest      = dtoTableSortParams.QuantColumnsOfInterest
@@ -491,5 +492,4 @@ module Dto =
                 AggregatorPepToProt         = dtoTableSortParams.AggregatorPepToProt
                 TukeyQuant                  = dtoTableSortParams.TukeyQuant
                 TukeyProt                   = dtoTableSortParams.TukeyProt
-                Labeled                     = dtoTableSortParams.Labeled
             }
