@@ -15,16 +15,16 @@ let defaultTableSortParams: Dto.TableSortParams =
     {
         SeparatorIn                 = "\t"
         SeparatorOut                = '\t'
+        EssentialFields             = EssentialFields.create "Quant_Light" (Some "Quant_Heavy") "GroupOfProteinIDs" "StringSequence" "PeptideSequence"
         QuantFieldsToFilterOn       = [|(FilterOnField.create "Quant_Light" (None) (Some 0.)); (FilterOnField.create "Quant_Heavy" (None) (Some 0.))|]
-        ProtFieldsToFilterOn        = [|(*(FilterOnField.create "EvidenceClass" None (Some 1.))*)|]
+        ProtFieldsToFilterOn        = [|(*(FilterOnField.create "Class" None (Some 1.))*)|]
         QuantColumnsOfInterest      = [|"Quant_Light";"Quant_Heavy"|]
-        ProtColumnsOfInterest       = [|"DistinctPeptideCount"; "QValue"; "TargetScore"|]
+        ProtColumnsOfInterest       = [|"DistinctPeptideCount"; "QValue"|]
         AggregatorFunction          = AggregationMethod.Median
         AggregatorFunctionIntensity = AggregationMethod.Median
         AggregatorPepToProt         = AggregationMethod.Median
         TukeyQuant                  = [|("Quant_Light", 2.); ("Quant_Heavy", 2.)|]
         TukeyProt                   = [||]
-        Labeled                     = true
     }
 
 let serialized = 
