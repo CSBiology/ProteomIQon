@@ -23,8 +23,7 @@ let defaultTableSortParams: Dto.TableSortParams =
         AggregatorFunction          = AggregationMethod.Median
         AggregatorFunctionIntensity = AggregationMethod.Median
         AggregatorPepToProt         = AggregationMethod.Median
-        TukeyQuant                  = [|("Quant_Light", 2.); ("Quant_Heavy", 2.)|]
-        TukeyProt                   = [||]
+        Tukey                       = [|("Ratio", 2.)|]
     }
 
 let serialized = 

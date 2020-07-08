@@ -35,7 +35,7 @@ module TableSort =
                 if x.Length = 0 then nan
                 else Array.median x
 
-    let getAggregatedPeptidesVals (peptidesPresent: Set<string>) (peptidesMapped:Series<string,string[]>) (data: Frame<string,string>) (columnName:string) (agMethod: Domain.AggregationMethod): Series<string,float> =
+    let getAggregatedPeptidesVals (peptidesPresent: Set<string>) (peptidesMapped:Series<string,string[]>) (data: Frame<string,string>) (columnName:string) (agMethod: Domain.AggregationMethod) (tukey: (string*float)[]): Series<string,float> =
         peptidesMapped
         |> Series.mapValues (fun peptides ->
             peptides
@@ -50,7 +50,20 @@ module TableSort =
             x
             |> Array.choose id
             |> Array.choose id
-            |> (aggregationMethodPepToProt agMethod))
+            |> fun arr ->
+                let tukeyField =
+                    tukey
+                    |> Array.tryFind (fun (fieldName, tukeyC) -> fieldName = columnName)
+                match tukeyField with
+                |Some (name,tukeyC)->
+                    let borders = FSharp.Stats.Testing.Outliers.tukey tukeyC arr
+                    arr
+                    |> Array.filter (fun v -> v <  borders.Upper && v > borders.Lower)
+                    |> (aggregationMethodPepToProt agMethod)
+                |None ->
+                    arr
+                    |> (aggregationMethodPepToProt agMethod)
+        )
 
     let applyLevelWithException (levelSel:_ -> 'K) (ex: 'C[]) (op:_ -> 'T) (exOp:_ -> 'T) (frame:Frame<'R, 'C>) =
         let indexBuilder = Deedle.Indices.Linear.LinearIndexBuilder.Instance
@@ -169,12 +182,9 @@ module TableSort =
 
                     quantTable
                     |> filterFrame param.QuantFieldsToFilterOn
-                    // is it okay to apply tukey outlier detection after filtering?
-                    |> filterFrameTukey param.TukeyQuant
                 let protTableFiltered: Frame<string,string> =
                     protTable
                     |> filterFrame param.ProtFieldsToFilterOn
-                    |> filterFrameTukey param.TukeyProt
                 let quantTableAggregated =
                     quantTableFiltered
                     // group all rows based on the peptide sequence. This groups different charges and global modifications of the same peptide
@@ -218,7 +228,7 @@ module TableSort =
                 // an entry is added to the base table at the corresponding protein group.
                 quantColumnsOfInterest
                 |> Array.map (fun name ->
-                    baseTable.AddColumn (name, getAggregatedPeptidesVals peptidesPresent peptidesMapped quantTableAggregated name param.AggregatorPepToProt)
+                    baseTable.AddColumn (name, getAggregatedPeptidesVals peptidesPresent peptidesMapped quantTableAggregated name param.AggregatorPepToProt param.Tukey)
                 ) |> ignore
                 baseTable
                 |> Frame.mapRowKeys (fun key -> key, System.IO.Path.GetFileNameWithoutExtension protFile)
