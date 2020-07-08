@@ -214,7 +214,6 @@ module Domain =
             AggregatorFunction          : AggregationMethod
             AggregatorFunctionIntensity : AggregationMethod
             AggregatorPepToProt         : AggregationMethod
-            TukeyQuant                  : (string*float) []
-            TukeyProt                   : (string*float) []
+            Tukey                       : (string*float) []
         }
    

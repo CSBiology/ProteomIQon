@@ -472,8 +472,7 @@ module Dto =
             AggregatorFunction          : AggregationMethod
             AggregatorFunctionIntensity : AggregationMethod
             AggregatorPepToProt         : AggregationMethod
-            TukeyQuant                  : (string*float) []
-            TukeyProt                   : (string*float) []
+            Tukey                       : (string*float) []
         }
 
     module TableSortParams =
@@ -490,6 +489,5 @@ module Dto =
                 AggregatorFunction          = dtoTableSortParams.AggregatorFunction
                 AggregatorFunctionIntensity = dtoTableSortParams.AggregatorFunctionIntensity
                 AggregatorPepToProt         = dtoTableSortParams.AggregatorPepToProt
-                TukeyQuant                  = dtoTableSortParams.TukeyQuant
-                TukeyProt                   = dtoTableSortParams.TukeyProt
+                Tukey                       = dtoTableSortParams.Tukey
             }
