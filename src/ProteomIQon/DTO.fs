@@ -468,8 +468,182 @@ module Dto =
         IntensityTrace_Corrected_Heavy              : float []
         }
 
+    module QuantificationResult = 
+        /// Retrieves the scan time based on the fitted parameter values (HULQ output).
+        let getTargetIntensity (qp:QuantificationResult) = 
+            try
+            if qp.GlobalMod = 0 then
+                qp.Quant_Light
+            else
+                qp.Quant_Heavy
+            with
+            | _ -> nan
+
+        /// Retrieves the scan time based on the fitted parameter values (HULQ output).
+        let getTargetScanTime (qp:QuantificationResult) = 
+            try
+            if qp.GlobalMod = 0 then
+                qp.Params_Light.[1] 
+            else
+                qp.Params_Heavy.[1] 
+            with
+            | _ -> nan
+
+        /// Retrieves the scan time based on the fitted parameter values (HULQ output).
+        let getTargetStabw (qp:QuantificationResult) = 
+            try
+            if qp.GlobalMod = 0 then
+                qp.Params_Light.[2] 
+            else
+                qp.Params_Heavy.[2] 
+            with
+            | _ -> nan
+
+        /// Retrieves the scan time based on the fitted parameter values (HULQ output).
+        let getTargetScanTimeDifference (qp:QuantificationResult) = 
+            try
+            if qp.GlobalMod = 0 then
+                qp.Difference_SearchRT_FittedRT_Light
+            else
+                qp.Difference_SearchRT_FittedRT_Heavy
+            with
+            | _ -> nan
+
+        /// Retrieves the scan time based on the fitted parameter values (HULQ output).
+        let tryTargetGetScanTime (qp:QuantificationResult) = 
+            try
+            if qp.GlobalMod = 0 then
+                qp.Params_Light.[1] 
+                |> float
+                |> Some
+            else
+                qp.Params_Heavy.[1] 
+                |> float
+                |> Some
+            with
+            | _ -> None
+
+        /// 
+        let getTargetRtTrace (qp:QuantificationResult) = 
+            try
+            if qp.GlobalMod = 0 then
+                qp.RtTrace_Light
+            else
+                qp.RtTrace_Heavy 
+            with
+            | _ -> [||]
+
+        /// 
+        let getTargetIntensityTrace (qp:QuantificationResult) = 
+            try
+            if qp.GlobalMod = 0 then
+                qp.IntensityTrace_Corrected_Light
+            else
+                qp.IntensityTrace_Corrected_Heavy
+            with
+            | _ -> [||]
+
+        /// 
+        let getIsotopicPatternMz (qp:QuantificationResult) = 
+            try
+            if qp.GlobalMod = 0 then
+                qp.IsotopicPatternMz_Light
+            else
+                qp.IsotopicPatternMz_Heavy
+            with
+            | _ -> [||]
+
+        /// 
+        let getIsotopicPatternIntensity_Observed (qp:QuantificationResult) = 
+            try
+            if qp.GlobalMod = 0 then
+                qp.IsotopicPatternIntensity_Corrected_Light
+            else
+                qp.IsotopicPatternIntensity_Corrected_Heavy
+            with
+            | _ -> [||]
+
+    ///
+    type AlignmentParams = {
+        Placeholder : bool 
+        }
 
 
+    ///
+    type AlignmentResult = 
+        {
+            [<FieldAttribute(0)>]
+            StringSequence               : string
+            [<FieldAttribute(1)>]
+            GlobalMod                    : int
+            [<FieldAttribute(2)>]
+            Charge                       : int
+            [<FieldAttribute(3)>]
+            PepSequenceID                : int
+            [<FieldAttribute(4)>]
+            ModSequenceID                : int
+            [<FieldAttribute(5)>]
+            Mz                           : float
+            [<FieldAttribute(6)>]
+            ProteinNames                 : string
+            [<FieldAttribute(7)>]
+            PredictedScanTime            : float
+            [<FieldAttribute(8)>][<TraceConverter>]
+            RtTrace_SourceFile           : float []
+            [<FieldAttribute(9)>][<TraceConverter>]
+            IntensityTrace_SourceFile    : float []
+            [<FieldAttribute(10)>][<TraceConverter>]
+            IsotopicPatternMz_SourceFile                    : float []            
+            [<FieldAttribute(11)>][<TraceConverter>]
+            IsotopicPatternIntensity_Observed_SourceFile    : float []       
+        } 
+
+    ///
+    type AlignmentModelMetrics<'Metrics> = 
+        {
+        Metrics                             : 'Metrics
+        Sequence                            : string []
+        GlobalMod                           : int []
+        Charge                              : int []
+        PepSequenceID                       : int []
+        ModSequenceID                       : int []
+        X_Intensities                       : float []
+        X_Stabw                             : float []        
+        X_Test                              : float []
+        X_IsotopicPatternMz                 : float [][]
+        X_IsotopicPatternIntensity_Observed : float [][]    
+        Y_Test                              : float []
+        YHat_Test                           : float []
+        YHat_Refined_Test                   : float []
+        Y_IsotopicPatternMz                 : float [][]
+        Y_IsotopicPatternIntensity_Observed : float [][]       
+        DtwDistanceBefore                   : float []
+        DtwDistanceAfter                    : float []
+        }
+
+    ///
+    type AlignmentMetricsDTO = 
+       {           
+           Sequence                             : string
+           GlobalMod                            : int
+           Charge                               : int
+           PepSequenceID                        : int
+           ModSequenceID                        : int
+           X_FileName                           : string 
+           X_Intensities                        : float 
+           X_Stabw                              : float
+           X_Test                               : float 
+           X_IsotopicPatternMz                  : float []
+           X_IsotopicPatternIntensity_Observed  : float []
+           Y_Test                               : float 
+           YHat_Test                            : float 
+           YHat_Refined_Test                    : float
+           Y_IsotopicPatternMz                  : float []
+           Y_IsotopicPatternIntensity_Observed  : float []           
+           DtwDistanceBefore                    : float 
+           DtwDistanceAfter                     : float 
+       }
+   
     type ProteinInferenceParams =
           {
               ProteinIdentifierRegex : string
