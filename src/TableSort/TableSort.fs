@@ -65,6 +65,24 @@ module TableSort =
                     |> (aggregationMethodPepToProt agMethod)
         )
 
+    let getAggregatedCVVals (peptidesPresent: Set<string>) (peptidesMapped:Series<string,string[]>) (data: Frame<string,string>) (columnName:string): Series<string,float> =
+        peptidesMapped
+        |> Series.mapValues (fun peptides ->
+            peptides
+            |> Array.map (fun peptide ->
+                if peptidesPresent.Contains(peptide) then
+                    Some (try Some (data.Item(columnName).Item(peptide)) with _ -> None)
+                else
+                    None
+            )
+        )
+        |> Series.mapValues (fun x ->
+            x
+            |> Array.choose id
+            |> Array.choose id
+            |> Seq.cv
+        )
+
     let applyLevelWithException (levelSel:_ -> 'K) (ex: 'C[]) (op:_ -> 'T) (exOp:_ -> 'T) (frame:Frame<'R, 'C>) =
         let indexBuilder = Deedle.Indices.Linear.LinearIndexBuilder.Instance
         let vectorBuilder = Deedle.Vectors.ArrayVector.ArrayVectorBuilder.Instance
@@ -173,8 +191,15 @@ module TableSort =
                     // aggregates the columns over the peptide sequence with a defined method (i.e. average,median,...)
                     |> applyLevelWithException (fun (sequence,index) -> sequence) ([|Some param.EssentialFields.Light;param.EssentialFields.Heavy|] |> Array.choose id)
                         (aggregationMethod param.AggregatorFunction) (aggregationMethod param.AggregatorFunctionIntensity)
-                    // drop sparse rows to prevent missing 14n/15n quant values, which will later complicate aggregation of peptides to proteins
-                    |> Frame.dropSparseRows
+                    //|> fun frame ->
+                    //    if labeled then
+                    //        let ratios =
+                    //            let n14 = frame.GetColumn<float>param.EssentialFields.Light
+                    //            let n15 = frame.GetColumn<float>param.EssentialFields.Heavy.Value
+                    //            n14/n15
+                    //        frame.AddColumn ("Ratio", ratios)
+                    //        frame
+                    //    else frame
                     //|> Frame.dropCol "PEPValue"
                 // set of every peptide present in the quant table based on the row keys
                 let peptidesPresent = quantTableAggregated.RowKeys |> Set.ofSeq
@@ -207,6 +232,10 @@ module TableSort =
                 quantColumnsOfInterest
                 |> Array.map (fun name ->
                     baseTable.AddColumn (name, getAggregatedPeptidesVals peptidesPresent peptidesMapped quantTableAggregated name param.AggregatorPepToProt param.Tukey)
+                ) |> ignore
+                param.CoefficientOfVariation
+                |> Array.map (fun name ->
+                    baseTable.AddColumn (name+"_CV", getAggregatedCVVals peptidesPresent peptidesMapped quantTableAggregated name)
                 ) |> ignore
                 baseTable
                 |> Frame.mapRowKeys (fun key -> key, System.IO.Path.GetFileNameWithoutExtension protFile)

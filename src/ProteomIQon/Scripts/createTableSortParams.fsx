@@ -20,10 +20,11 @@ let defaultTableSortParams: Dto.TableSortParams =
         ProtFieldsToFilterOn        = [|(*(FilterOnField.create "Class" None (Some 1.))*)|]
         QuantColumnsOfInterest      = [|"Quant_Light";"Quant_Heavy"|]
         ProtColumnsOfInterest       = [|"DistinctPeptideCount"; "QValue"|]
-        AggregatorFunction          = AggregationMethod.Median
-        AggregatorFunctionIntensity = AggregationMethod.Median
-        AggregatorPepToProt         = AggregationMethod.Median
-        Tukey                       = [|("Ratio", 2.)|]
+        CoefficientOfVariation      = [|"Ratio"|]
+        AggregatorFunction          = AggregationMethod.Mean
+        AggregatorFunctionIntensity = AggregationMethod.Mean
+        AggregatorPepToProt         = AggregationMethod.Mean
+        Tukey                       = [||]
     }
 
 let serialized = 

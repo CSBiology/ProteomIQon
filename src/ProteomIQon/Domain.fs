@@ -211,6 +211,7 @@ module Domain =
             ProtFieldsToFilterOn        : FilterOnField[]
             QuantColumnsOfInterest      : string[]
             ProtColumnsOfInterest       : string[]
+            CoefficientOfVariation      : string[]
             AggregatorFunction          : AggregationMethod
             AggregatorFunctionIntensity : AggregationMethod
             AggregatorPepToProt         : AggregationMethod
