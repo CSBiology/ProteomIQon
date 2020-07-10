@@ -65,23 +65,47 @@ module TableSort =
                     |> (aggregationMethodPepToProt agMethod)
         )
 
-    let getAggregatedCVVals (peptidesPresent: Set<string>) (peptidesMapped:Series<string,string[]>) (data: Frame<string,string>) (columnName:string): Series<string,float> =
-        peptidesMapped
-        |> Series.mapValues (fun peptides ->
-            peptides
-            |> Array.map (fun peptide ->
-                if peptidesPresent.Contains(peptide) then
-                    Some (try Some (data.Item(columnName).Item(peptide)) with _ -> None)
-                else
-                    None
+    let getAggregatedCVVals (peptidesPresent: Set<string>) (peptidesMapped:Series<string,string[]>) (data: Frame<string,string>) (columnName:string) (tukey: (string*float)[]) =
+        let aggregatedValues =
+            peptidesMapped
+            |> Series.mapValues (fun peptides ->
+                peptides
+                |> Array.map (fun peptide ->
+                    if peptidesPresent.Contains(peptide) then
+                        Some (try Some (data.Item(columnName).Item(peptide)) with _ -> None)
+                    else
+                        None
+                )
             )
-        )
-        |> Series.mapValues (fun x ->
-            x
-            |> Array.choose id
-            |> Array.choose id
-            |> Seq.cv
-        )
+        let tukeyField =
+            tukey
+            |> Array.tryFind (fun (fieldName, tukeyC) -> fieldName = columnName)
+        let cvNoTukey =
+            aggregatedValues
+            |> Series.mapValues (fun x ->
+                x
+                |> Array.choose id
+                |> Array.choose id
+                |> Seq.cv
+            )
+        let cvTukey: Series<string,float> option=
+            match tukeyField with
+            |Some (name,tukeyC) ->
+                let res = 
+                    aggregatedValues
+                    |> Series.mapValues (fun x ->
+                        x
+                        |> Array.choose id
+                        |> Array.choose id
+                        |> fun arr ->
+                            let borders = FSharp.Stats.Testing.Outliers.tukey tukeyC arr
+                            arr
+                            |> Array.filter (fun v -> v <  borders.Upper && v > borders.Lower)
+                            |> Seq.cv
+                    )
+                Some res
+            |None -> None
+        {|CV = cvNoTukey; CVTukey = cvTukey|}
 
     let applyLevelWithException (levelSel:_ -> 'K) (ex: 'C[]) (op:_ -> 'T) (exOp:_ -> 'T) (frame:Frame<'R, 'C>) =
         let indexBuilder = Deedle.Indices.Linear.LinearIndexBuilder.Instance
@@ -235,7 +259,10 @@ module TableSort =
                 ) |> ignore
                 param.CoefficientOfVariation
                 |> Array.map (fun name ->
-                    baseTable.AddColumn (name+"_CV", getAggregatedCVVals peptidesPresent peptidesMapped quantTableAggregated name)
+                    let newSeries = getAggregatedCVVals peptidesPresent peptidesMapped quantTableAggregated name param.Tukey
+                    baseTable.AddColumn (name+"_CV",newSeries.CV)
+                    if newSeries.CVTukey.IsSome then
+                        baseTable.AddColumn (name+"_CV_corr",newSeries.CVTukey.Value)
                 ) |> ignore
                 baseTable
                 |> Frame.mapRowKeys (fun key -> key, System.IO.Path.GetFileNameWithoutExtension protFile)
