@@ -24,7 +24,7 @@ let defaultTableSortParams: Dto.TableSortParams =
         AggregatorFunction          = AggregationMethod.Mean
         AggregatorFunctionIntensity = AggregationMethod.Mean
         AggregatorPepToProt         = AggregationMethod.Mean
-        Tukey                       = [|("Ratio",2.)|]
+        Tukey                       = [|("Ratio",2., Transform.Log2)|]
     }
 
 let serialized = 

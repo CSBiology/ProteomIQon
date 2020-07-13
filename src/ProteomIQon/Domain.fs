@@ -202,6 +202,12 @@ module Domain =
         |Mean
         |Median
 
+    type Transform =
+        |Log10
+        |Log2
+        |Ln
+        |NoTransform
+
     type TableSortParams =
         {
             SeparatorIn                 : string
@@ -215,6 +221,6 @@ module Domain =
             AggregatorFunction          : AggregationMethod
             AggregatorFunctionIntensity : AggregationMethod
             AggregatorPepToProt         : AggregationMethod
-            Tukey                       : (string*float) []
+            Tukey                       : (string*float*Transform) []
         }
    
