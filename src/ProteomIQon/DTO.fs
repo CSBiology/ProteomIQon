@@ -473,7 +473,7 @@ module Dto =
             AggregatorFunction          : AggregationMethod
             AggregatorFunctionIntensity : AggregationMethod
             AggregatorPepToProt         : AggregationMethod
-            Tukey                       : (string*float) []
+            Tukey                       : (string*float*Transform) []
         }
 
     module TableSortParams =

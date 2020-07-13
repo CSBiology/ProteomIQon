@@ -35,7 +35,21 @@ module TableSort =
                 if x.Length = 0 then nan
                 else Array.median x
 
-    let getAggregatedPeptidesVals (peptidesPresent: Set<string>) (peptidesMapped:Series<string,string[]>) (data: Frame<string,string>) (columnName:string) (agMethod: Domain.AggregationMethod) (tukey: (string*float)[]): Series<string,float> =
+    let transform (method:Domain.Transform) =
+        match method with
+        |Domain.Transform.Log10       -> log10
+        |Domain.Transform.Log2        -> log2
+        |Domain.Transform.Ln          -> fun x -> System.Math.Log (x,System.Math.E)
+        |Domain.Transform.NoTransform -> id
+
+    let revertTransform (method:Domain.Transform) =
+        match method with
+        |Domain.Transform.Log10       -> fun x -> 10.**x
+        |Domain.Transform.Log2        -> revLog2
+        |Domain.Transform.Ln          -> fun x -> System.Math.E**x
+        |Domain.Transform.NoTransform -> id
+
+    let getAggregatedPeptidesVals (peptidesPresent: Set<string>) (peptidesMapped:Series<string,string[]>) (data: Frame<string,string>) (columnName:string) (agMethod: Domain.AggregationMethod) (tukey: (string*float*Domain.Transform)[]): Series<string,float> =
         peptidesMapped
         |> Series.mapValues (fun peptides ->
             peptides
@@ -53,19 +67,21 @@ module TableSort =
             |> fun arr ->
                 let tukeyField =
                     tukey
-                    |> Array.tryFind (fun (fieldName, tukeyC) -> fieldName = columnName)
+                    |> Array.tryFind (fun (fieldName,_,_) -> fieldName = columnName)
                 match tukeyField with
-                |Some (name,tukeyC)->
-                    let borders = FSharp.Stats.Testing.Outliers.tukey tukeyC arr
-                    arr
+                |Some (name,tukeyC,method)->
+                    let arrTr = arr |> Array.map (transform method)
+                    let borders = FSharp.Stats.Testing.Outliers.tukey tukeyC arrTr
+                    arrTr
                     |> Array.filter (fun v -> v <  borders.Upper && v > borders.Lower)
+                    |> Array.map (revertTransform method)
                     |> (aggregationMethodPepToProt agMethod)
                 |None ->
                     arr
                     |> (aggregationMethodPepToProt agMethod)
         )
 
-    let getAggregatedCVVals (peptidesPresent: Set<string>) (peptidesMapped:Series<string,string[]>) (data: Frame<string,string>) (columnName:string) (tukey: (string*float)[]) =
+    let getAggregatedCVVals (peptidesPresent: Set<string>) (peptidesMapped:Series<string,string[]>) (data: Frame<string,string>) (columnName:string) (tukey: (string*float*Domain.Transform)[]) =
         let aggregatedValues =
             peptidesMapped
             |> Series.mapValues (fun peptides ->
@@ -79,7 +95,7 @@ module TableSort =
             )
         let tukeyField =
             tukey
-            |> Array.tryFind (fun (fieldName, tukeyC) -> fieldName = columnName)
+            |> Array.tryFind (fun (fieldName, _,_) -> fieldName = columnName)
         let cvNoTukey =
             aggregatedValues
             |> Series.mapValues (fun x ->
@@ -90,7 +106,7 @@ module TableSort =
             )
         let cvTukey: Series<string,float> option=
             match tukeyField with
-            |Some (name,tukeyC) ->
+            |Some (name,tukeyC,method) ->
                 let res = 
                     aggregatedValues
                     |> Series.mapValues (fun x ->
@@ -98,9 +114,11 @@ module TableSort =
                         |> Array.choose id
                         |> Array.choose id
                         |> fun arr ->
-                            let borders = FSharp.Stats.Testing.Outliers.tukey tukeyC arr
-                            arr
+                            let arrTr = arr |> Array.map (transform method)
+                            let borders = FSharp.Stats.Testing.Outliers.tukey tukeyC arrTr
+                            arrTr
                             |> Array.filter (fun v -> v <  borders.Upper && v > borders.Lower)
+                            |> Array.map (revertTransform method)
                             |> Seq.cv
                     )
                 Some res
