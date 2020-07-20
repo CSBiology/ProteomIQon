@@ -5,7 +5,6 @@ open BioFSharp.Mz
 open BioFSharp.Mz.SearchDB
 open Domain
 open FSharpAux.IO.SchemaReader
-open FSharpAux.IO.SchemaReader.Csv
 open FSharpAux.IO.SchemaReader.Attribute
 open MzIO.Binary
 
