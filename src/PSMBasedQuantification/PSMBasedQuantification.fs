@@ -229,12 +229,28 @@ module PSMBasedQuantification =
                 yFitted                     = [||]
             }
 
-    ///
-    let searchRTMinusFittedRt searchRT fit = 
+    /// Calculates the difference between the scan time used to retreave the peak and the fitted peak midpoint.
+    let searchRTMinusFittedRtTarget searchRT (fit:HULQ.QuantifiedPeak) = 
         try
             searchRT - fit.EstimatedParams.[1] 
         with
         | _ -> nan
+
+    /// Calculates the difference between the scan time used to retreave the peak and the fitted peak midpoint.
+    let searchRTMinusFittedRtInferred searchRT fit = 
+        try
+            searchRT - fit.EstimatedParams.[1] 
+        with
+        | _ -> nan
+    
+    /// Aims to provide the best scan time estimate when quanitfying a inferred peak.
+    let chooseScanTime maxDiff searchRTMinusFittedRT initialScanTime (quantP:HULQ.QuantifiedPeak) = 
+        if Array.isEmpty quantP.EstimatedParams then
+            initialScanTime 
+        elif abs searchRTMinusFittedRT > maxDiff then
+            initialScanTime 
+        else
+            quantP.EstimatedParams.[1]
 
     ///
     let saveChart sequence globalMod ch (xXic:float[]) (yXic:float[]) ms2s avgScanTime (xToQuantify:float[]) (ypToQuantify:float[]) (fitY:float[])
@@ -510,21 +526,13 @@ module PSMBasedQuantification =
             else
             let peakToQuantify = BioFSharp.Mz.Quantification.HULQ.getPeakBy peaks averagePSM.WeightedAvgScanTime
             let quantP = BioFSharp.Mz.Quantification.HULQ.quantifyPeak peakToQuantify                        
-            let searchRTMinusFittedRT = quantP.EstimatedParams.[1] - averagePSM.WeightedAvgScanTime
-            let inferredScanTime =
-                if Array.isEmpty quantP.EstimatedParams then
-                    averagePSM.WeightedAvgScanTime
-                elif abs searchRTMinusFittedRT >  processParams.XicExtraction.ScanTimeWindow then
-                    averagePSM.WeightedAvgScanTime
-                else
-                    quantP.EstimatedParams.[1]
-
-            let clusterComparison_Target = comparePredictedAndMeasuredIsotopicCluster averagePSM.X_Xic averagePSM.Y_Xic averagePSM.Y_Xic_uncorrected pepIon.Charge targetPeptide.BioSequence quantP.EstimatedParams.[1] averagePSM.MeanPrecMz
-            
+            let searchRTMinusFittedRT = searchRTMinusFittedRtTarget averagePSM.WeightedAvgScanTime quantP
+            let inferredScanTime = chooseScanTime processParams.XicExtraction.ScanTimeWindow searchRTMinusFittedRT averagePSM.WeightedAvgScanTime quantP 
+            let clusterComparison_Target = comparePredictedAndMeasuredIsotopicCluster averagePSM.X_Xic averagePSM.Y_Xic averagePSM.Y_Xic_uncorrected pepIon.Charge targetPeptide.BioSequence quantP.EstimatedParams.[1] averagePSM.MeanPrecMz            
             if pepIon.GlobalMod = 0 then
                 let mz_Heavy = Mass.toMZ (labeledPeptide.Mass) (pepIon.Charge|> float)
                 let inferred_Heavy = quantifyInferredPeak getXIC identifyPeaks mz_Heavy averagePSM.WeightedAvgScanTime inferredScanTime
-                let searchRTMinusFittedRT_Heavy = inferred_Heavy.EstimatedParams.[1] - inferredScanTime
+                let searchRTMinusFittedRT_Heavy = searchRTMinusFittedRtInferred inferredScanTime inferred_Heavy
                 let clusterComparison_Heavy = comparePredictedAndMeasuredIsotopicCluster inferred_Heavy.X_Xic inferred_Heavy.Y_Xic inferred_Heavy.Y_Xic_uncorrected pepIon.Charge labeledPeptide.BioSequence quantP.EstimatedParams.[1] mz_Heavy
                 let corrLightHeavy  = calcCorrelation averagePSM.X_Xic quantP inferred_Heavy  
                 let chart = saveChart pepIon.Sequence pepIon.GlobalMod pepIon.Charge averagePSM.X_Xic averagePSM.Y_Xic ms2s averagePSM.WeightedAvgScanTime
@@ -578,7 +586,7 @@ module PSMBasedQuantification =
             else
                 let mz_Light          = Mass.toMZ (unlabledPeptide.Mass) (pepIon.Charge|> float)
                 let inferred_Light       = quantifyInferredPeak getXIC identifyPeaks mz_Light averagePSM.WeightedAvgScanTime inferredScanTime
-                let searchRTMinusFittedRT_Light = inferred_Light.EstimatedParams.[1] - inferredScanTime  
+                let searchRTMinusFittedRT_Light = searchRTMinusFittedRtInferred inferredScanTime inferred_Light
                 let clusterComparison_Light = comparePredictedAndMeasuredIsotopicCluster inferred_Light.X_Xic inferred_Light.Y_Xic inferred_Light.Y_Xic_uncorrected pepIon.Charge unlabledPeptide.BioSequence quantP.EstimatedParams.[1] mz_Light
                 let corrLightHeavy        = calcCorrelation averagePSM.X_Xic quantP inferred_Light
                 let chart = saveChart pepIon.Sequence pepIon.GlobalMod pepIon.Charge averagePSM.X_Xic averagePSM.Y_Xic ms2s averagePSM.WeightedAvgScanTime
@@ -662,7 +670,7 @@ module PSMBasedQuantification =
             else
             let peakToQuantify = BioFSharp.Mz.Quantification.HULQ.getPeakBy peaks averagePSM.WeightedAvgScanTime
             let quantP = BioFSharp.Mz.Quantification.HULQ.quantifyPeak peakToQuantify
-            let searchRTMinusFittedRT = quantP.EstimatedParams.[1] - averagePSM.WeightedAvgScanTime
+            let searchRTMinusFittedRT = searchRTMinusFittedRtTarget averagePSM.WeightedAvgScanTime quantP 
             let clusterComparison_Target = comparePredictedAndMeasuredIsotopicCluster averagePSM.X_Xic averagePSM.Y_Xic averagePSM.Y_Xic_uncorrected pepIon.Charge unlabledPeptide.BioSequence quantP.EstimatedParams.[1] averagePSM.MeanPrecMz
             let chart = saveChart pepIon.Sequence pepIon.GlobalMod pepIon.Charge averagePSM.X_Xic averagePSM.Y_Xic ms2s averagePSM.WeightedAvgScanTime
                                 peakToQuantify.XData peakToQuantify.YData quantP.YPredicted  [||] [||] [||] [||] peaks clusterComparison_Target.PeakComparisons plotDirectory
