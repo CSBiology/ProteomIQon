@@ -136,6 +136,19 @@ module TableSort =
                     Series.applyLevel levelSel op s)
         |> FrameUtils.fromColumns indexBuilder vectorBuilder
 
+    let ensureUniqueKeys (frame1: Frame<'a,string>) (frame2: Frame<'b,string>) (differentiator: string)=
+        let colKeys1 = frame1.ColumnKeys |> Set.ofSeq
+        let colKeys2 = frame2.ColumnKeys |> Set.ofSeq
+        let sameKeys = Set.intersect colKeys1 colKeys2
+        let newFrame2 = 
+            frame2 
+            |> Frame.mapColKeys (fun ck -> 
+                if sameKeys.Contains ck then
+                    ck+differentiator
+                else ck
+            )
+        {|Frame1 = frame1; Frame2 = newFrame2; sameKeys = sameKeys|}
+
     let peptideEvidenceClassToFloat (ec: string) =
         match ec with
         | "Unknown" -> 0.
@@ -205,9 +218,11 @@ module TableSort =
                 // reads quant and prot table
                 let quantTable: Frame<int,string> =
                     Frame.ReadCsv(path=quantFile ,separators=param.SeparatorIn, schema=quantColumnTypes)
-                let protTable : Frame<string,string> =
+                let protTable : Frame<string*string,string> =
                     Frame.ReadCsv(path=protFile ,separators=param.SeparatorIn)
-                    |> Frame.indexRowsString param.EssentialFields.ProteinIDs
+                    |> Frame.groupRowsBy param.EssentialFields.ProteinIDs
+                    |> Frame.groupRowsBy param.EssentialFields.PepSequences
+                    |> Frame.mapRowKeys (fun (ss,(id,_)) -> id,ss)
                 let quantTableFiltered: Frame<int,string> =
                     // calculate 14N/15N ratios based on the corresponding fields from the quant table
                     // Ratio gets added before filtering, so that it can also be filtered on
@@ -220,10 +235,12 @@ module TableSort =
 
                     quantTable
                     |> filterFrame param.QuantFieldsToFilterOn
-                let protTableFiltered: Frame<string,string> =
+                let protTableFiltered: Frame<string*string,string> =
                     protTable
                     |> filterFrame param.ProtFieldsToFilterOn
-                let quantTableAggregated =
+                    |> Frame.sliceCols param.ProtColumnsOfInterest
+                    |> Frame.expandRowsByKey (fun (prot,s) -> String.split ';' s |> Seq.map (fun pep -> prot,pep))
+                let quantTableAggregated: Frame<string,string> =
                     quantTableFiltered
                     // group all rows based on the peptide sequence. This groups different charges and global modifications of the same peptide
                     //|> Frame.groupRowsUsing (fun k ser -> (ser.GetAs<string>("StringSequence")))
@@ -233,58 +250,14 @@ module TableSort =
                     // aggregates the columns over the peptide sequence with a defined method (i.e. average,median,...)
                     |> applyLevelWithException (fun (sequence,index) -> sequence) ([|Some param.EssentialFields.Light;param.EssentialFields.Heavy|] |> Array.choose id)
                         (aggregationMethod param.AggregatorFunction) (aggregationMethod param.AggregatorFunctionIntensity)
-                    //|> fun frame ->
-                    //    if labeled then
-                    //        let ratios =
-                    //            let n14 = frame.GetColumn<float>param.EssentialFields.Light
-                    //            let n15 = frame.GetColumn<float>param.EssentialFields.Heavy.Value
-                    //            n14/n15
-                    //        frame.AddColumn ("Ratio", ratios)
-                    //        frame
-                    //    else frame
-                    //|> Frame.dropCol "PEPValue"
-                // set of every peptide present in the quant table based on the row keys
-                let peptidesPresent = quantTableAggregated.RowKeys |> Set.ofSeq
-                // table containing every peptide that is mapped to a protein group. The row keys are the protein groups and the PeptideSequences column contains a string array with all peptides mapping to them.
-                let peptidesMapped =
-                    protTableFiltered
-                    |> Frame.getCol param.EssentialFields.PepSequences
-                    |> Series.mapValues (fun (s : string)-> s.Split(';'))
-                // calculates count of peptides mapped to each protein group
-                let distinctPeptideCount =
-                    protTableFiltered
-                    |> Frame.getCol param.EssentialFields.PepSequences
-                    |> Series.map (fun _ x ->
-                        x
-                        |> String.split ';'
-                        |> Array.length
-                    )
-                // an "empty" table based on the prot table. It only contains the row keys with the protein groups.
-                let baseTable =
-                    protTableFiltered
-                    |> Frame.addCol "DistinctPeptideCount" distinctPeptideCount
-                    |> Frame.filterCols (fun ck _ -> 
-                        (
-                            param.ProtColumnsOfInterest
-                            |> Set.ofArray
-                        ).Contains(ck)
-                    )
-                // the columns in the array are selected in the filtered quant table and compared to the protein groups. If the peptide is mapping to a protein group, then
-                // an entry is added to the base table at the corresponding protein group.
-                quantColumnsOfInterest
-                |> Array.map (fun name ->
-                    baseTable.AddColumn (name, getAggregatedPeptidesVals peptidesPresent peptidesMapped quantTableAggregated name param.AggregatorPepToProt param.Tukey)
-                ) |> ignore
-                param.CoefficientOfVariation
-                |> Array.map (fun name ->
-                    let newSeries = getAggregatedCVVals peptidesPresent peptidesMapped quantTableAggregated name param.Tukey
-                    baseTable.AddColumn (name+"_CV",newSeries.CV)
-                    if newSeries.CVTukey.IsSome then
-                        baseTable.AddColumn (name+"_CV_corr",newSeries.CVTukey.Value)
-                ) |> ignore
-                baseTable
-                |> Frame.mapRowKeys (fun key -> key, System.IO.Path.GetFileNameWithoutExtension protFile)
-
+                    |> Frame.sliceCols quantColumnsOfInterest
+                let uniqueKeyTables = ensureUniqueKeys quantTableAggregated protTableFiltered "_Prot"
+                let alignedTables =
+                    Frame.align snd id uniqueKeyTables.Frame2 uniqueKeyTables.Frame1
+                    |> Frame.mapRowKeys (fun (pep,(prot,_),(id)) -> prot,pep,id)
+                    |> Frame.applyLevel (fun (prot,pep,id) -> prot) (fun (s:Series<_,float>) -> s.Values |> Seq.mean)
+                    |> Frame.mapRowKeys (fun prot -> prot, System.IO.Path.GetFileNameWithoutExtension protFile)
+                alignedTables
             ) quantFiles protFiles
         tables
         |> Frame.mergeAll
