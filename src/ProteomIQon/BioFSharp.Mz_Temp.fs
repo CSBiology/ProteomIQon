@@ -776,17 +776,45 @@ module SearchDB' =
                     reader.GetString(0)
                 )
 
+            /// Prepares statement to select a ModSequence entry by Massrange (Between selected Mass -/+ the selected toleranceWidth)
+            let prepareSelectMassByModSequenceAndGlobalMod (cn:SQLiteConnection) =
+                let querystring = "SELECT RealMass FROM ModSequence WHERE Sequence=@sequence AND GlobalMod=@globalMod"
+                let cmd = new SQLiteCommand(querystring, cn)
+                cmd.Parameters.Add("@sequence", Data.DbType.String) |> ignore
+                cmd.Parameters.Add("@globalMod", Data.DbType.Int32) |> ignore
+                fun (sequence:string) (globalMod:int) ->
+                    cmd.Parameters.["@sequence"].Value  <- sequence
+                    cmd.Parameters.["@globalMod"].Value <- globalMod
+                    use reader = cmd.ExecuteReader()
+                    match reader.Read() with
+                    | true  -> Some (reader.GetDouble(0))
+                    | false -> Option.None
+                
+
+            //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+            /// Prepares statement to select a ModSequence entry by ModSequenceID
+            let prepareSelectModsequenceBySequenceAndGMod (cn:SQLiteConnection) =
+                let querystring = "SELECT * FROM ModSequence WHERE Sequence=@sequence AND GlobalMod=@globalMod"
+                let cmd = new SQLiteCommand(querystring, cn)
+                cmd.Parameters.Add("@sequence", Data.DbType.String) |> ignore
+                cmd.Parameters.Add("@globalMod", Data.DbType.Int32) |> ignore
+                fun (sequence:string) (globalMod:int) ->
+                    cmd.Parameters.["@sequence"].Value  <- sequence
+                    cmd.Parameters.["@globalMod"].Value <- globalMod
+                    use reader = cmd.ExecuteReader()
+                    match reader.Read() with
+                        | true ->  (reader.GetInt32(0), reader.GetInt32(1),reader.GetDouble(2), reader.GetInt64(3), reader.GetString(4), reader.GetInt32(5))
+                        | false -> -1,-1,nan,-1L,"",-1
+
     /// Prepares a function which returns a list of protein Accessions tupled with the peptide sequence whose ID they were retrieved by
     let getProteinPeptideLookUpFromFileBy (memoryDB: SQLiteConnection) =
         let tr = memoryDB.BeginTransaction()
         let selectCleavageIdxByPepSeqID   = Db.SQLiteQuery.prepareSelectCleavageIndexByPepSequenceID memoryDB tr
         let selectProteinByProtID         = DB'.SQLiteQuery'.prepareSelectProteinAccessionByID memoryDB tr
         let selectPeptideByPepSeqID       = DB'.SQLiteQuery'.prepareSelectPepSequenceByPepSequenceID memoryDB tr
-        (
-            fun pepSequenceID ->
-                selectCleavageIdxByPepSeqID pepSequenceID
-                |> List.map (fun (_,protID,pepID,_,_,_) -> selectProteinByProtID protID, selectPeptideByPepSeqID pepID )
-        )
+        fun pepSequenceID ->
+            selectCleavageIdxByPepSeqID pepSequenceID
+            |> List.map (fun (_,protID,pepID,_,_,_) -> selectProteinByProtID protID, selectPeptideByPepSeqID pepID )
 
     /// Returns Accession and Sequence of Proteins from SearchDB
     let selectProteins (cn:SQLiteConnection) =
@@ -794,16 +822,16 @@ module SearchDB' =
             let querystring = "SELECT Accession, Sequence FROM Protein"
             let cmd = new SQLiteCommand(querystring, cn)
             use reader = cmd.ExecuteReader()
-            (
-                [
-                    while reader.Read() do
-                        yield (reader.GetString(0), reader.GetString(1))
-                ]
-            )
+            
+            [
+                while reader.Read() do
+                    yield (reader.GetString(0), reader.GetString(1))
+            ]
+            
         selectProteins
 
     /// Returns SearchDbParams of a existing database by filePath
-    let getSDBParamsBy (cn :SQLiteConnection)=
+    let getSDBParams (cn :SQLiteConnection)=
         let cn =
             match cn.State with
             | ConnectionState.Open ->
@@ -820,6 +848,21 @@ module SearchDB' =
                         (Newtonsoft.Json.JsonConvert.DeserializeObject<SearchModification list>(fMods)) (Newtonsoft.Json.JsonConvert.DeserializeObject<SearchModification list>(vMods)) vThr
         | None ->
             failwith "This database does not contain any SearchParameters. It is not recommended to work with this file."
+
+
+    ///
+    let setIndexOnModSequenceAndGlobalMod (cn:SQLiteConnection) =
+        let querystring = "CREATE INDEX IF NOT EXISTS SequenceAndGlobalModIndex ON ModSequence (Sequence,GlobalMod)"
+        let cmd = new SQLiteCommand(querystring, cn)
+        cmd.ExecuteNonQuery()
+
+    /// Returns a LookUpResult list
+    let getThreadSafePeptideLookUpFromFileBySequenceAndGMod (cn:SQLiteConnection) sdbParams = 
+        let parseAAString = initOfModAminoAcidString sdbParams.IsotopicMod (sdbParams.FixedMods@sdbParams.VariableMods)
+        let selectModsequenceByID = DB'.SQLiteQuery'.prepareSelectModsequenceBySequenceAndGMod cn 
+        (fun sequence globalMod -> 
+            selectModsequenceByID sequence globalMod 
+            |> (createLookUpResultBy parseAAString))   
 
 module ProteinInference' =
 
