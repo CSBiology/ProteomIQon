@@ -14,6 +14,7 @@
     <AllowedOutputExtensionsInPackageBuildOutputFolder>$(AllowedOutputExtensionsInPackageBuildOutputFolder);.pdb</AllowedOutputExtensionsInPackageBuildOutputFolder>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="DeedleExtensionsTemp.fs" />
     <Compile Include="BioFSharp.Mz_Temp.fs" />
     <Compile Include="Logging.fs" />
     <Compile Include="Domain.fs" />
