@@ -28,8 +28,8 @@ module console1 =
         logger.Trace (sprintf "CLIArguments: %A" results)
         Directory.CreateDirectory(o) |> ignore
         let p =
-            Json.ReadAndDeserialize<Dto.QuantificationParams> p
-            |> Dto.QuantificationParams.toDomain
+            Json.ReadAndDeserialize<Dto.AlignmentBasedQuantificationParams> p
+            |> Dto.AlignmentBasedQuantificationParams.toDomain
         let dbConnection =
             if File.Exists d then
                 logger.Trace (sprintf "Database found at given location (%s)" d)
