@@ -137,6 +137,14 @@ module Domain =
             BaseLineCorrection           : BaseLineCorrection option
         }
 
+    type AlignmentBasedQuantificationParams = 
+        {
+            PerformLabeledQuantification : bool
+            PerformLocalWarp             : bool
+            XicExtraction                : XicExtraction
+            BaseLineCorrection           : BaseLineCorrection option
+        }
+
     type FDRMethod =
         |Conservative
         |MAYU

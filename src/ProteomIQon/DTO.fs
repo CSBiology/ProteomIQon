@@ -642,7 +642,25 @@ module Dto =
            DtwDistanceBefore                    : float 
            DtwDistanceAfter                     : float 
        }
-   
+    type AlignmentBasedQuantificationParams =
+        {
+            PerformLabeledQuantification : bool
+            PerformLocalWarp             : bool
+            XicExtraction                : XicExtraction
+            //10 6 0.05
+            BaseLineCorrection           : BaseLineCorrection option
+        }
+
+    module AlignmentBasedQuantificationParams =
+
+        let toDomain (dtoQuantificationParams: AlignmentBasedQuantificationParams ): Domain.AlignmentBasedQuantificationParams =
+            {
+                PerformLabeledQuantification = dtoQuantificationParams.PerformLabeledQuantification
+                PerformLocalWarp             = dtoQuantificationParams.PerformLocalWarp
+                XicExtraction                = dtoQuantificationParams.XicExtraction
+                BaseLineCorrection           = dtoQuantificationParams.BaseLineCorrection
+            }
+
     type ProteinInferenceParams =
           {
               ProteinIdentifierRegex : string
