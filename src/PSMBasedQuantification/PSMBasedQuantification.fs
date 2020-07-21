@@ -635,7 +635,6 @@ module PSMBasedQuantification =
                 RtTrace_Heavy                               = averagePSM.X_Xic 
                 IntensityTrace_Observed_Heavy               = averagePSM.Y_Xic_uncorrected
                 IntensityTrace_Corrected_Heavy              = averagePSM.Y_Xic
-
                 }
                 |> Option.Some
             with
@@ -718,7 +717,6 @@ module PSMBasedQuantification =
             RtTrace_Heavy                               = [||]
             IntensityTrace_Observed_Heavy               = [||]
             IntensityTrace_Corrected_Heavy              = [||]
-
             }
             |> Option.Some
             with
