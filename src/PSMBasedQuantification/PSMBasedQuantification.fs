@@ -515,7 +515,6 @@ module PSMBasedQuantification =
             let ms2s = psmsWithMatchedSums |> Array.map (fun (psm,m) -> psm.ScanTime,m)
             let averagePSM = average getXIC psmsWithMatchedSums
             let avgMass = Mass.ofMZ (averagePSM.MeanPrecMz) (pepIon.Charge |> float)
-            //let envelopeSumX,envelopeSumY = getEnvelopeSum ch averagePSM.WeightedAvgScanTime averagePSM.MeanPrecMz 
             let peaks = identifyPeaks averagePSM.X_Xic averagePSM.Y_Xic
             if Array.isEmpty peaks then 
                 Chart.Point(averagePSM.X_Xic, averagePSM.Y_Xic)

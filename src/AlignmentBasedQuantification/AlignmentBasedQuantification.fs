@@ -207,7 +207,6 @@ module AlignmentBasedQuantification =
             Chart.Point(pattern |> Array.map (fun x -> x.Mz), pattern |> Array.map (fun x -> x.MeasuredIntensity))          |> Chart.withTraceName "Measured"
             Chart.Point(pattern |> Array.map (fun x -> x.Mz), pattern |> Array.map (fun x -> x.MeasuredIntensityCorrected)) |> Chart.withTraceName "Measured Corrected"
             Chart.Point(pattern |> Array.map (fun x -> x.Mz), pattern |> Array.map (fun x -> x.PredictedRelFrequency))      |> Chart.withTraceName "Predicted Relative Frequency"
-            //Chart.Point(xEnvelopeSum, yEnvelopeSum)     |> Chart.withTraceName "Target Envelope Sum"
             ]
             |> Chart.Combine
         [xic;pattern]
@@ -324,7 +323,7 @@ module AlignmentBasedQuantification =
                 )
             |> Array.groupBy fst
             |> Array.map (fun ((peak),list) -> 
-                peak.Mz,peak.Intensity,list |> Array.sumBy snd  (*,list |>*)
+                peak.Mz,peak.Intensity,list |> Array.sumBy snd 
                 )
             |> Array.map (fun (mz,measuredIntensity,predictedRelFrequency) -> 
                     {Mz=mz;MeasuredIntensity = measuredIntensity;MeasuredIntensityCorrected= measuredIntensity - baseLineCorrectionF;PredictedRelFrequency= predictedRelFrequency}
@@ -351,7 +350,7 @@ module AlignmentBasedQuantification =
     
     
     ///
-    let quantifyPeptides (processParams:Domain.QuantificationParams) (outputDir:string) (cn:SQLiteConnection) (instrumentOutput:string) (scoredPSMs:string)  =
+    let quantifyPeptides (processParams:Domain.AlignmentBasedQuantificationParams) (outputDir:string) (cn:SQLiteConnection) (instrumentOutput:string) (scoredPSMs:string)  =
 
         let logger = Logging.createLogger (Path.GetFileNameWithoutExtension scoredPSMs)
         logger.Trace (sprintf "Input file: %s" instrumentOutput)
@@ -459,7 +458,9 @@ module AlignmentBasedQuantification =
                 let clusterComparison_Heavy = comparePredictedAndMeasuredIsotopicCluster inferred_Heavy.X_Xic inferred_Heavy.Y_Xic inferred_Heavy.Y_Xic_uncorrected psms.Charge labeledPeptide.BioSequence targetQuant.EstimatedParams.[1] mz_Heavy
                 let corrLightHeavy  = calcCorrelation targetQuant.X_Xic targetQuant inferred_Heavy  
                 let chart = saveChart psms.StringSequence psms.GlobalMod psms.Charge targetQuant.X_Xic targetQuant.Y_Xic psms.PredictedScanTime
-                                    targetQuant.X_Xic targetQuant.Y_Xic targetQuant.yFitted inferred_Heavy.X_Xic inferred_Heavy.Y_Xic inferred_Heavy.xPeak inferred_Heavy.yFitted clusterComparison_Target.PeakComparisons plotDirectory
+                                    targetQuant.xPeak targetQuant.yFitted targetQuant.yFitted 
+                                    inferred_Heavy.X_Xic inferred_Heavy.Y_Xic inferred_Heavy.xPeak inferred_Heavy.yFitted 
+                                    clusterComparison_Target.PeakComparisons plotDirectory
                 {
                 StringSequence                              = psms.StringSequence
                 GlobalMod                                   = psms.GlobalMod
@@ -469,7 +470,7 @@ module AlignmentBasedQuantification =
                 PrecursorMZ                                 = psms.Mz
                 MeasuredMass                                = targetPeptide.Mass
                 TheoMass                                    = targetPeptide.Mass
-                AbsDeltaMass                                = nan//abs(avgMass-unlabledPeptide.Mass)
+                AbsDeltaMass                                = nan
                 MeanPercolatorScore                         = 0.
                 QValue                                      = 0.
                 PEPValue                                    = 0.
@@ -491,7 +492,7 @@ module AlignmentBasedQuantification =
                 KLDiv_Observed_Theoretical_Heavy            = clusterComparison_Heavy.KLDiv_UnCorrected
                 KLDiv_CorrectedObserved_Theoretical_Heavy   = clusterComparison_Heavy.KLDiv_Corrected
                 Correlation_Light_Heavy                     = corrLightHeavy
-                QuantificationSource                        = QuantificationSource.PSM
+                QuantificationSource                        = QuantificationSource.Alignment
                 IsotopicPatternMz_Light                     = clusterComparison_Target.PeakComparisons |> Array.map (fun x -> x.Mz)
                 IsotopicPatternIntensity_Observed_Light     = clusterComparison_Target.PeakComparisons |> Array.map (fun x -> x.MeasuredIntensity)
                 IsotopicPatternIntensity_Corrected_Light    = clusterComparison_Target.PeakComparisons |> Array.map (fun x -> x.MeasuredIntensityCorrected)
@@ -513,7 +514,9 @@ module AlignmentBasedQuantification =
                 let clusterComparison_Light = comparePredictedAndMeasuredIsotopicCluster inferred_Light.X_Xic inferred_Light.Y_Xic inferred_Light.Y_Xic_uncorrected psms.Charge unlabledPeptide.BioSequence targetQuant.EstimatedParams.[1] mz_Light 
                 let corrLightHeavy  = calcCorrelation targetQuant.X_Xic targetQuant inferred_Light  
                 let chart = saveChart psms.StringSequence psms.GlobalMod psms.Charge targetQuant.X_Xic targetQuant.Y_Xic psms.PredictedScanTime
-                                    targetQuant.X_Xic targetQuant.Y_Xic targetQuant.yFitted inferred_Light.X_Xic inferred_Light.Y_Xic inferred_Light.xPeak inferred_Light.yFitted clusterComparison_Target.PeakComparisons plotDirectory
+                                    targetQuant.xPeak targetQuant.yFitted targetQuant.yFitted 
+                                    inferred_Light.X_Xic inferred_Light.Y_Xic inferred_Light.xPeak inferred_Light.yFitted 
+                                    clusterComparison_Target.PeakComparisons plotDirectory
                 {
                 StringSequence                              = psms.StringSequence
                 GlobalMod                                   = psms.GlobalMod
@@ -545,7 +548,7 @@ module AlignmentBasedQuantification =
                 KLDiv_Observed_Theoretical_Heavy            = clusterComparison_Target.KLDiv_UnCorrected
                 KLDiv_CorrectedObserved_Theoretical_Heavy   = clusterComparison_Target.KLDiv_Corrected
                 Correlation_Light_Heavy                     = corrLightHeavy
-                QuantificationSource                        = QuantificationSource.PSM
+                QuantificationSource                        = QuantificationSource.Alignment
                 IsotopicPatternMz_Light                     = clusterComparison_Light.PeakComparisons |> Array.map (fun x -> x.Mz)
                 IsotopicPatternIntensity_Observed_Light     = clusterComparison_Light.PeakComparisons |> Array.map (fun x -> x.MeasuredIntensity)
                 IsotopicPatternIntensity_Corrected_Light    = clusterComparison_Light.PeakComparisons |> Array.map (fun x -> x.MeasuredIntensityCorrected)
@@ -587,7 +590,9 @@ module AlignmentBasedQuantification =
                 let searchRTMinusFittedRT = searchRTMinusFittedRt psms.PredictedScanTime targetQuant 
                 let clusterComparison_Target = comparePredictedAndMeasuredIsotopicCluster targetQuant.X_Xic targetQuant.Y_Xic targetQuant.Y_Xic_uncorrected psms.Charge targetPeptide.BioSequence targetQuant.EstimatedParams.[1] targetMz
                 let chart = saveChart psms.StringSequence psms.GlobalMod psms.Charge targetQuant.X_Xic targetQuant.Y_Xic psms.PredictedScanTime
-                                    targetQuant.X_Xic targetQuant.Y_Xic targetQuant.yFitted [||] [||] [||] [||] clusterComparison_Target.PeakComparisons plotDirectory
+                                    targetQuant.xPeak targetQuant.yFitted targetQuant.yFitted 
+                                    [||] [||] [||] [||] 
+                                    clusterComparison_Target.PeakComparisons plotDirectory
                 {
                 StringSequence                              = psms.StringSequence
                 GlobalMod                                   = psms.GlobalMod
@@ -597,7 +602,7 @@ module AlignmentBasedQuantification =
                 PrecursorMZ                                 = psms.Mz
                 MeasuredMass                                = targetPeptide.Mass
                 TheoMass                                    = targetPeptide.Mass
-                AbsDeltaMass                                = nan//abs(avgMass-unlabledPeptide.Mass)
+                AbsDeltaMass                                = nan
                 MeanPercolatorScore                         = 0.
                 QValue                                      = 0.
                 PEPValue                                    = 0.
@@ -619,7 +624,7 @@ module AlignmentBasedQuantification =
                 KLDiv_Observed_Theoretical_Heavy            = nan
                 KLDiv_CorrectedObserved_Theoretical_Heavy   = nan
                 Correlation_Light_Heavy                     = nan
-                QuantificationSource                        = QuantificationSource.PSM
+                QuantificationSource                        = QuantificationSource.Alignment
                 IsotopicPatternMz_Light                     = clusterComparison_Target.PeakComparisons|> Array.map (fun x -> x.Mz)
                 IsotopicPatternIntensity_Observed_Light     = clusterComparison_Target.PeakComparisons|> Array.map (fun x -> x.MeasuredIntensity)
                 IsotopicPatternIntensity_Corrected_Light    = clusterComparison_Target.PeakComparisons|> Array.map (fun x -> x.MeasuredIntensityCorrected)
