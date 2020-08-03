@@ -14,13 +14,13 @@ module TableSort =
         |> Array.map (fun s -> sprintf "%s=%s"s fieldType)
         |> String.concat ","
 
-    let aggregationMethod (agMethod: Domain.AggregationMethod): Series<'K0,'V1> -> float =
+    let aggregationMethodSeries (agMethod: Domain.AggregationMethod): Series<'K0,'V1> -> float =
         match agMethod with
         | Domain.AggregationMethod.Sum    -> Stats.sum
         | Domain.AggregationMethod.Mean   -> Stats.mean
         | Domain.AggregationMethod.Median -> Stats.median
 
-    let aggregationMethodPepToProt (agMethod: Domain.AggregationMethod): float[] -> float =
+    let aggregationMethodArray (agMethod: Domain.AggregationMethod): float[] -> float =
         match agMethod with
         | Domain.AggregationMethod.Sum ->
             fun (x: float[]) ->
@@ -49,6 +49,31 @@ module TableSort =
         |Domain.Transform.Ln          -> fun x -> System.Math.E**x
         |Domain.Transform.NoTransform -> id
 
+    let removeNan = Array.filter (System.Double.IsNaN >> not)
+
+    let aggregateWithTukey ((tukeyC,method): float*Domain.Transform) (agMethod: Domain.AggregationMethod) (series: Series<'K1,'V2>): float =
+        let values = 
+            series.Values
+            |> Seq.map float
+            |> Array.ofSeq
+            |> removeNan
+        let transformedValues = 
+            values
+            |> Array.map (transform method)
+        let borders =
+            transformedValues
+            |> FSharp.Stats.Testing.Outliers.tukey tukeyC
+        let filteredValues =
+            values
+            |> Array.filter (fun v -> v <  borders.Upper && v > borders.Lower)
+            |> Array.map (revertTransform method)
+        filteredValues 
+        |> (aggregationMethodArray agMethod)
+
+    let seriesCV (series:Series<'R,'V>) =
+        series.Values
+        |> Seq.cv
+
     let getAggregatedPeptidesVals (peptidesPresent: Set<string>) (peptidesMapped:Series<string,string[]>) (data: Frame<string,string>) (columnName:string) (agMethod: Domain.AggregationMethod) (tukey: (string*float*Domain.Transform)[]): Series<string,float> =
         peptidesMapped
         |> Series.mapValues (fun peptides ->
@@ -75,10 +100,10 @@ module TableSort =
                     arrTr
                     |> Array.filter (fun v -> v <  borders.Upper && v > borders.Lower)
                     |> Array.map (revertTransform method)
-                    |> (aggregationMethodPepToProt agMethod)
+                    |> (aggregationMethodArray agMethod)
                 |None ->
                     arr
-                    |> (aggregationMethodPepToProt agMethod)
+                    |> (aggregationMethodArray agMethod)
         )
 
     let getAggregatedCVVals (peptidesPresent: Set<string>) (peptidesMapped:Series<string,string[]>) (data: Frame<string,string>) (columnName:string) (tukey: (string*float*Domain.Transform)[]) =
@@ -249,15 +274,57 @@ module TableSort =
                     |> Frame.filterCols (fun ck _ -> isQuantColumnOfInterest ck)
                     // aggregates the columns over the peptide sequence with a defined method (i.e. average,median,...)
                     |> applyLevelWithException (fun (sequence,index) -> sequence) ([|Some param.EssentialFields.Light;param.EssentialFields.Heavy|] |> Array.choose id)
-                        (aggregationMethod param.AggregatorFunction) (aggregationMethod param.AggregatorFunctionIntensity)
+                        (aggregationMethodSeries param.AggregatorFunction) (aggregationMethodSeries param.AggregatorFunctionIntensity)
                     |> Frame.sliceCols quantColumnsOfInterest
                 let uniqueKeyTables = ensureUniqueKeys quantTableAggregated protTableFiltered "_Prot"
                 let alignedTables =
                     Frame.align snd id uniqueKeyTables.Frame2 uniqueKeyTables.Frame1
                     |> Frame.mapRowKeys (fun (pep,(prot,_),(id)) -> prot,pep,id)
-                    |> Frame.applyLevel (fun (prot,pep,id) -> prot) (fun (s:Series<_,float>) -> s.Values |> Seq.mean)
+                    //|> Frame.applyLevel (fun (prot,pep,id) -> prot) (fun (s:Series<_,float>) -> s.Values |> Seq.mean)
+                let alignedAggTables =
+                    let fieldsWoTukey = 
+                        let allFields =
+                            Array.append param.QuantColumnsOfInterest param.ProtColumnsOfInterest
+                            |> fun x ->
+                                if labeled then 
+                                    Array.append x [|"Ratio"|]
+                                else
+                                    x
+                        let tukeyFields =
+                            param.Tukey
+                            |> Array.map (fun (name,_,_) -> name)
+                        allFields
+                        |> Array.filter (fun x -> Array.contains x tukeyFields |> not)
+                    let tukeyColumns =
+                        param.Tukey
+                        |> Array.map (fun (name,tukeyC,method) ->
+                            alignedTables
+                            |> Frame.sliceCols [name]
+                            |> Frame.applyLevel (fun (prot,pep,id) -> prot) (aggregateWithTukey (tukeyC, method) param.AggregatorPepToProt)
+                        )
+                    let noTukeyColumns =
+                        fieldsWoTukey
+                        |> Array.map (fun name ->
+                            alignedTables
+                            |> Frame.sliceCols [name]
+                            |> Frame.applyLevel (fun (prot,pep,id) -> prot) (aggregationMethodSeries param.AggregatorPepToProt)
+                        )
+                    let cvColumns =
+                        param.CoefficientOfVariation
+                        |> Array.map (fun name ->
+                            alignedTables
+                            |> Frame.sliceCols [name]
+                            |> Frame.applyLevel (fun (prot,pep,id) -> prot) seriesCV
+                            |> Frame.mapColKeys (fun c -> c + "_CV")
+                        )
+                    let combinedColumns =
+                        [tukeyColumns;noTukeyColumns;cvColumns]
+                        |> Array.concat
+                        |> Frame.mergeAll
+                    combinedColumns
+                    |> Frame.sortColsByKey
                     |> Frame.mapRowKeys (fun prot -> prot, System.IO.Path.GetFileNameWithoutExtension protFile)
-                alignedTables
+                alignedAggTables
             ) quantFiles protFiles
         tables
         |> Frame.mergeAll
