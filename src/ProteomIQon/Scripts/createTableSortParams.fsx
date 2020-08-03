@@ -21,9 +21,9 @@ let defaultTableSortParams: Dto.TableSortParams =
         QuantColumnsOfInterest      = [|"Quant_Light";"Quant_Heavy"|]
         ProtColumnsOfInterest       = [|"DistinctPeptideCount"; "QValue"|]
         CoefficientOfVariation      = [|"Ratio"|]
-        AggregatorFunction          = AggregationMethod.Mean
-        AggregatorFunctionIntensity = AggregationMethod.Mean
-        AggregatorPepToProt         = AggregationMethod.Mean
+        AggregatorFunction          = AggregationMethod.Median
+        AggregatorFunctionIntensity = AggregationMethod.Median
+        AggregatorPepToProt         = AggregationMethod.Median
         Tukey                       = [|("Ratio",2., Transform.Log2)|]
     }
 
