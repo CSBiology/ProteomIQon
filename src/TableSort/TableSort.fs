@@ -64,14 +64,16 @@ module TableSort =
             transformedValues
             |> FSharp.Stats.Testing.Outliers.tukey tukeyC
         let filteredValues =
-            values
-            |> Array.filter (fun v -> v <  borders.Upper && v > borders.Lower)
+            transformedValues
+            |> Array.filter (fun v -> v <=  borders.Upper && v >= borders.Lower)
             |> Array.map (revertTransform method)
         filteredValues 
         |> (aggregationMethodArray agMethod)
 
-    let seriesCV (series:Series<'R,'V>) =
+    let seriesCV (series:Series<'R,float>) =
         series.Values
+        |> Seq.toArray
+        |> removeNan
         |> Seq.cv
 
     let getAggregatedPeptidesVals (peptidesPresent: Set<string>) (peptidesMapped:Series<string,string[]>) (data: Frame<string,string>) (columnName:string) (agMethod: Domain.AggregationMethod) (tukey: (string*float*Domain.Transform)[]): Series<string,float> =
