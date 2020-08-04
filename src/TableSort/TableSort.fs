@@ -265,7 +265,6 @@ module TableSort =
                 let protTableFiltered: Frame<string*string,string> =
                     protTable
                     |> filterFrame param.ProtFieldsToFilterOn
-                    |> Frame.sliceCols param.ProtColumnsOfInterest
                     |> Frame.expandRowsByKey (fun (prot,s) -> String.split ';' s |> Seq.map (fun pep -> prot,pep))
                 let quantTableAggregated: Frame<string,string> =
                     quantTableFiltered
@@ -277,7 +276,6 @@ module TableSort =
                     // aggregates the columns over the peptide sequence with a defined method (i.e. average,median,...)
                     |> applyLevelWithException (fun (sequence,index) -> sequence) ([|Some param.EssentialFields.Light;param.EssentialFields.Heavy|] |> Array.choose id)
                         (aggregationMethodSeries param.AggregatorFunction) (aggregationMethodSeries param.AggregatorFunctionIntensity)
-                    |> Frame.sliceCols quantColumnsOfInterest
                 let uniqueKeyTables = ensureUniqueKeys quantTableAggregated protTableFiltered "_Prot"
                 let alignedTables =
                     Frame.align snd id uniqueKeyTables.Frame2 uniqueKeyTables.Frame1
