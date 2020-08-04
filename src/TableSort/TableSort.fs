@@ -295,6 +295,20 @@ module TableSort =
                             |> Array.map (fun (name,_,_) -> name)
                         allFields
                         |> Array.filter (fun x -> Array.contains x tukeyFields |> not)
+                    let distinctPeptideCount =
+                        if param.ProtColumnsOfInterest |> Array.contains "DistinctPeptideCount" && labeled then
+                            [|"Ratio"|]
+                            |> Array.map (fun name ->
+                                alignedTables
+                                |> Frame.sliceCols [name]
+                                |> Frame.applyLevel (fun (prot,pep,id) -> prot) (fun (s: Series<string*string*string,float>) -> 
+                                    let length = s.Values |> Seq.length
+                                    float length
+                                    )
+                                |> Frame.mapColKeys (fun c -> "DistinctPeptideCount")
+                            )
+                        else
+                            [||]
                     let tukeyColumns =
                         param.Tukey
                         |> Array.map (fun (name,tukeyC,method) ->
@@ -318,7 +332,7 @@ module TableSort =
                             |> Frame.mapColKeys (fun c -> c + "_CV")
                         )
                     let combinedColumns =
-                        [tukeyColumns;noTukeyColumns;cvColumns]
+                        [tukeyColumns;distinctPeptideCount;noTukeyColumns;cvColumns]
                         |> Array.concat
                         |> Frame.mergeAll
                     combinedColumns
