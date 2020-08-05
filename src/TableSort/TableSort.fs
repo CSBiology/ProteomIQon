@@ -65,7 +65,7 @@ module TableSort =
             |> FSharp.Stats.Testing.Outliers.tukey tukeyC
         let filteredValues =
             transformedValues
-            |> Array.filter (fun v -> v <=  borders.Upper && v >= borders.Lower)
+            |> Array.filter (fun v -> v < borders.Upper && v > borders.Lower)
             |> Array.map (revertTransform method)
         filteredValues 
         |> (aggregationMethodArray agMethod)
