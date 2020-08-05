@@ -51,24 +51,32 @@ module TableSort =
 
     let removeNan = Array.filter (System.Double.IsNaN >> not)
 
-    let aggregateWithTukey ((tukeyC,method): float*Domain.Transform) (agMethod: Domain.AggregationMethod) (series: Series<'K1,'V2>): float =
+    let aggregateWithTukey ((tukeyC,method): float*Domain.Transform) (agMethod: Domain.AggregationMethod) (logger: NLog.Logger)(series: Series<'K1,'V2>): float =
         let values = 
             series.Values
             |> Seq.map float
             |> Array.ofSeq
             |> removeNan
+        logger.Trace (sprintf "Unfiltered Values: %A" values)
         let transformedValues = 
             values
             |> Array.map (transform method)
+        logger.Trace (sprintf "Transformed Values: %A" transformedValues)
         let borders =
             transformedValues
             |> FSharp.Stats.Testing.Outliers.tukey tukeyC
+        logger.Trace (sprintf "Upper Border: %f" borders.Upper)
+        logger.Trace (sprintf "Lower Border: %f" borders.Lower)
         let filteredValues =
             transformedValues
-            |> Array.filter (fun v -> v < borders.Upper && v > borders.Lower)
+            |> Array.filter (fun v -> v <= borders.Upper && v >= borders.Lower)
             |> Array.map (revertTransform method)
-        filteredValues 
-        |> (aggregationMethodArray agMethod)
+        logger.Trace (sprintf "Filtered Values: %A" filteredValues)
+        let res =
+            filteredValues 
+            |> (aggregationMethodArray agMethod)
+        logger.Trace (sprintf "Result: %f\n" res)
+        res
 
     let seriesCV (series:Series<'R,float>) =
         series.Values
@@ -221,13 +229,18 @@ module TableSort =
 
     let sortTables (quantFiles: string[]) (protFiles: string[]) outDirectory (param: Domain.TableSortParams) =
 
+        let logger = Logging.createLogger "TableSort"
         // creates a schema that sets the column type of every column containing values to float
         let quantColsWithValues =
             Array.append param.QuantColumnsOfInterest (param.QuantFieldsToFilterOn |> Array.map (fun x -> x.FieldName))
             |> Array.distinct
+        logger.Trace (sprintf "Prot columns of interest: %A" param.ProtColumnsOfInterest)
+        logger.Trace (sprintf "Quant cloumns of interest: %A" param.QuantColumnsOfInterest)
+        logger.Trace (sprintf "Quant cloumns with values that are kept for analysis: %A" quantColsWithValues)
         let quantColumnTypes =
             createSchema "float" quantColsWithValues
         let labeled = param.EssentialFields.Heavy.IsSome
+        logger.Trace (sprintf "Labeled experiment: %b" labeled)
         let quantColumnsOfInterest =
             if labeled then 
                 param.QuantColumnsOfInterest
@@ -241,15 +254,20 @@ module TableSort =
             fun x -> s.Contains x
 
         let tables =
-            Array.map2 ( fun quantFile protFile ->
+            Array.map2 (fun (quantFile:string) protFile ->
+                let loggerFile = Logging.createLogger (System.IO.Path.GetFileNameWithoutExtension quantFile)
                 // reads quant and prot table
+                loggerFile.Trace "Reading quant table"
                 let quantTable: Frame<int,string> =
                     Frame.ReadCsv(path=quantFile ,separators=param.SeparatorIn, schema=quantColumnTypes)
+                loggerFile.Trace "Reading prot table"
                 let protTable : Frame<string*string,string> =
                     Frame.ReadCsv(path=protFile ,separators=param.SeparatorIn)
                     |> Frame.groupRowsBy param.EssentialFields.ProteinIDs
                     |> Frame.groupRowsBy param.EssentialFields.PepSequences
                     |> Frame.mapRowKeys (fun (ss,(id,_)) -> id,ss)
+                loggerFile.Trace "Filtering quant table"
+                loggerFile.Trace (sprintf "Calculating ratios: %b" labeled)
                 let quantTableFiltered: Frame<int,string> =
                     // calculate 14N/15N ratios based on the corresponding fields from the quant table
                     // Ratio gets added before filtering, so that it can also be filtered on
@@ -262,10 +280,12 @@ module TableSort =
 
                     quantTable
                     |> filterFrame param.QuantFieldsToFilterOn
+                loggerFile.Trace "Filtering prot table"
                 let protTableFiltered: Frame<string*string,string> =
                     protTable
                     |> filterFrame param.ProtFieldsToFilterOn
                     |> Frame.expandRowsByKey (fun (prot,s) -> String.split ';' s |> Seq.map (fun pep -> prot,pep))
+                loggerFile.Trace "Aggregating peptide versions"
                 let quantTableAggregated: Frame<string,string> =
                     quantTableFiltered
                     // group all rows based on the peptide sequence. This groups different charges and global modifications of the same peptide
@@ -276,11 +296,14 @@ module TableSort =
                     // aggregates the columns over the peptide sequence with a defined method (i.e. average,median,...)
                     |> applyLevelWithException (fun (sequence,index) -> sequence) ([|Some param.EssentialFields.Light;param.EssentialFields.Heavy|] |> Array.choose id)
                         (aggregationMethodSeries param.AggregatorFunction) (aggregationMethodSeries param.AggregatorFunctionIntensity)
+                loggerFile.Trace "Ensuring unique Keys"
                 let uniqueKeyTables = ensureUniqueKeys quantTableAggregated protTableFiltered "_Prot"
+                loggerFile.Trace (sprintf "Keys in common that were changed: %A" uniqueKeyTables.sameKeys)
                 let alignedTables =
                     Frame.align snd id uniqueKeyTables.Frame2 uniqueKeyTables.Frame1
                     |> Frame.mapRowKeys (fun (pep,(prot,_),(id)) -> prot,pep,id)
                     //|> Frame.applyLevel (fun (prot,pep,id) -> prot) (fun (s:Series<_,float>) -> s.Values |> Seq.mean)
+                loggerFile.Trace "Aggregating peptides to proteins"
                 let alignedAggTables =
                     let fieldsWoTukey = 
                         let allFields =
@@ -314,7 +337,7 @@ module TableSort =
                         |> Array.map (fun (name,tukeyC,method) ->
                             alignedTables
                             |> Frame.sliceCols [name]
-                            |> Frame.applyLevel (fun (prot,pep,id) -> prot) (aggregateWithTukey (tukeyC, method) param.AggregatorPepToProt)
+                            |> Frame.applyLevel (fun (prot,pep,id) -> prot) (aggregateWithTukey (tukeyC, method) param.AggregatorPepToProt loggerFile)
                         )
                     let noTukeyColumns =
                         fieldsWoTukey
