@@ -18,7 +18,7 @@ module console1 =
         let o = results.GetResult OutputDirectory
         let p = results.GetResult ParamFile
         Logging.generateConfig o
-        let logger = Logging.createLogger "SpectralLibrary"
+        let logger = Logging.createLogger "TableSort"
         logger.Info (sprintf "InputFilePath -i = %s" i)
         logger.Info (sprintf "Peptide data base -d = %s" d)
         logger.Info (sprintf "PSMStatisticsResult -g = %s" q)
