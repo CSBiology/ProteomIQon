@@ -18,7 +18,7 @@ module console1 =
         let o     = results.GetResult OutputDirectory
         let p     = results.GetResult ParamFile
         Logging.generateConfig o
-        let logger = Logging.createLogger "SpectralLibrary"
+        let logger = Logging.createLogger "TableSort"
         logger.Info (sprintf "QuantFilePath -i = %s" quant)
         logger.Info (sprintf "ProtFilePath = %s" prot)
         logger.Info (sprintf "OutputFolderPath -o = %s" o)
