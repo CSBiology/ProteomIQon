@@ -231,7 +231,15 @@ module TableSort =
                 let alignedAggTables =
                     let fieldsWoTukey = 
                         let allFields =
-                            Array.append param.QuantColumnsOfInterest param.ProtColumnsOfInterest
+                            let duplicateProtectedProtCols = 
+                                param.ProtColumnsOfInterest
+                                |> Array.map (fun col ->
+                                    if uniqueKeyTables.sameKeys.Contains col then
+                                        col + "_Prot"
+                                    else
+                                        col
+                                    )
+                            Array.append param.QuantColumnsOfInterest duplicateProtectedProtCols
                             |> fun x ->
                                 if labeled then 
                                     Array.append x [|"Ratio"|]
