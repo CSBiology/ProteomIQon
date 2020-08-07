@@ -69,7 +69,7 @@ module TableSort =
         logger.Trace (sprintf "Lower Border: %f" borders.Lower)
         let filteredValues =
             transformedValues
-            |> Array.filter (fun v -> v <= (borders.Upper + 0.000001) && v >= (borders.Lower - 0.000001))
+            |> Array.filter (fun v -> v <= borders.Upper && v >= borders.Lower)
             |> Array.map (revertTransform method)
         logger.Trace (sprintf "Filtered Values: %A" filteredValues)
         let res =
