@@ -15,9 +15,17 @@ let defaultTableSortParams: Dto.TableSortParams =
     {
         SeparatorIn                 = "\t"
         SeparatorOut                = '\t'
+        // light = Name of the unlabeled peptide quantification column in the quant file
+        // heavy = Name of the labeled peptide quantification column in the quant file (optional, if present, "Ratio" column is automatically added)
+        // proteinIDs = Name of the column containing the protein names in the prot file
+        // pepSequence = Name of the column containing the peptide sequence in the quant file
+        // pepSequences = Name of the column containing the peptide sequences in the prot file
         EssentialFields             = EssentialFields.create "Quant_Light" (Some "Quant_Heavy") "GroupOfProteinIDs" "StringSequence" "PeptideSequence"
         QuantFieldsToFilterOn       = [|(FilterOnField.create "Quant_Light" (None) (Some 0.)); (FilterOnField.create "Quant_Heavy" (None) (Some 0.))|]
         ProtFieldsToFilterOn        = [|(*(FilterOnField.create "Class" None (Some 1.))*)|]
+        // Columns of interest can be any column present in the original tables. The column "Ratio" is automatically added
+        // when heavy labeled peptides are present. "DistinctPeptideCount" is calculated from the amount of different peptides used
+        // for the ratio calculation and can be included.
         QuantColumnsOfInterest      = [|"Quant_Light";"Quant_Heavy"|]
         ProtColumnsOfInterest       = [|"DistinctPeptideCount"; "QValue"|]
         CoefficientOfVariation      = [|"Ratio"|]

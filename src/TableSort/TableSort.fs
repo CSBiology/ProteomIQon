@@ -57,25 +57,25 @@ module TableSort =
             |> Seq.map float
             |> Array.ofSeq
             |> removeNan
-        logger.Trace (sprintf "Unfiltered Values: %A" values)
+        //logger.Trace (sprintf "Unfiltered Values: %A" values)
         let transformedValues = 
             values
             |> Array.map (transform method)
-        logger.Trace (sprintf "Transformed Values: %A" transformedValues)
+        //logger.Trace (sprintf "Transformed Values: %A" transformedValues)
         let borders =
             transformedValues
             |> FSharp.Stats.Testing.Outliers.tukey tukeyC
-        logger.Trace (sprintf "Upper Border: %f" borders.Upper)
-        logger.Trace (sprintf "Lower Border: %f" borders.Lower)
+        //logger.Trace (sprintf "Upper Border: %f" borders.Upper)
+        //logger.Trace (sprintf "Lower Border: %f" borders.Lower)
         let filteredValues =
             transformedValues
             |> Array.filter (fun v -> v <= borders.Upper && v >= borders.Lower)
             |> Array.map (revertTransform method)
-        logger.Trace (sprintf "Filtered Values: %A" filteredValues)
+        //logger.Trace (sprintf "Filtered Values: %A" filteredValues)
         let res =
             filteredValues 
             |> (aggregationMethodArray agMethod)
-        logger.Trace (sprintf "Result: %f\n" res)
+        //logger.Trace (sprintf "Result: %f\n" res)
         res
 
     let seriesCV (series:Series<'R,float>) =
@@ -84,6 +84,7 @@ module TableSort =
         |> removeNan
         |> Seq.cv
 
+    // works like applyLevel, but columns can be excluded and have a different function applied
     let applyLevelWithException (levelSel:_ -> 'K) (ex: 'C[]) (op:_ -> 'T) (exOp:_ -> 'T) (frame:Frame<'R, 'C>) =
         let indexBuilder = Deedle.Indices.Linear.LinearIndexBuilder.Instance
         let vectorBuilder = Deedle.Vectors.ArrayVector.ArrayVectorBuilder.Instance
@@ -95,6 +96,7 @@ module TableSort =
                     Series.applyLevel levelSel op s)
         |> FrameUtils.fromColumns indexBuilder vectorBuilder
 
+    // checks for duplicate column keys in the tables and renames the second if duplicate is present
     let ensureUniqueKeys (frame1: Frame<'a,string>) (frame2: Frame<'b,string>) (differentiator: string)=
         let colKeys1 = frame1.ColumnKeys |> Set.ofSeq
         let colKeys2 = frame2.ColumnKeys |> Set.ofSeq
@@ -229,7 +231,9 @@ module TableSort =
                     //|> Frame.applyLevel (fun (prot,pep,id) -> prot) (fun (s:Series<_,float>) -> s.Values |> Seq.mean)
                 loggerFile.Trace "Aggregating peptides to proteins"
                 let alignedAggTables =
+                    // determines which filed should be included in the final table, that aren't filtered with Tukey
                     let fieldsWoTukey = 
+                        // all columns that are in the final table
                         let allFields =
                             let duplicateProtectedProtCols = 
                                 param.ProtColumnsOfInterest
@@ -245,11 +249,13 @@ module TableSort =
                                     Array.append x [|"Ratio"|]
                                 else
                                     x
+                        // fields that are in the final table but filtered with tukey
                         let tukeyFields =
                             param.Tukey
                             |> Array.map (fun (name,_,_) -> name)
                         allFields
                         |> Array.filter (fun x -> Array.contains x tukeyFields |> not)
+                    // calculates distinct peptide count based on the amount of peptides used for ratio calculation before tukey filtering
                     let distinctPeptideCount =
                         if param.ProtColumnsOfInterest |> Array.contains "DistinctPeptideCount" && labeled then
                             [|"Ratio"|]
