@@ -3,6 +3,7 @@ namespace ProteomIQon.Tests
 open Expecto
 open FsCheck
 open GeneratorsCode
+open ProteomIQon.TableSort
 
 module Tests =
     let config10k = { FsCheckConfig.defaultConfig with maxTest = 10000}
