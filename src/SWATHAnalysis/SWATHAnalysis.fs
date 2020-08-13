@@ -91,7 +91,6 @@ module SWATHAnalysis =
         let tr = inReader.BeginTransaction()
         let runID = Core.MzIO.Reader.getDefaultRunID inReader
         let swathIdx = SwathIndexer.SwathIndexer.Create(inReader, runID)
-        printfn "2"
         let peptideList =
             match swathAnalysisParams.PeptideList with
             | Some x -> x
@@ -138,5 +137,8 @@ module SWATHAnalysis =
                 | None -> None
             )
         tr.Dispose()
-        FSharpAux.IO.SeqIO.Seq.CSV "\t" true false quant
-        |> FSharpAux.IO.SeqIO.Seq.writeOrAppend outFilePath
+        if quant.Length >= 1 then
+            FSharpAux.IO.SeqIO.Seq.CSV "\t" true false quant
+            |> FSharpAux.IO.SeqIO.Seq.writeOrAppend outFilePath
+        else
+            ()
