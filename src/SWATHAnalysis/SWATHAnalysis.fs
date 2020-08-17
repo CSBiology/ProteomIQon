@@ -37,7 +37,7 @@ module SWATHAnalysis =
             Sequence: string
         }
 
-    let createPeptideQuery (peptide:string) (library: LibraryEntry[]) matchingTolerance=
+    let createPeptideQuery (peptide:string) (library: LibraryEntry[]) matchingTolerance offsetRange =
         let entries =
             library
             |> Array.filter (fun entry -> entry.Sequence = peptide)
@@ -55,9 +55,9 @@ module SWATHAnalysis =
                 |> Array.averageBy (fun entry -> entry.ScanTime)
             let offset =
                 if abs (averageRT-upperRT) > abs (averageRT-lowerRT) then
-                    abs (averageRT-upperRT) + 10.
+                    abs (averageRT-upperRT) + offsetRange
                 else
-                    abs (averageRT-lowerRT) + 10.
+                    abs (averageRT-lowerRT) + offsetRange
             offset, averageRT
         let rangeQueryRt = MzIO.Processing.Query.createRangeQuery averageRT offset
         let rangeQueriesMz =
@@ -100,7 +100,7 @@ module SWATHAnalysis =
                 |> Array.distinct
         let queries =
             peptideList
-            |> Array.map (fun peptide -> peptide, createPeptideQuery peptide consensusLibrary swathAnalysisParams.MatchingTolerancePPM)
+            |> Array.map (fun peptide -> peptide, createPeptideQuery peptide consensusLibrary swathAnalysisParams.MatchingTolerancePPM swathAnalysisParams.QueryOffsetRange)
         let quant =
             queries
             |> Array.choose (fun (peptide,(rt,query)) ->

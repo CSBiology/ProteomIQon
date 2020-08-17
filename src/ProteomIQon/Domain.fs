@@ -160,4 +160,5 @@ module Domain =
         {
             PeptideList         : string [] option
             MatchingTolerancePPM: float
+            QueryOffsetRange    : float
         }

@@ -503,6 +503,7 @@ module Dto =
         {
             PeptideList         : string [] option
             MatchingTolerancePPM: float
+            QueryOffsetRange    : float
         }
 
     module SWATHAnalysisParams =
@@ -511,4 +512,5 @@ module Dto =
             {
                 PeptideList          = dtoSWATHAnalysisParams.PeptideList
                 MatchingTolerancePPM = dtoSWATHAnalysisParams.MatchingTolerancePPM
+                QueryOffsetRange     = dtoSWATHAnalysisParams.QueryOffsetRange
             }
