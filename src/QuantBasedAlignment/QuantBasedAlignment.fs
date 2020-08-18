@@ -102,6 +102,8 @@ module QuantBasedAlignment =
             SourceStabw                  : float32
             [<ColumnName("TargetScanTime")>]
             TargetScanTime               : float32
+            [<ColumnName("TargetIntensity")>]
+            TargetIntensity              : float32
             [<ColumnName("RtTrace_SourceFile")>]
             RtTrace_SourceFile           : float []
             [<ColumnName("IntensityTrace_SourceFile")>]
@@ -137,6 +139,7 @@ module QuantBasedAlignment =
                 SourceIntensity                                 = getTargetIntensity sourcePep |> float32
                 SourceStabw                                     = getTargetStabw sourcePep     |> float32
                 TargetScanTime                                  = getTargetScanTime tP         |> float32
+                TargetIntensity                                 = getTargetIntensity tP        |> float32
                 RtTrace_SourceFile                              = getTargetRtTrace sourcePep
                 IntensityTrace_SourceFile                       = getTargetIntensityTrace sourcePep
                 RtTrace_TargetFile                              = getTargetRtTrace tP
@@ -157,6 +160,7 @@ module QuantBasedAlignment =
                 SourceIntensity                                 = getTargetIntensity sourcePep |> float32
                 SourceStabw                                     = getTargetStabw sourcePep     |> float32
                 TargetScanTime                                  = nan                          |> float32
+                TargetIntensity                                 = nan                          |> float32
                 RtTrace_SourceFile                              = getTargetRtTrace sourcePep
                 IntensityTrace_SourceFile                       = getTargetIntensityTrace sourcePep
                 RtTrace_TargetFile                              = [||]
@@ -259,6 +263,7 @@ module QuantBasedAlignment =
             Mz                                              = Mass.toMZ (quantifiedPeptide.TheoMass) (float quantifiedPeptide.Charge) 
             ProteinNames                                    = quantifiedPeptide.ProteinNames
             PredictedScanTime                               = float scanTimePrediction.TargetScanTime
+            ScanTime_SourceFile                             = getTargetScanTime quantifiedPeptide
             RtTrace_SourceFile                              = getTargetRtTrace quantifiedPeptide
             IntensityTrace_SourceFile                       = getTargetIntensityTrace quantifiedPeptide
             IsotopicPatternMz_SourceFile                    = getIsotopicPatternMz quantifiedPeptide       
@@ -279,38 +284,21 @@ module QuantBasedAlignment =
         X_Stabw                             : float []        
         X_Test                              : float []
         X_IsotopicPatternMz                 : float [][]
-        X_IsotopicPatternIntensity_Observed : float [][]    
+        X_IsotopicPatternIntensity_Observed : float [][]
+        X_RtTrace                           : float [][]
+        X_IntensityTrace                    : float [][]   
         Y_Test                              : float []
         YHat_Test                           : float []
         YHat_Refined_Test                   : float []
+        Y_Intensities                       : float []
         Y_IsotopicPatternMz                 : float [][]
-        Y_IsotopicPatternIntensity_Observed : float [][]       
+        Y_IsotopicPatternIntensity_Observed : float [][]
+        Y_RtTrace                           : float [][]
+        Y_IntensityTrace                    : float [][]
         DtwDistanceBefore                   : float []
-        DtwDistanceAfter                    : float []
         }
 
-    ///
-    type MetricsDTO = 
-       {           
-           Sequence                             : string
-           GlobalMod                            : int
-           Charge                               : int
-           PepSequenceID                        : int
-           ModSequenceID                        : int
-           X_FileName                           : string 
-           X_Intensities                        : float 
-           X_Stabw                              : float
-           X_Test                               : float 
-           X_IsotopicPatternMz                  : float []
-           X_IsotopicPatternIntensity_Observed  : float []
-           Y_Test                               : float 
-           YHat_Test                            : float 
-           YHat_Refined_Test                    : float
-           Y_IsotopicPatternMz                  : float []
-           Y_IsotopicPatternIntensity_Observed  : float []           
-           DtwDistanceBefore                    : float 
-           DtwDistanceAfter                     : float 
-       }
+
 
     ///
     let createMetricsChart fileName (*stabwMedian*) (rnd:System.Random) (metrics:ModelMetrics) = 
@@ -393,6 +381,7 @@ module QuantBasedAlignment =
         |> Chart.Stack 2
         |> Chart.withSize(2000.,2500.)
 
+
     ///
     let saveMetrics outputDir targetFileName sourceFileName (metrics:ModelMetrics) = 
         let fileName = (targetFileName ) + ".alignmetric"
@@ -413,13 +402,18 @@ module QuantBasedAlignment =
                         X_Test                               = metrics.X_Test.[i] 
                         X_IsotopicPatternMz                  = metrics.X_IsotopicPatternMz.[i]
                         X_IsotopicPatternIntensity_Observed  = metrics.X_IsotopicPatternIntensity_Observed.[i]
+                        X_RtTrace                            = metrics.X_RtTrace.[i]
+                        X_IntensityTrace                     = metrics.X_IntensityTrace.[i]
                         Y_Test                               = metrics.Y_Test.[i] 
                         YHat_Test                            = metrics.YHat_Test.[i] 
                         YHat_Refined_Test                    = metrics.YHat_Refined_Test.[i]
+                        Y_Intensity                          = metrics.Y_Intensities.[i]
                         Y_IsotopicPatternMz                  = metrics.Y_IsotopicPatternMz.[i]
                         Y_IsotopicPatternIntensity_Observed  = metrics.Y_IsotopicPatternIntensity_Observed.[i]
+                        Y_RtTrace                            = metrics.Y_RtTrace.[i]
+                        Y_IntensityTrace                     = metrics.Y_IntensityTrace.[i]   
                         DtwDistanceBefore                    = metrics.DtwDistanceBefore.[i]
-                        DtwDistanceAfter                     = metrics.DtwDistanceAfter.[i]
+
                     }
             |]
         if System.IO.File.Exists outFilePath then 
@@ -453,11 +447,13 @@ module QuantBasedAlignment =
             let x             = evalView.GetColumn<float32>("SourceScanTime")   |> Seq.map float |> Array.ofSeq
             let y             = evalView.GetColumn<float32>("TargetScanTime")   |> Seq.map float |> Array.ofSeq
             let yHat          = evalView.GetColumn<float32>("Score")            |> Seq.map float |> Array.ofSeq
+            let yIntensities    = evalView.GetColumn<float32>("TargetIntensity")  |> Seq.map float |> Array.ofSeq
+            let xSource = evalView.GetColumn<float[]>("RtTrace_SourceFile")        |> Seq.map (Array.ofSeq) |> Array.ofSeq
+            let ySource = evalView.GetColumn<float[]>("IntensityTrace_SourceFile") |> Seq.map (Array.ofSeq) |> Array.ofSeq
+            let xTarget = evalView.GetColumn<float[]>("RtTrace_TargetFile")        |> Seq.map (Array.ofSeq) |> Array.ofSeq
+            let yTarget = evalView.GetColumn<float[]>("IntensityTrace_TargetFile") |> Seq.map (Array.ofSeq) |> Array.ofSeq
+            
             let yHatAfterRefinement,dtwDistanceBefore,dtwDistanceAfter = 
-                let xSource = evalView.GetColumn<float[]>("RtTrace_SourceFile")        |> Seq.map (Array.ofSeq) |> Array.ofSeq
-                let ySource = evalView.GetColumn<float[]>("IntensityTrace_SourceFile") |> Seq.map (Array.ofSeq) |> Array.ofSeq
-                let xTarget = evalView.GetColumn<float[]>("RtTrace_TargetFile")        |> Seq.map (Array.ofSeq) |> Array.ofSeq
-                let yTarget = evalView.GetColumn<float[]>("IntensityTrace_TargetFile") |> Seq.map (Array.ofSeq) |> Array.ofSeq
                 [|
                     for i = 0 to xSource.Length-1 do                          
                         printfn "%i %i %i %i" xSource.[i].Length ySource.[i].Length xTarget.[i].Length yTarget.[i].Length
@@ -472,7 +468,7 @@ module QuantBasedAlignment =
                         let dtwDistanceBefore = 
                             DTW'.distance None None None None None None (Array.map snd target)  (Array.map snd source)
                         let dtwDistanceAfter = 
-                            DTW'.distance None None None None None None (Array.map snd alignment)  (Array.map snd source)
+                            DTW'.distance None None None None None None (Array.map snd target)  (Array.map snd alignment)
                         yield yRefined,dtwDistanceBefore,dtwDistanceAfter
                 |]
                 |> Array.unzip3
@@ -493,13 +489,17 @@ module QuantBasedAlignment =
                 X_Test                              = x
                 X_IsotopicPatternMz                 = x_IsotopicPatternMz
                 X_IsotopicPatternIntensity_Observed = x_IsotopicPatternIntensity_Observed
+                X_RtTrace                           = xSource
+                X_IntensityTrace                    = ySource
                 Y_Test                              = y
                 YHat_Test                           = yHat
                 YHat_Refined_Test                   = yHatAfterRefinement
+                Y_Intensities                       = yIntensities
                 Y_IsotopicPatternMz                 = y_IsotopicPatternMz
                 Y_IsotopicPatternIntensity_Observed = y_IsotopicPatternIntensity_Observed
+                Y_RtTrace                           = xTarget
+                Y_IntensityTrace                    = yTarget
                 DtwDistanceBefore                   = dtwDistanceBefore
-                DtwDistanceAfter                    = dtwDistanceAfter
             }
         let predF = ctx.Model.CreatePredictionEngine<PeptideForLearning,ScanTimePrediction>(model)
         let predict quantifiedPeptide = 

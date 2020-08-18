@@ -567,7 +567,6 @@ module Dto =
         Placeholder : bool 
         }
 
-
     ///
     type AlignmentResult = 
         {
@@ -587,61 +586,90 @@ module Dto =
             ProteinNames                 : string
             [<FieldAttribute(7)>]
             PredictedScanTime            : float
-            [<FieldAttribute(8)>][<TraceConverter>]
-            RtTrace_SourceFile           : float []
+            [<FieldAttribute(8)>]
+            ScanTime_SourceFile          : float
             [<FieldAttribute(9)>][<TraceConverter>]
-            IntensityTrace_SourceFile    : float []
+            RtTrace_SourceFile           : float []
             [<FieldAttribute(10)>][<TraceConverter>]
-            IsotopicPatternMz_SourceFile                    : float []            
+            IntensityTrace_SourceFile    : float []
             [<FieldAttribute(11)>][<TraceConverter>]
+            IsotopicPatternMz_SourceFile                    : float []            
+            [<FieldAttribute(12)>][<TraceConverter>]
             IsotopicPatternIntensity_Observed_SourceFile    : float []       
         } 
 
-    ///
-    type AlignmentModelMetrics<'Metrics> = 
-        {
-        Metrics                             : 'Metrics
-        Sequence                            : string []
-        GlobalMod                           : int []
-        Charge                              : int []
-        PepSequenceID                       : int []
-        ModSequenceID                       : int []
-        X_Intensities                       : float []
-        X_Stabw                             : float []        
-        X_Test                              : float []
-        X_IsotopicPatternMz                 : float [][]
-        X_IsotopicPatternIntensity_Observed : float [][]    
-        Y_Test                              : float []
-        YHat_Test                           : float []
-        YHat_Refined_Test                   : float []
-        Y_IsotopicPatternMz                 : float [][]
-        Y_IsotopicPatternIntensity_Observed : float [][]       
-        DtwDistanceBefore                   : float []
-        DtwDistanceAfter                    : float []
-        }
+    /////
+    //type AlignmentModelMetrics<'Metrics> = 
+    //    {
+    //    Metrics                             : 'Metrics
+    //    Sequence                            : string []
+    //    GlobalMod                           : int []
+    //    Charge                              : int []
+    //    PepSequenceID                       : int []
+    //    ModSequenceID                       : int []
+    //    X_Intensities                       : float []
+    //    X_Stabw                             : float []        
+    //    X_Test                              : float []
+    //    X_IsotopicPatternMz                 : float [][]
+    //    X_IsotopicPatternIntensity_Observed : float [][]    
+    //    Y_Test                              : float []
+    //    YHat_Test                           : float []
+    //    YHat_Refined_Test                   : float []
+    //    Y_IsotopicPatternMz                 : float [][]
+    //    Y_IsotopicPatternIntensity_Observed : float [][]       
+    //    DtwDistanceBefore                   : float []
+    //    DtwDistanceAfter                    : float []
+    //    }
 
     ///
     type AlignmentMetricsDTO = 
-       {           
+       {
+           [<FieldAttribute(0)>]
            Sequence                             : string
+           [<FieldAttribute(1)>]
            GlobalMod                            : int
+           [<FieldAttribute(2)>]
            Charge                               : int
+           [<FieldAttribute(3)>]
            PepSequenceID                        : int
+           [<FieldAttribute(4)>]
            ModSequenceID                        : int
+           [<FieldAttribute(5)>]
            X_FileName                           : string 
+           [<FieldAttribute(6)>]
            X_Intensities                        : float 
+           [<FieldAttribute(7)>]
            X_Stabw                              : float
+           [<FieldAttribute(8)>]
            X_Test                               : float 
+           [<FieldAttribute(9)>] [<TraceConverter>]
            X_IsotopicPatternMz                  : float []
+           [<FieldAttribute(10)>] [<TraceConverter>]
            X_IsotopicPatternIntensity_Observed  : float []
+           [<FieldAttribute(11)>] [<TraceConverter>]
+           X_RtTrace                            : float []
+           [<FieldAttribute(12)>] [<TraceConverter>]
+           X_IntensityTrace                     : float []   
+           [<FieldAttribute(13)>]
            Y_Test                               : float 
+           [<FieldAttribute(14)>]
            YHat_Test                            : float 
+           [<FieldAttribute(15)>]
            YHat_Refined_Test                    : float
+           [<FieldAttribute(16)>]
+           Y_Intensity                          : float
+           [<FieldAttribute(17)>] [<TraceConverter>]
            Y_IsotopicPatternMz                  : float []
-           Y_IsotopicPatternIntensity_Observed  : float []           
+           [<FieldAttribute(18)>] [<TraceConverter>]
+           Y_IsotopicPatternIntensity_Observed  : float [] 
+           [<FieldAttribute(19)>] [<TraceConverter>]
+           Y_RtTrace                            : float []
+           [<FieldAttribute(20)>] [<TraceConverter>]
+           Y_IntensityTrace                     : float []
+           [<FieldAttribute(21)>]
            DtwDistanceBefore                    : float 
-           DtwDistanceAfter                     : float 
        }
+
     type AlignmentBasedQuantificationParams =
         {
             PerformLabeledQuantification : bool
