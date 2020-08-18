@@ -486,7 +486,7 @@ module PSMBasedQuantification =
         let ms1AccuracyEstimate = 
             peptides
             |> Seq.stDevBy (fun x -> abs(x.PrecursorMZ - Mass.toMZ x.TheoMass (float x.Charge)) )
-        logger.Trace "Estimate ms1 mz accuracy:finished"
+        logger.Trace (sprintf "Estimate ms1 mz accuracy:finished, Accuracy: %f" ms1AccuracyEstimate) 
             
         logger.Trace "init lookup functions"        
         ///
