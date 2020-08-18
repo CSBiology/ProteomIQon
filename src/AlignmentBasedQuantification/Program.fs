@@ -16,6 +16,8 @@ module console1 =
         let results = parser.Parse argv
         let i = results.GetResult InstrumentOutput
         let ii = results.GetResult AlignedPeptides
+        let iii = results.GetResult Metrics
+        let iv = results.GetResult QuantifiedPeptides
         let o = results.GetResult OutputDirectory
         let p = results.GetResult ParamFile
         let d = results.GetResult PeptideDataBase
@@ -41,33 +43,48 @@ module console1 =
         logger.Trace "Set Index on data base if not present: finished"
         if File.Exists i then
             logger.Info "single file"
-            quantifyPeptides p o dbConnection i ii
+            quantifyPeptides p o dbConnection i iii iv ii 
         elif Directory.Exists i && Directory.Exists ii then
             logger.Info "multiple files"
             let mzfiles =
                 Directory.GetFiles(i,("*.mzlite"))
-            let pepfiles =
+            let alignmentFiles =
                 Directory.GetFiles(ii,("*.align"))
+            let metricFiles =
+                Directory.GetFiles(iii,("*.alignmetric"))
+            let quantFiles =
+                Directory.GetFiles(iv,("*.quant"))
             logger.Trace (sprintf "mz files : %A" mzfiles)
-            logger.Trace (sprintf "align files : %A" pepfiles)
+            logger.Trace (sprintf "align files : %A" alignmentFiles)
             let mzFilesAndPepFiles =
                 mzfiles
                 |> Array.choose (fun mzFilePath ->
-                    match pepfiles  |> Array.tryFind (fun pepFilePath -> (Path.GetFileNameWithoutExtension pepFilePath) = (Path.GetFileNameWithoutExtension mzFilePath)) with
-                    | Some pepFile -> Some(mzFilePath,pepFile)
+                    match alignmentFiles |> Array.tryFind (fun alignfilePath -> (Path.GetFileNameWithoutExtension alignfilePath) = (Path.GetFileNameWithoutExtension mzFilePath)) with
+                    | Some alignfilePath -> 
+                        match metricFiles |> Array.tryFind (fun metricFilePath -> (Path.GetFileNameWithoutExtension metricFilePath) = (Path.GetFileNameWithoutExtension alignfilePath)) with
+                        | Some(metricFilePath) -> 
+                            match quantFiles |> Array.tryFind (fun quantFilePath -> (Path.GetFileNameWithoutExtension quantFilePath) = (Path.GetFileNameWithoutExtension metricFilePath)) with
+                            | Some(quantFilePath) ->
+                                Some(mzFilePath,alignfilePath,metricFilePath,quantFilePath)
+                            | None -> 
+                                logger.Trace (sprintf "no quant file for %s" mzFilePath)
+                                None
+                        | None ->
+                            logger.Trace (sprintf "no alignment metric file for %s" mzFilePath)
+                            None
                     | None ->
-                        logger.Trace (sprintf "no qpsmFileFor %s" mzFilePath)
+                        logger.Trace (sprintf "no alignment file for %s" mzFilePath)
                         None
                     )
             if mzfiles.Length <> mzFilesAndPepFiles.Length then
-                logger.Info (sprintf "There are %i mzFiles but %i files containing scored PSMs" mzfiles.Length pepfiles.Length)
+                logger.Info (sprintf "There are %i mzFiles but only %i can be mapped to there corresponding .align, .alignmetric and .quant files" mzfiles.Length mzFilesAndPepFiles.Length)
             let c =
                 match results.TryGetResult Parallelism_Level with
                 | Some c    -> c
                 | None      -> 1
             logger.Trace (sprintf "Program is running on %i cores" c)
             mzFilesAndPepFiles
-            |> FSharpAux.PSeq.map (fun (i,ii) -> quantifyPeptides p o dbConnection i ii)
+            |> FSharpAux.PSeq.map (fun (mzFilePath,alignfilePath,metricFilePath,quantFilePath) -> quantifyPeptides p o dbConnection mzFilePath quantFilePath metricFilePath alignfilePath)
             |> FSharpAux.PSeq.withDegreeOfParallelism c
             |> Array.ofSeq
             |> ignore
