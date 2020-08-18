@@ -175,14 +175,15 @@ module DTW' =
         | Some x -> x.Distance
         | None -> failwith "Warping not possible."
        
-    
+    // Aligns source to target. Given a sourceX it returns the mapping of the xVal closest to
+    // sourceX to its targetX counterPart after alignment.
     let align (target:(float*float)[]) (source:(float*float)[]) =
         let xt,yt = target |> Array.unzip
         let xs,ys = source |> Array.unzip
         let optimalPath = warping_Path None None None None None None yt ys
         List.map (fun (ytIdx,ysIdx) -> xt.[ytIdx],ys.[ysIdx]) optimalPath 
 
-    // Aligns target to source. Given a sourceX it returns the mapping of the xVal closest to
+    // Aligns source to target. Given a sourceX it returns the mapping of the xVal closest to
     // sourceX to its targetX counterPart after alignment.
     let align' (target:(float*float)[]) (source:(float*float)[]) sourceX =
         let xt,yt = target |> Array.unzip
