@@ -101,15 +101,26 @@ module Domain =
 
     type WindowSize = 
         | Fixed of int
-        | Estimate 
+        | EstimateUsingAutoCorrelation of float
+    
+    type SecondDerivativeParams = 
+        {
+            MinSNR                       : float  
+            PolynomOrder                 : int
+            WindowSize                   : WindowSize
+        }
+    
+    type WaveletParameters = FSharpStats'.Wavelet.Parameters 
 
+    type XicProcessing = 
+        | SecondDerivative of SecondDerivativeParams
+        | Wavelet of WaveletParameters
+        
     type XicExtraction = 
         {
             ScanTimeWindow               : float 
             MzWindow_Da                  : float 
-            MinSNR                       : float  
-            PolynomOrder                 : int
-            WindowSize                   : WindowSize
+            XicProcessing                : XicProcessing
         }
        
     type BaseLineCorrection = 
@@ -122,6 +133,14 @@ module Domain =
     type QuantificationParams = 
         {
             PerformLabeledQuantification : bool
+            XicExtraction                : XicExtraction
+            BaseLineCorrection           : BaseLineCorrection option
+        }
+
+    type AlignmentBasedQuantificationParams = 
+        {
+            PerformLabeledQuantification : bool
+            PerformLocalWarp             : bool
             XicExtraction                : XicExtraction
             BaseLineCorrection           : BaseLineCorrection option
         }

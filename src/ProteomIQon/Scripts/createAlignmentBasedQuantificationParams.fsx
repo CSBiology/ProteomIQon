@@ -12,7 +12,7 @@ open ProteomIQon.Domain
 open ProteomIQon.FSharpStats'.Wavelet
 
 
-let defaultPreprocessingParams :Dto.QuantificationParams = 
+let defaultPreprocessingParams :Dto.AlignmentBasedQuantificationParams = 
     ///
     let waveletParams :WaveletParameters = 
         {
@@ -44,6 +44,7 @@ let defaultPreprocessingParams :Dto.QuantificationParams =
 
     {
         PerformLabeledQuantification = true
+        PerformLocalWarp             = true
         XicExtraction                = XicExtraction
         BaseLineCorrection           = Some BaseLineCorrection
     }
@@ -53,10 +54,10 @@ let serialized =
     defaultPreprocessingParams
     |> Json.serialize
 
-System.IO.File.WriteAllText(__SOURCE_DIRECTORY__ + @"/../defaultParams\QuantificationParams.json",serialized)
+System.IO.File.WriteAllText(__SOURCE_DIRECTORY__ + @"/../defaultParams\AlignmentBasedQuantificationParams.json",serialized)
 
 let deserialized = 
-    System.IO.File.ReadAllText(__SOURCE_DIRECTORY__ + @"/../defaultParams\QuantificationParams.json")
+    System.IO.File.ReadAllText(__SOURCE_DIRECTORY__ + @"/../defaultParams\AlignmentBasedQuantificationParams.json")
     |> Json.deserialize<Dto.QuantificationParams>
     |> QuantificationParams.toDomain
 
