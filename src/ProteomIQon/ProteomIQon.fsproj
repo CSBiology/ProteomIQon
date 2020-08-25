@@ -20,6 +20,8 @@
     <Compile Include="DTO.fs" />
     <Compile Include="Json.fs" />
     <Compile Include="Core.fs" />
+    <None Include="Scripts\createSWATHAnalysisParams.fsx" />
+    <None Include="Scripts\createConsensusSpectralLibraryParams.fsx" />
     <None Include="Scripts\createAlignmentBasedQuantificationParams.fsx" />
     <None Include="Scripts\createPSMBasedQuantificationParams.fsx" />
     <None Include="Scripts\createPreprocessingParamsThermo.fsx" />

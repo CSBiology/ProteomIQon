@@ -722,3 +722,33 @@ module Dto =
                 ChargeList           = dtoSpectralLibraryParams.ChargeList
                 MatchingTolerancePPM = dtoSpectralLibraryParams.MatchingTolerancePPM
             }
+
+    type ConsensusSpectralLibraryParams =
+        {
+            RTTolerance: float
+            iRTPeptides: string list
+        }
+
+    module ConsensusSpectralLibraryParams =
+
+        let toDomain (dtoConsensusSpectralLibraryParams: ConsensusSpectralLibraryParams): Domain.ConsensusSpectralLibraryParams =
+            {
+                RTTolerance = dtoConsensusSpectralLibraryParams.RTTolerance
+                iRTPeptides = dtoConsensusSpectralLibraryParams.iRTPeptides
+            }
+
+    type SWATHAnalysisParams =
+        {
+            PeptideList         : string [] option
+            MatchingTolerancePPM: float
+            QueryOffsetRange    : float
+        }
+
+    module SWATHAnalysisParams =
+
+        let toDomain (dtoSWATHAnalysisParams: SWATHAnalysisParams): Domain.SWATHAnalysisParams =
+            {
+                PeptideList          = dtoSWATHAnalysisParams.PeptideList
+                MatchingTolerancePPM = dtoSWATHAnalysisParams.MatchingTolerancePPM
+                QueryOffsetRange     = dtoSWATHAnalysisParams.QueryOffsetRange
+            }
