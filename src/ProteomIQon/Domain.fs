@@ -168,4 +168,16 @@ module Domain =
             ChargeList          : float list
             MatchingTolerancePPM: float
         }
+
+    type ConsensusSpectralLibraryParams =
+        {
+            RTTolerance: float
+            iRTPeptides: string list
+        }
    
+    type SWATHAnalysisParams =
+        {
+            PeptideList         : string [] option
+            MatchingTolerancePPM: float
+            QueryOffsetRange    : float
+        }
