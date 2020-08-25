@@ -147,8 +147,9 @@ module ProteinInference =
 
         let logger = Logging.createLogger "ProteinInference_readAndInferFile"
 
-        let rawFilePaths = System.IO.Directory.GetFiles (rawFolderPath, "*.qpsm")
-                           |> Array.toList
+        let rawFilePaths = 
+            System.IO.Directory.GetFiles (rawFolderPath, "*.qpsm")
+            |> Array.toList
 
         let outFiles: string list =
             rawFilePaths
@@ -157,7 +158,7 @@ module ProteinInference =
                 outDirectory + @"\" (*+ foldername.[foldername.Length - 1]*) + "\\" + (System.IO.Path.GetFileNameWithoutExtension filePath) + ".prot"
                 )
 
-        let dbParams = ProteomIQon.SearchDB'.getSDBParamsBy dbConnection
+        let dbParams = ProteomIQon.SearchDB'.getSDBParams dbConnection
 
         logger.Trace "Getting proteins with peptide sequence from db"
 

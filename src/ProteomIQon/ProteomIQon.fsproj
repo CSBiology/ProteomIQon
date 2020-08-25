@@ -22,11 +22,12 @@
     <Compile Include="Core.fs" />
     <None Include="Scripts\createSWATHAnalysisParams.fsx" />
     <None Include="Scripts\createConsensusSpectralLibraryParams.fsx" />
+    <None Include="Scripts\createAlignmentBasedQuantificationParams.fsx" />
+    <None Include="Scripts\createPSMBasedQuantificationParams.fsx" />
+    <None Include="Scripts\createPreprocessingParamsThermo.fsx" />
     <None Include="Scripts\createSpectralLibraryParams.fsx" />
     <None Include="Scripts\createProteinInferenceParams.fsx" />
     <None Include="Scripts\createPreprocessingParamsBruker.fsx" />
-    <None Include="Scripts\createPSMBasedQuantificationParams.fsx" />
-    <None Include="Scripts\createPreprocessingParamsThermo.fsx" />
     <None Include="Scripts\createPeptideSpectrumMatchingParams.fsx" />
     <None Include="Scripts\createPeptideDBParams.fsx" />
     <None Include="Scripts\Testing.fsx" />
@@ -69,7 +70,6 @@
     <Reference Include="Clearcore2.Utility">
       <HintPath>..\..\lib\FsMzLite\Clearcore2.Utility.dll</HintPath>
     </Reference>
-    <Reference Include="System.Transactions" />
   </ItemGroup>
   <Import Project="..\..\.paket\Paket.Restore.targets" />
 </Project>

@@ -13,6 +13,9 @@
       del SQLite.Interop.dll
     </PostBuildEvent>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net47|AnyCPU'">
+    <PlatformTarget>AnyCPU</PlatformTarget>
+  </PropertyGroup>
   <ItemGroup>
     <None Include="App.config" />
     <Compile Include="PeptideSpectrumMatching.fs" />
