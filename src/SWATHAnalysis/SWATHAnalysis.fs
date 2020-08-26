@@ -18,6 +18,7 @@ open MzIO.Commons.Arrays
 open System.Linq
 open FSharpAux
 open FSharpAux.IO
+open FSharp.Stats
 
 module SWATHAnalysis = 
   
@@ -81,6 +82,43 @@ module SWATHAnalysis =
     let getRTProfiles (swathIndexer: SwathIndexer.SwathIndexer) (reader: IMzIODataReader) (swathQuery: SwathQuery) =
         swathIndexer.GetRTProfiles(reader, swathQuery, false, getClosestMz)
 
+    let optimizeWindowWidth polOrder (windowWidthToTest:int[]) noiseAutoCorr (signalOfInterest:float[]) =
+        let signalOfInterest' = signalOfInterest |> vector
+        //let noiseAutoCorr = Correlation.Vector.autoCorrelation 1 (blankSignal |> vector)
+        let filterF w yData = FSharp.Stats.Signal.Filtering.savitzky_golay w polOrder 0 0 yData
+        let windowWidthToTest' = windowWidthToTest |> Array.filter (fun x -> x%2 <> 0)
+        let optimizedWindowWidth =
+            windowWidthToTest'
+            |> Array.map (fun w ->
+                let smoothedY = filterF w signalOfInterest
+                let noise = smoothedY - (signalOfInterest')
+                w, Correlation.Vector.autoCorrelation 1 noise
+                )
+            |> Array.minBy (fun (w,ac) -> (ac - noiseAutoCorr) |> abs )
+            |> fst
+        optimizedWindowWidth
+
+    ///
+    let initGetWindowWidth (windowEst:Domain.WindowSize) polynomOrder (windowWidthToTest:int[]) =
+        match windowEst with
+        | Domain.WindowSize.Fixed w  -> fun yData -> w
+        | Domain.WindowSize.EstimateUsingAutoCorrelation noiseAutoCorr -> fun yData -> optimizeWindowWidth polynomOrder windowWidthToTest noiseAutoCorr yData
+
+
+    ///
+    let initIdentifyPeaks (peakDetectionParams:Domain.XicProcessing) =
+        match peakDetectionParams with 
+        | Domain.XicProcessing.SecondDerivative parameters ->
+            let getWindowWidth = initGetWindowWidth parameters.WindowSize parameters.PolynomOrder [|5 .. 2 .. 60|] 
+            (fun xData yData -> 
+                let  windowSize = getWindowWidth yData
+                FSharp.Stats.Signal.PeakDetection.SecondDerivative.getPeaks parameters.MinSNR parameters.PolynomOrder windowSize xData yData
+                )
+        | Domain.XicProcessing.Wavelet parameters ->
+            (fun xData yData -> 
+                FSharpStats'.Wavelet.identify parameters xData yData
+                )
+
     let quantify (library: string) (swathAnalysisParams: Domain.SWATHAnalysisParams) (instrumentOutput: string) (outFolder: string) =
         let outFilePath = outFolder + "/" + (System.IO.Path.GetFileNameWithoutExtension instrumentOutput) + ".squant"
         let consensusLibrary =
@@ -91,6 +129,7 @@ module SWATHAnalysis =
         let tr = inReader.BeginTransaction()
         let runID = Core.MzIO.Reader.getDefaultRunID inReader
         let swathIdx = SwathIndexer.SwathIndexer.Create(inReader, runID)
+        let identifyPeaks = initIdentifyPeaks swathAnalysisParams.XicProcessing
         let peptideList =
             match swathAnalysisParams.PeptideList with
             | Some x -> x
@@ -123,7 +162,7 @@ module SWATHAnalysis =
                             retInt
                             |> Array.unzip
                             |> fun (ret, intensity) ->
-                                FSharp.Stats.Signal.PeakDetection.SecondDerivative.getPeaks 0.1 2 13 ret intensity
+                                identifyPeaks ret intensity
                             |> fun peaks ->
                                 match peaks with
                                 | [||] -> None
