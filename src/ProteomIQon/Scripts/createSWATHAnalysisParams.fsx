@@ -1,14 +1,17 @@
 // Learn more about F# at http://fsharp.org. See the 'F# Tutorial' project
 // for more guidance on F# programming.
 #r "netstandard"
-#r @"../../../bin\ProteomIQon\netstandard2.0\ProteomIQon.dll"
 #r @"../../../packages\FSharp.Stats\lib\netstandard2.0\FSharp.Stats.dll"
+#r @"../../../bin\ProteomIQon\netstandard2.0\ProteomIQon.dll"
+#r @"../../../packages\BioFSharp.Mz\lib\netstandard2.0\BioFSharp.Mz.dll"
+#r @"../../../packages\FSharpAux.IO\lib\netstandard2.0\FSharpAux.IO.dll"
 
+open FSharp.Stats
+open FSharp.Stats.Signal
 open ProteomIQon
 open ProteomIQon.Dto
-open ProteomIQon.FSharpStats'.Wavelet
-open FSharp.Stats.Signal
 open ProteomIQon.Domain
+open ProteomIQon.FSharpStats'.Wavelet
 
 let waveletParams :WaveletParameters = 
     {
