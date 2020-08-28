@@ -21,6 +21,45 @@ open FSharpAux.IO
 open FSharp.Stats
 
 module SWATHAnalysis = 
+
+    type SwathIndexer.SwathIndexer with
+        
+        member this.GetRTProfiles2(dataReader:IMzIODataReader, query: SwathQuery, getLockMz: bool, ?mzRangeSelector: Peak1DArray * RangeQuery -> Peak1D) =
+
+            let getClosestMz (peaks: Peak1DArray, mzRange: RangeQuery) =
+                peaks.Peaks
+                    .DefaultIfEmpty(new Peak1D(0., mzRange.LockValue))
+                    .ItemAtMin(fun x -> Math.Abs(x.Mz - mzRange.LockValue))
+
+            let mzRangeSelector = defaultArg mzRangeSelector getClosestMz
+
+            let swathSpectra = 
+                this.SwathList.SearchAllTargetMz(query.TargetMz)
+                    .Take(1)
+                    .SelectMany(fun x -> x.SearchAllRt(query))
+                    .ToArray()
+            if swathSpectra.Length > 0 then
+
+                let profile = Array2D.create query.CountMS2Masses swathSpectra.Length (new Peak2D())
+
+                for specIdx = 0 to swathSpectra.Length - 1 do
+
+                    let swathSpec = swathSpectra.[specIdx]
+                    let pa = dataReader.ReadSpectrumPeaks(swathSpec.SpectrumID)
+
+                    for ms2MassIndex = 0 to query.CountMS2Masses - 1 do
+                        
+                        let mzRange = query.Ms2Masses.[ms2MassIndex]
+                        let p = mzRangeSelector(pa, mzRange)
+
+                        if getLockMz then
+                            profile.[ms2MassIndex, specIdx] <- new Peak2D(p.Intensity, mzRange.LockValue, swathSpec.Rt)
+                        else
+                            profile.[ms2MassIndex, specIdx] <- new Peak2D(p.Intensity, p.Mz, swathSpec.Rt)
+
+                Some profile
+            else
+                None
   
     type LibraryEntry =
         {
@@ -80,7 +119,7 @@ module SWATHAnalysis =
             p1d
 
     let getRTProfiles (swathIndexer: SwathIndexer.SwathIndexer) (reader: IMzIODataReader) (swathQuery: SwathQuery) =
-        swathIndexer.GetRTProfiles(reader, swathQuery, false, getClosestMz)
+        swathIndexer.GetRTProfiles2(reader, swathQuery, false, getClosestMz)
 
     let optimizeWindowWidth polOrder (windowWidthToTest:int[]) noiseAutoCorr (signalOfInterest:float[]) =
         let signalOfInterest' = signalOfInterest |> vector
