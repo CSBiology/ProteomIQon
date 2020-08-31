@@ -24,7 +24,7 @@ module SWATHAnalysis =
 
     type SwathIndexer.SwathIndexer with
         
-        member this.GetRTProfiles2(dataReader:IMzIODataReader, query: SwathQuery, getLockMz: bool, ?mzRangeSelector: Peak1DArray * RangeQuery -> Peak1D) =
+        member this.GetRTProfiles2(dataReader:IMzIODataReader, query: SwathQuery, getLockMz: bool, spectrumSelector: seq<SwathIndexer.MSSwath> -> seq<SwathIndexer.MSSwath> list ,?mzRangeSelector: Peak1DArray * RangeQuery -> Peak1D) =
 
             let getClosestMz (peaks: Peak1DArray, mzRange: RangeQuery) =
                 peaks.Peaks
@@ -35,31 +35,35 @@ module SWATHAnalysis =
 
             let swathSpectra = 
                 this.SwathList.SearchAllTargetMz(query.TargetMz)
-                    .Take(1)
-                    .SelectMany(fun x -> x.SearchAllRt(query))
-                    .ToArray()
-            if swathSpectra.Length > 0 then
+                    |> spectrumSelector
 
-                let profile = Array2D.create query.CountMS2Masses swathSpectra.Length (new Peak2D())
+            swathSpectra
+            |> List.map (fun spec ->
+                let swathSpectrum = spec.SelectMany(fun x -> x.SearchAllRt(query)).ToArray()
 
-                for specIdx = 0 to swathSpectra.Length - 1 do
+                if swathSpectrum.Length > 0 then
 
-                    let swathSpec = swathSpectra.[specIdx]
-                    let pa = dataReader.ReadSpectrumPeaks(swathSpec.SpectrumID)
+                    let profile = Array2D.create query.CountMS2Masses swathSpectrum.Length (new Peak2D())
 
-                    for ms2MassIndex = 0 to query.CountMS2Masses - 1 do
+                    for specIdx = 0 to swathSpectrum.Length - 1 do
+
+                        let swathSpec = swathSpectrum.[specIdx]
+                        let pa = dataReader.ReadSpectrumPeaks(swathSpec.SpectrumID)
+
+                        for ms2MassIndex = 0 to query.CountMS2Masses - 1 do
                         
-                        let mzRange = query.Ms2Masses.[ms2MassIndex]
-                        let p = mzRangeSelector(pa, mzRange)
+                            let mzRange = query.Ms2Masses.[ms2MassIndex]
+                            let p = mzRangeSelector(pa, mzRange)
 
-                        if getLockMz then
-                            profile.[ms2MassIndex, specIdx] <- new Peak2D(p.Intensity, mzRange.LockValue, swathSpec.Rt)
-                        else
-                            profile.[ms2MassIndex, specIdx] <- new Peak2D(p.Intensity, p.Mz, swathSpec.Rt)
+                            if getLockMz then
+                                profile.[ms2MassIndex, specIdx] <- new Peak2D(p.Intensity, mzRange.LockValue, swathSpec.Rt)
+                            else
+                                profile.[ms2MassIndex, specIdx] <- new Peak2D(p.Intensity, p.Mz, swathSpec.Rt)
 
-                Some profile
-            else
-                None
+                    Some profile
+                else
+                    None
+            )
   
     type LibraryEntry =
         {
@@ -119,7 +123,7 @@ module SWATHAnalysis =
             p1d
 
     let getRTProfiles (swathIndexer: SwathIndexer.SwathIndexer) (reader: IMzIODataReader) (swathQuery: SwathQuery) =
-        swathIndexer.GetRTProfiles2(reader, swathQuery, false, getClosestMz)
+        swathIndexer.GetRTProfiles2(reader, swathQuery, false, (*(fun x -> x |> Seq.fold (fun acc y -> seq[y]::acc)[])*)(fun x -> [x.Take(1)]),getClosestMz)
 
     let optimizeWindowWidth polOrder (windowWidthToTest:int[]) noiseAutoCorr (signalOfInterest:float[]) =
         let signalOfInterest' = signalOfInterest |> vector
@@ -181,38 +185,55 @@ module SWATHAnalysis =
             |> Array.map (fun peptide -> peptide, createPeptideQuery peptide consensusLibrary swathAnalysisParams.MatchingTolerancePPM swathAnalysisParams.QueryOffsetRange)
         let quant =
             queries
-            |> Array.choose (fun (peptide,(rt,query)) ->
-                let profile = getRTProfiles swathIdx inReader query
+            |> Array.map (fun (peptide,(rt,query)) ->
+                let profiles = getRTProfiles swathIdx inReader query
+                profiles
+                |> List.choose (fun profile ->
                 // Match to look if RTProfile was found. If none was found, quantification is skipped.
-                match profile with
-                | Some rtProfile ->
-                    let rtProfiles =
-                        rtProfile
-                        |> Array2D.toJaggedArray
-                        |> Array.map (fun peak2DArr ->
-                            peak2DArr
-                            |> Array.map (fun peak2D ->
-                                peak2D.Rt, peak2D.Intensity
+                    match profile with
+                    | Some rtProfile ->
+                        let rtProfiles =
+                            rtProfile
+                            |> Array2D.toJaggedArray
+                            |> Array.map (fun peak2DArr ->
+                                peak2DArr
+                                |> Array.map (fun peak2D ->
+                                    peak2D.Rt, peak2D.Intensity
+                                )
                             )
-                        )
-                    let quants = 
-                        rtProfiles
-                        |> Array.choose (fun retInt ->
-                            retInt
-                            |> Array.unzip
-                            |> fun (ret, intensity) ->
-                                identifyPeaks ret intensity
-                            |> fun peaks ->
-                                match peaks with
-                                | [||] -> None
-                                | _    -> Some (BioFSharp.Mz.Quantification.HULQ.getPeakBy peaks rt)
-                        )
-                        |> Array.map (fun peak ->
-                            BioFSharp.Mz.Quantification.HULQ.quantifyPeak peak
-                            |> fun x -> x.Area
-                        )
-                    Some {|Peptide = peptide; Area = (quants |> Array.sum)|}
-                | None -> None
+                        let quants = 
+                            rtProfiles
+                            |> Array.choose (fun retInt ->
+                                retInt
+                                |> Array.unzip
+                                |> fun (ret, intensity) ->
+                                    identifyPeaks ret intensity
+                                |> fun peaks ->
+                                    match peaks with
+                                    | [||] -> None
+                                    | _    -> Some (BioFSharp.Mz.Quantification.HULQ.getPeakBy peaks rt)
+                            )
+                            |> Array.map (fun peak ->
+                                BioFSharp.Mz.Quantification.HULQ.quantifyPeak peak
+                                |> fun x -> x.Area
+                            )
+                        Some (peptide, quants)
+                    | None -> None
+                )
+            )
+            |> fun x -> x
+            |> Array.filter (fun x -> x |> List.isEmpty |> not)
+            |> Array.map (fun x -> 
+                    let rec loop (i: int) (acc: float[]) (input: (string*float[]) list) =
+                        if i <= input.Length-1 then
+                            let acc' = 
+                                let quants = Array.append acc (snd input.[i])
+                                quants
+                            loop (i+1) acc' input
+                        else
+                            fst input.[0], acc
+                    let combined = loop 0 [||] x
+                    {|Peptide = fst combined; Area = (snd combined) |> Array.sum|}
             )
         tr.Dispose()
         if quant.Length >= 1 then
