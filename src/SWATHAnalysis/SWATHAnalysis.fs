@@ -122,8 +122,8 @@ module SWATHAnalysis =
         else
             p1d
 
-    let getRTProfiles (swathIndexer: SwathIndexer.SwathIndexer) (reader: IMzIODataReader) (swathQuery: SwathQuery) =
-        swathIndexer.GetRTProfiles2(reader, swathQuery, false, (*(fun x -> x |> Seq.fold (fun acc y -> seq[y]::acc)[])*)(fun x -> [x.Take(1)]),getClosestMz)
+    let getRTProfiles (swathIndexer: SwathIndexer.SwathIndexer) (reader: IMzIODataReader) (spectrumSelector: seq<SwathIndexer.MSSwath> -> seq<SwathIndexer.MSSwath> list) (swathQuery: SwathQuery) =
+        swathIndexer.GetRTProfiles2(reader, swathQuery, false, spectrumSelector ,getClosestMz)
 
     let optimizeWindowWidth polOrder (windowWidthToTest:int[]) noiseAutoCorr (signalOfInterest:float[]) =
         let signalOfInterest' = signalOfInterest |> vector
@@ -186,7 +186,7 @@ module SWATHAnalysis =
         let quant =
             queries
             |> Array.map (fun (peptide,(rt,query)) ->
-                let profiles = getRTProfiles swathIdx inReader query
+                let profiles = getRTProfiles swathIdx inReader swathAnalysisParams.SpectrumSelectionF query
                 profiles
                 |> List.choose (fun profile ->
                 // Match to look if RTProfile was found. If none was found, quantification is skipped.
@@ -233,7 +233,7 @@ module SWATHAnalysis =
                         else
                             fst input.[0], acc
                     let combined = loop 0 [||] x
-                    {|Peptide = fst combined; Area = (snd combined) |> Array.sum|}
+                    {|Peptide = fst combined; Area = (snd combined) |> swathAnalysisParams.AccumulationF|}
             )
         tr.Dispose()
         if quant.Length >= 1 then

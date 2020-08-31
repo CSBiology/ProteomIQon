@@ -5,6 +5,7 @@
 #r @"../../../bin\ProteomIQon\netstandard2.0\ProteomIQon.dll"
 #r @"../../../packages\BioFSharp.Mz\lib\netstandard2.0\BioFSharp.Mz.dll"
 #r @"../../../packages\FSharpAux.IO\lib\netstandard2.0\FSharpAux.IO.dll"
+#r @"../../../packages\MzIO.Processing\lib\netstandard2.0\MzIO.Processing.dll"
 
 open FSharp.Stats
 open FSharp.Stats.Signal
@@ -32,6 +33,8 @@ let defaultSWATHAnalysisParams: Dto.SWATHAnalysisParams =
         PeptideList          = None
         MatchingTolerancePPM = 100.
         QueryOffsetRange     = 10.
+        SpectrumSelectionF   = (fun x -> x |> Seq.fold (fun acc y -> seq[y]::acc)[])
+        AccumulationF        = Array.median
         XicProcessing        = Wavelet waveletParams
     }
 
