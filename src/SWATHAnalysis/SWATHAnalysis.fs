@@ -81,6 +81,26 @@ module SWATHAnalysis =
             Sequence: string
         }
 
+    let parseSpectrumSelection (swathParam: Domain.SWATHAnalysisParams) =
+        match swathParam.SpectrumSelectionF with
+        |Domain.SpectrumSelection.All -> (fun x -> x |> Seq.fold (fun acc y -> seq[y]::acc)[])
+        |Domain.SpectrumSelection.First -> (fun x -> [x.Take(1)])
+
+    let aggregationMethodArray (agMethod: Domain.AggregationMethod): float[] -> float =
+        match agMethod with
+        | Domain.AggregationMethod.Sum ->
+            fun (x: float[]) ->
+                if x.Length = 0 then nan
+                else Array.sum x
+        | Domain.AggregationMethod.Mean ->
+            fun (x: float[]) ->
+                if x.Length = 0 then nan
+                else Array.average x
+        | Domain.AggregationMethod.Median ->
+            fun (x: float[]) ->
+                if x.Length = 0 then nan
+                else Array.median x
+
     let createPeptideQuery (peptide:string) (library: LibraryEntry[]) matchingTolerance offsetRange =
         let entries =
             library
@@ -186,7 +206,7 @@ module SWATHAnalysis =
         let quant =
             queries
             |> Array.map (fun (peptide,(rt,query)) ->
-                let profiles = getRTProfiles swathIdx inReader swathAnalysisParams.SpectrumSelectionF query
+                let profiles = getRTProfiles swathIdx inReader (parseSpectrumSelection swathAnalysisParams) query
                 profiles
                 |> List.choose (fun profile ->
                 // Match to look if RTProfile was found. If none was found, quantification is skipped.
@@ -233,7 +253,7 @@ module SWATHAnalysis =
                         else
                             fst input.[0], acc
                     let combined = loop 0 [||] x
-                    {|Peptide = fst combined; Area = (snd combined) |> swathAnalysisParams.AccumulationF|}
+                    {|Peptide = fst combined; Area = (snd combined) |> (aggregationMethodArray swathAnalysisParams.AggregationF)|}
             )
         tr.Dispose()
         if quant.Length >= 1 then

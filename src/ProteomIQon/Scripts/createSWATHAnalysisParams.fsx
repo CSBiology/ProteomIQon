@@ -33,8 +33,8 @@ let defaultSWATHAnalysisParams: Dto.SWATHAnalysisParams =
         PeptideList          = None
         MatchingTolerancePPM = 100.
         QueryOffsetRange     = 10.
-        SpectrumSelectionF   = (fun x -> x |> Seq.fold (fun acc y -> seq[y]::acc)[])
-        AccumulationF        = Array.median
+        SpectrumSelectionF   = All
+        AggregationF         = Median
         XicProcessing        = Wavelet waveletParams
     }
 

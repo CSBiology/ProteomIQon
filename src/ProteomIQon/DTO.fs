@@ -743,8 +743,8 @@ module Dto =
             PeptideList         : string [] option
             MatchingTolerancePPM: float
             QueryOffsetRange    : float
-            SpectrumSelectionF  : seq<SwathIndexer.MSSwath> -> seq<SwathIndexer.MSSwath> list
-            AccumulationF       : float[] -> float
+            SpectrumSelectionF  : SpectrumSelection
+            AggregationF        : AggregationMethod
             XicProcessing       : XicProcessing
         }
 
@@ -756,6 +756,6 @@ module Dto =
                 MatchingTolerancePPM = dtoSWATHAnalysisParams.MatchingTolerancePPM
                 QueryOffsetRange     = dtoSWATHAnalysisParams.QueryOffsetRange
                 SpectrumSelectionF   = dtoSWATHAnalysisParams.SpectrumSelectionF
-                AccumulationF        = dtoSWATHAnalysisParams.AccumulationF
+                AggregationF         = dtoSWATHAnalysisParams.AggregationF
                 XicProcessing        = dtoSWATHAnalysisParams.XicProcessing
             }

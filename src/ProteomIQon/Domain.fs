@@ -3,7 +3,6 @@ namespace ProteomIQon
 open BioFSharp
 open BioFSharp.Mz
 open MzIO.Binary
-open MzIO.Processing
 
 module Domain = 
 
@@ -176,12 +175,21 @@ module Domain =
             iRTPeptides: string list
         }
    
+    type AggregationMethod =
+         |Sum
+         |Mean
+         |Median
+
+    type SpectrumSelection =
+        |First
+        |All
+
     type SWATHAnalysisParams =
         {
             PeptideList         : string [] option
             MatchingTolerancePPM: float
             QueryOffsetRange    : float
-            SpectrumSelectionF  : seq<SwathIndexer.MSSwath> -> seq<SwathIndexer.MSSwath> list
-            AccumulationF       : float[] -> float
+            SpectrumSelectionF  : SpectrumSelection
+            AggregationF        : AggregationMethod
             XicProcessing       : XicProcessing
         }
