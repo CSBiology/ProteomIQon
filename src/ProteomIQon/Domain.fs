@@ -3,6 +3,7 @@ namespace ProteomIQon
 open BioFSharp
 open BioFSharp.Mz
 open MzIO.Binary
+open MzIO.Processing
 
 module Domain = 
 
@@ -180,5 +181,7 @@ module Domain =
             PeptideList         : string [] option
             MatchingTolerancePPM: float
             QueryOffsetRange    : float
+            SpectrumSelectionF  : seq<SwathIndexer.MSSwath> -> seq<SwathIndexer.MSSwath> list
+            AccumulationF       : float[] -> float
             XicProcessing       : XicProcessing
         }

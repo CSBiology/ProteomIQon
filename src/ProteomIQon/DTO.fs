@@ -7,6 +7,7 @@ open Domain
 open FSharpAux.IO.SchemaReader
 open FSharpAux.IO.SchemaReader.Attribute
 open MzIO.Binary
+open MzIO.Processing
 
 [<AutoOpen>]
 module Common =
@@ -742,6 +743,8 @@ module Dto =
             PeptideList         : string [] option
             MatchingTolerancePPM: float
             QueryOffsetRange    : float
+            SpectrumSelectionF  : seq<SwathIndexer.MSSwath> -> seq<SwathIndexer.MSSwath> list
+            AccumulationF       : float[] -> float
             XicProcessing       : XicProcessing
         }
 
@@ -752,5 +755,7 @@ module Dto =
                 PeptideList          = dtoSWATHAnalysisParams.PeptideList
                 MatchingTolerancePPM = dtoSWATHAnalysisParams.MatchingTolerancePPM
                 QueryOffsetRange     = dtoSWATHAnalysisParams.QueryOffsetRange
+                SpectrumSelectionF   = dtoSWATHAnalysisParams.SpectrumSelectionF
+                AccumulationF        = dtoSWATHAnalysisParams.AccumulationF
                 XicProcessing        = dtoSWATHAnalysisParams.XicProcessing
             }
