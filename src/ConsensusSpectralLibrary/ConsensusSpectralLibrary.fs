@@ -6,42 +6,47 @@ module ConsensusSpectralLibrary =
 
     type IonInformation =
         {
-            Charge        : float
-            Iontype       : string
-            MassOverCharge: float
-            Number        : int
-            Intensity     : float
-            ModSequenceID : int
-            PSMId         : string
-            PrecursorMZ   : float
-            ScanTime      : float
-            Sequence      : string
-            GlobalMod     : int
+            Charge         : float
+            Iontype        : string
+            MassOverCharge : float
+            Number         : int
+            Intensity      : float
+            PepSequenceID  : int
+            ModSequenceID  : int
+            PSMId          : string
+            PrecursorMZ    : float
+            ScanTime       : float
+            Sequence       : string
+            GlobalMod      : int
+            PercolatorScore: float
         }
 
     type ConsensIonInformation =
         {
-            Charge        : float
-            Iontype       : string
-            MassOverCharge: float
-            Number        : int
-            Intensity     : float
-            ModSequenceID : int
-            PSMId         : string
-            PrecursorMZ   : float
-            ScanTime      : float
-            Count         : float
-            Version       : int
-            Sequence      : string
-            GlobalMod     : int
+            Charge         : float
+            Iontype        : string
+            MassOverCharge : float
+            Number         : int
+            Intensity      : float
+            PepSequenceID  : int
+            ModSequenceID  : int
+            PSMId          : string
+            PrecursorMZ    : float
+            ScanTime       : float
+            Count          : float
+            Version        : int
+            Sequence       : string
+            GlobalMod      : int
+            PercolatorScore: float
         }
-        static member create charge ionType massOverCharge number intensity modSeqID psmID precMZ scanTime count version sequence globalMod=
+        static member create charge ionType massOverCharge number intensity pepSeqID modSeqID psmID precMZ scanTime count version sequence globalMod percolatorScore =
             {
                 Charge         = charge
                 Iontype        = ionType
                 MassOverCharge = massOverCharge
                 Number         = number
                 Intensity      = intensity
+                PepSequenceID  = pepSeqID
                 ModSequenceID  = modSeqID
                 PSMId          = psmID
                 PrecursorMZ    = precMZ
@@ -50,9 +55,10 @@ module ConsensusSpectralLibrary =
                 Version        = version
                 Sequence       = sequence
                 GlobalMod      = globalMod
+                PercolatorScore= percolatorScore
             }
     
-        static member createFromFile charge (ionType: string) massOverCharge number intensity modSeqID psmID precMZ scanTime count version sequence globalMod=
+        static member createFromFile charge (ionType: string) massOverCharge number intensity pepSeqID modSeqID psmID precMZ scanTime count version sequence globalMod percolatorScore =
             {
                 Charge         = charge
                 Iontype        =
@@ -62,6 +68,7 @@ module ConsensusSpectralLibrary =
                 MassOverCharge = massOverCharge
                 Number         = number
                 Intensity      = intensity
+                PepSequenceID  = pepSeqID
                 ModSequenceID  = modSeqID
                 PSMId          = psmID
                 PrecursorMZ    = precMZ
@@ -70,6 +77,7 @@ module ConsensusSpectralLibrary =
                 Version        = version
                 Sequence       = sequence
                 GlobalMod      = globalMod
+                PercolatorScore= percolatorScore
             }
   
     let binning (difference: float) (data: ConsensIonInformation[]) =
@@ -90,6 +98,7 @@ module ConsensusSpectralLibrary =
                     ionInfo.MassOverCharge
                     ionInfo.Number
                     ionInfo.Intensity
+                    ionInfo.PepSequenceID
                     ionInfo.ModSequenceID
                     ionInfo.PSMId
                     ionInfo.PrecursorMZ
@@ -98,6 +107,7 @@ module ConsensusSpectralLibrary =
                     0
                     ionInfo.Sequence
                     ionInfo.GlobalMod
+                    ionInfo.PercolatorScore
             )
         let rec loop i (acc: ConsensIonInformation []) =
             let currentFile =
@@ -110,6 +120,7 @@ module ConsensusSpectralLibrary =
                         ionInfo.MassOverCharge
                         ionInfo.Number
                         ionInfo.Intensity
+                        ionInfo.PepSequenceID
                         ionInfo.ModSequenceID
                         ionInfo.PSMId
                         ionInfo.PrecursorMZ
@@ -118,6 +129,7 @@ module ConsensusSpectralLibrary =
                         0
                         ionInfo.Sequence
                         ionInfo.GlobalMod
+                        ionInfo.PercolatorScore
                 )
             let total =
                 Array.append acc currentFile
@@ -138,11 +150,12 @@ module ConsensusSpectralLibrary =
                         |> Array.fold (fun acc ionInfo ->
                             {
                                 acc with
-                                    MassOverCharge = (acc.MassOverCharge * acc.Count + ionInfo.MassOverCharge * ionInfo.Count) / (acc.Count + ionInfo.Count)
-                                    Intensity      = (acc.Intensity * acc.Count + ionInfo.Intensity * ionInfo.Count) / (acc.Count + ionInfo.Count)
-                                    ScanTime       = (acc.ScanTime * acc.Count + ionInfo.ScanTime * ionInfo.Count) / (acc.Count + ionInfo.Count)
-                                    Count          = acc.Count + ionInfo.Count
-                                    Version        = i
+                                    MassOverCharge  = (acc.MassOverCharge * acc.Count + ionInfo.MassOverCharge * ionInfo.Count) / (acc.Count + ionInfo.Count)
+                                    Intensity       = (acc.Intensity * acc.Count + ionInfo.Intensity * ionInfo.Count) / (acc.Count + ionInfo.Count)
+                                    ScanTime        = (acc.ScanTime * acc.Count + ionInfo.ScanTime * ionInfo.Count) / (acc.Count + ionInfo.Count)
+                                    Count           = acc.Count + ionInfo.Count
+                                    Version         = i
+                                    PercolatorScore = (acc.PercolatorScore * acc.Count + ionInfo.PercolatorScore * ionInfo.Count) / (acc.Count + ionInfo.Count)
                             }
                         )bin.[0]
                     )
