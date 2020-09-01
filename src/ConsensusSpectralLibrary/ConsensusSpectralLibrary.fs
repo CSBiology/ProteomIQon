@@ -16,6 +16,7 @@ module ConsensusSpectralLibrary =
             PrecursorMZ   : float
             ScanTime      : float
             Sequence      : string
+            GlobalMod     : int
         }
 
     type ConsensIonInformation =
@@ -32,8 +33,9 @@ module ConsensusSpectralLibrary =
             Count         : float
             Version       : int
             Sequence      : string
+            GlobalMod     : int
         }
-        static member create charge ionType massOverCharge number intensity modSeqID psmID precMZ scanTime count version sequence =
+        static member create charge ionType massOverCharge number intensity modSeqID psmID precMZ scanTime count version sequence globalMod=
             {
                 Charge         = charge
                 Iontype        = ionType
@@ -47,9 +49,10 @@ module ConsensusSpectralLibrary =
                 Count          = count
                 Version        = version
                 Sequence       = sequence
+                GlobalMod      = globalMod
             }
     
-        static member createFromFile charge (ionType: string) massOverCharge number intensity modSeqID psmID precMZ scanTime count version sequence =
+        static member createFromFile charge (ionType: string) massOverCharge number intensity modSeqID psmID precMZ scanTime count version sequence globalMod=
             {
                 Charge         = charge
                 Iontype        =
@@ -66,6 +69,7 @@ module ConsensusSpectralLibrary =
                 Count          = count
                 Version        = version
                 Sequence       = sequence
+                GlobalMod      = globalMod
             }
   
     let binning (difference: float) (data: ConsensIonInformation[]) =
@@ -93,6 +97,7 @@ module ConsensusSpectralLibrary =
                     1.
                     0
                     ionInfo.Sequence
+                    ionInfo.GlobalMod
             )
         let rec loop i (acc: ConsensIonInformation []) =
             let currentFile =
@@ -112,10 +117,11 @@ module ConsensusSpectralLibrary =
                         1.
                         0
                         ionInfo.Sequence
+                        ionInfo.GlobalMod
                 )
             let total =
                 Array.append acc currentFile
-                |> Array.groupBy (fun info -> info.Charge, info.Iontype, info.Number, info.ModSequenceID)
+                |> Array.groupBy (fun info -> info.Charge, info.Iontype, info.Number, info.ModSequenceID, info.GlobalMod)
                 |> Array.map snd
             total
             |> Array.map (fun sameIons ->

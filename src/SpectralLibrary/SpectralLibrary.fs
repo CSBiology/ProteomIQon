@@ -25,9 +25,10 @@ module SpectralLibrary =
             PrecursorMZ   : float
             ScanTime      : float
             Sequence      : string
+            GlobalMod     : int
         }
 
-    let createIonInformation charge iontype mOverZ number intensity modSeqID psmID precMZ scanTime sequence =
+    let createIonInformation charge iontype mOverZ number intensity modSeqID psmID precMZ scanTime sequence globalMod =
         {
             Charge         = charge
             Iontype        = iontype
@@ -39,6 +40,7 @@ module SpectralLibrary =
             PrecursorMZ    = precMZ
             ScanTime       = scanTime
             Sequence       = sequence
+            GlobalMod      = globalMod
         }
 
     /// Returns SearchDbParams of a existing database by filePath
@@ -126,7 +128,7 @@ module SpectralLibrary =
                         frag
                         |> Seq.choose (fun ion ->
                             if (abs (ion.MassOverCharge - peak.Mz)) <= (Mass.deltaMassByPpm matchingTolerance peak.Mz) then
-                                Some (createIonInformation ion.Charge ion.Iontype ion.MassOverCharge ion.Number peak.Intensity psm.ModSequenceID psm.PSMId psm.TheoMass psm.ScanTime sequence.StringSequence)
+                                Some (createIonInformation ion.Charge ion.Iontype ion.MassOverCharge ion.Number peak.Intensity psm.ModSequenceID psm.PSMId psm.TheoMass psm.ScanTime sequence.StringSequence psm.GlobalMod)
                             else
                                 None
                         )
