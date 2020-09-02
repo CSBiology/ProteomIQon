@@ -67,18 +67,63 @@ module SWATHAnalysis =
   
     type LibraryEntry =
         {
-            Charge: float
-            Iontype: string
-            MassOverCharge: float
-            Number: int
-            Intensity: float
-            ModSequenceID: int
-            PSMId: string
-            PrecursorMZ: float
-            ScanTime: float
-            Count: float
-            Version: int
-            Sequence: string
+            Charge         : float
+            Iontype        : string
+            MassOverCharge : float
+            Number         : int
+            Intensity      : float
+            PepSequenceID  : int
+            ModSequenceID  : int
+            PSMId          : string
+            PrecursorMZ    : float
+            ScanTime       : float
+            Count          : float
+            Version        : int
+            Sequence       : string
+            GlobalMod      : int
+            PercolatorScore: float
+        }
+
+    type PeptideInformation =
+        {
+            PepSequenceID  : int
+            ModSequenceID  : int
+            PrecursorMZ    : float
+            Sequence       : string
+            GlobalMod      : int
+            PercolatorScore: float
+        }
+
+    let createPeptideInformation pepSeqID modSeqID precMz seq globalMod percolatorScore =
+        {
+            PepSequenceID   = pepSeqID
+            ModSequenceID   = modSeqID
+            PrecursorMZ     = precMz
+            Sequence        = seq
+            GlobalMod       = globalMod
+            PercolatorScore = percolatorScore
+        }
+
+    type PeptideInformationQuant =
+        {
+            PepSequenceID  : int
+            ModSequenceID  : int
+            PrecursorMZ    : float
+            StringSequence : string
+            GlobalMod      : int
+            PercolatorScore: float
+            Quantification : float
+        }
+
+    let createPeptideInformationQuant pepSeqID modSeqID precMz seq globalMod percolatorScore quant=
+        {
+            PepSequenceID   = pepSeqID
+            ModSequenceID   = modSeqID
+            PrecursorMZ     = precMz
+            StringSequence  = seq
+            GlobalMod       = globalMod
+            PercolatorScore = percolatorScore
+            Quantification  = quant
         }
 
     let parseSpectrumSelection (swathParam: Domain.SWATHAnalysisParams) =
@@ -101,10 +146,8 @@ module SWATHAnalysis =
                 if x.Length = 0 then nan
                 else Array.median x
 
-    let createPeptideQuery (peptide:string) (library: LibraryEntry[]) matchingTolerance offsetRange =
-        let entries =
-            library
-            |> Array.filter (fun entry -> entry.Sequence = peptide)
+    let createPeptideQuery (entries: LibraryEntry[]) matchingTolerance offsetRange =
+
         let offset, averageRT =
             let upperRT =
                 entries
@@ -195,18 +238,25 @@ module SWATHAnalysis =
         let identifyPeaks = initIdentifyPeaks swathAnalysisParams.XicProcessing
         let peptideList =
             match swathAnalysisParams.PeptideList with
-            | Some x -> x
+            | Some x ->
+                consensusLibrary
+                |> Array.groupBy (fun x -> x.Sequence, x.GlobalMod, x.ModSequenceID, x.PepSequenceID)
+                |> Array.map snd
+                |> Array.filter (fun y -> x.Contains y.[0].Sequence)
             | None ->
                 consensusLibrary
-                |> Array.map (fun x -> x.Sequence)
-                |> Array.distinct
+                |> Array.groupBy (fun x -> x.Sequence, x.GlobalMod, x.ModSequenceID, x.PepSequenceID)
+                |> Array.map snd
         let queries =
             peptideList
-            |> Array.map (fun peptide -> peptide, createPeptideQuery peptide consensusLibrary swathAnalysisParams.MatchingTolerancePPM swathAnalysisParams.QueryOffsetRange)
+            |> Array.map (fun entries -> entries, createPeptideQuery entries swathAnalysisParams.MatchingTolerancePPM swathAnalysisParams.QueryOffsetRange)
         let quant =
             queries
-            |> Array.map (fun (peptide,(rt,query)) ->
+            |> Array.map (fun (entries,(rt,query)) ->
                 let profiles = getRTProfiles swathIdx inReader (parseSpectrumSelection swathAnalysisParams) query
+                let pepInfo =
+                    createPeptideInformation entries.[0].PepSequenceID entries.[0].ModSequenceID entries.[0].PrecursorMZ
+                        entries.[0].Sequence entries.[0].GlobalMod (entries |> Array.averageBy (fun x -> x.PercolatorScore))
                 profiles
                 |> List.choose (fun profile ->
                 // Match to look if RTProfile was found. If none was found, quantification is skipped.
@@ -237,14 +287,13 @@ module SWATHAnalysis =
                                 BioFSharp.Mz.Quantification.HULQ.quantifyPeak peak
                                 |> fun x -> x.Area
                             )
-                        Some (peptide, quants)
+                        Some (pepInfo, quants)
                     | None -> None
                 )
             )
-            |> fun x -> x
             |> Array.filter (fun x -> x |> List.isEmpty |> not)
             |> Array.map (fun x -> 
-                    let rec loop (i: int) (acc: float[]) (input: (string*float[]) list) =
+                    let rec loop (i: int) (acc: float[]) (input: (PeptideInformation*float[]) list) =
                         if i <= input.Length-1 then
                             let acc' = 
                                 let quants = Array.append acc (snd input.[i])
@@ -252,8 +301,15 @@ module SWATHAnalysis =
                             loop (i+1) acc' input
                         else
                             fst input.[0], acc
-                    let combined = loop 0 [||] x
-                    {|Peptide = fst combined; Area = (snd combined) |> (aggregationMethodArray swathAnalysisParams.AggregationF)|}
+                    let pepInformation,quants = loop 0 [||] x
+                    createPeptideInformationQuant
+                        pepInformation.PepSequenceID
+                        pepInformation.ModSequenceID
+                        pepInformation.PrecursorMZ
+                        pepInformation.Sequence
+                        pepInformation.GlobalMod
+                        pepInformation.PercolatorScore
+                        (quants |> (aggregationMethodArray swathAnalysisParams.AggregationF))
             )
         tr.Dispose()
         if quant.Length >= 1 then
