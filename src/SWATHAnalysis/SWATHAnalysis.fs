@@ -126,6 +126,33 @@ module SWATHAnalysis =
             Quantification  = quant
         }
 
+
+    type PeptideInformationQuantJoined =
+        {
+            PepSequenceID  : int
+            PrecursorMZ_L  : float
+            PrecursorMZ_H  : float 
+            StringSequence : string
+            PercolatorScore: float
+            PercScoreL     : float
+            PercScoreH     : float
+            Quant_Light    : float
+            Quant_Heavy    : float
+        }
+
+    let createPeptideInformationQuantJoined pepSeqID precMzL precMzH stringSeq percScore percScoreL percScoreH quantL quantH=
+        {
+            PepSequenceID  = pepSeqID
+            PrecursorMZ_L  = precMzL
+            PrecursorMZ_H  = precMzH
+            StringSequence = stringSeq
+            PercolatorScore= percScore
+            PercScoreL     = percScoreL
+            PercScoreH     = percScoreL
+            Quant_Light    = quantL
+            Quant_Heavy    = quantH
+        }
+
     let parseSpectrumSelection (swathParam: Domain.SWATHAnalysisParams) =
         match swathParam.SpectrumSelectionF with
         |Domain.SpectrumSelection.All -> (fun x -> x |> Seq.fold (fun acc y -> seq[y]::acc)[])
@@ -312,8 +339,59 @@ module SWATHAnalysis =
                         (quants |> (aggregationMethodArray swathAnalysisParams.AggregationF))
             )
         tr.Dispose()
-        if quant.Length >= 1 then
-            FSharpAux.IO.SeqIO.Seq.CSV "\t" true false quant
+        let joinedQuant =
+            quant
+            //|> Array.filter (fun x -> x.Quantification |> isNan |> not)
+            |> Array.groupBy (fun x -> x.PepSequenceID, x.StringSequence)
+            |> Array.map snd
+            |> Array.map (fun x ->
+                x |> Array.sortBy (fun x -> x.GlobalMod)
+            )
+            |> Array.map (fun x ->
+                match x.Length with
+                | 1 ->
+                    let item = x |> Array.head
+                    match item.GlobalMod with
+                    | 0 ->
+                        createPeptideInformationQuantJoined
+                            item.PepSequenceID
+                            item.PrecursorMZ
+                            nan
+                            item.StringSequence
+                            item.PercolatorScore
+                            item.PercolatorScore
+                            nan
+                            item.Quantification
+                            nan
+                    | 1 ->
+                        createPeptideInformationQuantJoined
+                            item.PepSequenceID
+                            nan
+                            item.PrecursorMZ
+                            item.StringSequence
+                            item.PercolatorScore
+                            nan
+                            item.PercolatorScore
+                            nan
+                            item.Quantification
+                    | _ -> failwith "invalid GlobalMod"
+                | 2 ->
+                    let light,heavy = x.[0],x.[1]
+                    createPeptideInformationQuantJoined
+                        light.PepSequenceID
+                        light.PrecursorMZ
+                        heavy.PrecursorMZ
+                        light.StringSequence
+                        ((light.PercolatorScore + heavy.PercolatorScore) / 2.)
+                        light.PercolatorScore
+                        heavy.PercolatorScore
+                        light.Quantification
+                        heavy.Quantification
+
+                | _ -> failwith "Unexpected Array size"
+            )
+        if joinedQuant.Length >= 1 then
+            FSharpAux.IO.SeqIO.Seq.CSV "\t" true false joinedQuant
             |> FSharpAux.IO.SeqIO.Seq.writeOrAppend outFilePath
         else
             ()
