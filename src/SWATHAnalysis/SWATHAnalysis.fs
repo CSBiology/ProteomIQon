@@ -20,51 +20,8 @@ open FSharpAux
 open FSharpAux.IO
 open FSharp.Stats
 
-module SWATHAnalysis = 
+module SWATHAnalysis =
 
-    type SwathIndexer.SwathIndexer with
-        
-        member this.GetRTProfiles2(dataReader:IMzIODataReader, query: SwathQuery, getLockMz: bool, spectrumSelector: seq<SwathIndexer.MSSwath> -> seq<SwathIndexer.MSSwath> list ,?mzRangeSelector: Peak1DArray * RangeQuery -> Peak1D) =
-
-            let getClosestMz (peaks: Peak1DArray, mzRange: RangeQuery) =
-                peaks.Peaks
-                    .DefaultIfEmpty(new Peak1D(0., mzRange.LockValue))
-                    .ItemAtMin(fun x -> Math.Abs(x.Mz - mzRange.LockValue))
-
-            let mzRangeSelector = defaultArg mzRangeSelector getClosestMz
-
-            let swathSpectra = 
-                this.SwathList.SearchAllTargetMz(query.TargetMz)
-                    |> spectrumSelector
-
-            swathSpectra
-            |> List.map (fun spec ->
-                let swathSpectrum = spec.SelectMany(fun x -> x.SearchAllRt(query)).ToArray()
-
-                if swathSpectrum.Length > 0 then
-
-                    let profile = Array2D.create query.CountMS2Masses swathSpectrum.Length (new Peak2D())
-
-                    for specIdx = 0 to swathSpectrum.Length - 1 do
-
-                        let swathSpec = swathSpectrum.[specIdx]
-                        let pa = dataReader.ReadSpectrumPeaks(swathSpec.SpectrumID)
-
-                        for ms2MassIndex = 0 to query.CountMS2Masses - 1 do
-                        
-                            let mzRange = query.Ms2Masses.[ms2MassIndex]
-                            let p = mzRangeSelector(pa, mzRange)
-
-                            if getLockMz then
-                                profile.[ms2MassIndex, specIdx] <- new Peak2D(p.Intensity, mzRange.LockValue, swathSpec.Rt)
-                            else
-                                profile.[ms2MassIndex, specIdx] <- new Peak2D(p.Intensity, p.Mz, swathSpec.Rt)
-
-                    Some profile
-                else
-                    None
-            )
-  
     type LibraryEntry =
         {
             Charge         : float
@@ -83,6 +40,103 @@ module SWATHAnalysis =
             GlobalMod      : int
             PercolatorScore: float
         }
+
+    type LibraryEntryQuant =
+        {
+            Charge         : float
+            Iontype        : string
+            MassOverCharge : float
+            Number         : int
+            Intensity      : float
+            PepSequenceID  : int
+            ModSequenceID  : int
+            PSMId          : string
+            PrecursorMZ    : float
+            ScanTime       : float
+            Count          : float
+            Version        : int
+            Sequence       : string
+            GlobalMod      : int
+            PercolatorScore: float
+            Quant          : float
+        }
+
+    /// Contains the three dimensional information of a peak, consisting of one intensity and the corresponding m/z amd retention time value.
+    type Peak2DInfo(intensity:float, mz:float, rt:float, fragmentInfo: LibraryEntry) =
+    
+        inherit Peak1D(intensity, mz)
+
+        new () = Peak2DInfo(0., 0., 0.,
+                    {
+                        Charge         = -1.
+                        Iontype        = ""
+                        MassOverCharge = -1.
+                        Number         = -1
+                        Intensity      = -1.
+                        PepSequenceID  = -1
+                        ModSequenceID  = -1
+                        PSMId          = ""
+                        PrecursorMZ    = -1.
+                        ScanTime       = -1.
+                        Count          = -1.
+                        Version        = -1
+                        Sequence       = ""
+                        GlobalMod      = -1
+                        PercolatorScore= -1.
+                    }
+        )
+    
+        member this.Rt
+            with get() = rt
+
+        member this.FragmentInfo
+            with get() = fragmentInfo
+    
+        override this.ToString() =
+            String.Format("intensity={0}, mz={1}, rt={2}, fragment Info={3}", this.Intensity, this.Mz, this.Rt, this.FragmentInfo)
+
+    type SwathIndexer.SwathIndexer with
+        
+        member this.GetRTProfiles2(dataReader:IMzIODataReader, query: SwathQuery, entries: LibraryEntry[], getLockMz: bool, spectrumSelector: seq<SwathIndexer.MSSwath> -> seq<SwathIndexer.MSSwath> list ,?mzRangeSelector: Peak1DArray * RangeQuery -> Peak1D) =
+
+            let getClosestMz (peaks: Peak1DArray, mzRange: RangeQuery) =
+                peaks.Peaks
+                    .DefaultIfEmpty(new Peak1D(0., mzRange.LockValue))
+                    .ItemAtMin(fun x -> Math.Abs(x.Mz - mzRange.LockValue))
+
+            let mzRangeSelector = defaultArg mzRangeSelector getClosestMz
+
+            let swathSpectra = 
+                this.SwathList.SearchAllTargetMz(query.TargetMz)
+                    |> spectrumSelector
+
+            swathSpectra
+            |> List.map (fun spec ->
+                let swathSpectrum = spec.SelectMany(fun x -> x.SearchAllRt(query)).ToArray()
+
+                if swathSpectrum.Length > 0 then
+
+                    let profile = Array2D.create query.CountMS2Masses swathSpectrum.Length (new Peak2DInfo())
+
+                    for specIdx = 0 to swathSpectrum.Length - 1 do
+
+                        let swathSpec = swathSpectrum.[specIdx]
+                        let pa = dataReader.ReadSpectrumPeaks(swathSpec.SpectrumID)
+
+                        for ms2MassIndex = 0 to query.CountMS2Masses - 1 do
+                        
+                            let mzRange = query.Ms2Masses.[ms2MassIndex]
+                            let p = mzRangeSelector(pa, mzRange)
+
+                            if getLockMz then
+                                profile.[ms2MassIndex, specIdx] <- new Peak2DInfo(p.Intensity, mzRange.LockValue, swathSpec.Rt, entries.[ms2MassIndex])
+                            else
+                                profile.[ms2MassIndex, specIdx] <- new Peak2DInfo(p.Intensity, p.Mz, swathSpec.Rt,  entries.[ms2MassIndex])
+
+                    Some profile
+                else
+                    None
+            )
 
     type PeptideInformation =
         {
@@ -212,8 +266,8 @@ module SWATHAnalysis =
         else
             p1d
 
-    let getRTProfiles (swathIndexer: SwathIndexer.SwathIndexer) (reader: IMzIODataReader) (spectrumSelector: seq<SwathIndexer.MSSwath> -> seq<SwathIndexer.MSSwath> list) (swathQuery: SwathQuery) =
-        swathIndexer.GetRTProfiles2(reader, swathQuery, false, spectrumSelector ,getClosestMz)
+    let getRTProfiles (swathIndexer: SwathIndexer.SwathIndexer) (reader: IMzIODataReader) (spectrumSelector: seq<SwathIndexer.MSSwath> -> seq<SwathIndexer.MSSwath> list) (entries: LibraryEntry[]) (swathQuery: SwathQuery) =
+        swathIndexer.GetRTProfiles2(reader, swathQuery, entries, false, spectrumSelector ,getClosestMz)
 
     let optimizeWindowWidth polOrder (windowWidthToTest:int[]) noiseAutoCorr (signalOfInterest:float[]) =
         let signalOfInterest' = signalOfInterest |> vector
@@ -227,7 +281,7 @@ module SWATHAnalysis =
                 let noise = smoothedY - (signalOfInterest')
                 w, Correlation.Vector.autoCorrelation 1 noise
                 )
-            |> Array.minBy (fun (w,ac) -> (ac - noiseAutoCorr) |> abs )
+            |> Array.minBy (fun (w,ac) -> (ac - noiseAutoCorr) |> abs)
             |> fst
         optimizedWindowWidth
 
@@ -280,10 +334,7 @@ module SWATHAnalysis =
         let quant =
             queries
             |> Array.map (fun (entries,(rt,query)) ->
-                let profiles = getRTProfiles swathIdx inReader (parseSpectrumSelection swathAnalysisParams) query
-                let pepInfo =
-                    createPeptideInformation entries.[0].PepSequenceID entries.[0].ModSequenceID entries.[0].PrecursorMZ
-                        entries.[0].Sequence entries.[0].GlobalMod (entries |> Array.averageBy (fun x -> x.PercolatorScore))
+                let profiles = getRTProfiles swathIdx inReader (parseSpectrumSelection swathAnalysisParams) entries query
                 profiles
                 |> List.choose (fun profile ->
                 // Match to look if RTProfile was found. If none was found, quantification is skipped.
@@ -295,103 +346,61 @@ module SWATHAnalysis =
                             |> Array.map (fun peak2DArr ->
                                 peak2DArr
                                 |> Array.map (fun peak2D ->
-                                    peak2D.Rt, peak2D.Intensity
+                                    peak2D.Rt, peak2D.Intensity, peak2D.FragmentInfo
                                 )
                             )
                         let quants = 
                             rtProfiles
                             |> Array.choose (fun retInt ->
                                 retInt
-                                |> Array.unzip
-                                |> fun (ret, intensity) ->
-                                    identifyPeaks ret intensity
-                                |> fun peaks ->
+                                |> Array.unzip3
+                                |> fun (ret, intensity, libEntry) ->
+                                    let checkSameLibEntry =
+                                        libEntry
+                                        |> Array.distinct
+                                        |> fun x ->
+                                            if x.Length > 1 then failwith "Too many Library Entries for one fragment"
+                                            else
+                                                x.[0]
+                                    identifyPeaks ret intensity, checkSameLibEntry
+                                |> fun (peaks,libEntry) ->
                                     match peaks with
                                     | [||] -> None
-                                    | _    -> Some (BioFSharp.Mz.Quantification.HULQ.getPeakBy peaks rt)
+                                    | _    -> Some ((BioFSharp.Mz.Quantification.HULQ.getPeakBy peaks rt), libEntry)
                             )
-                            |> Array.map (fun peak ->
+                            |> Array.map (fun (peak, libEntry) ->
                                 BioFSharp.Mz.Quantification.HULQ.quantifyPeak peak
-                                |> fun x -> x.Area
+                                |> fun x -> x.Area, libEntry
                             )
-                        Some (pepInfo, quants)
+                        Some (quants)
                     | None -> None
                 )
             )
-            |> Array.filter (fun x -> x |> List.isEmpty |> not)
-            |> Array.map (fun x -> 
-                    let rec loop (i: int) (acc: float[]) (input: (PeptideInformation*float[]) list) =
-                        if i <= input.Length-1 then
-                            let acc' = 
-                                let quants = Array.append acc (snd input.[i])
-                                quants
-                            loop (i+1) acc' input
-                        else
-                            fst input.[0], acc
-                    let pepInformation,quants = loop 0 [||] x
-                    createPeptideInformationQuant
-                        pepInformation.PepSequenceID
-                        pepInformation.ModSequenceID
-                        pepInformation.PrecursorMZ
-                        pepInformation.Sequence
-                        pepInformation.GlobalMod
-                        pepInformation.PercolatorScore
-                        (quants |> (aggregationMethodArray swathAnalysisParams.AggregationF))
+            |> List.concat
+            |> Array.concat
+            |> Array.map (fun (quant,x) ->
+                {
+                    Charge         = x.Charge
+                    Iontype        = x.Iontype
+                    MassOverCharge = x.MassOverCharge
+                    Number         = x.Number
+                    Intensity      = x.Intensity
+                    PepSequenceID  = x.PepSequenceID
+                    ModSequenceID  = x.ModSequenceID
+                    PSMId          = x.PSMId
+                    PrecursorMZ    = x.PrecursorMZ
+                    ScanTime       = x.ScanTime
+                    Count          = x.Count
+                    Version        = x.Version
+                    Sequence       = x.Sequence
+                    GlobalMod      = x.GlobalMod
+                    PercolatorScore= x.PercolatorScore
+                    Quant          = quant
+                }
             )
         tr.Dispose()
-        let joinedQuant =
-            quant
-            //|> Array.filter (fun x -> x.Quantification |> isNan |> not)
-            |> Array.groupBy (fun x -> x.PepSequenceID, x.StringSequence)
-            |> Array.map snd
-            |> Array.map (fun x ->
-                x |> Array.sortBy (fun x -> x.GlobalMod)
-            )
-            |> Array.map (fun x ->
-                match x.Length with
-                | 1 ->
-                    let item = x |> Array.head
-                    match item.GlobalMod with
-                    | 0 ->
-                        createPeptideInformationQuantJoined
-                            item.PepSequenceID
-                            item.PrecursorMZ
-                            nan
-                            item.StringSequence
-                            item.PercolatorScore
-                            item.PercolatorScore
-                            nan
-                            item.Quantification
-                            nan
-                    | 1 ->
-                        createPeptideInformationQuantJoined
-                            item.PepSequenceID
-                            nan
-                            item.PrecursorMZ
-                            item.StringSequence
-                            item.PercolatorScore
-                            nan
-                            item.PercolatorScore
-                            nan
-                            item.Quantification
-                    | _ -> failwith "invalid GlobalMod"
-                | 2 ->
-                    let light,heavy = x.[0],x.[1]
-                    createPeptideInformationQuantJoined
-                        light.PepSequenceID
-                        light.PrecursorMZ
-                        heavy.PrecursorMZ
-                        light.StringSequence
-                        ((light.PercolatorScore + heavy.PercolatorScore) / 2.)
-                        light.PercolatorScore
-                        heavy.PercolatorScore
-                        light.Quantification
-                        heavy.Quantification
-
-                | _ -> failwith "Unexpected Array size"
-            )
-        if joinedQuant.Length >= 1 then
-            FSharpAux.IO.SeqIO.Seq.CSV "\t" true false joinedQuant
+        if quant.Length >= 1 then
+            FSharpAux.IO.SeqIO.Seq.CSV "\t" true false quant
             |> FSharpAux.IO.SeqIO.Seq.writeOrAppend outFilePath
         else
             ()
