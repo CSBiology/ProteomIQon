@@ -110,57 +110,67 @@ module ConsensusSpectralLibrary =
                     ionInfo.PercolatorScore
             )
         let rec loop i (acc: ConsensIonInformation []) =
-            let currentFile =
-                Seq.fromFileWithCsvSchema<IonInformation>(paths.[i], '\t', true,schemaMode = FSharpAux.IO.SchemaReader.Csv.SchemaModes.Fill)
-                |> Seq.toArray
-                |> Array.map (fun ionInfo ->
-                    ConsensIonInformation.createFromFile
-                        ionInfo.Charge
-                        ionInfo.Iontype
-                        ionInfo.MassOverCharge
-                        ionInfo.Number
-                        ionInfo.Intensity
-                        ionInfo.PepSequenceID
-                        ionInfo.ModSequenceID
-                        ionInfo.PSMId
-                        ionInfo.PrecursorMZ
-                        ionInfo.ScanTime
-                        1.
-                        0
-                        ionInfo.Sequence
-                        ionInfo.GlobalMod
-                        ionInfo.PercolatorScore
-                )
-            let total =
-                Array.append acc currentFile
-                |> Array.groupBy (fun info -> info.Charge, info.Iontype, info.Number, info.ModSequenceID, info.GlobalMod)
-                |> Array.map snd
-            total
-            |> Array.map (fun sameIons ->
-                if sameIons.Length = 1 then
-                    [|sameIons.[0]|]
-                else
-                    //bin by rt with binsize = allowed difference
-                    let binned =
-                        sameIons
-                        |> binning tolerance
-                    binned
-                    |> Array.mapi (fun i bin ->
-                        bin.[1 ..]
-                        |> Array.fold (fun acc ionInfo ->
-                            {
-                                acc with
-                                    MassOverCharge  = (acc.MassOverCharge * acc.Count + ionInfo.MassOverCharge * ionInfo.Count) / (acc.Count + ionInfo.Count)
-                                    Intensity       = (acc.Intensity * acc.Count + ionInfo.Intensity * ionInfo.Count) / (acc.Count + ionInfo.Count)
-                                    ScanTime        = (acc.ScanTime * acc.Count + ionInfo.ScanTime * ionInfo.Count) / (acc.Count + ionInfo.Count)
-                                    Count           = acc.Count + ionInfo.Count
-                                    Version         = i
-                                    PercolatorScore = (acc.PercolatorScore * acc.Count + ionInfo.PercolatorScore * ionInfo.Count) / (acc.Count + ionInfo.Count)
-                            }
-                        )bin.[0]
+            if i < paths.Length then
+                let currentFile =
+                    Seq.fromFileWithCsvSchema<IonInformation>(paths.[i], '\t', true,schemaMode = FSharpAux.IO.SchemaReader.Csv.SchemaModes.Fill)
+                    |> Seq.toArray
+                    |> Array.map (fun ionInfo ->
+                        ConsensIonInformation.createFromFile
+                            ionInfo.Charge
+                            ionInfo.Iontype
+                            ionInfo.MassOverCharge
+                            ionInfo.Number
+                            ionInfo.Intensity
+                            ionInfo.PepSequenceID
+                            ionInfo.ModSequenceID
+                            ionInfo.PSMId
+                            ionInfo.PrecursorMZ
+                            ionInfo.ScanTime
+                            1.
+                            0
+                            ionInfo.Sequence
+                            ionInfo.GlobalMod
+                            ionInfo.PercolatorScore
                     )
-            )
+                let total =
+                    Array.append acc currentFile
+                    |> Array.groupBy (fun info -> info.Charge, info.Iontype, info.Number, info.ModSequenceID, info.GlobalMod)
+                    |> Array.map snd
+                let newAcc =
+                    total
+                    |> Array.map (fun sameIons ->
+                        if sameIons.Length = 1 then
+                            [|sameIons.[0]|]
+                        else
+                            //bin by rt with binsize = allowed difference
+                            let binned =
+                                sameIons
+                                |> binning tolerance
+                            binned
+                            |> Array.mapi (fun i bin ->
+                                bin.[1 ..]
+                                |> Array.fold (fun acc ionInfo ->
+                                    {
+                                        acc with
+                                            PSMId           = 
+                                                if acc.PSMId <> ionInfo.PSMId then
+                                                    acc.PSMId + ";" + ionInfo.PSMId
+                                                else
+                                                    acc.PSMId
+                                            MassOverCharge  = (acc.MassOverCharge * acc.Count + ionInfo.MassOverCharge * ionInfo.Count) / (acc.Count + ionInfo.Count)
+                                            Intensity       = (acc.Intensity * acc.Count + ionInfo.Intensity * ionInfo.Count) / (acc.Count + ionInfo.Count)
+                                            ScanTime        = (acc.ScanTime * acc.Count + ionInfo.ScanTime * ionInfo.Count) / (acc.Count + ionInfo.Count)
+                                            Count           = acc.Count + ionInfo.Count
+                                            Version         = i
+                                            PercolatorScore = (acc.PercolatorScore * acc.Count + ionInfo.PercolatorScore * ionInfo.Count) / (acc.Count + ionInfo.Count)
+                                    }
+                                )bin.[0]
+                            )
+                    )
+                    |> Array.concat
+                loop (i+1) newAcc
+            else
+                acc
         loop 1 head
-        |> Array.concat
         |> FSharpAux.IO.SeqIO.Seq.CSV "\t" true true
         |> Seq.write (sprintf @"%s/Consens.csl"outPath)
