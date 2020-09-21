@@ -208,6 +208,11 @@ module Domain =
         |Ln
         |NoTransform
 
+    type StatisticalMeasurement =
+        |SEM
+        |StDev
+        |CV
+
     type TableSortParams =
         {
             SeparatorIn                 : string
@@ -217,7 +222,7 @@ module Domain =
             ProtFieldsToFilterOn        : FilterOnField[]
             QuantColumnsOfInterest      : string[]
             ProtColumnsOfInterest       : string[]
-            CoefficientOfVariation      : string[]
+            StatisticalMeasurements     : (string*StatisticalMeasurement)[]
             AggregatorFunction          : AggregationMethod
             AggregatorFunctionIntensity : AggregationMethod
             AggregatorPepToProt         : AggregationMethod

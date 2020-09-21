@@ -84,6 +84,26 @@ module TableSort =
         |> removeNan
         |> Seq.cv
 
+    let seriesStDev (series:Series<'R,float>) =
+        series.Values
+        |> Seq.toArray
+        |> removeNan
+        |> Seq.stDev
+
+    let seriesSEM (series:Series<'R,float>) =
+        series.Values
+        |> Seq.toArray
+        |> removeNan
+        |> fun x -> 
+            let stDev = Seq.stDev x
+            stDev / (sqrt (float x.Length))
+
+    let matchStatMeasurement (param:Domain.StatisticalMeasurement) =
+        match param with
+        |Domain.StatisticalMeasurement.CV    -> seriesCV, "_CV"
+        |Domain.StatisticalMeasurement.StDev -> seriesStDev, "_StDev"
+        |Domain.StatisticalMeasurement.SEM   -> seriesSEM, "_SEM"
+
     // works like applyLevel, but columns can be excluded and have a different function applied
     let applyLevelWithException (levelSel:_ -> 'K) (ex: 'C[]) (op:_ -> 'T) (exOp:_ -> 'T) (frame:Frame<'R, 'C>) =
         let indexBuilder = Deedle.Indices.Linear.LinearIndexBuilder.Instance
@@ -284,16 +304,17 @@ module TableSort =
                             |> Frame.sliceCols [name]
                             |> Frame.applyLevel (fun (prot,pep,id) -> prot) (aggregationMethodSeries param.AggregatorPepToProt)
                         )
-                    let cvColumns =
-                        param.CoefficientOfVariation
-                        |> Array.map (fun name ->
+                    let statsColumns =
+                        param.StatisticalMeasurements
+                        |> Array.map (fun (name, method) ->
+                            let seriesMethod, columnNameExtension = matchStatMeasurement method
                             alignedTables
                             |> Frame.sliceCols [name]
-                            |> Frame.applyLevel (fun (prot,pep,id) -> prot) seriesCV
-                            |> Frame.mapColKeys (fun c -> c + "_CV")
+                            |> Frame.applyLevel (fun (prot,pep,id) -> prot) seriesMethod
+                            |> Frame.mapColKeys (fun c -> c + columnNameExtension)
                         )
                     let combinedColumns =
-                        [tukeyColumns;distinctPeptideCount;noTukeyColumns;cvColumns]
+                        [tukeyColumns;distinctPeptideCount;noTukeyColumns;statsColumns]
                         |> Array.concat
                         |> Frame.mergeAll
                     combinedColumns
