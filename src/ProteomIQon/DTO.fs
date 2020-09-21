@@ -469,7 +469,7 @@ module Dto =
             ProtFieldsToFilterOn        : FilterOnField[]
             QuantColumnsOfInterest      : string[]
             ProtColumnsOfInterest       : string[]
-            CoefficientOfVariation      : string[]
+            StatisticalMeasurements     : (string*StatisticalMeasurement)[]
             AggregatorFunction          : AggregationMethod
             AggregatorFunctionIntensity : AggregationMethod
             AggregatorPepToProt         : AggregationMethod
@@ -487,7 +487,7 @@ module Dto =
                 ProtFieldsToFilterOn        = dtoTableSortParams.ProtFieldsToFilterOn
                 QuantColumnsOfInterest      = dtoTableSortParams.QuantColumnsOfInterest
                 ProtColumnsOfInterest       = dtoTableSortParams.ProtColumnsOfInterest
-                CoefficientOfVariation      = dtoTableSortParams.CoefficientOfVariation
+                StatisticalMeasurements     = dtoTableSortParams.StatisticalMeasurements
                 AggregatorFunction          = dtoTableSortParams.AggregatorFunction
                 AggregatorFunctionIntensity = dtoTableSortParams.AggregatorFunctionIntensity
                 AggregatorPepToProt         = dtoTableSortParams.AggregatorPepToProt
