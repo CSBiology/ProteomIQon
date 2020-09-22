@@ -1,1 +1,83 @@
-{"SeparatorIn":"\t","SeparatorOut":"\t","EssentialFields":{"Light":"Quant_Light","Heavy":{"Case":"Some","Fields":["Quant_Heavy"]},"ProteinIDs":"GroupOfProteinIDs","PepSequence":"StringSequence","PepSequences":"PeptideSequence"},"QuantFieldsToFilterOn":[{"FieldName":"Quant_Light","UpperBound":null,"LowerBound":{"Case":"Some","Fields":[0.0]}},{"FieldName":"Quant_Heavy","UpperBound":null,"LowerBound":{"Case":"Some","Fields":[0.0]}}],"ProtFieldsToFilterOn":[{"FieldName":"Class","UpperBound":null,"LowerBound":{"Case":"Some","Fields":[1.0]}}],"QuantColumnsOfInterest":["Quant_Light","Quant_Heavy","QValue"],"ProtColumnsOfInterest":["DistinctPeptideCount","QValue"],"CoefficientOfVariation":["Ratio"],"AggregatorFunction":{"Case":"Median"},"AggregatorFunctionIntensity":{"Case":"Median"},"AggregatorPepToProt":{"Case":"Median"},"Tukey":[{"Item1":"Ratio","Item2":2.0,"Item3":{"Case":"Log2"}}]}
+{
+  "SeparatorIn": "\t",
+  "SeparatorOut": "\t",
+  "EssentialFields": {
+    "Light": "Quant_Light",
+    "Heavy": {
+      "Case": "Some",
+      "Fields": [
+        "Quant_Heavy"
+      ]
+    },
+    "ProteinIDs": "GroupOfProteinIDs",
+    "PepSequence": "StringSequence",
+    "PepSequences": "PeptideSequence"
+  },
+  "QuantFieldsToFilterOn": [
+    {
+      "FieldName": "Quant_Light",
+      "UpperBound": null,
+      "LowerBound": {
+        "Case": "Some",
+        "Fields": [
+          0.0
+        ]
+      }
+    },
+    {
+      "FieldName": "Quant_Heavy",
+      "UpperBound": null,
+      "LowerBound": {
+        "Case": "Some",
+        "Fields": [
+          0.0
+        ]
+      }
+    }
+  ],
+  "ProtFieldsToFilterOn": [
+    {
+      "FieldName": "Class",
+      "UpperBound": null,
+      "LowerBound": {
+        "Case": "Some",
+        "Fields": [
+          1.0
+        ]
+      }
+    }
+  ],
+  "QuantColumnsOfInterest": [
+    "Quant_Light",
+    "Quant_Heavy",
+    "QValue"
+  ],
+  "ProtColumnsOfInterest": [
+    "DistinctPeptideCount",
+    "QValue"
+  ],
+  "StatisticalMeasurements": [
+    {
+      "Item1": "Ratio",
+      "Item2": { "Case": "CV" }
+    }
+  ],
+  "AggregatorFunction": {
+    "Case": "Median"
+  },
+  "AggregatorFunctionIntensity": {
+    "Case": "Median"
+  },
+  "AggregatorPepToProt": {
+    "Case": "Median"
+  },
+  "Tukey": [
+    {
+      "Item1": "Ratio",
+      "Item2": 2.0,
+      "Item3": {
+        "Case": "Log2"
+      }
+    }
+  ]
+}

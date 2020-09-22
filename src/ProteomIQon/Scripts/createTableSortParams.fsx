@@ -28,7 +28,7 @@ let defaultTableSortParams: Dto.TableSortParams =
         // for the ratio calculation and can be included.
         QuantColumnsOfInterest      = [|"Quant_Light";"Quant_Heavy"|]
         ProtColumnsOfInterest       = [|"DistinctPeptideCount"; "QValue"|]
-        CoefficientOfVariation      = [|"Ratio"|]
+        StatisticalMeasurements     = [|("Ratio", StatisticalMeasurement.CV); ("Ratio", StatisticalMeasurement.SEM); ("Ratio", StatisticalMeasurement.StDev)|]
         AggregatorFunction          = AggregationMethod.Median
         AggregatorFunctionIntensity = AggregationMethod.Median
         AggregatorPepToProt         = AggregationMethod.Median
