@@ -86,6 +86,14 @@ module ConsensusSpectralLibrary =
         |> Array.groupBy (fun x -> floor (x.ScanTime / doubleDiff))
         |> Array.map snd
 
+    let checkConflict (field: string) (arr: 'a[]) =
+        arr
+        |> Array.distinct
+        |> fun x ->
+            if x.Length > 1 then
+                failwith (sprintf "Version conflict %s" field)
+            else
+                x |> Array.head
 
     let buildConsens (paths: string []) tolerance (outPath: string)=
 
@@ -122,60 +130,30 @@ module ConsensusSpectralLibrary =
                     let charge =
                         version
                         |> Array.map (fun entry -> entry.Charge)
-                        |> Array.distinct
-                        |> fun x ->
-                            if x.Length > 1 then
-                                failwith "Version conflict charge"
-                            else
-                                x |> Array.head
+                        |> (checkConflict "Charge")
                     let ionType =
                         version
                         |> Array.map (fun entry -> entry.Iontype)
-                        |> Array.distinct
-                        |> fun x ->
-                            if x.Length > 1 then
-                                failwith "Version conflict iontype"
-                            else
-                                x |> Array.head
+                        |> (checkConflict "Iontype")
                     let massCharge =
                         version
                         |> Array.map (fun entry -> entry.MassOverCharge)
-                        |> Array.distinct
-                        |> fun x ->
-                            if x.Length > 1 then
-                                failwith "Version conflict m/z"
-                            else
-                                x |> Array.head
+                        |> (checkConflict "m/z")
                     let number =
                         version
                         |> Array.map (fun entry -> entry.Number)
-                        |> Array.distinct
-                        |> fun x ->
-                            if x.Length > 1 then
-                                failwith "Version conflict number"
-                            else
-                                x |> Array.head
+                        |> (checkConflict "Number")
                     let intensity =
                         version
                         |> Array.averageBy (fun entry -> entry.Intensity)
                     let pepSeqID =
                         version
                         |> Array.map (fun entry -> entry.PepSequenceID)
-                        |> Array.distinct
-                        |> fun x ->
-                            if x.Length > 1 then
-                                failwith "Version conflict PepSequenceID"
-                            else
-                                x |> Array.head
+                        |> (checkConflict "PepSequenceID")
                     let modSeqID =
                         version
                         |> Array.map (fun entry -> entry.ModSequenceID)
-                        |> Array.distinct
-                        |> fun x ->
-                            if x.Length > 1 then
-                                failwith "Version conflict ModSequenceID"
-                            else
-                                x |> Array.head
+                        |> (checkConflict "ModSequenceID")
                     let psmId =
                         version
                         |> Array.map (fun entry -> entry.PSMId)
@@ -184,33 +162,18 @@ module ConsensusSpectralLibrary =
                     let precursorMz =
                         version
                         |> Array.map (fun entry -> entry.PrecursorMZ)
-                        |> Array.distinct
-                        |> fun x ->
-                            if x.Length > 1 then
-                                failwith "Version conflict PrecursorMz"
-                            else
-                                x |> Array.head
+                        |> (checkConflict "PrecursorMZ")
                     let scanTime =
                         version
                         |> Array.averageBy (fun entry -> entry.ScanTime)
                     let sequence =
                         version
                         |> Array.map (fun entry -> entry.Sequence)
-                        |> Array.distinct
-                        |> fun x ->
-                            if x.Length > 1 then
-                                failwith "Version conflict Sequence"
-                            else
-                                x |> Array.head
+                        |> (checkConflict "Sequence")
                     let globalMod =
                         version
                         |> Array.map (fun entry -> entry.GlobalMod)
-                        |> Array.distinct
-                        |> fun x ->
-                            if x.Length > 1 then
-                                failwith "Version conflict GlobalMod"
-                            else
-                                x |> Array.head
+                        |> (checkConflict "GlobalMod")
                     let percolatorScore =
                         version
                         |> Array.averageBy (fun entry -> entry.PercolatorScore)
