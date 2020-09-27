@@ -353,6 +353,20 @@ module SWATHAnalysis =
                             rtProfiles
                             |> Array.choose (fun retInt ->
                                 retInt
+                                //process XIC
+                                |> Array.mapi (fun i (rt,intensity,lib) ->
+                                    if i = 0 || i = retInt.Length-1 || intensity > 0. then
+                                        Some (rt,intensity,lib)
+                                    else
+                                        let rt',intensity',lib' = retInt.[i-1]
+                                        if intensity' = 0. then
+                                            Some (rt,intensity,lib)
+                                        elif intensity' > (100. * (intensity+1.)) then
+                                            None
+                                        else
+                                            Some (rt,intensity,lib)
+                                  )
+                                |> Array.choose id
                                 |> Array.unzip3
                                 |> fun (ret, intensity, libEntry) ->
                                     let checkSameLibEntry =
