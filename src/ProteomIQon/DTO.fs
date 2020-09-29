@@ -757,7 +757,7 @@ module Dto =
                 AggregatorFunctionIntensity = dtoTableSortParams.AggregatorFunctionIntensity
                 AggregatorPepToProt         = dtoTableSortParams.AggregatorPepToProt
                 Tukey                       = dtoTableSortParams.Tukey
-
+            }
     type ConsensusSpectralLibraryParams =
         {
             RTTolerance: float
