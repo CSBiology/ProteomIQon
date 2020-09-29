@@ -724,6 +724,40 @@ module Dto =
                 MatchingTolerancePPM = dtoSpectralLibraryParams.MatchingTolerancePPM
             }
 
+
+    type TableSortParams =
+        {
+            SeparatorIn                 : string
+            SeparatorOut                : char
+            EssentialFields             : EssentialFields
+            QuantFieldsToFilterOn       : FilterOnField[]
+            ProtFieldsToFilterOn        : FilterOnField[]
+            QuantColumnsOfInterest      : string[]
+            ProtColumnsOfInterest       : string[]
+            StatisticalMeasurements     : (string*StatisticalMeasurement)[]
+            AggregatorFunction          : AggregationMethod
+            AggregatorFunctionIntensity : AggregationMethod
+            AggregatorPepToProt         : AggregationMethod
+            Tukey                       : (string*float*Transform) []
+        }
+
+    module TableSortParams =
+        
+        let inline toDomain (dtoTableSortParams: TableSortParams): Domain.TableSortParams =
+            {
+                SeparatorIn                 = dtoTableSortParams.SeparatorIn
+                SeparatorOut                = dtoTableSortParams.SeparatorOut
+                EssentialFields             = dtoTableSortParams.EssentialFields
+                QuantFieldsToFilterOn       = dtoTableSortParams.QuantFieldsToFilterOn
+                ProtFieldsToFilterOn        = dtoTableSortParams.ProtFieldsToFilterOn
+                QuantColumnsOfInterest      = dtoTableSortParams.QuantColumnsOfInterest
+                ProtColumnsOfInterest       = dtoTableSortParams.ProtColumnsOfInterest
+                StatisticalMeasurements     = dtoTableSortParams.StatisticalMeasurements
+                AggregatorFunction          = dtoTableSortParams.AggregatorFunction
+                AggregatorFunctionIntensity = dtoTableSortParams.AggregatorFunctionIntensity
+                AggregatorPepToProt         = dtoTableSortParams.AggregatorPepToProt
+                Tukey                       = dtoTableSortParams.Tukey
+
     type ConsensusSpectralLibraryParams =
         {
             RTTolerance: float
