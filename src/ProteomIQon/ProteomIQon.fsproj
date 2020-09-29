@@ -14,12 +14,14 @@
     <AllowedOutputExtensionsInPackageBuildOutputFolder>$(AllowedOutputExtensionsInPackageBuildOutputFolder);.pdb</AllowedOutputExtensionsInPackageBuildOutputFolder>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="DeedleExtensionsTemp.fs" />
     <Compile Include="BioFSharp.Mz_Temp.fs" />
     <Compile Include="Logging.fs" />
     <Compile Include="Domain.fs" />
     <Compile Include="DTO.fs" />
     <Compile Include="Json.fs" />
     <Compile Include="Core.fs" />
+    <None Include="Scripts\createTableSortParams.fsx" />
     <None Include="Scripts\createSWATHAnalysisParams.fsx" />
     <None Include="Scripts\createConsensusSpectralLibraryParams.fsx" />
     <None Include="Scripts\createAlignmentBasedQuantificationParams.fsx" />

@@ -169,16 +169,80 @@ module Domain =
             MatchingTolerancePPM: float
         }
 
+    type FilterOnField =
+        {
+            FieldName  : string
+            UpperBound : float option
+            LowerBound : float option
+        }
+
+    module FilterOnField =
+
+        let create fieldName upperBound lowerBound =
+            {
+                FieldName  = fieldName
+                UpperBound = upperBound
+                LowerBound = lowerBound
+            }
+
+    type EssentialFields =
+        {
+            Light       : string
+            Heavy       : string option
+            ProteinIDs  : string
+            PepSequence : string
+            PepSequences: string
+        }
+
+    module EssentialFields =
+
+        let create light heavy proteinIDs pepSequence pepSequences =
+            {
+                Light       = light
+                Heavy       = heavy
+                ProteinIDs  = proteinIDs
+                PepSequence = pepSequence
+                PepSequences= pepSequences
+            }
+
+    type AggregationMethod =
+        |Sum
+        |Mean
+        |Median
+
+    type Transform =
+        |Log10
+        |Log2
+        |Ln
+        |NoTransform
+
+    type StatisticalMeasurement =
+        |SEM
+        |StDev
+        |CV
+
+    type TableSortParams =
+        {
+            SeparatorIn                 : string
+            SeparatorOut                : char
+            EssentialFields             : EssentialFields
+            QuantFieldsToFilterOn       : FilterOnField[]
+            ProtFieldsToFilterOn        : FilterOnField[]
+            QuantColumnsOfInterest      : string[]
+            ProtColumnsOfInterest       : string[]
+            StatisticalMeasurements     : (string*StatisticalMeasurement)[]
+            AggregatorFunction          : AggregationMethod
+            AggregatorFunctionIntensity : AggregationMethod
+            AggregatorPepToProt         : AggregationMethod
+            Tukey                       : (string*float*Transform) []
+        }
+   
+
     type ConsensusSpectralLibraryParams =
         {
             RTTolerance: float
             iRTPeptides: string list
         }
-   
-    type AggregationMethod =
-         |Sum
-         |Mean
-         |Median
 
     type SpectrumSelection =
         |First
