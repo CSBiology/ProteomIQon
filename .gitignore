@@ -193,6 +193,7 @@ temp
 /lib/ThermoFisher/ThermoFisher.CommonCore.Data.4.0.107.nupkg
 /lib/ThermoFisher/ThermoFisher.CommonCore.BackgroundSubtraction.4.0.107.nupkg
 /src/SpectralLibrary/SpectralLibraryTest.fsx
+/src/ConsensusSpectralLibrary/ConsensusLibraryTest.fsx
 /src/PSMBasedQuantification/testing_wavelet_3.fsx
 /src/PSMBasedQuantification/testing_wavelet_2.fsx
 /src/PSMBasedQuantification/testing_wavelet.fsx

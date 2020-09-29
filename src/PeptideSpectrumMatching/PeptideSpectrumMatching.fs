@@ -10,12 +10,7 @@ open System.IO
 open BioFSharp.Mz
 open MzIO
 open MzIO.IO
-open MzIO.Model
-open MzIO.Binary
 open MzIO.Processing
-open Core.MzIO
-open Core.MzIO.Reader
-open Core.MzIO.Peaks
 open FSharpAux.IO
 
 module PeptideSpectrumMatching =
@@ -24,25 +19,6 @@ module PeptideSpectrumMatching =
     open System.Data
     open BioFSharp.Mz.TheoreticalSpectra
     open BioFSharp.Mz.ChargeState
-
-    /// Returns SearchDbParams of a existing database by filePath
-    let getSDBParamsBy (cn :SQLiteConnection)=
-        let cn =
-            match cn.State with
-            | ConnectionState.Open ->
-                cn
-            | ConnectionState.Closed ->
-                cn.Open()
-                cn
-            | _ as x -> failwith "Data base is busy."
-        match Db.SQLiteQuery.selectSearchDbParams cn with
-        | Some (iD,name,fo,fp,pr,minmscl,maxmscl,mass,minpL,maxpL,isoL,mMode,fMods,vMods,vThr) ->
-            createSearchDbParams
-                name fo fp id (Digestion.Table.getProteaseBy pr) minmscl maxmscl mass minpL maxpL
-                    (Newtonsoft.Json.JsonConvert.DeserializeObject<SearchInfoIsotopic list>(isoL)) (Newtonsoft.Json.JsonConvert.DeserializeObject<MassMode>(mMode)) (massFBy (Newtonsoft.Json.JsonConvert.DeserializeObject<MassMode>(mMode)))
-                        (Newtonsoft.Json.JsonConvert.DeserializeObject<SearchModification list>(fMods)) (Newtonsoft.Json.JsonConvert.DeserializeObject<SearchModification list>(vMods)) vThr
-        | None ->
-            failwith "This database does not contain any SearchParameters. It is not recommended to work with this file."
 
     let getPrecursorCharge (chParams:ChargeState.ChargeDetermParams) rnd inRunID (inReader: IMzIODataReader) =
         /// Returns a Sequence containing all MassSpectra of a single MS-run
@@ -407,7 +383,7 @@ module PeptideSpectrumMatching =
 
         let chargeParams = processParams.ChargeStateDeterminationParams
         logger.Trace (sprintf "Charge parameters: %A" chargeParams)
-        let dBParams     = getSDBParamsBy memoryDB
+        let dBParams     = SearchDB'.getSDBParams memoryDB
         logger.Trace (sprintf "DB parameters: %A" dBParams)
 
         let calcIonSeries aal  =

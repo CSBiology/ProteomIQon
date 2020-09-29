@@ -15,28 +15,36 @@ module SpectralLibrary =
     /// Holds information about ion and in which spectrum it is found.
     type IonInformation =
         {
-            Charge        : float
-            Iontype       : Ions.IonTypeFlag
-            MassOverCharge: float
-            Number        : int
-            Intensity     : float
-            ModSequenceID : int
-            PSMId         : string
-            PrecursorMZ   : float
-            ScanTime      : float
+            Charge         : float
+            Iontype        : Ions.IonTypeFlag
+            MassOverCharge : float
+            Number         : int
+            Intensity      : float
+            PepSequenceID  : int
+            ModSequenceID  : int
+            PSMId          : string
+            PrecursorMZ    : float
+            ScanTime       : float
+            Sequence       : string
+            GlobalMod      : int
+            PercolatorScore: float
         }
 
-    let createIonInformation charge iontype mOverZ number intensity modSeqID psmID precMZ scanTime =
+    let createIonInformation charge iontype mOverZ number intensity pepSeqID modSeqID psmID precMZ scanTime sequence globalMod percolatorScore =
         {
             Charge         = charge
             Iontype        = iontype
             MassOverCharge = mOverZ
             Number         = number
             Intensity      = intensity
+            PepSequenceID  = pepSeqID
             ModSequenceID  = modSeqID
             PSMId          = psmID
             PrecursorMZ    = precMZ
             ScanTime       = scanTime
+            Sequence       = sequence
+            GlobalMod      = globalMod
+            PercolatorScore= percolatorScore
         }
 
     /// Returns SearchDbParams of a existing database by filePath
@@ -124,7 +132,7 @@ module SpectralLibrary =
                         frag
                         |> Seq.choose (fun ion ->
                             if (abs (ion.MassOverCharge - peak.Mz)) <= (Mass.deltaMassByPpm matchingTolerance peak.Mz) then
-                                Some (createIonInformation ion.Charge ion.Iontype ion.MassOverCharge ion.Number peak.Intensity psm.ModSequenceID psm.PSMId psm.PrecursorMZ psm.ScanTime)
+                                Some (createIonInformation ion.Charge ion.Iontype ion.MassOverCharge ion.Number peak.Intensity psm.PepSequenceID psm.ModSequenceID psm.PSMId psm.TheoMass psm.ScanTime sequence.StringSequence psm.GlobalMod psm.PercolatorScore)
                             else
                                 None
                         )

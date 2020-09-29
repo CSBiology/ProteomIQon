@@ -1,9 +1,9 @@
 namespace ProteomIQon
 
+open System.IO
 open Argu
 
 module CLIArgumentParsing = 
-    open System.IO
     
     type IOType =
         | Directory of string
@@ -28,3 +28,13 @@ module CLIArgumentParsing =
                 | Parallelism_Level _   -> "Set the number of cores the programm can use. Parallelization occurs on file level. This flag is only of effect if a input directory (-i) is specified."
                 | Log_Level _           -> "Set the log level."
                 | Verbosity_Level _     -> "Set the verbosity level."
+
+
+
+
+
+
+
+
+
+

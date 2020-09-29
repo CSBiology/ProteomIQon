@@ -5,13 +5,12 @@
 #r @"../../../bin\ProteomIQon\net47\Newtonsoft.Json.dll"
 #r @"../../../bin\ProteomIQon\net47\FSharp.Stats.dll"
                               
-#r @"../../../bin\ProteomIQon\net47\MzLite.dll"
-#r @"../../../bin\ProteomIQon\net47\MzLite.SQL.dll"
-#r @"../../../bin\ProteomIQon\net47\MzLite.Processing.dll"
-#r @"../../../bin\ProteomIQon\net47\ProteomIQon.dll"
-#r @"../../../packages\FSharpAux.IO\lib\netstandard2.0\FSharpAux.IO.dll"
-#r @"../../../packages\FSharpAux.IO\lib\netstandard2.0\FSharpAux.dll"
 
+#r @"../../../bin\ProteomIQon\net47\FSharp.Stats.dll"
+#r @"../../../bin\ProteomIQon\net47\ProteomIQon.dll"
+#r @"../../../bin\ProteomIQon\net47\FSharp.Plotly.dll"
+
+#r @"../../../packages\FSharpAux.IO\lib\netstandard2.0\FSharpAux.IO.dll"
 #r @"../../../bin\ProteomIQon\net47\BioFSharp.dll"
 #r @"../../../bin\ProteomIQon\net47\BioFSharp.Mz.dll"
 
@@ -19,32 +18,28 @@
 open ProteomIQon
 open ProteomIQon.Domain
 open ProteomIQon.Dto
-//open ProteomIQon.Library
-open BioFSharp.Mz.SearchDB
+open FSharp.Plotly
 
-open ProteomIQon.Core
+let res = DTW'.align DTW'.s1 DTW'.s2
+let res2 = DTW'.align' DTW'.s1 DTW'.s2 46.
 
-let mzliteReader = MzLite.Reader.getReader @"C:\Users\david\Source\Repos\netCoreRepos\ProteomiconTest\20171129 FW LW tot001.mzlite"
-let tr = mzliteReader.BeginTransaction()
-open System
-open System.IO
-Directory.Exists @"Z:\5_6BackUpHyperCSB2\SFB-core\Acclimation_3hm\181005_cold1_3h_GD1_01_8993.d"
-Directory.GetFiles( @"Z:\5_6BackUpHyperCSB2\SFB-core\Acclimation_3hm\181005_cold1_3h_GD1_01_8993.d",("*.d")) 
-Directory.GetDirectories(@"Z:\5_6BackUpHyperCSB2\SFB-core\Acclimation_3hm\",("*.d"))
+[
+Chart.Point(DTW'.s1)
+Chart.Point(DTW'.s2)
+Chart.Point(res)
+Chart.Point([snd res2,2.])
+]
+|> Chart.Combine
+|> Chart.Show
+open FSharp.Stats
 
-let spec = 
-    mzliteReader.ReadMassSpectra("sample=0")
-    |> Array.ofSeq
-    |> Array.filter (fun x -> ProteomIQon.Core.MzLite.MassSpectrum.getMsLevel x = 2 )
-true || true
-let length = 
-    spec 
-    |> Array.map (fun spec -> mzliteReader.ReadSpectrumPeaks(spec.ID).Peaks.Length)
+let xV = [|1. .. 10000.|]                            
+let yV = [|1. .. 10000.|]
+let xy = Array.zip xV yV
+10000 / 200
 
-length .Length
-length 
-|> Array.filter (fun x -> x <> 0)
-|> Array.length
+
+
 
 let weightedMean (weights:seq<'T>) (items:seq<'T>) =
     let sum,n = Seq.fold2 (fun (sum,n) w i -> w*i+sum,n + w ) (0.,0.) weights items 

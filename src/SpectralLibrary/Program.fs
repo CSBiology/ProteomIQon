@@ -44,7 +44,7 @@ module console1 =
             let instrumentFiles =
                 Directory.GetFiles(i,("*.mzlite"))
             let resultFiles =
-                Directory.GetFiles(i,("*.qpsm"))
+                Directory.GetFiles(q,("*.qpsm"))
             let matchedFiles =
                 instrumentFiles
                 |> Array.collect (fun instrumentFile ->
