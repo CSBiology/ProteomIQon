@@ -137,6 +137,14 @@ module Domain =
             BaseLineCorrection           : BaseLineCorrection option
         }
 
+    type AlignmentBasedQuantificationParams = 
+        {
+            PerformLabeledQuantification : bool
+            PerformLocalWarp             : bool
+            XicExtraction                : XicExtraction
+            BaseLineCorrection           : BaseLineCorrection option
+        }
+
     type FDRMethod =
         |Conservative
         |MAYU
@@ -229,3 +237,23 @@ module Domain =
             Tukey                       : (string*float*Transform) []
         }
    
+
+    type ConsensusSpectralLibraryParams =
+        {
+            RTTolerance: float
+            iRTPeptides: string list
+        }
+
+    type SpectrumSelection =
+        |First
+        |All
+
+    type SWATHAnalysisParams =
+        {
+            PeptideList         : string [] option
+            MatchingTolerancePPM: float
+            QueryOffsetRange    : float
+            SpectrumSelectionF  : SpectrumSelection
+            AggregationF        : AggregationMethod
+            XicProcessing       : XicProcessing
+        }

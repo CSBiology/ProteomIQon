@@ -5,9 +5,9 @@ open BioFSharp.Mz
 open BioFSharp.Mz.SearchDB
 open Domain
 open FSharpAux.IO.SchemaReader
-open FSharpAux.IO.SchemaReader.Csv
 open FSharpAux.IO.SchemaReader.Attribute
 open MzIO.Binary
+open MzIO.Processing
 
 [<AutoOpen>]
 module Common =
@@ -360,6 +360,20 @@ module Dto =
                 if (str) = "PSM" then QuantificationSource.PSM else QuantificationSource.Alignment 
                 |> box
                 )
+
+    type TraceConverter() = 
+        inherit ConverterAttribute()
+        override this.convertToObj = 
+            Converter.Single(fun (str : string) -> 
+                let tmp = (str |> String.filter (fun x -> x <> '|' && x <> '[' && x <> ']' )).Trim() 
+                if tmp = "" then 
+                    [||]
+                else
+                    tmp.Split(';')
+                    |> Array.map float
+                |> box 
+                )
+                
     ///
     type QuantificationResult = {
         [<FieldAttribute(0)>]
@@ -396,14 +410,15 @@ module Dto =
         MeasuredApex_Light                          : float 
         [<FieldAttribute(16)>]
         Seo_Light                                   : float
-        [<FieldAttribute(17)>]
-        Params_Light                                : string
+        [<FieldAttribute(17)>][<TraceConverter>]
+        Params_Light                                : float []
         [<FieldAttribute(18)>]
         Difference_SearchRT_FittedRT_Light          : float
         [<FieldAttribute(19)>]
         KLDiv_Observed_Theoretical_Light            : float
         [<FieldAttribute(20)>]
         KLDiv_CorrectedObserved_Theoretical_Light   : float
+
         [<FieldAttribute(21)>]
         QuantMz_Heavy                               : float
         [<FieldAttribute(22)>]
@@ -412,19 +427,268 @@ module Dto =
         MeasuredApex_Heavy                          : float
         [<FieldAttribute(24)>]
         Seo_Heavy                                   : float
-        [<FieldAttribute(25)>]
-        Params_Heavy                                : string        
+        [<FieldAttribute(25)>][<TraceConverter>]
+        Params_Heavy                                : float []        
         [<FieldAttribute(26)>]
         Difference_SearchRT_FittedRT_Heavy          : float
         [<FieldAttribute(27)>]
         KLDiv_Observed_Theoretical_Heavy            : float
         [<FieldAttribute(28)>]
         KLDiv_CorrectedObserved_Theoretical_Heavy   : float
+
+
         [<FieldAttribute(29)>]
         Correlation_Light_Heavy                     : float
         [<FieldAttribute(30)>][<QuantSourceConverter>]
         QuantificationSource                        : QuantificationSource
+
+        [<FieldAttribute(31)>][<TraceConverter>]
+        IsotopicPatternMz_Light                     : float []
+        [<FieldAttribute(32)>][<TraceConverter>]
+        IsotopicPatternIntensity_Observed_Light     : float []
+        [<FieldAttribute(33)>][<TraceConverter>]
+        IsotopicPatternIntensity_Corrected_Light    : float []
+        [<FieldAttribute(34)>][<TraceConverter>]
+        RtTrace_Light                               : float []
+        [<FieldAttribute(35)>][<TraceConverter>]
+        IntensityTrace_Observed_Light               : float []
+        [<FieldAttribute(36)>][<TraceConverter>]
+        IntensityTrace_Corrected_Light              : float []
+        [<FieldAttribute(37)>][<TraceConverter>]
+        IsotopicPatternMz_Heavy                     : float []
+        [<FieldAttribute(38)>][<TraceConverter>]
+        IsotopicPatternIntensity_Observed_Heavy     : float []
+        [<FieldAttribute(39)>][<TraceConverter>]
+        IsotopicPatternIntensity_Corrected_Heavy    : float []
+        [<FieldAttribute(40)>][<TraceConverter>]
+        RtTrace_Heavy                               : float []
+        [<FieldAttribute(41)>][<TraceConverter>]
+        IntensityTrace_Observed_Heavy               : float []
+        [<FieldAttribute(42)>][<TraceConverter>]
+        IntensityTrace_Corrected_Heavy              : float []
         }
+
+    module QuantificationResult = 
+        /// Retrieves the scan time based on the fitted parameter values (HULQ output).
+        let getTargetIntensity (qp:QuantificationResult) = 
+            try
+            if qp.GlobalMod = 0 then
+                qp.Quant_Light
+            else
+                qp.Quant_Heavy
+            with
+            | _ -> nan
+
+        /// Retrieves the scan time based on the fitted parameter values (HULQ output).
+        let getTargetScanTime (qp:QuantificationResult) = 
+            try
+            if qp.GlobalMod = 0 then
+                qp.Params_Light.[1] 
+            else
+                qp.Params_Heavy.[1] 
+            with
+            | _ -> nan
+
+        /// Retrieves the scan time based on the fitted parameter values (HULQ output).
+        let getTargetStabw (qp:QuantificationResult) = 
+            try
+            if qp.GlobalMod = 0 then
+                qp.Params_Light.[2] 
+            else
+                qp.Params_Heavy.[2] 
+            with
+            | _ -> nan
+
+        /// Retrieves the scan time based on the fitted parameter values (HULQ output).
+        let getTargetScanTimeDifference (qp:QuantificationResult) = 
+            try
+            if qp.GlobalMod = 0 then
+                qp.Difference_SearchRT_FittedRT_Light
+            else
+                qp.Difference_SearchRT_FittedRT_Heavy
+            with
+            | _ -> nan
+
+        /// Retrieves the scan time based on the fitted parameter values (HULQ output).
+        let tryTargetGetScanTime (qp:QuantificationResult) = 
+            try
+            if qp.GlobalMod = 0 then
+                qp.Params_Light.[1] 
+                |> float
+                |> Some
+            else
+                qp.Params_Heavy.[1] 
+                |> float
+                |> Some
+            with
+            | _ -> None
+
+        /// 
+        let getTargetRtTrace (qp:QuantificationResult) = 
+            try
+            if qp.GlobalMod = 0 then
+                qp.RtTrace_Light
+            else
+                qp.RtTrace_Heavy 
+            with
+            | _ -> [||]
+
+        /// 
+        let getTargetIntensityTrace (qp:QuantificationResult) = 
+            try
+            if qp.GlobalMod = 0 then
+                qp.IntensityTrace_Corrected_Light
+            else
+                qp.IntensityTrace_Corrected_Heavy
+            with
+            | _ -> [||]
+
+        /// 
+        let getIsotopicPatternMz (qp:QuantificationResult) = 
+            try
+            if qp.GlobalMod = 0 then
+                qp.IsotopicPatternMz_Light
+            else
+                qp.IsotopicPatternMz_Heavy
+            with
+            | _ -> [||]
+
+        /// 
+        let getIsotopicPatternIntensity_Observed (qp:QuantificationResult) = 
+            try
+            if qp.GlobalMod = 0 then
+                qp.IsotopicPatternIntensity_Corrected_Light
+            else
+                qp.IsotopicPatternIntensity_Corrected_Heavy
+            with
+            | _ -> [||]
+
+    ///
+    type AlignmentParams = {
+        Placeholder : bool 
+        }
+
+    ///
+    type AlignmentResult = 
+        {
+            [<FieldAttribute(0)>]
+            StringSequence               : string
+            [<FieldAttribute(1)>]
+            GlobalMod                    : int
+            [<FieldAttribute(2)>]
+            Charge                       : int
+            [<FieldAttribute(3)>]
+            PepSequenceID                : int
+            [<FieldAttribute(4)>]
+            ModSequenceID                : int
+            [<FieldAttribute(5)>]
+            Mz                           : float
+            [<FieldAttribute(6)>]
+            ProteinNames                 : string
+            [<FieldAttribute(7)>]
+            PredictedScanTime            : float
+            [<FieldAttribute(8)>]
+            ScanTime_SourceFile          : float
+            [<FieldAttribute(9)>][<TraceConverter>]
+            RtTrace_SourceFile           : float []
+            [<FieldAttribute(10)>][<TraceConverter>]
+            IntensityTrace_SourceFile    : float []
+            [<FieldAttribute(11)>][<TraceConverter>]
+            IsotopicPatternMz_SourceFile                    : float []            
+            [<FieldAttribute(12)>][<TraceConverter>]
+            IsotopicPatternIntensity_Observed_SourceFile    : float []       
+        } 
+
+    /////
+    //type AlignmentModelMetrics<'Metrics> = 
+    //    {
+    //    Metrics                             : 'Metrics
+    //    Sequence                            : string []
+    //    GlobalMod                           : int []
+    //    Charge                              : int []
+    //    PepSequenceID                       : int []
+    //    ModSequenceID                       : int []
+    //    X_Intensities                       : float []
+    //    X_Stabw                             : float []        
+    //    X_Test                              : float []
+    //    X_IsotopicPatternMz                 : float [][]
+    //    X_IsotopicPatternIntensity_Observed : float [][]    
+    //    Y_Test                              : float []
+    //    YHat_Test                           : float []
+    //    YHat_Refined_Test                   : float []
+    //    Y_IsotopicPatternMz                 : float [][]
+    //    Y_IsotopicPatternIntensity_Observed : float [][]       
+    //    DtwDistanceBefore                   : float []
+    //    DtwDistanceAfter                    : float []
+    //    }
+
+    ///
+    type AlignmentMetricsDTO = 
+       {
+           [<FieldAttribute(0)>]
+           Sequence                             : string
+           [<FieldAttribute(1)>]
+           GlobalMod                            : int
+           [<FieldAttribute(2)>]
+           Charge                               : int
+           [<FieldAttribute(3)>]
+           PepSequenceID                        : int
+           [<FieldAttribute(4)>]
+           ModSequenceID                        : int
+           [<FieldAttribute(5)>]
+           X_FileName                           : string 
+           [<FieldAttribute(6)>]
+           X_Intensities                        : float 
+           [<FieldAttribute(7)>]
+           X_Stabw                              : float
+           [<FieldAttribute(8)>]
+           X_Test                               : float 
+           [<FieldAttribute(9)>] [<TraceConverter>]
+           X_IsotopicPatternMz                  : float []
+           [<FieldAttribute(10)>] [<TraceConverter>]
+           X_IsotopicPatternIntensity_Observed  : float []
+           [<FieldAttribute(11)>] [<TraceConverter>]
+           X_RtTrace                            : float []
+           [<FieldAttribute(12)>] [<TraceConverter>]
+           X_IntensityTrace                     : float []   
+           [<FieldAttribute(13)>]
+           Y_Test                               : float 
+           [<FieldAttribute(14)>]
+           YHat_Test                            : float 
+           [<FieldAttribute(15)>]
+           YHat_Refined_Test                    : float
+           [<FieldAttribute(16)>]
+           Y_Intensity                          : float
+           [<FieldAttribute(17)>] [<TraceConverter>]
+           Y_IsotopicPatternMz                  : float []
+           [<FieldAttribute(18)>] [<TraceConverter>]
+           Y_IsotopicPatternIntensity_Observed  : float [] 
+           [<FieldAttribute(19)>] [<TraceConverter>]
+           Y_RtTrace                            : float []
+           [<FieldAttribute(20)>] [<TraceConverter>]
+           Y_IntensityTrace                     : float []
+           [<FieldAttribute(21)>]
+           DtwDistanceBefore                    : float 
+       }
+
+    type AlignmentBasedQuantificationParams =
+        {
+            PerformLabeledQuantification : bool
+            PerformLocalWarp             : bool
+            XicExtraction                : XicExtraction
+            //10 6 0.05
+            BaseLineCorrection           : BaseLineCorrection option
+        }
+
+    module AlignmentBasedQuantificationParams =
+
+        let toDomain (dtoQuantificationParams: AlignmentBasedQuantificationParams ): Domain.AlignmentBasedQuantificationParams =
+            {
+                PerformLabeledQuantification = dtoQuantificationParams.PerformLabeledQuantification
+                PerformLocalWarp             = dtoQuantificationParams.PerformLocalWarp
+                XicExtraction                = dtoQuantificationParams.XicExtraction
+                BaseLineCorrection           = dtoQuantificationParams.BaseLineCorrection
+            }
 
     type ProteinInferenceParams =
           {
@@ -460,6 +724,7 @@ module Dto =
                 MatchingTolerancePPM = dtoSpectralLibraryParams.MatchingTolerancePPM
             }
 
+
     type TableSortParams =
         {
             SeparatorIn                 : string
@@ -492,4 +757,39 @@ module Dto =
                 AggregatorFunctionIntensity = dtoTableSortParams.AggregatorFunctionIntensity
                 AggregatorPepToProt         = dtoTableSortParams.AggregatorPepToProt
                 Tukey                       = dtoTableSortParams.Tukey
+
+    type ConsensusSpectralLibraryParams =
+        {
+            RTTolerance: float
+            iRTPeptides: string list
+        }
+
+    module ConsensusSpectralLibraryParams =
+
+        let toDomain (dtoConsensusSpectralLibraryParams: ConsensusSpectralLibraryParams): Domain.ConsensusSpectralLibraryParams =
+            {
+                RTTolerance = dtoConsensusSpectralLibraryParams.RTTolerance
+                iRTPeptides = dtoConsensusSpectralLibraryParams.iRTPeptides
+            }
+
+    type SWATHAnalysisParams =
+        {
+            PeptideList         : string [] option
+            MatchingTolerancePPM: float
+            QueryOffsetRange    : float
+            SpectrumSelectionF  : SpectrumSelection
+            AggregationF        : AggregationMethod
+            XicProcessing       : XicProcessing
+        }
+
+    module SWATHAnalysisParams =
+
+        let toDomain (dtoSWATHAnalysisParams: SWATHAnalysisParams): Domain.SWATHAnalysisParams =
+            {
+                PeptideList          = dtoSWATHAnalysisParams.PeptideList
+                MatchingTolerancePPM = dtoSWATHAnalysisParams.MatchingTolerancePPM
+                QueryOffsetRange     = dtoSWATHAnalysisParams.QueryOffsetRange
+                SpectrumSelectionF   = dtoSWATHAnalysisParams.SpectrumSelectionF
+                AggregationF         = dtoSWATHAnalysisParams.AggregationF
+                XicProcessing        = dtoSWATHAnalysisParams.XicProcessing
             }

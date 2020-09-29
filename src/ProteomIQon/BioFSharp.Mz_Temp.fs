@@ -13,7 +13,267 @@ open ModificationInfo
 open System
 open FSharp.Stats.Signal
 
+module DTW' =
+                       
+    type warpingPaths = {
+        Distance: float
+        Paths   : Matrix<float>
+        }
+    
+    //window: see   : Only allow for shifts up to this amount away from the two diagonals.
+    //maxDist: see  : Stop if the returned distance measure will be larger than this value.
+    //maxStep: see  : Do not allow steps larger than this value.
+    //maxLengthDiff : Return infinity if difference in length of two series is larger.
+    //penalty       : Penalty to add if compression or expansion is applied (on top of the distance).
+    //psi           : Relaxation to ignore begin and/or end of sequences (for cylical sequencies)
+    ///Dynamic Time Warping.
+    ///The full matrix of all warping paths is build.
+    ///x: First sequence
+    ///y: Second sequence
+    ///returns: (DTW distance, DTW matrix)
+    let warp window maxDist maxStep maxLengthDiff penalty psi (x:array<float>) (y:array<float>) = 
+        let r,c = x.Length, y.Length
+        match maxLengthDiff with
+        | Some x when abs(r-c) > x -> None 
+        | _  -> 
+        let window = 
+            match window with
+            | Some x -> x
+            | None   -> max r c             
+        let maxStep = 
+            match maxStep with
+            | Some x -> Some (x**2.)
+            | None   -> None 
+        let maxDist = 
+            match maxDist with
+            | Some x -> Some (x**2.)
+            | None   -> None
+        let penalty = 
+            match penalty with
+            | Some x -> (x**2.)
+            | None   -> 0. 
+        let psi = 
+            match psi with
+            | Some x -> x
+            | None   -> 0    
+        let dtw = 
+            let tmp = Matrix.create (r+1) (c+1) infinity 
+            for i = 0 to psi do 
+                tmp.[0,i] <- 0.
+                tmp.[i,0] <- 0.
+            tmp
+        ///
+        let rec innerLoop upper prevLastUnderMaxDist lastUnderMaxDis i0 i1 i j = 
+            if j = upper then 
+                i+1, lastUnderMaxDis
+            else 
+                let d = (x.[i] - y.[j])**2.
+                match maxStep with 
+                | Some x when d > x -> 
+                    innerLoop upper prevLastUnderMaxDist lastUnderMaxDis i0 i1 i (j+1)
+                | _ ->                   
+                    dtw.[i1,j+1] <- d + (List.min [ dtw.[i0, j];dtw.[i0, j + 1] + penalty;dtw.[i1, j] + penalty]) 
+                    match maxDist with 
+                    | Some x when dtw.[i1, j + 1] <= x ->
+                        innerLoop upper prevLastUnderMaxDist (j) i0 i1 i (j+1)
+                    | Some x -> 
+                        dtw.[i1, j + 1] <- infinity 
+                        if prevLastUnderMaxDist < (j+1) then 
+                            (i+1, lastUnderMaxDis)
+                        else 
+                        innerLoop upper prevLastUnderMaxDist lastUnderMaxDis i0 i1 i (j+1)
+                    | None  -> 
+                        innerLoop upper prevLastUnderMaxDist lastUnderMaxDis i0 i1 i (j+1)
+        ///
+        let rec outerLoop lastUnderMaxDist i = 
+            if i = r then Some (dtw,i)
+            else 
+                let prevLastUnderMaxDist = 
+                    if lastUnderMaxDist = -1 then
+                        infinity |> int |> (*) -1
+                    else
+                       lastUnderMaxDist
+                let last_under_max_dist, i0, i1 = -1, i, i+1
+                let lower = 
+                    let tmp = i - (max 0 (r - c)) - window + 1
+                    max 0 tmp
+                let upper = 
+                    let tmp = i + (max 0 (c - r)) + window
+                    min c tmp
+                let nextIdx,prevLastUnderMaxDist = innerLoop upper prevLastUnderMaxDist lastUnderMaxDist i0 i1 i lower
+                match maxDist with 
+                | Some x when lastUnderMaxDist = -1 ->
+                    None 
+                | Some x -> 
+                    outerLoop lastUnderMaxDist (i+1)
+                | None ->
+                    outerLoop lastUnderMaxDist (i+1)
+        let (dtw') = outerLoop 0 0
+        match dtw' with 
+        | None -> 
+            Some ({Distance=infinity;Paths=dtw}) 
+        | Some (dtw',i1) ->
+            Matrix.inplace_mapi (fun m n x -> sqrt x) dtw' |> ignore
+            let d = 
+                //if psi = 0 then 
+                     dtw.[i1, (min c (c + window - 1))]  
+            //    else 
+            //        let ir = i1
+            //        let ic = min (c + window - 1)
+            //        vr = dtw.get[ir-psi:ir+1, ic]
+            //        vc = dtw[ir, ic-psi:ic+1]
+            //        mir = np.argmin(vr)
+            //        mic = np.argmin(vc)
+            //        if vr[mir] < vc[mic]:
+            //            dtw[ir-psi+mir+1:ir+1, ic] = -1
+            //            d = vr[mir]
+            //        else:
+            //            dtw[ir, ic - psi + mic + 1:ic+1] = -1
+            //            d = vc[mic]
+            Some ({Distance=d;Paths=dtw}) 
+    
+    open FSharpAux
+    
+    
+    /// Returns the best warping path.
+    let bestPath (paths:Matrix<float>) =
+        let m,n = 
+            let m',n' = paths.Dimensions
+            m'-1,n'-1
+        let pInit = if paths.[m,n] <> -1. then [m-1,n-1] else []
+        let rec loop m n path =
+            if m <= 0 || n <= 0 then
+                match path with 
+                | h::t -> t
+                | []   -> []
+            else 
+            let pos = [|paths.[m - 1, n - 1]; paths.[m - 1, n]; paths.[m, n - 1]|]    
+            let c = Array.foldi (fun i acc x -> if x < pos.[acc] then i else acc ) 0 pos
+            let m',n' = 
+                if c = 0 then
+                    (m-1),(n-1)
+                elif c = 1 then 
+                    (m-1),(n)
+                else
+                    (m),(n-1)
+            if paths.[m',n'] <> -1. then 
+                loop m' n' ((m'-1,n'-1)::path)
+            else loop m' n' (path)
+        loop m n pInit        
+    
+    ///
+    let warping_Path window maxDist maxStep maxLengthDiff penalty psi (x:array<float>) (y:array<float>) = 
+        let res = warp window maxDist maxStep maxLengthDiff penalty psi x y
+        match res with 
+        | Some x -> bestPath x.Paths
+        | None -> failwith "Warping not possible."
+        
+    ///
+    let distance window maxDist maxStep maxLengthDiff penalty psi (x:array<float>) (y:array<float>) = 
+        let res = warp window maxDist maxStep maxLengthDiff penalty psi x y
+        match res with 
+        | Some x -> x.Distance
+        | None -> failwith "Warping not possible."
+       
+    // Aligns source to target. Given a sourceX it returns the mapping of the xVal closest to
+    // sourceX to its targetX counterPart after alignment.
+    let align (target:(float*float)[]) (source:(float*float)[]) =
+        let xt,yt = target |> Array.unzip
+        let xs,ys = source |> Array.unzip
+        let optimalPath = warping_Path None None None None None None yt ys
+        List.map (fun (ytIdx,ysIdx) -> xt.[ytIdx],ys.[ysIdx]) optimalPath 
 
+    // Aligns source to target. Given a sourceX it returns the mapping of the xVal closest to
+    // sourceX to its targetX counterPart after alignment.
+    let align' (target:(float*float)[]) (source:(float*float)[]) sourceX =
+        let xt,yt = target |> Array.unzip
+        let xs,ys = source |> Array.unzip
+        let optimalPath = warping_Path None None None None None None yt ys
+        List.map (fun (ytIdx,ysIdx) -> xs.[ysIdx],xt.[ytIdx]) optimalPath 
+        |> List.minBy (fun (xs,xt) -> abs(xs-sourceX))
+    
+    let s1 = 
+        [|0.;1.;2.;3.;2.;1.;0.;0.;0.;0.;0.;0.;0.;0.;0.;0.;0.;0.;1.;2.;1.;0.|] 
+        |> Array.mapi (fun i x -> float i,x)
+    
+    let s2 = 
+        [|0.;0.;0.;0.;0.;1.;2.;2.5;2.;1.;0.;0.;0.;0.;0.;0.;0.;0.;0.;0.;0.1;0.2;0.1;0.;0.;0.5;1.;0.5;0.|] 
+        |> Array.mapi (fun i x -> float i + 20.,x)
+    
+    let s2' = 
+        align s1 s2
+
+    
+    let zNorm (y:float []) = 
+        let m = Seq.mean y
+        let s = Seq.stDev y 
+        y
+        |> Array.map (fun x -> (x-m)/s)
+    
+    
+
+module SeqIO' = 
+    open FSharpAux.IO.SeqIO
+
+    ///Returns a function to format a given value as string
+    let inline stringFunction (separator: string) (flatten: bool) (input: 'a) =
+        let o = box input
+        match o with
+        //match string first so that it doesn't get treated as a char array
+        | :? string ->
+            fun (x: obj) ->
+                let sb = new System.Text.StringBuilder()
+                sb.Append x |> ignore
+                let res = sb.ToString()
+                sb.Clear() |> ignore
+                res
+        | :? System.Collections.IEnumerable ->
+            if flatten then
+                fun x ->
+                    let sb = new System.Text.StringBuilder()
+                    let a = x :?> System.Collections.IEnumerable
+                    //iterates over Collections.IEnumerable to get entries as objects for the string builder
+                    let b = [for i in a do yield box i]
+                    b
+                    |> Seq.iteri (fun i x ->
+                        if i = 0 then
+                            sb.AppendFormat("{0}", x) |> ignore
+                        else
+                            sb.AppendFormat(sprintf "%s{0}" separator, x) |> ignore
+                        )
+                    let res = sb.ToString()
+                    sb.Clear() |> ignore
+                    res
+            else
+                fun x -> 
+                    let standardSeparators = [";";"\t";","]
+                    let separator = 
+                        standardSeparators
+                        |> List.find (fun sep -> sep <> separator)
+                    let sb = new System.Text.StringBuilder()
+                    let a = x :?> System.Collections.IEnumerable
+                    //iterates over Collections.IEnumerable to get entries as objects for the string builder
+                    let b = [for i in a do yield box i]
+                    b
+                    |> Seq.iteri (fun i x ->
+                        if i = 0 then
+                            sb.AppendFormat("{0}", x) |> ignore
+                        else
+                            sb.AppendFormat(sprintf "%s{0}" separator, x) |> ignore
+                        )
+                    let res = sb.ToString()
+                    sb.Clear() |> ignore
+                    res            
+        | _ ->
+            fun (x: obj) ->
+                let sb = new System.Text.StringBuilder()
+                sb.Append x |> ignore
+                let res = sb.ToString()
+                sb.Clear() |> ignore
+                res
+
+    let csv separator header flatten data = Seq.CSVwith Seq.valueFunction stringFunction separator header flatten data 
+    
 module FSharpStats' = 
 
     module Wavelet =
@@ -517,17 +777,45 @@ module SearchDB' =
                     reader.GetString(0)
                 )
 
+            /// Prepares statement to select a ModSequence entry by Massrange (Between selected Mass -/+ the selected toleranceWidth)
+            let prepareSelectMassByModSequenceAndGlobalMod (cn:SQLiteConnection) =
+                let querystring = "SELECT RealMass FROM ModSequence WHERE Sequence=@sequence AND GlobalMod=@globalMod"
+                let cmd = new SQLiteCommand(querystring, cn)
+                cmd.Parameters.Add("@sequence", Data.DbType.String) |> ignore
+                cmd.Parameters.Add("@globalMod", Data.DbType.Int32) |> ignore
+                fun (sequence:string) (globalMod:int) ->
+                    cmd.Parameters.["@sequence"].Value  <- sequence
+                    cmd.Parameters.["@globalMod"].Value <- globalMod
+                    use reader = cmd.ExecuteReader()
+                    match reader.Read() with
+                    | true  -> Some (reader.GetDouble(0))
+                    | false -> Option.None
+                
+
+            //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+            /// Prepares statement to select a ModSequence entry by ModSequenceID
+            let prepareSelectModsequenceBySequenceAndGMod (cn:SQLiteConnection) =
+                let querystring = "SELECT * FROM ModSequence WHERE Sequence=@sequence AND GlobalMod=@globalMod"
+                let cmd = new SQLiteCommand(querystring, cn)
+                cmd.Parameters.Add("@sequence", Data.DbType.String) |> ignore
+                cmd.Parameters.Add("@globalMod", Data.DbType.Int32) |> ignore
+                fun (sequence:string) (globalMod:int) ->
+                    cmd.Parameters.["@sequence"].Value  <- sequence
+                    cmd.Parameters.["@globalMod"].Value <- globalMod
+                    use reader = cmd.ExecuteReader()
+                    match reader.Read() with
+                        | true ->  (reader.GetInt32(0), reader.GetInt32(1),reader.GetDouble(2), reader.GetInt64(3), reader.GetString(4), reader.GetInt32(5))
+                        | false -> -1,-1,nan,-1L,"",-1
+
     /// Prepares a function which returns a list of protein Accessions tupled with the peptide sequence whose ID they were retrieved by
     let getProteinPeptideLookUpFromFileBy (memoryDB: SQLiteConnection) =
         let tr = memoryDB.BeginTransaction()
         let selectCleavageIdxByPepSeqID   = Db.SQLiteQuery.prepareSelectCleavageIndexByPepSequenceID memoryDB tr
         let selectProteinByProtID         = DB'.SQLiteQuery'.prepareSelectProteinAccessionByID memoryDB tr
         let selectPeptideByPepSeqID       = DB'.SQLiteQuery'.prepareSelectPepSequenceByPepSequenceID memoryDB tr
-        (
-            fun pepSequenceID ->
-                selectCleavageIdxByPepSeqID pepSequenceID
-                |> List.map (fun (_,protID,pepID,_,_,_) -> selectProteinByProtID protID, selectPeptideByPepSeqID pepID )
-        )
+        fun pepSequenceID ->
+            selectCleavageIdxByPepSeqID pepSequenceID
+            |> List.map (fun (_,protID,pepID,_,_,_) -> selectProteinByProtID protID, selectPeptideByPepSeqID pepID )
 
     /// Returns Accession and Sequence of Proteins from SearchDB
     let selectProteins (cn:SQLiteConnection) =
@@ -535,16 +823,16 @@ module SearchDB' =
             let querystring = "SELECT Accession, Sequence FROM Protein"
             let cmd = new SQLiteCommand(querystring, cn)
             use reader = cmd.ExecuteReader()
-            (
-                [
-                    while reader.Read() do
-                        yield (reader.GetString(0), reader.GetString(1))
-                ]
-            )
+            
+            [
+                while reader.Read() do
+                    yield (reader.GetString(0), reader.GetString(1))
+            ]
+            
         selectProteins
 
     /// Returns SearchDbParams of a existing database by filePath
-    let getSDBParamsBy (cn :SQLiteConnection)=
+    let getSDBParams (cn :SQLiteConnection)=
         let cn =
             match cn.State with
             | ConnectionState.Open ->
@@ -561,6 +849,21 @@ module SearchDB' =
                         (Newtonsoft.Json.JsonConvert.DeserializeObject<SearchModification list>(fMods)) (Newtonsoft.Json.JsonConvert.DeserializeObject<SearchModification list>(vMods)) vThr
         | None ->
             failwith "This database does not contain any SearchParameters. It is not recommended to work with this file."
+
+
+    ///
+    let setIndexOnModSequenceAndGlobalMod (cn:SQLiteConnection) =
+        let querystring = "CREATE INDEX IF NOT EXISTS SequenceAndGlobalModIndex ON ModSequence (Sequence,GlobalMod)"
+        let cmd = new SQLiteCommand(querystring, cn)
+        cmd.ExecuteNonQuery()
+
+    /// Returns a LookUpResult list
+    let getThreadSafePeptideLookUpFromFileBySequenceAndGMod (cn:SQLiteConnection) sdbParams = 
+        let parseAAString = initOfModAminoAcidString sdbParams.IsotopicMod (sdbParams.FixedMods@sdbParams.VariableMods)
+        let selectModsequenceByID = DB'.SQLiteQuery'.prepareSelectModsequenceBySequenceAndGMod cn 
+        (fun sequence globalMod -> 
+            selectModsequenceByID sequence globalMod 
+            |> (createLookUpResultBy parseAAString))   
 
 module ProteinInference' =
 
@@ -1319,7 +1622,8 @@ module Fragmentation' =
     let ladderElement (ionList: Mz.PeakFamily<Mz.TaggedMass.TaggedMass> list) (chargeList: float list) =
         let groupedList =
             ionList
-            |> List.groupBy ( fun x -> x.MainPeak.Iontype)
+            |> List.groupBy ( fun x -> 
+                x.MainPeak.Iontype)
             |> List.map snd
             |> List.map List.sort
         groupedList

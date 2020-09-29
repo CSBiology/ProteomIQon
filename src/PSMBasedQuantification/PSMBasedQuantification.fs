@@ -1,9 +1,7 @@
 namespace ProteomIQon
 
 open System.IO
-open Argu
 open System.Data.SQLite
-open System
 open ProteomIQon.Core
 open Core.MzIO
 open Dto
@@ -13,11 +11,9 @@ open BioFSharp.Mz
 open FSharpAux.IO.SchemaReader
 open FSharp.Plotly
 open BioFSharp
-open BioFSharp.Mz.Quantification
 open MzIO.Processing
 open BioFSharp.Mz.SearchDB
-open System.Data
-open System.Data.SQLite
+open SearchDB'
 
 module PSMBasedQuantification =
 
@@ -30,95 +26,6 @@ module PSMBasedQuantification =
             PepSequenceID        : int
         }
             
-    /// Returns SearchDbParams of a existing database by filePath
-    let getSDBParamsBy (cn :SQLiteConnection)=
-        let cn =
-            match cn.State with
-            | ConnectionState.Open ->
-                cn
-            | ConnectionState.Closed ->
-                cn.Open()
-                cn
-            | _ as x -> failwith "Data base is busy."
-        match Db.SQLiteQuery.selectSearchDbParams cn with
-        | Some (iD,name,fo,fp,pr,minmscl,maxmscl,mass,minpL,maxpL,isoL,mMode,fMods,vMods,vThr) ->
-            createSearchDbParams
-                name fo fp id (Digestion.Table.getProteaseBy pr) minmscl maxmscl mass minpL maxpL
-                    (Newtonsoft.Json.JsonConvert.DeserializeObject<SearchInfoIsotopic list>(isoL)) (Newtonsoft.Json.JsonConvert.DeserializeObject<MassMode>(mMode)) (massFBy (Newtonsoft.Json.JsonConvert.DeserializeObject<MassMode>(mMode)))
-                        (Newtonsoft.Json.JsonConvert.DeserializeObject<SearchModification list>(fMods)) (Newtonsoft.Json.JsonConvert.DeserializeObject<SearchModification list>(vMods)) vThr
-        | None ->
-            failwith "This database does not contain any SearchParameters. It is not recommended to work with this file."
-
-    ///
-    let setIndexOnModSequenceAndGlobalMod (cn:SQLiteConnection) =
-        let querystring = "CREATE INDEX IF NOT EXISTS SequenceAndGlobalModIndex ON ModSequence (Sequence,GlobalMod)"
-        let cmd = new SQLiteCommand(querystring, cn)
-        cmd.ExecuteNonQuery()
-
-
-    /// Prepares statement to select a ModSequence entry by Massrange (Between selected Mass -/+ the selected toleranceWidth)
-    let prepareSelectMassByModSequenceAndGlobalMod (cn:SQLiteConnection) =
-        let querystring = "SELECT RealMass FROM ModSequence WHERE Sequence=@sequence AND GlobalMod=@globalMod"
-        let cmd = new SQLiteCommand(querystring, cn)
-        cmd.Parameters.Add("@sequence", Data.DbType.String) |> ignore
-        cmd.Parameters.Add("@globalMod", Data.DbType.Int32) |> ignore
-        (fun (sequence:string) (globalMod:int) ->
-            cmd.Parameters.["@sequence"].Value  <- sequence
-            cmd.Parameters.["@globalMod"].Value <- globalMod
-            use reader = cmd.ExecuteReader()
-            match reader.Read() with
-            | true  -> Some (reader.GetDouble(0))
-            | false -> Option.None)
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    ///// Prepares statement to select a ModSequence entry by ModSequenceID
-    //let prepareSelectModsequenceByModSequenceID (cn:SQLiteConnection) =
-    //    let querystring = "SELECT * FROM ModSequence WHERE ID=@id"
-    //    let cmd = new SQLiteCommand(querystring, cn) 
-    //    cmd.Parameters.Add("@id", Data.DbType.Int64) |> ignore       
-    //    (fun (id:int)  ->        
-    //        cmd.Parameters.["@id"].Value <- id
-
-    //        use reader = cmd.ExecuteReader()            
-    //        match reader.Read() with
-    //        | true ->  (reader.GetInt32(0), reader.GetInt32(1),reader.GetDouble(2), reader.GetInt64(3), reader.GetString(4), reader.GetInt32(5))
-    //        | false -> -1,-1,nan,-1L,"",-1
-    //    )
-
-    ///// Returns a LookUpResult list
-    //let getThreadSafePeptideLookUpFromFileBy (cn:SQLiteConnection) sdbParams = 
-    //    let parseAAString = initOfModAminoAcidString sdbParams.IsotopicMod (sdbParams.FixedMods@sdbParams.VariableMods)
-    //    let selectModsequenceByID = prepareSelectModsequenceByModSequenceID cn 
-    //    (fun id -> 
-    //        selectModsequenceByID id 
-    //        |> (createLookUpResultBy parseAAString))   
-
-
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    /// Prepares statement to select a ModSequence entry by ModSequenceID
-    let prepareSelectModsequenceByModSequenceID (cn:SQLiteConnection) =
-        let querystring = "SELECT * FROM ModSequence WHERE Sequence=@sequence AND GlobalMod=@globalMod"
-        let cmd = new SQLiteCommand(querystring, cn)
-        cmd.Parameters.Add("@sequence", Data.DbType.String) |> ignore
-        cmd.Parameters.Add("@globalMod", Data.DbType.Int32) |> ignore
-        (fun (sequence:string) (globalMod:int) ->
-            cmd.Parameters.["@sequence"].Value  <- sequence
-            cmd.Parameters.["@globalMod"].Value <- globalMod
-            use reader = cmd.ExecuteReader()
-            match reader.Read() with
-                | true ->  (reader.GetInt32(0), reader.GetInt32(1),reader.GetDouble(2), reader.GetInt64(3), reader.GetString(4), reader.GetInt32(5))
-                | false -> -1,-1,nan,-1L,"",-1
-        )
-
-    /// Returns a LookUpResult list
-    let getThreadSafePeptideLookUpFromFileBy (cn:SQLiteConnection) sdbParams = 
-        let parseAAString = initOfModAminoAcidString sdbParams.IsotopicMod (sdbParams.FixedMods@sdbParams.VariableMods)
-        let selectModsequenceByID = prepareSelectModsequenceByModSequenceID cn 
-        (fun sequence globalMod -> 
-            selectModsequenceByID sequence globalMod 
-            |> (createLookUpResultBy parseAAString))   
-
-        
     type averagePSM = {
         MeanPrecMz   : float
         MeanScanTime : float
@@ -177,10 +84,7 @@ module PSMBasedQuantification =
     let klDiv (p:float []) (q:float []) = 
         Array.fold2 (fun acc p q -> (System.Math.Log(p/q)*p) + acc ) 0. p q
      
-    ///
-    let weightedMean (weights:seq<'T>) (items:seq<'T>) =
-        let sum,n = Seq.fold2 (fun (sum,n) w i -> w*i+sum,n + w ) (0.,0.) weights items
-        sum / n
+
 
     ///
     let substractBaseLine (logger: NLog.Logger) (baseLineParams:Domain.BaseLineCorrection) (yData:float []) =
@@ -242,31 +146,13 @@ module PSMBasedQuantification =
             |]
             |> Array.unzip 
         retData',itzData'
-    
-    ///
-    let average getXic (psms:(PSMStatisticsResult*float) []) =
-            let psms    =
-                let tmp = psms |> Array.map snd
-                let filter = Testing.Outliers.tukey 2. tmp
-                Array.filter (fun (x,scanTime) -> scanTime <= filter.Upper && scanTime >= filter.Lower) psms
-            let meanPrecMz          = psms |> Seq.meanBy (fun (x,scanTime) -> x.PrecursorMZ)
-            let meanScanTime        = psms |> Seq.meanBy (fun (x,scanTime) -> scanTime)
-            let (retData,itzDataCorrected,ItzDataUncorrected)   = getXic meanScanTime meanPrecMz
-            let meanScore = psms |> Seq.averageBy (fun (x,scanTime) -> x.PercolatorScore)
-            let weightedAvgScanTime =
-                let scanTimes =
-                    psms
-                    |> Seq.map snd
-                let weights =
-                    scanTimes
-                    |> Seq.map (FSharp.Stats.Signal.PeakDetection.idxOfClosestPeakBy retData itzDataCorrected)
-                    |> Seq.map (fun idx -> itzDataCorrected.[idx])
-                    |> Seq.map (fun x -> if x <= 0. then 1. else x)
-                weightedMean weights scanTimes
-            createAveragePSM meanPrecMz meanScanTime weightedAvgScanTime meanScore retData itzDataCorrected ItzDataUncorrected
 
     ///
-    let average' getXic (psms:(PSMStatisticsResult*float) []) =
+    let weightedMean (weights:seq<'T>) (items:seq<'T>) =
+        let sum,n = Seq.fold2 (fun (sum,n) w i -> w*i+sum,n + w ) (0.,0.) weights items
+        sum / n
+    ///
+    let average getXic (psms:(PSMStatisticsResult*float) []) =
             let meanPrecMz   = psms |> Seq.meanBy (fun (psm,m) -> psm.PrecursorMZ)
             let meanScanTime = psms |> Seq.meanBy (fun (psm,m) -> psm.ScanTime)
             let meanScore = psms |> Seq.averageBy (fun (psm,m) -> psm.PercolatorScore)
@@ -343,6 +229,29 @@ module PSMBasedQuantification =
                 yFitted                     = [||]
             }
 
+    /// Calculates the difference between the scan time used to retreave the peak and the fitted peak midpoint.
+    let searchRTMinusFittedRtTarget searchRT (fit:HULQ.QuantifiedPeak) = 
+        try
+            searchRT - fit.EstimatedParams.[1] 
+        with
+        | _ -> nan
+
+    /// Calculates the difference between the scan time used to retreave the peak and the fitted peak midpoint.
+    let searchRTMinusFittedRtInferred searchRT fit = 
+        try
+            searchRT - fit.EstimatedParams.[1] 
+        with
+        | _ -> nan
+    
+    /// Aims to provide the best scan time estimate when quanitfying a inferred peak.
+    let chooseScanTime maxDiff searchRTMinusFittedRT initialScanTime (quantP:HULQ.QuantifiedPeak) = 
+        if Array.isEmpty quantP.EstimatedParams then
+            initialScanTime 
+        elif abs searchRTMinusFittedRT > maxDiff then
+            initialScanTime 
+        else
+            quantP.EstimatedParams.[1]
+
     ///
     let saveChart sequence globalMod ch (xXic:float[]) (yXic:float[]) ms2s avgScanTime (xToQuantify:float[]) (ypToQuantify:float[]) (fitY:float[])
             (xXicInferred:float[]) (yXicinferred:float[]) (xInferred:float[]) (inferredFit:float[]) (*(xEnvelopeSum:float[]) (yEnvelopeSum:float[])*) (peaks:FSharp.Stats.Signal.PeakDetection.IdentifiedPeak []) (pattern:PeakComparison []) plotDirectory =
@@ -370,13 +279,12 @@ module PSMBasedQuantification =
             ]
             |> Chart.Combine
         [xic;pattern]
-        |> Chart.Stack(2, 100.)
+        |> Chart.Stack(2, 0.1)
         |> Chart.withTitle(sprintf "Sequence= %s,globalMod = %i" sequence globalMod)
         |> Chart.withSize(2500.,800.)
         |> Chart.SaveHtmlAs(Path.Combine[|plotDirectory; ((sequence |> String.filter (fun x -> x <> '*')) + "_GMod_" + globalMod.ToString() + "Ch" + ch.ToString())|])
             
-            
-
+           
     // Method is based on: https://doi.org/10.1021/ac0600196
     /// Estimates the autocorrelation at lag 1 of a blank signal (containing only noise). Subsequently, the signal of interest is smoothed
     /// several times by a savitzky golay filter using constant polynomial order and variing windowWidth. For each iteration, the deviation
@@ -410,7 +318,7 @@ module PSMBasedQuantification =
             let getWindowWidth = initGetWindowWidth parameters.WindowSize parameters.PolynomOrder [|5 .. 2 .. 60|] 
             (fun xData yData -> 
                 let  windowSize = getWindowWidth yData
-                SignalDetectionTemp.getPeaks parameters.MinSNR parameters.PolynomOrder windowSize xData yData
+                FSharp.Stats.Signal.PeakDetection.SecondDerivative.getPeaks parameters.MinSNR parameters.PolynomOrder windowSize xData yData
                 )
         | Domain.XicProcessing.Wavelet parameters ->
             (fun xData yData -> 
@@ -491,8 +399,7 @@ module PSMBasedQuantification =
             KLDiv_UnCorrected   = klUnCorr
             KLDiv_Corrected     = klCorr
         }
-    
-    
+       
     ///
     let quantifyPeptides (processParams:Domain.QuantificationParams) (outputDir:string) (cn:SQLiteConnection) (instrumentOutput:string) (scoredPSMs:string)  =
 
@@ -520,9 +427,9 @@ module PSMBasedQuantification =
         let memoryDB = SearchDB.copyDBIntoMemory cn
         logger.Trace "Copy peptide DB into Memory: finished"
         logger.Trace "Get peptide lookUp function"
-        let dBParams     = getSDBParamsBy memoryDB
+        let dBParams     = getSDBParams memoryDB
         //let massLookUp = prepareSelectMassByModSequenceAndGlobalMod memoryDB
-        let peptideLookUp = getThreadSafePeptideLookUpFromFileBy memoryDB dBParams
+        let peptideLookUp = getThreadSafePeptideLookUpFromFileBySequenceAndGMod memoryDB dBParams
         let calcIonSeries aal = Fragmentation.Series.fragmentMasses Fragmentation.Series.bOfBioList Fragmentation.Series.yOfBioList dBParams.MassFunction aal
         logger.Trace "Get peptide lookUp function: finished"
         // initialize Reader and Transaction
@@ -573,14 +480,13 @@ module PSMBasedQuantification =
             Csv.CsvReader<PSMStatisticsResult>(SchemaMode=Csv.Fill).ReadFile(scoredPSMs,'\t',false,1)
             |> Array.ofSeq
         logger.Trace "Read scored PSMs:finished"
-
-        
+ 
         logger.Trace "Estimate ms1 mz accuracy"
         ///
         let ms1AccuracyEstimate = 
             peptides
             |> Seq.stDevBy (fun x -> abs(x.PrecursorMZ - Mass.toMZ x.TheoMass (float x.Charge)) )
-        logger.Trace "Estimate ms1 mz accuracy:finished"
+        logger.Trace (sprintf "Estimate ms1 mz accuracy:finished, Accuracy: %f" ms1AccuracyEstimate) 
             
         logger.Trace "init lookup functions"        
         ///
@@ -590,10 +496,6 @@ module PSMBasedQuantification =
         ///
         let getXIC = 
             initGetProcessedXIC logger processParams.BaseLineCorrection inReader retTimeIdxed processParams.XicExtraction.ScanTimeWindow processParams.XicExtraction.MzWindow_Da     
-        
-        ///
-        let getEnvelopeSum = 
-            initGetIsotopicEnvelope inReader retTimeIdxed processParams.XicExtraction.ScanTimeWindow processParams.XicExtraction.MzWindow_Da    
         
         ///
         let identifyPeaks = 
@@ -611,9 +513,8 @@ module PSMBasedQuantification =
             let targetPeptide = if pepIon.GlobalMod = 0 then unlabledPeptide else labeledPeptide            
             let psmsWithMatchedSums = countMatchedMasses targetPeptide psms 
             let ms2s = psmsWithMatchedSums |> Array.map (fun (psm,m) -> psm.ScanTime,m)
-            let averagePSM = average' getXIC psmsWithMatchedSums
+            let averagePSM = average getXIC psmsWithMatchedSums
             let avgMass = Mass.ofMZ (averagePSM.MeanPrecMz) (pepIon.Charge |> float)
-            //let envelopeSumX,envelopeSumY = getEnvelopeSum ch averagePSM.WeightedAvgScanTime averagePSM.MeanPrecMz 
             let peaks = identifyPeaks averagePSM.X_Xic averagePSM.Y_Xic
             if Array.isEmpty peaks then 
                 Chart.Point(averagePSM.X_Xic, averagePSM.Y_Xic)
@@ -624,21 +525,13 @@ module PSMBasedQuantification =
             else
             let peakToQuantify = BioFSharp.Mz.Quantification.HULQ.getPeakBy peaks averagePSM.WeightedAvgScanTime
             let quantP = BioFSharp.Mz.Quantification.HULQ.quantifyPeak peakToQuantify                        
-            let searchRTMinusFittedRT = quantP.EstimatedParams.[1] - averagePSM.WeightedAvgScanTime
-            let inferredScanTime =
-                if Array.isEmpty quantP.EstimatedParams then
-                    averagePSM.WeightedAvgScanTime
-                elif abs searchRTMinusFittedRT >  processParams.XicExtraction.ScanTimeWindow then
-                    averagePSM.WeightedAvgScanTime
-                else
-                    quantP.EstimatedParams.[1]
-
-            let clusterComparison_Target = comparePredictedAndMeasuredIsotopicCluster averagePSM.X_Xic averagePSM.Y_Xic averagePSM.Y_Xic_uncorrected pepIon.Charge targetPeptide.BioSequence quantP.EstimatedParams.[1] averagePSM.MeanPrecMz
-            
+            let searchRTMinusFittedRT = searchRTMinusFittedRtTarget averagePSM.WeightedAvgScanTime quantP
+            let inferredScanTime = chooseScanTime processParams.XicExtraction.ScanTimeWindow searchRTMinusFittedRT averagePSM.WeightedAvgScanTime quantP 
+            let clusterComparison_Target = comparePredictedAndMeasuredIsotopicCluster averagePSM.X_Xic averagePSM.Y_Xic averagePSM.Y_Xic_uncorrected pepIon.Charge targetPeptide.BioSequence quantP.EstimatedParams.[1] averagePSM.MeanPrecMz            
             if pepIon.GlobalMod = 0 then
                 let mz_Heavy = Mass.toMZ (labeledPeptide.Mass) (pepIon.Charge|> float)
                 let inferred_Heavy = quantifyInferredPeak getXIC identifyPeaks mz_Heavy averagePSM.WeightedAvgScanTime inferredScanTime
-                let searchRTMinusFittedRT_Heavy = inferred_Heavy.EstimatedParams.[1] - inferredScanTime
+                let searchRTMinusFittedRT_Heavy = searchRTMinusFittedRtInferred inferredScanTime inferred_Heavy
                 let clusterComparison_Heavy = comparePredictedAndMeasuredIsotopicCluster inferred_Heavy.X_Xic inferred_Heavy.Y_Xic inferred_Heavy.Y_Xic_uncorrected pepIon.Charge labeledPeptide.BioSequence quantP.EstimatedParams.[1] mz_Heavy
                 let corrLightHeavy  = calcCorrelation averagePSM.X_Xic quantP inferred_Heavy  
                 let chart = saveChart pepIon.Sequence pepIon.GlobalMod pepIon.Charge averagePSM.X_Xic averagePSM.Y_Xic ms2s averagePSM.WeightedAvgScanTime
@@ -661,7 +554,7 @@ module PSMBasedQuantification =
                 Quant_Light                                 = quantP.Area
                 MeasuredApex_Light                          = quantP.MeasuredApexIntensity
                 Seo_Light                                   = quantP.StandardErrorOfPrediction
-                Params_Light                                = quantP.EstimatedParams |> Array.map string |> String.concat ";"                
+                Params_Light                                = quantP.EstimatedParams            
                 Difference_SearchRT_FittedRT_Light          = searchRTMinusFittedRT
                 KLDiv_Observed_Theoretical_Light            = clusterComparison_Target.KLDiv_UnCorrected
                 KLDiv_CorrectedObserved_Theoretical_Light   = clusterComparison_Target.KLDiv_Corrected
@@ -669,18 +562,30 @@ module PSMBasedQuantification =
                 Quant_Heavy                                 = inferred_Heavy.Area
                 MeasuredApex_Heavy                          = inferred_Heavy.MeasuredApexIntensity
                 Seo_Heavy                                   = inferred_Heavy.StandardErrorOfPrediction
-                Params_Heavy                                = inferred_Heavy.EstimatedParams |> Array.map string |> String.concat ";"
+                Params_Heavy                                = inferred_Heavy.EstimatedParams 
                 Difference_SearchRT_FittedRT_Heavy          = searchRTMinusFittedRT_Heavy
                 KLDiv_Observed_Theoretical_Heavy            = clusterComparison_Heavy.KLDiv_UnCorrected
                 KLDiv_CorrectedObserved_Theoretical_Heavy   = clusterComparison_Heavy.KLDiv_Corrected
                 Correlation_Light_Heavy                     = corrLightHeavy
                 QuantificationSource                        = QuantificationSource.PSM
+                IsotopicPatternMz_Light                     = clusterComparison_Target.PeakComparisons |> Array.map (fun x -> x.Mz)
+                IsotopicPatternIntensity_Observed_Light     = clusterComparison_Target.PeakComparisons |> Array.map (fun x -> x.MeasuredIntensity)
+                IsotopicPatternIntensity_Corrected_Light    = clusterComparison_Target.PeakComparisons |> Array.map (fun x -> x.MeasuredIntensityCorrected)
+                RtTrace_Light                               = averagePSM.X_Xic 
+                IntensityTrace_Observed_Light               = averagePSM.Y_Xic_uncorrected
+                IntensityTrace_Corrected_Light              = averagePSM.Y_Xic
+                IsotopicPatternMz_Heavy                     = clusterComparison_Heavy.PeakComparisons |> Array.map (fun x -> x.Mz)
+                IsotopicPatternIntensity_Observed_Heavy     = clusterComparison_Heavy.PeakComparisons |> Array.map (fun x -> x.MeasuredIntensity)
+                IsotopicPatternIntensity_Corrected_Heavy    = clusterComparison_Heavy.PeakComparisons |> Array.map (fun x -> x.MeasuredIntensityCorrected)
+                RtTrace_Heavy                               = inferred_Heavy.X_Xic 
+                IntensityTrace_Observed_Heavy               = inferred_Heavy.Y_Xic_uncorrected
+                IntensityTrace_Corrected_Heavy              = inferred_Heavy.Y_Xic
                 }
                 |> Option.Some
             else
                 let mz_Light          = Mass.toMZ (unlabledPeptide.Mass) (pepIon.Charge|> float)
                 let inferred_Light       = quantifyInferredPeak getXIC identifyPeaks mz_Light averagePSM.WeightedAvgScanTime inferredScanTime
-                let searchRTMinusFittedRT_Light = inferred_Light.EstimatedParams.[1] - inferredScanTime  
+                let searchRTMinusFittedRT_Light = searchRTMinusFittedRtInferred inferredScanTime inferred_Light
                 let clusterComparison_Light = comparePredictedAndMeasuredIsotopicCluster inferred_Light.X_Xic inferred_Light.Y_Xic inferred_Light.Y_Xic_uncorrected pepIon.Charge unlabledPeptide.BioSequence quantP.EstimatedParams.[1] mz_Light
                 let corrLightHeavy        = calcCorrelation averagePSM.X_Xic quantP inferred_Light
                 let chart = saveChart pepIon.Sequence pepIon.GlobalMod pepIon.Charge averagePSM.X_Xic averagePSM.Y_Xic ms2s averagePSM.WeightedAvgScanTime
@@ -703,7 +608,7 @@ module PSMBasedQuantification =
                 Quant_Light                                 = inferred_Light.Area
                 MeasuredApex_Light                          = inferred_Light.MeasuredApexIntensity
                 Seo_Light                                   = inferred_Light.StandardErrorOfPrediction
-                Params_Light                                = inferred_Light.EstimatedParams |> Array.map string |> String.concat ";"
+                Params_Light                                = inferred_Light.EstimatedParams 
                 Difference_SearchRT_FittedRT_Light          = searchRTMinusFittedRT_Light
                 KLDiv_Observed_Theoretical_Light            = clusterComparison_Light.KLDiv_UnCorrected
                 KLDiv_CorrectedObserved_Theoretical_Light   = clusterComparison_Light.KLDiv_Corrected
@@ -711,19 +616,30 @@ module PSMBasedQuantification =
                 Quant_Heavy                                 = quantP.Area
                 MeasuredApex_Heavy                          = quantP.MeasuredApexIntensity
                 Seo_Heavy                                   = quantP.StandardErrorOfPrediction
-                Params_Heavy                                = quantP.EstimatedParams |> Array.map string |> String.concat ";"
+                Params_Heavy                                = quantP.EstimatedParams 
                 Difference_SearchRT_FittedRT_Heavy          = searchRTMinusFittedRT
                 KLDiv_Observed_Theoretical_Heavy            = clusterComparison_Target.KLDiv_UnCorrected
                 KLDiv_CorrectedObserved_Theoretical_Heavy   = clusterComparison_Target.KLDiv_Corrected
                 Correlation_Light_Heavy                     = corrLightHeavy
                 QuantificationSource                        = QuantificationSource.PSM
+                IsotopicPatternMz_Light                     = clusterComparison_Light.PeakComparisons |> Array.map (fun x -> x.Mz)
+                IsotopicPatternIntensity_Observed_Light     = clusterComparison_Light.PeakComparisons |> Array.map (fun x -> x.MeasuredIntensity)
+                IsotopicPatternIntensity_Corrected_Light    = clusterComparison_Light.PeakComparisons |> Array.map (fun x -> x.MeasuredIntensityCorrected)
+                RtTrace_Light                               = inferred_Light.X_Xic 
+                IntensityTrace_Observed_Light               = inferred_Light.Y_Xic_uncorrected
+                IntensityTrace_Corrected_Light              = inferred_Light.Y_Xic
+                IsotopicPatternMz_Heavy                     = clusterComparison_Target.PeakComparisons |> Array.map (fun x -> x.Mz)
+                IsotopicPatternIntensity_Observed_Heavy     = clusterComparison_Target.PeakComparisons |> Array.map (fun x -> x.MeasuredIntensity)
+                IsotopicPatternIntensity_Corrected_Heavy    = clusterComparison_Target.PeakComparisons |> Array.map (fun x -> x.MeasuredIntensityCorrected)
+                RtTrace_Heavy                               = averagePSM.X_Xic 
+                IntensityTrace_Observed_Heavy               = averagePSM.Y_Xic_uncorrected
+                IntensityTrace_Corrected_Heavy              = averagePSM.Y_Xic
                 }
                 |> Option.Some
             with
             | ex ->
                 
                 logger.Trace (sprintf "Quantfailed: %A" ex)
-                printfn "%A" ex
                 Option.None
 
         let lableFreeQuantification (pepIon:PeptideIon)  (psms:PSMStatisticsResult []) = 
@@ -734,7 +650,7 @@ module PSMBasedQuantification =
             let unlabledPeptide = peptideLookUp pepIon.Sequence 0
             let psmsWithMatchedSums = countMatchedMasses unlabledPeptide psms 
             let ms2s = psmsWithMatchedSums |> Array.map (fun (psm,m) -> psm.ScanTime,m)
-            let averagePSM = average' getXIC psmsWithMatchedSums
+            let averagePSM = average getXIC psmsWithMatchedSums
             let avgMass = Mass.ofMZ (averagePSM.MeanPrecMz) (pepIon.Charge |> float)
             let peaks = 
                 try
@@ -742,7 +658,6 @@ module PSMBasedQuantification =
                 with 
                 | ex ->
                     logger.Trace (sprintf "Quantfailed: %A" ex)
-                    printfn "%A" ex
                     [||]
             if Array.isEmpty peaks then 
                 Chart.Point(averagePSM.X_Xic, averagePSM.Y_Xic)
@@ -753,10 +668,10 @@ module PSMBasedQuantification =
             else
             let peakToQuantify = BioFSharp.Mz.Quantification.HULQ.getPeakBy peaks averagePSM.WeightedAvgScanTime
             let quantP = BioFSharp.Mz.Quantification.HULQ.quantifyPeak peakToQuantify
-            let searchRTMinusFittedRT = quantP.EstimatedParams.[1] - averagePSM.WeightedAvgScanTime
-            let chart = saveChart pepIon.Sequence pepIon.GlobalMod pepIon.Charge averagePSM.X_Xic averagePSM.Y_Xic ms2s averagePSM.WeightedAvgScanTime
-                                peakToQuantify.XData peakToQuantify.YData quantP.YPredicted (*[||] [||]*) [||] [||] [||] [||] peaks [||] plotDirectory
+            let searchRTMinusFittedRT = searchRTMinusFittedRtTarget averagePSM.WeightedAvgScanTime quantP 
             let clusterComparison_Target = comparePredictedAndMeasuredIsotopicCluster averagePSM.X_Xic averagePSM.Y_Xic averagePSM.Y_Xic_uncorrected pepIon.Charge unlabledPeptide.BioSequence quantP.EstimatedParams.[1] averagePSM.MeanPrecMz
+            let chart = saveChart pepIon.Sequence pepIon.GlobalMod pepIon.Charge averagePSM.X_Xic averagePSM.Y_Xic ms2s averagePSM.WeightedAvgScanTime
+                                peakToQuantify.XData peakToQuantify.YData quantP.YPredicted  [||] [||] [||] [||] peaks clusterComparison_Target.PeakComparisons plotDirectory
             {
             StringSequence                              = pepIon.Sequence
             GlobalMod                                   = pepIon.GlobalMod
@@ -775,7 +690,7 @@ module PSMBasedQuantification =
             Quant_Light                                 = quantP.Area
             MeasuredApex_Light                          = quantP.MeasuredApexIntensity
             Seo_Light                                   = quantP.StandardErrorOfPrediction
-            Params_Light                                = quantP.EstimatedParams |> Array.map string |> String.concat ";"
+            Params_Light                                = quantP.EstimatedParams 
             Difference_SearchRT_FittedRT_Light          = searchRTMinusFittedRT
             KLDiv_Observed_Theoretical_Light            = clusterComparison_Target.KLDiv_UnCorrected
             KLDiv_CorrectedObserved_Theoretical_Light   = clusterComparison_Target.KLDiv_Corrected
@@ -783,18 +698,29 @@ module PSMBasedQuantification =
             Quant_Heavy                                 = nan
             MeasuredApex_Heavy                          = nan
             Seo_Heavy                                   = nan
-            Params_Heavy                                = ""
+            Params_Heavy                                = [||]
             Difference_SearchRT_FittedRT_Heavy          = nan
             KLDiv_Observed_Theoretical_Heavy            = nan
             KLDiv_CorrectedObserved_Theoretical_Heavy   = nan
             Correlation_Light_Heavy                     = nan
             QuantificationSource                        = QuantificationSource.PSM
+            IsotopicPatternMz_Light                     = clusterComparison_Target.PeakComparisons|> Array.map (fun x -> x.Mz)
+            IsotopicPatternIntensity_Observed_Light     = clusterComparison_Target.PeakComparisons|> Array.map (fun x -> x.MeasuredIntensity)
+            IsotopicPatternIntensity_Corrected_Light    = clusterComparison_Target.PeakComparisons|> Array.map (fun x -> x.MeasuredIntensityCorrected)
+            RtTrace_Light                               = averagePSM.X_Xic 
+            IntensityTrace_Observed_Light               = averagePSM.Y_Xic_uncorrected
+            IntensityTrace_Corrected_Light              = averagePSM.Y_Xic
+            IsotopicPatternMz_Heavy                     = [||]
+            IsotopicPatternIntensity_Observed_Heavy     = [||]
+            IsotopicPatternIntensity_Corrected_Heavy    = [||]
+            RtTrace_Heavy                               = [||]
+            IntensityTrace_Observed_Heavy               = [||]
+            IntensityTrace_Corrected_Heavy              = [||]
             }
             |> Option.Some
             with
             | ex ->
                 logger.Trace (sprintf "Quantfailed: %A" ex)
-                printfn "%A" ex
                 Option.None
         logger.Trace "init quantification functions:finished"
         
@@ -817,7 +743,7 @@ module PSMBasedQuantification =
             )
         |> Array.filter Option.isSome
         |> Array.map (fun x -> x.Value)
-        |> FSharpAux.IO.SeqIO.Seq.CSV "\t" true true
+        |> SeqIO'.csv "\t" true false
         |> FSharpAux.IO.SeqIO.Seq.writeOrAppend (outFilePath)
         logger.Trace "executing quantification:finished"
         

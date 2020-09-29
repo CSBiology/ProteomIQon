@@ -1,10 +1,10 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFrameworks>net47;netcoreapp2.1</TargetFrameworks>
-    <RootNamespace>PSMBasedQuantification</RootNamespace>
-    <AssemblyName>PSMBasedQuantification</AssemblyName>
-    <Name>PSMBasedQuantification</Name>
+    <RootNamespace>ConsensusSpectralLibrary</RootNamespace>
+    <AssemblyName>ConsensusSpectralLibrary</AssemblyName>
+    <Name>ConsensusSpectralLibrary</Name>
     <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
@@ -13,16 +13,11 @@
       del SQLite.Interop.dll
     </PostBuildEvent>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net47|AnyCPU'">
-    <PlatformTarget>AnyCPU</PlatformTarget>
-  </PropertyGroup>
   <ItemGroup>
-    <None Include="App.config" />
-    <Compile Include="PSMBasedQuantification.fs" />
+    <None Include="ConsensusLibraryTest.fsx" />
+    <Compile Include="ConsensusSpectralLibrary.fs" />
     <Compile Include="CLIArgumentParsing.fs" />
     <Compile Include="Program.fs" />
-    <None Include="testing.fsx" />
-    <None Include="testing_wavelet_3.fsx" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\ProteomIQon\ProteomIQon.fsproj">
