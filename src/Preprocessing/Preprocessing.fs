@@ -100,7 +100,36 @@ module Preprocessing =
                         BioFSharp.Mz.SignalDetection.Wavelet.toCentroidWithRicker2D waveletParameters mzData intensityData
         | _ as r , PeakPicking.Centroid CentroidizationMode.Manufacturer ->
             failwith "Manufacturer peak picking is only supported for .baf (Bruker) files."
-  
+
+    let getReader (instrumentOutput:string) = 
+        match System.IO.Path.GetExtension instrumentOutput with 
+        | ".wiff" -> 
+            let wiffReader = new Wiff.WiffFileReader(instrumentOutput) 
+            wiffReader :> IMzIODataReader
+        | ".d"    -> 
+            let bafPath = Path.Combine[|instrumentOutput;"analysis.baf"|]
+            let bafReader = new Bruker.BafFileReader(bafPath)
+            bafReader :> IMzIODataReader
+        | ".mzlite" -> 
+            let mzLiteReader = new MzSQL.MzSQL(instrumentOutput)
+            mzLiteReader :> IMzIODataReader
+        | ".raw" -> 
+            let rawReader = new Thermo.ThermoRawFileReader(instrumentOutput)
+            rawReader :> IMzIODataReader
+        | ".RAW" -> 
+            let rawReader = new Thermo.ThermoRawFileReader(instrumentOutput)
+            rawReader :> IMzIODataReader
+        | _       ->  
+            failwith "Reader could not be opened. Only the formats .wiff (ABSciex), baf (Bruker), .raw (Thermo) or .mzlite (CSBiology) are supported." 
+    
+    /// Returns the default runID used by manufacturers
+    let getDefaultRunID (mzReader:IMzIODataReader) = 
+        match mzReader with
+        | :? Wiff.WiffFileReader as r        -> "sample=0" 
+        | :? BafFileReader as r         -> "run_1" 
+        | :? ThermoRawFileReader as r   -> "run_1"
+        | :? MzSQL as r                 -> "sample=0"
+
     ///
     let insertSprectrum (compress:BinaryDataCompressionType) (outReader: MzSQL.MzSQL) (runID:string)
         (ms1PeakPicking: MassSpectrum -> float [] * float []) (ms2PeakPicking: MassSpectrum -> float [] * float [])
@@ -140,7 +169,7 @@ module Preprocessing =
 
         logger.Trace "Init connection to input data base."
         // initialize Reader and Transaction
-        let inReader = Core.MzIO.Reader.getReader instrumentOutput
+        let inReader = getReader instrumentOutput
         let inRunID  = Core.MzIO.Reader.getDefaultRunID inReader
         let inTr = inReader.BeginTransaction()
 
