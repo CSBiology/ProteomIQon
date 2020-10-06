@@ -2,11 +2,25 @@
 // FAKE build script
 // --------------------------------------------------------------------------------------
 
-#r "paket: groupref FakeBuild //"
+#r "paket:
+nuget BlackFox.Fake.BuildTask
+nuget Fake.Core.Target
+nuget Fake.Core.Process
+nuget Fake.Core.ReleaseNotes
+nuget Fake.IO.FileSystem
+nuget Fake.DotNet.Cli
+nuget Fake.DotNet.MSBuild
+nuget Fake.DotNet.AssemblyInfoFile
+nuget Fake.DotNet.Paket
+nuget Fake.DotNet.FSFormatting
+nuget Fake.DotNet.Fsi
+nuget Fake.DotNet.NuGet
+nuget Fake.Api.Github
+nuget Fake.DotNet.Testing.Expecto //"
 
-#load "./.fake/build.fsx/intellisense.fsx"
+#load ".fake/build.fsx/intellisense.fsx"
 
-
+open BlackFox.Fake
 open System.IO
 open Fake.Core
 open Fake.Core.TargetOperators
@@ -19,6 +33,8 @@ open Fake.DotNet.Testing
 open Fake.Tools
 open Fake.Api
 open Fake.Tools.Git
+
+Target.initEnvironment ()
 
 [<AutoOpen>]
 module TemporaryDocumentationHelpers =
@@ -99,7 +115,7 @@ let summary = "Project has no summmary; update build.fsx"
 let description = "Project has no description; update build.fsx"
 
 // List of author names (for NuGet package)
-let author = "David Zimmer, Timo MÃ¼hlhaus, Lukas Weil"
+let author = "David Zimmer, Timo Mühlhaus, Lukas Weil"
 
 // Tags for your project (for NuGet package)
 let tags = "proteomics computational modular quantification labeled lablefree fsharp"
@@ -252,7 +268,7 @@ Target.create "RunTests" (fun _ ->
 Target.create "NuGet" (fun _ ->
     Paket.pack(fun p ->
         { p with
-            ToolPath=".paket/paket.exe"
+            ToolType = ToolType.CreateLocalTool()
             OutputPath = "bin"
             Version = release.NugetVersion
             ReleaseNotes = String.toLines release.Notes})
@@ -284,7 +300,7 @@ let githubLink = sprintf "https://github.com/%s/%s" github_release_user gitName
 // Specify more information about your project
 let info =
   [ "project-name", "ProteomIQon"
-    "project-author", "David Zimmer, Timo MÃ¼hlhaus, Lukas Weil"
+    "project-author", "David Zimmer, Timo Mühlhaus, Lukas Weil"
     "project-summary", "Project has no summmary; update build.fsx"
     "project-github", githubLink
     "project-nuget", "http://nuget.org/packages/ProteomIQon" ]

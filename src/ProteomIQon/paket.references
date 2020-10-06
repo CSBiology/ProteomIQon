@@ -10,10 +10,8 @@ FSharp.Plotly
 BioFSharp.Mz
 MzIO
 MzIO.Processing
-MzIO.SQL 
-MzIO.Bruker 
+MzIO.SQL
 MzIO.Wiff
-MzIO.Thermo
 Deedle
 
 group Logging
