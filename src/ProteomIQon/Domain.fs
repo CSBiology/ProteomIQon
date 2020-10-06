@@ -257,3 +257,12 @@ module Domain =
             AggregationF        : AggregationMethod
             XicProcessing       : XicProcessing
         }
+
+    type MzTABParams =
+        {
+            ExperimentNames      : (string*int)[]
+            StudyVariables       : (string*int[]*int)[]
+            SearchEngineNamesProt: (string*string*int)[]
+            SearchEngineNamesPep : (string*string*int)[]
+            SearchEngineNamesPSM : (string*string*int)[]
+        }

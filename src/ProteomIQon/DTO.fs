@@ -793,3 +793,23 @@ module Dto =
                 AggregationF         = dtoSWATHAnalysisParams.AggregationF
                 XicProcessing        = dtoSWATHAnalysisParams.XicProcessing
             }
+
+    type MzTABParams =
+        {
+            ExperimentNames      : (string*int)[]
+            StudyVariables       : (string*int[]*int)[]
+            SearchEngineNamesProt: (string*string*int)[]
+            SearchEngineNamesPep : (string*string*int)[]
+            SearchEngineNamesPSM : (string*string*int)[]
+        }
+
+    module MzTABParams =
+
+        let toDomain (dtoMzTABParams: MzTABParams): Domain.MzTABParams =
+            {
+                ExperimentNames       = dtoMzTABParams.ExperimentNames
+                StudyVariables        = dtoMzTABParams.StudyVariables
+                SearchEngineNamesProt = dtoMzTABParams.SearchEngineNamesProt
+                SearchEngineNamesPep  = dtoMzTABParams.SearchEngineNamesPep
+                SearchEngineNamesPSM  = dtoMzTABParams.SearchEngineNamesPSM
+            }
