@@ -8,7 +8,7 @@ open MzIO
 open MzIO.IO
 open MzIO.Commons.Arrays
 open MzIO.Binary
-open MzIO.Bruker
+//open MzIO.Bruker
 open MzIO.Wiff
 //open MzIO.(*Thermo*)
 open MzIO.MzSQL
@@ -45,19 +45,19 @@ module Core =
                 | ".wiff" -> 
                     let wiffReader = new Wiff.WiffFileReader(instrumentOutput) 
                     wiffReader :> IMzIODataReader
-                | ".d"    -> 
-                    let bafPath = Path.Combine[|instrumentOutput;"analysis.baf"|]
-                    let bafReader = new Bruker.BafFileReader(bafPath)
-                    bafReader :> IMzIODataReader
+                //| ".d"    -> 
+                //    let bafPath = Path.Combine[|instrumentOutput;"analysis.baf"|]
+                //    let bafReader = new Bruker.BafFileReader(bafPath)
+                //    bafReader :> IMzIODataReader
                 | ".mzlite" -> 
                     let mzLiteReader = new MzSQL.MzSQL(instrumentOutput)
                     mzLiteReader :> IMzIODataReader
-                | ".raw" -> 
-                    let rawReader = new Thermo.ThermoRawFileReader(instrumentOutput)
-                    rawReader :> IMzIODataReader
-                | ".RAW" -> 
-                    let rawReader = new Thermo.ThermoRawFileReader(instrumentOutput)
-                    rawReader :> IMzIODataReader
+                //| ".raw" -> 
+                //    let rawReader = new Thermo.ThermoRawFileReader(instrumentOutput)
+                //    rawReader :> IMzIODataReader
+                //| ".RAW" -> 
+                //    let rawReader = new Thermo.ThermoRawFileReader(instrumentOutput)
+                //    rawReader :> IMzIODataReader
                 | _       ->  
                     failwith "Reader could not be opened. Only the formats .wiff (ABSciex), baf (Bruker), .raw (Thermo) or .mzlite (CSBiology) are supported." 
             
@@ -65,10 +65,10 @@ module Core =
             let getDefaultRunID (mzReader:IMzIODataReader) = 
                 match mzReader with
                 | :? WiffFileReader as r        -> "sample=0" 
-                | :? BafFileReader as r         -> "run_1" 
+                //| :? BafFileReader as r         -> "run_1" 
                 //| :? ThermoRawFileReader as r   -> "run_1"
                 | :? MzSQL as r                 -> "sample=0"
-                | :? Thermo.ThermoRawFileReader as r -> "run_1"
+                //| :? Thermo.ThermoRawFileReader as r -> "run_1"
             /// Initializes a transaction scope.
             let beginTransaction (mzReader:IMzIODataReader) =
                 mzReader.BeginTransaction()
