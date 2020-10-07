@@ -135,11 +135,11 @@ module MzTAB =
     let readQpsm (path: string) =
         SeqIO.Seq.fromFileWithCsvSchema<PSMStatisticsResult>(path, '\t', true)
         |> Seq.toArray
-    
+
     let readQuant (path: string) =
         SeqIO.Seq.fromFileWithCsvSchema<QuantificationResult>(path, '\t', true)
         |> Seq.toArray
-    
+
     let readProt (path: string) =
         SeqIO.Seq.fromFileWithCsvSchema<InferredProteinClassItemOut>(path, '\t', true)
         |> Seq.toArray
@@ -157,7 +157,7 @@ module MzTAB =
                         |> String.concat ";"
             }
         )
-  
+
     let readTab (path: string) =
         SeqIO.Seq.fromFileWithCsvSchema<TableSort>(path, '\t', true)
         |> Seq.toArray
@@ -763,3 +763,151 @@ module MzTAB =
         sb.AppendLine() |> ignore
         IO.File.AppendAllText(path, sb.ToString())
 
+    let psmHeader path (mzTABParams: Domain.MzTABParams) =
+        let searchEnginecount = mzTABParams.SearchEngineNamesPep.Length
+        let searchEngineScoreMS =
+            formatOne searchEnginecount (sprintf "search_engine_score[%i]")
+        let sb = new Text.StringBuilder()
+        sb.AppendFormat(
+            "PSH\tsequence\tPSM_ID\taccession\tunique\tdatabase\tdatabase_version\tsearch_engine\t{0}\treliability\tmodifications\tretention_time\tcharge\texp_mass_to_charge\tcalc_mass_to_charge\turi\tspectra_ref\tpre\tpost\tstart\tend",
+            searchEngineScoreMS
+        ) |> ignore
+        sb.AppendLine() |> ignore
+        IO.File.AppendAllText(path, sb.ToString())
+
+    let protBody path (proteinS: ProteinSection[]) =
+        let sb = new Text.StringBuilder()
+        proteinS
+        |> Array.map (fun prot ->
+            sb.AppendFormat(
+                "PRT\t{0}\t{1}\t{2}\t{3}\t{4}\t{5}\t{6}\t{7}\t{8}\t{9}\t{10}\t{11}\t{12}\t{13}\t{14}\t{15}\t{16}\t{17}\t{18}\t{19}\t{20}\t{21}",
+                prot.accession,
+                prot.description,
+                prot.taxid,
+                prot.species,
+                prot.database,
+                prot.database_version,
+                prot.search_engine,
+                //needs to be adapted for different search engines
+                prot.best_search_engine_score,
+                prot.search_engine_score_ms_run
+                |> Array.map (fun score ->
+                    score
+                    |> concatRuns "null"
+                )
+                |> String.concat "\t",
+                prot.reliability,
+                prot.num_psms_ms_run
+                |> concatRuns "0",
+                prot.num_peptides_distinct_ms_run
+                |> concatRuns "0",
+                prot.num_peptides_unique_ms_run
+                |> concatRuns "0",
+                prot.ambiguity_members
+                |> String.concat ",",
+                prot.modifications,
+                prot.uri,
+                prot.go_terms,
+                prot.protein_coverage,
+                prot.protein_abundance_assay
+                |> concatRuns "null",
+                prot.protein_abundance_study_variable
+                |> concatRuns "null",
+                prot.protein_abundance_stdev_study_variable
+                |> concatRuns "null",
+                prot.protein_abundance_std_error_study_variable
+                |> concatRuns "null"
+            ) |> ignore
+            sb.AppendLine()
+        ) |> ignore
+        IO.File.AppendAllText(path, sb.ToString())
+
+    let pepBody path (peptideS: PeptideSection[]) =
+        let sb = new Text.StringBuilder()
+        peptideS
+        |> Array.map (fun pep ->
+            printfn "%A" pep.accession
+            pep.accession
+            |> Array.iter (fun prot ->
+                sb.AppendFormat(
+                    "PEP\t{0}\t{1}\t{2}\t{3}\t{4}\t{5}\t{6}\t{7}\t{8}\t{9}\t{10}\t{11}\t{12}\t{13}\t{14}\t{15}\t{16}\t{17}\t{18}\t{19}",
+                    pep.sequence,
+                    prot,
+                    pep.unique,
+                    pep.database,
+                    pep.database_version,
+                    pep.search_engine,
+                    //needs to be adapted for different search engines
+                    pep.best_search_engine_score,
+                    pep.search_engine_score_ms_run
+                    |> Array.map (fun score ->
+                        score
+                        |> concatRuns "null"
+                    )
+                    |> String.concat "\t",
+                    pep.reliability,
+                    pep.modifications,
+                    pep.retention_time
+                    |> fun (x,y) ->
+                        match (x,y) with
+                        |None, Some b -> sprintf "null|%f" b
+                        |Some a, None -> sprintf "%f|null" a
+                        |Some a, Some b -> sprintf "%f|%f" a b
+                    ,
+                    pep.retention_time_window,
+                    pep.charge,
+                    pep.mass_to_charge,
+                    pep.uri,
+                    pep.spectra_ref,
+                    pep.peptide_abundance_assay
+                    |> concatRuns "null",
+                    pep.peptide_abundance_study_variable
+                    |> concatRuns "null",
+                    pep.peptide_abundance_stdev_study_variable
+                    |> concatRuns "null",
+                    pep.peptide_abundance_std_error_study_variable
+                    |> concatRuns "null"
+                ) |> ignore
+                sb.AppendLine()
+                |> ignore
+            )
+        ) |> ignore
+        IO.File.AppendAllText(path, sb.ToString())
+
+    let psmBody path (psmS: PSMSection[]) =
+        let sb = new Text.StringBuilder()
+        psmS
+        |> Array.map (fun psm ->
+            psm.accession
+            |> Array.iter (fun prot ->
+                sb.AppendFormat(
+                    "PSM\t{0}\t{1}\t{2}\t{3}\t{4}\t{5}\t{6}\t{7}\t{8}\t{9}\t{10}\t{11}\t{12}\t{13}\t{14}\t{15}\t{16}\t{17}\t{18}\t{19}",
+                    psm.sequence,
+                    psm.PSM_ID,
+                    prot,
+                    psm.unique,
+                    psm.database,
+                    psm.database_version,
+                    psm.search_engine,
+                    //needs to be adapted for different search engines
+                    psm.search_engine_score
+                    |> Array.map string
+                    |> String.concat "\t",
+                    psm.reliability,
+                    psm.modifications,
+                    psm.retention_time,
+                    psm.charge,
+                    psm.exp_mass_to_charge,
+                    psm.calc_mass_to_charge,
+                    psm.uri,
+                    psm.spectra_ref,
+                    psm.pre,
+                    psm.post,
+                    psm.start,
+                    psm.ending
+                ) |> ignore
+                sb.AppendLine()
+                |> ignore
+            )
+        ) |> ignore
+        IO.File.AppendAllText(path, sb.ToString())
