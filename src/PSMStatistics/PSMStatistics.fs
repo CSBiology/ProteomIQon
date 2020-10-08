@@ -269,13 +269,14 @@ module PSMStatistics =
                                     | _ -> 
                                         None
                                 )
-
+            logger.Trace (sprintf "Number of results: %i" result.Length)
             result
             |> FSharpAux.IO.SeqIO.Seq.CSV "\t" true true
             |> FSharpAux.IO.FileIO.writeToFile false outFilePath
 
         with
         | ex ->
+            logger.Trace (sprintf "%A" ex.Message)
             printfn "%A" ex.Message
             ()
         logger.Trace "Done."
