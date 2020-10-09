@@ -16,15 +16,12 @@ nuget FSharp.Plotly
 nuget Microsoft.ML ~> 1.5.0-preview
 nuget Microsoft.ML.FastTree ~> 1.5.0-preview
 nuget Deedle
+nuget FSharp.Stats ~> 0.3.0-beta
 
 git https://github.com/CSBiology/FSharpAux.git nuget Packages: /
 
 nuget FSharpAux
 nuget FSharpAux.IO
-
-git https://github.com/CSBiology/FSharp.Stats.git nuget Packages: /
-
-nuget FSharp.Stats
 
 git https://github.com/CSBiology/BioFSharp.git nuget Packages: /
 
@@ -33,7 +30,7 @@ nuget BioFSharp.IO
 
 git https://github.com/CSBiology/BioFSharp.Mz.git nuget Packages: /
 
-nuget BioFSharp.Mz ~> 0.1.3
+nuget BioFSharp.Mz ~> 0.1.4
 
 source lib/ThermoFisher
 nuget ThermoFisher.CommonCore.BackgroundSubtraction
@@ -51,7 +48,6 @@ nuget MzIO.Wiff
 nuget MzIO.MzML
 nuget MzIO.Thermo
 
-clitool dotnet-fake
 
 group Formatting
 source https://nuget.org/api/v2
