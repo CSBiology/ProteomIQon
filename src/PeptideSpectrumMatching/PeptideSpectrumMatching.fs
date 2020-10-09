@@ -12,8 +12,11 @@ open MzIO
 open MzIO.IO
 open MzIO.Processing
 open FSharpAux.IO
-
 module PeptideSpectrumMatching =
+
+    let tryGet tolerance (xTar:float) (data:#seq<(float*float)>) = 
+        let xTmp,yTmp = data |> Seq.minBy (fun (x,y) -> abs(x-xTar))
+        if abs(xTmp-xTar) < tolerance then Some(xTmp,yTmp) else None
 
     open System.IO
     open System.Data
@@ -113,9 +116,9 @@ module PeptideSpectrumMatching =
                                 items
                             )
 
-        positionMetricScoredCharges
+        positionMetricScoredCharges,peakPosStdDev
 
-    let psm (processParams:PeptideSpectrumMatchingParams) lookUpF calcIonSeries (reader: IMzIODataReader) (outFilePath: string) (ms2sAndAssignedCharges: AssignedCharge list list) =
+    let psm (processParams:PeptideSpectrumMatchingParams) peakPosStdDev lookUpF calcIonSeries (reader: IMzIODataReader) (outFilePath: string) (ms2sAndAssignedCharges: AssignedCharge list list) =
         let logger = Logging.createLogger (Path.GetFileNameWithoutExtension outFilePath)
         let resultWriter = new System.IO.StreamWriter(outFilePath, true)
         let (ms2IDAssignedCharge) =
@@ -144,78 +147,6 @@ module PeptideSpectrumMatching =
                                             let recSpec =
                                                 Peaks.unzipIMzliteArray (reader.ReadSpectrumPeaks(ms2Id).Peaks)
                                                 |> fun (mzData,intensityData) -> PeakArray.zip mzData intensityData
-                                            let precMz = assCh.PrecursorMZ
-                                            let lowerMass,upperMass =
-                                                let massWithH2O = assCh.PutMass
-                                                Mass.rangePpm processParams.LookUpPPM massWithH2O
-                                            let lookUpResults :SearchDB.LookUpResult<AminoAcids.AminoAcid> list =
-                                                lookUpF lowerMass upperMass
-                                            let theoSpecsN =
-                                                lookUpResults
-                                                |> List.map (fun lookUpResult ->
-                                                                let ionSeries = calcIonSeries lookUpResult.BioSequence
-                                                                lookUpResult,ionSeries
-                                                            )
-                                            
-                                            //let precMzMinus1 = precMz - (Mass.Table.NMassInU / (ch|> float))
-                                            //let lowerMassM1,upperMassM1 =
-                                            //    let massWithH2O = BioFSharp.Mass.ofMZ precMzMinus1 (ch|> float)
-                                            //    Mass.rangePpm processParams.LookUpPPM massWithH2O
-                                            //let lookUpResultsM1 :SearchDB.LookUpResult<AminoAcids.AminoAcid> list =
-                                            //    lookUpF lowerMassM1 upperMassM1
-                                            //let theoSpecsM1 =
-                                            //    lookUpResultsM1
-                                            //    |> List.map (fun lookUpResult ->
-                                            //                    let ionSeries = calcIonSeries lookUpResult.BioSequence
-                                            //                    lookUpResult,
-                                            //                    {
-                                            //                        ionSeries with 
-                                            //                            Fragmentation.FragmentMasses.TargetMasses = 
-                                            //                                ionSeries.TargetMasses 
-                                            //                                |> List.map (fun pf -> 
-                                            //                                    let mp = TaggedMass.createTaggedMass pf.MainPeak.Iontype (pf.MainPeak.Mass + Mass.Table.NMassInU) 
-                                            //                                    let dps = pf.DependentPeaks |> List.map (fun dp ->TaggedMass.createTaggedMass dp.Iontype (dp.Mass + Mass.Table.NMassInU) )
-                                            //                                    Peaks.createPeakFamily mp dps
-                                            //                                    )
-                                            //                            Fragmentation.FragmentMasses.DecoyMasses  = 
-                                            //                                ionSeries.DecoyMasses 
-                                            //                                |> List.map (fun pf -> 
-                                            //                                    let mp = TaggedMass.createTaggedMass pf.MainPeak.Iontype (pf.MainPeak.Mass + Mass.Table.NMassInU) 
-                                            //                                    let dps = pf.DependentPeaks |> List.map (fun dp ->TaggedMass.createTaggedMass dp.Iontype (dp.Mass + Mass.Table.NMassInU) )
-                                            //                                    Peaks.createPeakFamily mp dps
-                                            //                                    )
-                                            //                    }
-                                            //                )                                            
-                                            //let precMzPlus1 = precMz + (Mass.Table.NMassInU / (ch|> float))
-                                            //let lowerMassP1,upperMassP1 =
-                                            //    let massWithH2O = BioFSharp.Mass.ofMZ precMzPlus1 (ch|> float)
-                                            //    Mass.rangePpm processParams.LookUpPPM massWithH2O
-                                            //let lookUpResultsP1 :SearchDB.LookUpResult<AminoAcids.AminoAcid> list =
-                                            //    lookUpF lowerMassP1 upperMassP1
-                                            //let theoSpecsP1 =
-                                            //    lookUpResultsP1
-                                            //    |> List.map (fun lookUpResult ->
-                                            //                    let ionSeries = calcIonSeries lookUpResult.BioSequence
-                                            //                    lookUpResult,
-                                            //                    {
-                                            //                        ionSeries with 
-                                            //                            Fragmentation.FragmentMasses.TargetMasses = 
-                                            //                                ionSeries.TargetMasses 
-                                            //                                |> List.map (fun pf -> 
-                                            //                                    let mp = TaggedMass.createTaggedMass pf.MainPeak.Iontype (pf.MainPeak.Mass - Mass.Table.NMassInU) 
-                                            //                                    let dps = pf.DependentPeaks |> List.map (fun dp ->TaggedMass.createTaggedMass dp.Iontype (dp.Mass - Mass.Table.NMassInU) )
-                                            //                                    Peaks.createPeakFamily mp dps
-                                            //                                    )
-                                            //                            Fragmentation.FragmentMasses.DecoyMasses  = 
-                                            //                                ionSeries.DecoyMasses 
-                                            //                                |> List.map (fun pf -> 
-                                            //                                    let mp = TaggedMass.createTaggedMass pf.MainPeak.Iontype (pf.MainPeak.Mass - Mass.Table.NMassInU) 
-                                            //                                    let dps = pf.DependentPeaks |> List.map (fun dp ->TaggedMass.createTaggedMass dp.Iontype (dp.Mass - Mass.Table.NMassInU) )
-                                            //                                    Peaks.createPeakFamily mp dps
-                                            //                                    )
-                                            //                    }
-                                            //                )                                            
-                                            let theoSpecs = theoSpecsN(*@theoSpecsM1@theoSpecsP1*)
                                             let floorToClosest10 x = 
                                                 Math.Floor(x / 10.) * 10.            
                                             let ceilToClosest10 x =
@@ -224,6 +155,48 @@ module PeptideSpectrumMatching =
                                                 let low = Math.Max(0.,System.Math.Round((recSpec |> Array.minBy (fun x -> x.Mz)).Mz,0) |> floorToClosest10)
                                                 let top = Math.Round((recSpec |> Array.maxBy (fun x -> x.Mz)).Mz,0)  |> ceilToClosest10
                                                 low,top
+
+                                            let getLookUpsResults precMz = 
+                                                let lowerMass,upperMass =
+                                                    let massWithH2O = BioFSharp.Mass.ofMZ precMz (ch|> float) 
+                                                    Mass.rangePpm processParams.LookUpPPM massWithH2O
+                                                let lookUpResults :SearchDB.LookUpResult<AminoAcids.AminoAcid> list =
+                                                    lookUpF lowerMass upperMass
+                                                lookUpResults
+                                            let precMz' = 
+                                                let ms1Spec = 
+                                                    Peaks.unzipIMzliteArray (reader.ReadSpectrumPeaks(assCh.PrecursorSpecID).Peaks)
+                                                    ||> Seq.zip
+                                                let mz = assCh.PrecursorMZ
+                                                let monoIso = tryGet (3. * peakPosStdDev) mz ms1Spec
+                                                let mzMinusOne = mz - (Mass.Table.PMassInU / (float ch)) 
+                                                let minusOne = tryGet (3. * peakPosStdDev) mzMinusOne ms1Spec
+                                                match monoIso,minusOne with
+                                                //| Some (x,picked),Some (x2,minusOne) -> 
+                                                //    if (picked / minusOne) > 0.8 then Some x2 else None
+                                                //| Some (x,picked),None -> 
+                                                //    Some mzMinusOne
+                                                
+                                                | _ -> 
+                                                    //None
+                                                    Some mzMinusOne
+                                            let lookUpResults = 
+                                                match precMz' with 
+                                                | Some pMz -> 
+                                                    (getLookUpsResults pMz)@(getLookUpsResults assCh.PrecursorMZ)
+                                                    |> List.distinctBy (fun x -> x.ModSequenceID)
+                                                | None -> 
+                                                    (getLookUpsResults assCh.PrecursorMZ)
+                                                
+                                            let theoSpecsN =
+                                                lookUpResults
+                                                |> List.map (fun lookUpResult ->
+                                                                let ionSeries = calcIonSeries lookUpResult.BioSequence
+                                                                lookUpResult,ionSeries
+                                                            )
+                                       
+                                            let theoSpecs = theoSpecsN(*@theoSpecsM1@theoSpecsP1*)
+
                                             let sequestTheoreticalSpecs = SequestLike.getTheoSpecs scanRange assCh.PrecCharge theoSpecs
                                             let sequestLikeScored =
                                                 try
@@ -249,6 +222,7 @@ module PeptideSpectrumMatching =
                                                 |> List.truncate 10
                                                 |> List.map (fun x -> (x.ModSequenceID,x.GlobalMod),x)
                                                 |> Map.ofList
+
                                             let andromedaTheorticalSpecs =
                                                 theoSpecs
                                                 |> List.filter (fun (lookUpResult,fragments) ->
@@ -256,7 +230,7 @@ module PeptideSpectrumMatching =
                                                                     bestDecoySequest  |> Map.containsKey (lookUpResult.ModSequenceID,lookUpResult.GlobalMod)
                                                                )
 
-                                                |> AndromedaLike.getTheoSpecs scanRange assCh.PrecCharge    
+                                                |> XScoring.getTheoSpecs scanRange assCh.PrecCharge    
                                                 
                                             let andromedaLikeScored,xtandemScored = 
                                                 XScoring.calcAndromedaAndXTandemScore processParams.AndromedaParams.PMinPMax scanRange processParams.AndromedaParams.MatchingIonTolerancePPM
@@ -340,6 +314,7 @@ module PeptideSpectrumMatching =
                                                 ) andromedaLikeScored xtandemScored
                                                 |> List.choose id
                                                 |> List.groupBy (fun x -> fst x)
+                                                |> List.sortBy fst
                                                 |> List.map (fun (x,y) ->
                                                                 y
                                                                 |> List.map snd
@@ -403,11 +378,11 @@ module PeptideSpectrumMatching =
 
         // Charge state determination
         logger.Trace "Starting charge state determination."
-        let ms2sAndAssignedCharges = getPrecursorCharge chargeParams rnd inRunID inReader
+        let ms2sAndAssignedCharges,peakPosStdDev = getPrecursorCharge chargeParams rnd inRunID inReader
         logger.Trace "Finished charge state determination."
 
         logger.Trace "Starting peptide spectrum matching."
-        psm processParams dbLookUp calcIonSeries inReader outFilePath ms2sAndAssignedCharges
+        psm processParams peakPosStdDev dbLookUp  calcIonSeries inReader outFilePath ms2sAndAssignedCharges
         logger.Trace "Finished peptide spectrum matching."
 
         inTr.Commit()
