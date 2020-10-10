@@ -411,6 +411,134 @@ module MzTAB =
             |> fun x -> sb.AppendLine(x)
         |None -> sb
 
+    let metaDataSection (md: MetaDataSection) =
+        let sb = new Text.StringBuilder()
+        let mzTabVersion =
+            sb.AppendFormat("MTD\tmzTab-version\t{0}", md.mzTab_version)
+            |> ignore
+            sb.AppendLine()
+        let mzTabMode =
+            sb.AppendFormat("MTD\tmzTab-mode\t{0}", md.mzTab_mode)
+            |> ignore
+            sb.AppendLine()
+        let mzTabType =
+            sb.AppendFormat("MTD\tmzTab-type\t{0}", md.mzTab_type)
+            |> ignore
+            sb.AppendLine()
+        let mzTabID =
+            md.mzTab_ID
+            |> matchOption (sprintf "MTD\tmzTab-ID\t%s") sb
+        let title =
+            md.title
+            |> matchOption (sprintf "MTD\ttitle\t%s") sb
+        let description =
+            sb.AppendFormat("MTD\tdescription\t{0}", md.description)
+            |> ignore
+            sb.AppendLine()
+        let sampleProcessing =
+            let f =
+                let pickF =
+                    sortAndPick snd fst
+                let strF =
+                    formatOneMD (sprintf "MTD\tsample_processing[%i]\t%s")
+                pickF >> strF
+            md.sample_processing
+            |> matchOption f sb
+        let instrumentName =
+            let f =
+                let pickF =
+                    sortAndPick snd fst
+                let strF =
+                    formatOneMD (sprintf "MTD\tinstrument[%i]-name\t%s")
+                pickF >> strF
+            md.instrument_name
+            |> matchOption f sb
+        let instrumentSource =
+            let f =
+                let pickF =
+                    sortAndPick snd fst
+                let strF =
+                    formatOneMD (sprintf "MTD\tinstrument[%i]-source\t%s")
+                pickF >> strF
+            md.instrument_source
+            |> matchOption f sb
+        let instrumentAnalyzer =
+            let f =
+                let pickF =
+                    sortAndPick snd fst
+                let strF =
+                    formatTwoMD (sprintf "MTD\tinstrument[%i]-analyzer[%i]\t%s")
+                pickF >> strF
+            md.instrument_analyzer
+            |> matchOption f sb
+        let instrumentDetector =
+            let f =
+                let pickF =
+                    sortAndPick snd fst
+                let strF =
+                    formatOneMD (sprintf "MTD\tinstrument[%i]-detector\t%s")
+                pickF >> strF
+            md.instrument_detector
+            |> matchOption f sb
+        let software =
+            let f =
+                let pickF =
+                    sortAndPick snd fst
+                let strF =
+                    formatOneMD (sprintf "MTD\tsoftware[%i]\t%s")
+                pickF >> strF
+            md.software
+            |> matchOption f sb
+        let softwareSetting =
+            let f =
+                let pickF =
+                    sortAndPick snd fst
+                let strF =
+                    // documentation isn't clear about the number behind setting
+                    // sample shows it without number, but according to instructions there should be a number
+                    formatTwoMD (sprintf "MTD\tsoftware[%i]-setting[%i]\t%s")
+                pickF >> strF
+            md.software_setting
+            |> matchOption f sb
+        let protSearchEngineScore =
+            let f =
+                let pickF =
+                    sortAndPick (fun (_,_,x)->x) (fun (y,_,_)->y)
+                let strF =
+                    formatOneMD (sprintf "MTD\tprotein_search_engine_score[%i]\t%s")
+                pickF >> strF
+            md.protein_search_engine_score
+            |> matchOption f sb
+        let pepSearchEngineScore =
+            let f =
+                let pickF =
+                    sortAndPick (fun (_,_,x)->x) (fun (y,_,_)->y)
+                let strF =
+                    formatOneMD (sprintf "MTD\tpeptide_search_engine_score[%i]\t%s")
+                pickF >> strF
+            md.peptide_search_engine_score
+            |> matchOption f sb
+        let psmSearchEngineScore =
+            let f =
+                let pickF =
+                    sortAndPick (fun (_,_,x)->x) (fun (y,_,_)->y)
+                let strF =
+                    formatOneMD (sprintf "MTD\tpsm_search_engine_score[%i]\t%s")
+                pickF >> strF
+            md.psm_search_engine_score
+            |> matchOption f sb
+        let fdr =
+            let f =
+                (String.concat "|") >> sprintf "MTD\tfalse_discovery_rate\t%s"
+            md.false_discovery_rate
+            |> matchOption f sb
+        let publication =
+            let strF =
+                formatOneMD (sprintf "MTD\tpsm_search_engine_score[%i]\t%s")
+            md.publication
+            |> matchOption strF sb
+        printfn "%s" (sb.ToString())
+
     let proteinSection (allAligned: AlignedComplete[]) (mzTABParams: Domain.MzTABParams) =
         let experimentNames = mzTABParams.ExperimentNames
         let groupedTab =
