@@ -39,6 +39,70 @@ module MzTAB =
             QValue           : float
         }
 
+    type MetaDataSection =
+        {
+            mzTab_version                    : string
+            mzTab_mode                       : string
+            mzTab_type                       : string
+            mzTab_ID                         : (string)option
+            title                            : (string)option
+            description                      : string
+            sample_processing                : ((string*int)[])option
+            instrument_name                  : ((string*int)[])option
+            instrument_source                : ((string*int)[])option
+            instrument_analyzer              : ((string[]*int)[])option
+            instrument_detector              : ((string*int)[])option
+            software                         : ((string*int)[])option
+            software_setting                 : ((string[]*int)[])option
+            protein_search_engine_score      : ((string*string*int)[])option
+            peptide_search_engine_score      : ((string*string*int)[])option
+            psm_search_engine_score          : ((string*string*int)[])option
+            false_discovery_rate             : (string[])option
+            publication                      : (string[])option
+            contact_name                     : ((string*int)[])option
+            contact_affiliation              : ((string*int)[])option
+            contact_email                    : ((string*int)[])option
+            uri                              : (string)option
+            fixed_mod                        : (string*int)[]
+            fixed_mod_site                   : ((string*int)[])option
+            fixed_mod_position               : ((string*int)[])option
+            variable_mod                     : (string*int)[]
+            variable_mod_site                : ((string*int)[])option
+            variable_mod_position            : ((string*int)[])option
+            quantification_method            : (string)option
+            protein_quantification_unit      : (string)option
+            peptide_quantification_unit      : (string)option
+            ms_run_format                    : ((string*int)[])option
+            ms_run_location                  : (string*int)[]
+            ms_run_id_format                 : ((string*int)[])option
+            ms_run_fragmentation_method      : ((string[]*int)[])option
+            ms_run_hash                      : ((string*int)[])option
+            ms_run_hash_method               : ((string*int)[])option
+            custom                           : (string[])option
+            sample_species                   : ((string[]*int)[])option
+            sample_tissue                    : ((string[]*int)[])option
+            sample_cell_type                 : ((string[]*int)[])option
+            sample_disease                   : ((string[]*int)[])option
+            sample_description               : ((string*int)[])option
+            sample_custom                    : ((string[]*int)[])option
+            assay_quantification_reagent     : ((string*int)[])option
+            assay_quantification_mod         : (((string*int)[]*int)[])option
+            assay_quantification_mod_site    : (((string*int)[]*int)[])option
+            assay_quantification_mod_position: (((string*int)[]*int)[])option
+            assay_sample_ref                 : ((string*int)[])option
+            assay_ms_run_ref                 : ((string*int)[])option
+            study_variable_assay_refs        : ((int[]*int)[])option
+            study_variable_sample_refs       : ((int[]*int)[])option
+            study_variable_description       : ((string*int)[])option
+            cv_label                         : ((string*int)[])option
+            cv_full_name                     : ((string*int)[])option
+            cv_version                       : ((string*int)[])option
+            cv_url                           : ((string*int)[])option
+            colunit_protein                  : (string)option
+            colunit_psm                      : (string)option
+            colunit_small_molecule           : (string)option
+        }
+
     type ProteinSection =
         {
             accession                                 : string
