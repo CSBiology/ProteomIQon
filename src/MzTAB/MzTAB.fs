@@ -383,6 +383,34 @@ module MzTAB =
         )
         |> String.concat "\t"
 
+    let sortAndPick (sortBy: 'T -> 'Key) (pick: 'T -> 'C) (input: 'T[]) =
+        input
+        |> Array.sortBy sortBy
+        |> Array.map pick
+
+    let formatOneMD (strF: int -> string -> string) (input: string[]) =
+        [|
+            for i=0 to (input.Length - 1) do
+                yield strF (i+1) input.[i]
+        |]
+        |> String.concat "\n"
+
+    let formatTwoMD (strF: int -> int -> string -> string) (input: string[][])=
+        [|
+            for i=0 to (input.Length - 1) do
+                for j=0 to (input.[i].Length - 1) do
+                    yield strF (i+1) (j+1) input.[i].[j]
+        |]
+        |> String.concat "\n"
+
+    let matchOption (format: 'a -> string) (sb: Text.StringBuilder) (item: 'a option) =
+        match item with
+        |Some x -> 
+            x
+            |> format
+            |> fun x -> sb.AppendLine(x)
+        |None -> sb
+
     let proteinSection (allAligned: AlignedComplete[]) (mzTABParams: Domain.MzTABParams) =
         let experimentNames = mzTABParams.ExperimentNames
         let groupedTab =
