@@ -51,7 +51,7 @@ module TableSort =
 
     let removeNan = Array.filter (System.Double.IsNaN >> not)
 
-    let aggregateWithTukey ((tukeyC,method): float*Domain.Transform) (agMethod: Domain.AggregationMethod) (logger: NLog.Logger)(series: Series<'K1,'V2>): float =
+    let aggregateWithTukey ((tukeyC,method): float*Domain.Transform) (agMethod: Domain.AggregationMethod) (logger: NLog.Logger)(series: Series<'K1,float>): float =
         let values = 
             series.Values
             |> Seq.map float
@@ -276,6 +276,7 @@ module TableSort =
                         allFields
                         |> Array.filter (fun x -> Array.contains x tukeyFields |> not)
                     // calculates distinct peptide count based on the amount of peptides used for ratio calculation before tukey filtering
+                    loggerFile.Trace "calculating distinct peptide count"
                     let distinctPeptideCount =
                         if param.ProtColumnsOfInterest |> Array.contains "DistinctPeptideCount" && labeled then
                             [|"Ratio"|]
@@ -290,13 +291,19 @@ module TableSort =
                             )
                         else
                             [||]
+                    loggerFile.Trace "processing columns with tukey property"
                     let tukeyColumns =
                         param.Tukey
                         |> Array.map (fun (name,tukeyC,method) ->
                             alignedTables
+                            |> fun x -> 
+                                x
                             |> Frame.sliceCols [name]
+                            |> fun x -> 
+                                x
                             |> Frame.applyLevel (fun (prot,pep,id) -> prot) (aggregateWithTukey (tukeyC, method) param.AggregatorPepToProt loggerFile)
                         )
+                    loggerFile.Trace "processing columns with no tukey property"
                     let noTukeyColumns =
                         fieldsWoTukey
                         |> Array.map (fun name ->
@@ -304,6 +311,7 @@ module TableSort =
                             |> Frame.sliceCols [name]
                             |> Frame.applyLevel (fun (prot,pep,id) -> prot) (aggregationMethodSeries param.AggregatorPepToProt)
                         )
+                    loggerFile.Trace (sprintf "calculating stats for %A" param.StatisticalMeasurements)
                     let statsColumns =
                         param.StatisticalMeasurements
                         |> Array.map (fun (name, method) ->
@@ -313,6 +321,7 @@ module TableSort =
                             |> Frame.applyLevel (fun (prot,pep,id) -> prot) seriesMethod
                             |> Frame.mapColKeys (fun c -> c + columnNameExtension)
                         )
+                    loggerFile.Trace "combining all columns"
                     let combinedColumns =
                         [tukeyColumns;distinctPeptideCount;noTukeyColumns;statsColumns]
                         |> Array.concat
@@ -322,6 +331,7 @@ module TableSort =
                     |> Frame.mapRowKeys (fun prot -> prot, System.IO.Path.GetFileNameWithoutExtension protFile)
                 alignedAggTables
             ) quantFiles protFiles
+        logger.Trace "Merging all results"
         tables
         |> Frame.mergeAll
         |> fun frame ->
