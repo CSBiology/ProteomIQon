@@ -62,7 +62,7 @@ module MzTAB =
             contact_name                     : ((string*int)[])option
             contact_affiliation              : ((string*int)[])option
             contact_email                    : ((string*int)[])option
-            uri                              : (string)option
+            uri                              : ((string*int)[])option
             fixed_mod                        : (string*int)[]
             fixed_mod_site                   : ((string*int)[])option
             fixed_mod_position               : ((string*int)[])option
@@ -73,6 +73,7 @@ module MzTAB =
             protein_quantification_unit      : (string)option
             peptide_quantification_unit      : (string)option
             ms_run_format                    : ((string*int)[])option
+            // if unknown, "null" must be reported
             ms_run_location                  : (string*int)[]
             ms_run_id_format                 : ((string*int)[])option
             ms_run_fragmentation_method      : ((string[]*int)[])option
@@ -99,6 +100,7 @@ module MzTAB =
             cv_version                       : ((string*int)[])option
             cv_url                           : ((string*int)[])option
             colunit_protein                  : (string)option
+            colunit_peptide                  : (string)option
             colunit_psm                      : (string)option
             colunit_small_molecule           : (string)option
         }
@@ -534,9 +536,380 @@ module MzTAB =
             |> matchOption f sb
         let publication =
             let strF =
-                formatOneMD (sprintf "MTD\tpsm_search_engine_score[%i]\t%s")
+                formatOneMD (sprintf "MTD\tpublication[%i]\t%s")
             md.publication
             |> matchOption strF sb
+        let contactName =
+            let f =
+                let pickF =
+                    sortAndPick snd fst
+                let strF =
+                    formatOneMD (sprintf "MTD\tcontact[%i]-name\t%s")
+                pickF >> strF
+            md.contact_name
+            |> matchOption f sb
+        let contactAffiliation =
+            let f =
+                let pickF =
+                    sortAndPick snd fst
+                let strF =
+                    formatOneMD (sprintf "MTD\tcontact[%i]-affiliation\t%s")
+                pickF >> strF
+            md.contact_affiliation
+            |> matchOption f sb
+        let contactEmail =
+            let f =
+                let pickF =
+                    sortAndPick snd fst
+                let strF =
+                    formatOneMD (sprintf "MTD\tcontact[%i]-email\t%s")
+                pickF >> strF
+            md.contact_email
+            |> matchOption f sb
+        let uri =
+            let f =
+                let pickF =
+                    sortAndPick snd fst
+                let strF =
+                    formatOneMD (sprintf "MTD\turi[%i]\t%s")
+                pickF >> strF
+            md.uri
+            |> matchOption f sb
+        let fixedMod =
+            let f =
+                let pickF =
+                    sortAndPick snd fst
+                let strF =
+                    formatOneMD (sprintf "MTD\tfixed_mod[%i]\t%s")
+                pickF >> strF
+            md.fixed_mod
+            |> fun x -> sb.AppendLine (f x)
+        let fixedModSite =
+            let f =
+                let pickF =
+                    sortAndPick snd fst
+                let strF =
+                    formatOneMD (sprintf "MTD\tfixed_mod[%i]-site\t%s")
+                pickF >> strF
+            md.fixed_mod_site
+            |> matchOption f sb
+        let fixedModPosition =
+            let f =
+                let pickF =
+                    sortAndPick snd fst
+                let strF =
+                    formatOneMD (sprintf "MTD\tfixed_mod[%i]-position\t%s")
+                pickF >> strF
+            md.fixed_mod_position
+            |> matchOption f sb
+        let variableMod =
+            let f =
+                let pickF =
+                    sortAndPick snd fst
+                let strF =
+                    formatOneMD (sprintf "MTD\tvariable_mod[%i]\t%s")
+                pickF >> strF
+            md.variable_mod
+            |> fun x -> sb.AppendLine (f x)
+        let variableModSite =
+            let f =
+                let pickF =
+                    sortAndPick snd fst
+                let strF =
+                    formatOneMD (sprintf "MTD\tvariable_mod[%i]-site\t%s")
+                pickF >> strF
+            md.variable_mod_site
+            |> matchOption f sb
+        let variableModPosition =
+            let f =
+                let pickF =
+                    sortAndPick snd fst
+                let strF =
+                    formatOneMD (sprintf "MTD\tvariable_mod[%i]-position\t%s")
+                pickF >> strF
+            md.variable_mod_position
+            |> matchOption f sb
+        let quantificationMethod =
+            md.quantification_method
+            |> matchOption (sprintf "MTD\tquantification_method\t%s") sb
+        let proteinQuantificationUnit =
+            md.protein_quantification_unit
+            |> matchOption (sprintf "MTD\tprotein_quantification_unit\t%s") sb
+        let peptideQuantificationUnit =
+            md.peptide_quantification_unit
+            |> matchOption (sprintf "MTD\tpeptide_quantification_unit\t%s") sb
+        let msRunFormat =
+            let f =
+                let pickF =
+                    sortAndPick snd fst
+                let strF =
+                    formatOneMD (sprintf "MTD\tms_run[%i]-format\t%s")
+                pickF >> strF
+            md.ms_run_format
+            |> matchOption f sb
+        let msRunLocation =
+            let f =
+                let pickF =
+                    sortAndPick snd fst
+                let strF =
+                    formatOneMD (sprintf "MTD\tms_run[%i]-location\t%s")
+                pickF >> strF
+            md.ms_run_location
+            |> fun x -> sb.AppendLine (f x)
+        let msRunIdFormat =
+            let f =
+                let pickF =
+                    sortAndPick snd fst
+                let strF =
+                    formatOneMD (sprintf "MTD\tms_run[%i]-id_format\t%s")
+                pickF >> strF
+            md.ms_run_id_format
+            |> matchOption f sb
+        let msRunFragmentationMethod =
+            let f =
+                let pickF =
+                    sortAndPick snd fst
+                let concatF (input: string[][])=
+                    input
+                    |> Array.map (fun x ->
+                        x
+                        |> String.concat "|"
+                    )
+                let strF =
+                    formatOneMD (sprintf "MTD\tms_run[%i]-fragmentation_method\t%s")
+                pickF >> concatF >> strF
+            md.ms_run_fragmentation_method
+            |> matchOption f sb
+        let msRunHash =
+            let f =
+                let pickF =
+                    sortAndPick snd fst
+                let strF =
+                    formatOneMD (sprintf "MTD\tms_run[%i]-hash\t%s")
+                pickF >> strF
+            md.ms_run_hash
+            |> matchOption f sb
+        let msRunHashMethod =
+            let f =
+                let pickF =
+                    sortAndPick snd fst
+                let strF =
+                    formatOneMD (sprintf "MTD\tms_run[%i]-hash_method\t%s")
+                pickF >> strF
+            md.ms_run_hash_method
+            |> matchOption f sb
+        let custom =
+            let strF =
+                    formatOneMD (sprintf "MTD\tcustom[%i]\t%s")
+            md.custom
+            |> matchOption strF sb
+        let sampleSpecies =
+            let f =
+                let pickF =
+                    sortAndPick snd fst
+                let strF =
+                    formatTwoMD (sprintf "MTD\tsample[%i]-species[%i]\t%s")
+                pickF >> strF
+            md.sample_species
+            |> matchOption f sb
+        let sampleTissue =
+            let f =
+                let pickF =
+                    sortAndPick snd fst
+                let strF =
+                    formatTwoMD (sprintf "MTD\tsample[%i]-tissue[%i]\t%s")
+                pickF >> strF
+            md.sample_tissue
+            |> matchOption f sb
+        let sampleCellType =
+            let f =
+                let pickF =
+                    sortAndPick snd fst
+                let strF =
+                    formatTwoMD (sprintf "MTD\tsample[%i]-cell_type[%i]\t%s")
+                pickF >> strF
+            md.sample_cell_type
+            |> matchOption f sb
+        let sampleDisease =
+            let f =
+                let pickF =
+                    sortAndPick snd fst
+                let strF =
+                    formatTwoMD (sprintf "MTD\tsample[%i]-disease[%i]\t%s")
+                pickF >> strF
+            md.sample_disease
+            |> matchOption f sb
+        let sampleDescription =
+            let f =
+                let pickF =
+                    sortAndPick snd fst
+                let strF =
+                    formatOneMD (sprintf "MTD\tsample[%i]-description\t%s")
+                pickF >> strF
+            md.sample_description
+            |> matchOption f sb
+        let sampleCustom =
+            let f =
+                let pickF =
+                    sortAndPick snd fst
+                let strF =
+                    formatTwoMD (sprintf "MTD\tsample[%i]-custom[%i]\t%s")
+                pickF >> strF
+            md.sample_custom
+            |> matchOption f sb
+        let assayQuantificationReagent =
+            let f =
+                let pickF =
+                    sortAndPick snd fst
+                let strF =
+                    formatOneMD (sprintf "MTD\tassay[%i]-quantification_reagent\t%s")
+                pickF >> strF
+            md.assay_quantification_reagent
+            |> matchOption f sb
+        let assayQuantificationMod =
+            let f =
+                let pickF =
+                    sortAndPick snd fst
+                let pickF2 i =
+                    i
+                    |> Array.map (sortAndPick snd fst)
+                let strF =
+                    formatTwoMD (sprintf "MTD\tassay[%i]-quantification_mod[%i]\t%s")
+                pickF >> pickF2 >> strF
+            md.assay_quantification_mod
+            |> matchOption f sb
+        let assayQuantificationModSite =
+            let f =
+                let pickF =
+                    sortAndPick snd fst
+                let pickF2 i =
+                    i
+                    |> Array.map (sortAndPick snd fst)
+                let strF =
+                    formatTwoMD (sprintf "MTD\tassay[%i]-quantification_mod[%i]-site\t%s")
+                pickF >> pickF2 >> strF
+            md.assay_quantification_mod_site
+            |> matchOption f sb
+        let assayQuantificationModPosition =
+            let f =
+                let pickF =
+                    sortAndPick snd fst
+                let pickF2 i =
+                    i
+                    |> Array.map (sortAndPick snd fst)
+                let strF =
+                    formatTwoMD (sprintf "MTD\tassay[%i]-quantification_mod[%i]-position\t%s")
+                pickF >> pickF2 >> strF
+            md.assay_quantification_mod_position
+            |> matchOption f sb
+        let assaySampleRef =
+            let f =
+                let pickF =
+                    sortAndPick snd fst
+                let strF =
+                    formatOneMD (sprintf "MTD\tassay[%i]-sample_ref\t%s")
+                pickF >> strF
+            md.assay_sample_ref
+            |> matchOption f sb
+        let assayMsRunRef =
+            let f =
+                let pickF =
+                    sortAndPick snd fst
+                let strF =
+                    formatOneMD (sprintf "MTD\tassay[%i]-ms_run_ref\t%s")
+                pickF >> strF
+            md.assay_ms_run_ref
+            |> matchOption f sb
+        let studyVariableAssayRefs =
+            let f =
+                let pickF =
+                    sortAndPick snd fst
+                let concatF (input: int[][])=
+                    input
+                    |> Array.map (fun x ->
+                        x
+                        |> Array.map (fun y ->
+                            sprintf "assay[%i]" y
+                        )
+                        |> String.concat ","
+                    )
+                let strF =
+                    formatOneMD (sprintf "MTD\tstudy_variable[%i]-assay_refs\t%s")
+                pickF >> concatF >> strF
+            md.study_variable_assay_refs
+            |> matchOption f sb
+        let studyVariableSampleRefs =
+            let f =
+                let pickF =
+                    sortAndPick snd fst
+                let concatF (input: int[][])=
+                    input
+                    |> Array.map (fun x ->
+                        x
+                        |> Array.map (fun y ->
+                            sprintf "assay[%i]" y
+                        )
+                        |> String.concat ","
+                    )
+                let strF =
+                    formatOneMD (sprintf "MTD\tstudy_variable[%i]-sample_refs\t%s")
+                pickF >> concatF >> strF
+            md.study_variable_sample_refs
+            |> matchOption f sb
+        let studyVariableDescription =
+            let f =
+                let pickF =
+                    sortAndPick snd fst
+                let strF =
+                    formatOneMD (sprintf "MTD\tstudy_variable[%i]-description\t%s")
+                pickF >> strF
+            md.study_variable_description
+            |> matchOption f sb
+        let cvLabel =
+            let f =
+                let pickF =
+                    sortAndPick snd fst
+                let strF =
+                    formatOneMD (sprintf "MTD\tcv[%i]-label\t%s")
+                pickF >> strF
+            md.cv_label
+            |> matchOption f sb
+        let cvFullName =
+            let f =
+                let pickF =
+                    sortAndPick snd fst
+                let strF =
+                    formatOneMD (sprintf "MTD\tcv[%i]-full_name\t%s")
+                pickF >> strF
+            md.cv_full_name
+            |> matchOption f sb
+        let cvVersion =
+            let f =
+                let pickF =
+                    sortAndPick snd fst
+                let strF =
+                    formatOneMD (sprintf "MTD\tcv[%i]-version\t%s")
+                pickF >> strF
+            md.cv_version
+            |> matchOption f sb
+        let cvUrl =
+            let f =
+                let pickF =
+                    sortAndPick snd fst
+                let strF =
+                    formatOneMD (sprintf "MTD\tcv[%i]-url\t%s")
+                pickF >> strF
+            md.cv_url
+            |> matchOption f sb
+        let colunitProtein =
+            md.colunit_protein
+            |> matchOption (sprintf "MTD\tcolunit-protein\t%s") sb
+        let colunitPeptide =
+            md.colunit_peptide
+            |> matchOption (sprintf "MTD\tcolunit-peptide\t%s") sb
+        let colunitPSM =
+            md.colunit_psm
+            |> matchOption (sprintf "MTD\tcolunit-psm\t%s") sb
         printfn "%s" (sb.ToString())
 
     let proteinSection (allAligned: AlignedComplete[]) (mzTABParams: Domain.MzTABParams) =
