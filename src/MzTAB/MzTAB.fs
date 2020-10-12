@@ -47,7 +47,7 @@ module MzTAB =
             mzTab_ID                         : (string)option
             title                            : (string)option
             description                      : string
-            sample_processing                : ((string*int)[])option
+            sample_processing                : ((ParamMappings.SampleProcessing[]*int)[])option
             instrument_name                  : ((string*int)[])option
             instrument_source                : ((string*int)[])option
             instrument_analyzer              : ((string[]*int)[])option
@@ -441,9 +441,18 @@ module MzTAB =
             let f =
                 let pickF =
                     sortAndPick snd fst
+                let paramF (p: ParamMappings.SampleProcessing[][]) =
+                    p
+                    |> Array.map (fun x ->
+                        x
+                        |> Array.map (fun y ->
+                            y.toParam
+                        )
+                        |> String.concat "|"
+                    )
                 let strF =
                     formatOneMD (sprintf "MTD\tsample_processing[%i]\t%s")
-                pickF >> strF
+                pickF >> paramF >> strF
             md.sample_processing
             |> matchOption f sb
         let instrumentName =
