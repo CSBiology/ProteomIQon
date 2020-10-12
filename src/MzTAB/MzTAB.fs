@@ -47,7 +47,7 @@ module MzTAB =
             mzTab_ID                         : (string)option
             title                            : (string)option
             description                      : string
-            sample_processing                : ((ParamMappings.SampleProcessing[]*int)[])option
+            sample_processing                : ((Ontologies.SampleProcessing[]*int)[])option
             instrument_name                  : ((string*int)[])option
             instrument_source                : ((string*int)[])option
             instrument_analyzer              : ((string[]*int)[])option
@@ -413,7 +413,7 @@ module MzTAB =
             |> fun x -> sb.AppendLine(x)
         |None -> sb
 
-    let metaDataSection (md: MetaDataSection) =
+    let metaDataSection path (md: MetaDataSection) =
         let sb = new Text.StringBuilder()
         let mzTabVersion =
             sb.AppendFormat("MTD\tmzTab-version\t{0}", md.mzTab_version)
@@ -441,7 +441,7 @@ module MzTAB =
             let f =
                 let pickF =
                     sortAndPick snd fst
-                let paramF (p: ParamMappings.SampleProcessing[][]) =
+                let paramF (p: Ontologies.SampleProcessing[][]) =
                     p
                     |> Array.map (fun x ->
                         x
@@ -919,7 +919,7 @@ module MzTAB =
         let colunitPSM =
             md.colunit_psm
             |> matchOption (sprintf "MTD\tcolunit-psm\t%s") sb
-        printfn "%s" (sb.ToString())
+        IO.File.AppendAllText(path, sb.ToString())
 
     let proteinSection (allAligned: AlignedComplete[]) (mzTABParams: Domain.MzTABParams) =
         let experimentNames = mzTABParams.ExperimentNames

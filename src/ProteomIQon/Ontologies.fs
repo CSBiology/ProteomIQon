@@ -1,6 +1,6 @@
 ﻿namespace ProteomIQon
 
-module ParamMappings =
+module Ontologies =
 
     type SampleProcessing =
         |PeakPicking
