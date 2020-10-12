@@ -331,4 +331,5 @@ module Domain =
             SearchEngineNamesProt: (string*string*int)[]
             SearchEngineNamesPep : (string*string*int)[]
             SearchEngineNamesPSM : (string*string*int)[]
+            MetaData             : MetaDataSection
         }

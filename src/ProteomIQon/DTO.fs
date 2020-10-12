@@ -801,6 +801,7 @@ module Dto =
             SearchEngineNamesProt: (string*string*int)[]
             SearchEngineNamesPep : (string*string*int)[]
             SearchEngineNamesPSM : (string*string*int)[]
+            MetaData             : MetaDataSection
         }
 
     module MzTABParams =
@@ -812,4 +813,5 @@ module Dto =
                 SearchEngineNamesProt = dtoMzTABParams.SearchEngineNamesProt
                 SearchEngineNamesPep  = dtoMzTABParams.SearchEngineNamesPep
                 SearchEngineNamesPSM  = dtoMzTABParams.SearchEngineNamesPSM
+                MetaData              = dtoMzTABParams.MetaData
             }
