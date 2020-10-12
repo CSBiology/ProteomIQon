@@ -209,6 +209,8 @@ module PeptideSpectrumMatching =
                                                         |> fun (mzData,intensityData) -> 
                                                             Array.zip mzData intensityData
                                                     logger.Trace (sprintf "spec with id: %s MinScan: %f MaxScan: %f , theoSpecLength: %A fails with: %A " ms2Id (fst scanRange) (snd scanRange) (sequestTheoreticalSpecs |> List.map (fun x -> x.DecoyTheoSpec.Length,x.TheoSpec.Length )) recSpec ); []
+                                            
+                                            
                                             let bestTargetSequest =
                                                 sequestLikeScored
                                                 |> List.filter (fun (x:SearchEngineResult.SearchEngineResult<float>) -> x.IsTarget)
@@ -376,11 +378,11 @@ module PeptideSpectrumMatching =
         logger.Trace (sprintf "Run ID: %s" inRunID)
         let inTr = inReader.BeginTransaction()
 
-        // Charge state determination
+   
         logger.Trace "Starting charge state determination."
         let ms2sAndAssignedCharges,peakPosStdDev = getPrecursorCharge chargeParams rnd inRunID inReader
         logger.Trace "Finished charge state determination."
-
+        
         logger.Trace "Starting peptide spectrum matching."
         psm processParams peakPosStdDev dbLookUp  calcIonSeries inReader outFilePath ms2sAndAssignedCharges
         logger.Trace "Finished peptide spectrum matching."
