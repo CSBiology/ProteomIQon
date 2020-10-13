@@ -111,7 +111,7 @@ module Ontologies =
             |ProteinCterm ->
                 "Protein C-term"
 
-    type SearchEngineScores =
+    type SearchEngineScore =
         |Percolator
         |Mascot
         |SequestConsensusScore

@@ -273,21 +273,21 @@ module Domain =
             instrument_detector              : ((string*int)[])option
             software                         : ((string*int)[])option
             software_setting                 : ((string[]*int)[])option
-            protein_search_engine_score      : ((string*string*int)[])option
-            peptide_search_engine_score      : ((string*string*int)[])option
-            psm_search_engine_score          : ((string*string*int)[])option
+            protein_search_engine_score      : ((Ontologies.SearchEngineScore*string*int)[])option
+            peptide_search_engine_score      : ((Ontologies.SearchEngineScore*string*int)[])option
+            psm_search_engine_score          : ((Ontologies.SearchEngineScore*string*int)[])option
             false_discovery_rate             : (string[])option
             publication                      : (string[])option
             contact_name                     : ((string*int)[])option
             contact_affiliation              : ((string*int)[])option
             contact_email                    : ((string*int)[])option
             uri                              : ((string*int)[])option
-            fixed_mod                        : (string*int)[]
+            fixed_mod                        : (Ontologies.Modification*int)[]
             fixed_mod_site                   : ((string*int)[])option
-            fixed_mod_position               : ((string*int)[])option
-            variable_mod                     : (string*int)[]
+            fixed_mod_position               : ((Ontologies.ModificationPosition*int)[])option
+            variable_mod                     : (Ontologies.Modification*int)[]
             variable_mod_site                : ((string*int)[])option
-            variable_mod_position            : ((string*int)[])option
+            variable_mod_position            : ((Ontologies.ModificationPosition*int)[])option
             quantification_method            : (string)option
             protein_quantification_unit      : (string)option
             peptide_quantification_unit      : (string)option

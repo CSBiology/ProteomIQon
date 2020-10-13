@@ -449,27 +449,42 @@ module MzTAB =
             let f =
                 let pickF =
                     sortAndPick (fun (_,_,x)->x) (fun (y,_,_)->y)
+                let paramF (p: Ontologies.SearchEngineScore[]) =
+                    p
+                    |> Array.map (fun x ->
+                        x.toParam
+                    )
                 let strF =
                     formatOneMD (sprintf "MTD\tprotein_search_engine_score[%i]\t%s")
-                pickF >> strF
+                pickF >> paramF >> strF
             md.protein_search_engine_score
             |> matchOption f sb
         let pepSearchEngineScore =
             let f =
                 let pickF =
                     sortAndPick (fun (_,_,x)->x) (fun (y,_,_)->y)
+                let paramF (p: Ontologies.SearchEngineScore[]) =
+                    p
+                    |> Array.map (fun x ->
+                        x.toParam
+                    )
                 let strF =
                     formatOneMD (sprintf "MTD\tpeptide_search_engine_score[%i]\t%s")
-                pickF >> strF
+                pickF >> paramF >> strF
             md.peptide_search_engine_score
             |> matchOption f sb
         let psmSearchEngineScore =
             let f =
                 let pickF =
                     sortAndPick (fun (_,_,x)->x) (fun (y,_,_)->y)
+                let paramF (p: Ontologies.SearchEngineScore[]) =
+                    p
+                    |> Array.map (fun x ->
+                        x.toParam
+                    )
                 let strF =
                     formatOneMD (sprintf "MTD\tpsm_search_engine_score[%i]\t%s")
-                pickF >> strF
+                pickF >> paramF >> strF
             md.psm_search_engine_score
             |> matchOption f sb
         let fdr =
@@ -522,9 +537,14 @@ module MzTAB =
             let f =
                 let pickF =
                     sortAndPick snd fst
+                let paramF (p: Ontologies.Modification[]) =
+                    p
+                    |> Array.map (fun x ->
+                        x.toParam
+                    )
                 let strF =
                     formatOneMD (sprintf "MTD\tfixed_mod[%i]\t%s")
-                pickF >> strF
+                pickF >> paramF >> strF
             md.fixed_mod
             |> fun x -> sb.AppendLine (f x)
         let fixedModSite =
@@ -540,18 +560,28 @@ module MzTAB =
             let f =
                 let pickF =
                     sortAndPick snd fst
+                let paramF (p: Ontologies.ModificationPosition[]) =
+                    p
+                    |> Array.map (fun x ->
+                        x.toParam
+                    )
                 let strF =
                     formatOneMD (sprintf "MTD\tfixed_mod[%i]-position\t%s")
-                pickF >> strF
+                pickF >> paramF >> strF
             md.fixed_mod_position
             |> matchOption f sb
         let variableMod =
             let f =
                 let pickF =
                     sortAndPick snd fst
+                let paramF (p: Ontologies.Modification[]) =
+                    p
+                    |> Array.map (fun x ->
+                        x.toParam
+                    )
                 let strF =
                     formatOneMD (sprintf "MTD\tvariable_mod[%i]\t%s")
-                pickF >> strF
+                pickF >> paramF >> strF
             md.variable_mod
             |> fun x -> sb.AppendLine (f x)
         let variableModSite =
@@ -567,9 +597,14 @@ module MzTAB =
             let f =
                 let pickF =
                     sortAndPick snd fst
+                let paramF (p: Ontologies.ModificationPosition[]) =
+                    p
+                    |> Array.map (fun x ->
+                        x.toParam
+                    )
                 let strF =
                     formatOneMD (sprintf "MTD\tvariable_mod[%i]-position\t%s")
-                pickF >> strF
+                pickF >> paramF >> strF
             md.variable_mod_position
             |> matchOption f sb
         let quantificationMethod =
