@@ -119,6 +119,8 @@ module Ontologies =
         |SequestDeltaCn
         |Andromeda
         |XTandem
+        |PeptideQValue
+        |ProteinQValue
 
         member this.toParam =
             match this with
@@ -136,3 +138,50 @@ module Ontologies =
                 "[MS, MS:1002338, Andromeda:score, ]"
             |XTandem ->
                 "[MS, MS:1001331, X\\!Tandem:hyperscore, ]"
+            |PeptideQValue ->
+                "[MS, MS:1001868, distinct peptide-level q-value, ]"
+            |ProteinQValue ->
+                "[MS, MS:1001869, protein-level q-value, ]"
+
+    type IDFormats =
+        |Thermo
+        |Waters
+        |WIFF
+        |BrukerAgilent
+        |BrukerBAF
+        |BrukerFID
+        |MultiPeakListNativeID
+
+        member this.toParam =
+            match this with
+            |Thermo ->
+                "[MS, MS:1000768, Thermo nativeID format, ]"
+            |Waters ->
+                "[MS, MS:1000769, Waters nativeID format, ]"
+            |WIFF ->
+                "[MS, MS:1000770, WIFF nativeID format, ]"
+            |BrukerAgilent ->
+                "[MS, MS:1000771, Bruker/Agilent YEP nativeID format, ]"
+            |BrukerBAF ->
+                "[MS, MS:1000772, Bruker BAF nativeID format, ]"
+            |BrukerFID ->
+                "[MS, MS:1000773, Bruker FID nativeID format, ]"
+            |MultiPeakListNativeID ->
+                "[MS, MS:1000774, multiple peak list nativeID format, ]"
+
+    type FileFormats =
+        |MzML
+        |BrukerAgilent
+        |Thermo
+        |WIFF
+
+        member this.toParam =
+            match this with
+            |MzML ->
+                "[MS, MS:1000584, mzML format, ]"
+            |BrukerAgilent ->
+                "[MS, MS:1000567, Bruker/Agilent YEP format, ]"
+            |Thermo ->
+                "[MS, MS:1000563, Thermo RAW format, ]"
+            |WIFF ->
+                "[MS, MS:1000562, ABI WIFF format, ]"

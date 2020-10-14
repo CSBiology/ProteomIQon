@@ -620,9 +620,14 @@ module MzTAB =
             let f =
                 let pickF =
                     sortAndPick snd fst
+                let paramF (p: Ontologies.FileFormats[]) =
+                    p
+                    |> Array.map (fun x ->
+                        x.toParam
+                    )
                 let strF =
                     formatOneMD (sprintf "MTD\tms_run[%i]-format\t%s")
-                pickF >> strF
+                pickF >> paramF >> strF
             md.ms_run_format
             |> matchOption f sb
         let msRunLocation =
@@ -638,9 +643,14 @@ module MzTAB =
             let f =
                 let pickF =
                     sortAndPick snd fst
+                let paramF (p: Ontologies.IDFormats[]) =
+                    p
+                    |> Array.map (fun x ->
+                        x.toParam
+                    )
                 let strF =
                     formatOneMD (sprintf "MTD\tms_run[%i]-id_format\t%s")
-                pickF >> strF
+                pickF >> paramF >> strF
             md.ms_run_id_format
             |> matchOption f sb
         let msRunFragmentationMethod =
@@ -928,9 +938,8 @@ module MzTAB =
                 database                                  = "Chlamy.db"
                 database_version                          = "19-Apr-20 21:44"
                 search_engine                             =
-                    mzTABParams.SearchEngineNamesProt
-
-                    |> Array.map (fun (x,_,_) -> x)
+                    mzTABParams.MetaData.protein_search_engine_score.Value
+                    |> Array.map (fun (x,_,_) -> x.toParam)
                     |> String.concat "|"
                 best_search_engine_score                  =
                     protGroup
@@ -1096,8 +1105,8 @@ module MzTAB =
                 database_version                          =
                     "19-Apr-20 21:44"
                 search_engine                             =
-                    mzTABParams.SearchEngineNamesPep
-                    |> Array.map (fun (x,_,_) -> x)
+                    mzTABParams.MetaData.peptide_search_engine_score.Value
+                    |> Array.map (fun (x,_,_) -> x.toParam)
                     |> String.concat "|"
                 best_search_engine_score                  =
                     pepGroup
@@ -1221,8 +1230,8 @@ module MzTAB =
                 database_version                          =
                     "19-Apr-20 21:44"
                 search_engine                             =
-                    mzTABParams.SearchEngineNamesPSM
-                    |> Array.map (fun (x,_,_) -> x)
+                    mzTABParams.MetaData.psm_search_engine_score.Value
+                    |> Array.map (fun (x,_,_) -> x.toParam)
                     |> String.concat "|"
                 search_engine_score                       =
                     mzTABParams.SearchEngineNamesPSM
