@@ -798,9 +798,9 @@ module Dto =
         {
             ExperimentNames      : (string*int)[]
             StudyVariables       : (string*int[]*int)[]
-            SearchEngineNamesProt: (string*string*int)[]
-            SearchEngineNamesPep : (string*string*int)[]
-            SearchEngineNamesPSM : (string*string*int)[]
+            SearchEngineNamesProt: (Ontologies.SearchEngineScore*string*int)[]
+            SearchEngineNamesPep : (Ontologies.SearchEngineScore*string*int)[]
+            SearchEngineNamesPSM : (Ontologies.SearchEngineScore*string*int)[]
             MetaData             : MetaDataSection
         }
 

@@ -291,10 +291,10 @@ module Domain =
             quantification_method            : (string)option
             protein_quantification_unit      : (string)option
             peptide_quantification_unit      : (string)option
-            ms_run_format                    : ((string*int)[])option
+            ms_run_format                    : ((Ontologies.FileFormats*int)[])option
             // if unknown, "null" must be reported
             ms_run_location                  : (string*int)[]
-            ms_run_id_format                 : ((string*int)[])option
+            ms_run_id_format                 : ((Ontologies.IDFormats*int)[])option
             ms_run_fragmentation_method      : ((string[]*int)[])option
             ms_run_hash                      : ((string*int)[])option
             ms_run_hash_method               : ((string*int)[])option
@@ -328,8 +328,8 @@ module Domain =
         {
             ExperimentNames      : (string*int)[]
             StudyVariables       : (string*int[]*int)[]
-            SearchEngineNamesProt: (string*string*int)[]
-            SearchEngineNamesPep : (string*string*int)[]
-            SearchEngineNamesPSM : (string*string*int)[]
+            SearchEngineNamesProt: (Ontologies.SearchEngineScore*string*int)[]
+            SearchEngineNamesPep : (Ontologies.SearchEngineScore*string*int)[]
+            SearchEngineNamesPSM : (Ontologies.SearchEngineScore*string*int)[]
             MetaData             : MetaDataSection
         }
