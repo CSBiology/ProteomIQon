@@ -16,17 +16,17 @@ module MzTAB =
     type TableSort =
         {
             [<FieldAttribute("\"Key #1\"")>]
-            Protein             : string
+            Protein: string
             [<FieldAttribute("\"Key #2\"")>]
-            Experiment          : string
+            Experiment: string
             DistinctPeptideCount: float
-            Quant_Heavy         : float
-            Quant_Light         : float
-            QValue              : float
-            Ratio               : float
-            Ratio_CV            : float
-            Ratio_SEM           : float
-            Ratio_StDev         : float
+            Quant_Heavy: float
+            Quant_Light: float
+            QValue: float
+            Ratio: float
+            Ratio_CV: float
+            Ratio_SEM: float
+            Ratio_StDev: float
         }
 
     type InferredProteinClassItemOut =
@@ -37,6 +37,84 @@ module MzTAB =
             TargetScore      : float
             DecoyScore       : float
             QValue           : float
+        }
+
+    type PSMStatisticsResult = {
+        // a combination of the spectrum ID in the rawFile, the ascending ms2 id and the chargeState in the search space seperated by '_
+        PSMId                        : string
+        GlobalMod                    : int
+        PepSequenceID                : int
+        ModSequenceID                : int
+        Label                        : int
+        // ascending ms2 id (file specific)
+        ScanNr                       : int
+        ScanTime                     : float
+        Charge                       : int
+        PrecursorMZ                  : float
+        TheoMass                     : float
+        AbsDeltaMass                 : float
+        PeptideLength                : int
+        MissCleavages                : int
+        SequestScore                 : float
+        SequestNormDeltaBestToRest   : float
+        SequestNormDeltaNext         : float
+        AndroScore                   : float
+        AndroNormDeltaBestToRest     : float
+        AndroNormDeltaNext           : float
+        XtandemScore                 : float
+        XtandemNormDeltaBestToRest   : float
+        XtandemNormDeltaNext         : float
+        PercolatorScore              : float
+        QValue                       : float
+        PEPValue                     : float
+        StringSequence               : string
+        ProteinNames                 : string
+        }
+
+    type QuantificationResult = {
+        StringSequence                              : string
+        GlobalMod                                   : int
+        Charge                                      : int
+        PepSequenceID                               : int
+        ModSequenceID                               : int
+        PrecursorMZ                                 : float
+        MeasuredMass                                : float
+        TheoMass                                    : float
+        AbsDeltaMass                                : float
+        MeanPercolatorScore                         : float
+        QValue                                      : float
+        PEPValue                                    : float
+        ProteinNames                                : string
+        QuantMz_Light                               : float
+        Quant_Light                                 : float
+        MeasuredApex_Light                          : float
+        Seo_Light                                   : float
+        Params_Light                                : string
+        Difference_SearchRT_FittedRT_Light          : float
+        KLDiv_Observed_Theoretical_Light            : float
+        KLDiv_CorrectedObserved_Theoretical_Light   : float
+        QuantMz_Heavy                               : float
+        Quant_Heavy                                 : float
+        MeasuredApex_Heavy                          : float
+        Seo_Heavy                                   : float
+        Params_Heavy                                : string
+        Difference_SearchRT_FittedRT_Heavy          : float
+        KLDiv_Observed_Theoretical_Heavy            : float
+        KLDiv_CorrectedObserved_Theoretical_Heavy   : float
+        Correlation_Light_Heavy                     : float
+        QuantificationSource                        : string
+        IsotopicPatternMz_Light                     : string
+        IsotopicPatternIntensity_Observed_Light     : string
+        IsotopicPatternIntensity_Corrected_Light    : string
+        RtTrace_Light                               : string
+        IntensityTrace_Observed_Light               : string
+        IntensityTrace_Corrected_Light              : string
+        IsotopicPatternMz_Heavy                     : string
+        IsotopicPatternIntensity_Observed_Heavy     : string
+        IsotopicPatternIntensity_Corrected_Heavy    : string
+        RtTrace_Heavy                               : string
+        IntensityTrace_Observed_Heavy               : string
+        IntensityTrace_Corrected_Heavy              : string
         }
 
     type ProteinSection =
@@ -133,7 +211,7 @@ module MzTAB =
         IO.Directory.GetFiles (path, identifier)
 
     let readQpsm (path: string) =
-        SeqIO.Seq.fromFileWithCsvSchema<PSMStatisticsResult>(path, '\t', true)
+        SeqIO.Seq.fromFileWithCsvSchema<PSMStatisticsResult>(path, '\t', true, schemaMode=SchemaReader.Csv.SchemaModes.Fill)
         |> Seq.toArray
 
     let readQuant (path: string) =
