@@ -14,14 +14,16 @@ module console1 =
         let results = parser.Parse argv
         let i = results.GetResult InstrumentOutput
         let d = results.GetResult PeptideDataBase
-        let q = results.GetResult PSMStatisticsResult
+        let ii = results.GetResult PSMStatisticsResult
+        let iii = results.GetResult PSMStatisticsResult
         let o = results.GetResult OutputDirectory
         let p = results.GetResult ParamFile
         Logging.generateConfig o
         let logger = Logging.createLogger "TableSort"
         logger.Info (sprintf "InputFilePath -i = %s" i)
         logger.Info (sprintf "Peptide data base -d = %s" d)
-        logger.Info (sprintf "PSMStatisticsResult -g = %s" q)
+        logger.Info (sprintf "PSMStatisticsResult -ii = %s" ii)
+        logger.Info (sprintf "QuantResult -iii = %s" iii)
         logger.Info (sprintf "OutputFilePath -o = %s" o)
         logger.Info (sprintf "InputParameterPath -p = %s" p)
         logger.Trace (sprintf "CLIArguments: %A" results)
@@ -35,16 +37,16 @@ module console1 =
         let p =
             Json.ReadAndDeserialize<Dto.SpectralLibraryParams> p
             |> Dto.SpectralLibraryParams.toDomain
-        if File.Exists i && File.Exists q then
+        if File.Exists i && File.Exists ii then
             logger.Info (sprintf "single file")
-            logger.Trace (sprintf "Scoring spectra for %s and %s" i q)
-            createSpectralLibrary o p dbConnection (i,q)
-        elif Directory.Exists i && Directory.Exists q then
+            logger.Trace (sprintf "Scoring spectra for %s and %s" i ii)
+            createSpectralLibrary o p dbConnection (i,ii)
+        elif Directory.Exists i && Directory.Exists ii then
             logger.Info (sprintf "multiple files")
             let instrumentFiles =
                 Directory.GetFiles(i,("*.mzlite"))
             let resultFiles =
-                Directory.GetFiles(q,("*.qpsm"))
+                Directory.GetFiles(ii,("*.qpsm"))
             let matchedFiles =
                 instrumentFiles
                 |> Array.collect (fun instrumentFile ->
@@ -67,7 +69,7 @@ module console1 =
             |> FSharpAux.PSeq.withDegreeOfParallelism c
             |> Array.ofSeq
             |> ignore
-        elif (Directory.Exists i && File.Exists q) || (File.Exists i && Directory.Exists q) then
+        elif (Directory.Exists i && File.Exists ii) || (File.Exists i && Directory.Exists ii) then
             failwith "Both, instrument output and PSMStatistics result must be either a path or a folder."
         else
             failwith "The given paths to the instrument output and PSMStatistics result are neither valid file paths nor valid directory paths."
