@@ -815,3 +815,47 @@ module Dto =
                 SearchEngineNamesPSM  = dtoMzTABParams.SearchEngineNamesPSM
                 MetaData              = dtoMzTABParams.MetaData
             }
+
+    type FragmentIon = {
+        Charge                            : float
+        Iontype                           : string
+        Number                            : int
+        // Brauch man glaub ich nicht weil das in der Quantinfo steckt
+        GlobalMod                         : int
+        CountAbsolute                     : int
+        CountFraction                     : float
+        MeanFragMz                        : float 
+        CvMeanFragMz                      : float
+        MaxIntensity                      :float
+        MinIntensity                      :float
+        MeanRelativeIntensity_Total       : float
+        CVRelativeIntensity_Total         : float
+        MeanRelativeIntensity_Frags       : float
+        CVRelativeIntensity_Frags         : float
+        }
+    
+    ///
+    type PeptideIon = {
+        StringSequence                              : string
+        GlobalMod                                   : int
+        Charge                                      : int
+        PepSequenceID                               : int
+        ModSequenceID                               : int
+        PrecursorMZ                                 : float
+        MeasuredMass                                : float 
+        TheoMass                                    : float
+        AbsDeltaMass                                : float
+        MeanPercolatorScore                         : float
+        QValue                                      : float
+        PEPValue                                    : float
+        ProteinNames                                : string
+        Quant                                       : float
+        RelativeQuant                               : float
+        MeasuredApex                                : float
+        RelativeMeasuredApex                        : float
+        Seo                                         : float
+        ScanTime                                    : float
+        ElutionWidth                                : float
+        Fragments                                   : FragmentIon list
+        }
+ 
