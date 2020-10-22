@@ -15,36 +15,44 @@ module SpectralLibrary =
     /// Holds information about ion and in which spectrum it is found.
     type IonInformation =
         {
-            Charge         : float
-            Iontype        : Ions.IonTypeFlag
-            MassOverCharge : float
-            Number         : int
-            Intensity      : float
-            PepSequenceID  : int
-            ModSequenceID  : int
-            PSMId          : string
-            PrecursorMZ    : float
-            ScanTime       : float
-            Sequence       : string
-            GlobalMod      : int
-            PercolatorScore: float
+            Charge          : float
+            Iontype         : Ions.IonTypeFlag
+            Number          : int
+            MassOverCharge  : float
+            Intensity       : float
+            RelIntensitySpec: float
+            RelIntensityFrag: float
+            RelIntensityRun : float
+            PepSequenceID   : int
+            ModSequenceID   : int
+            PSMId           : string
+            PrecursorMZ     : float
+            ScanTime        : float
+            Sequence        : string
+            GlobalMod       : int
+            PercolatorScore : float
+            MzDelta         : float
         }
 
-    let createIonInformation charge iontype mOverZ number intensity pepSeqID modSeqID psmID precMZ scanTime sequence globalMod percolatorScore =
+    let createIonInformation charge iontype number mOverZ intensity relIntSpec relIntFrag relIntRun pepSeqID modSeqID psmID precMZ scanTime sequence globalMod percolatorScore mzDelta=
         {
-            Charge         = charge
-            Iontype        = iontype
-            MassOverCharge = mOverZ
-            Number         = number
-            Intensity      = intensity
-            PepSequenceID  = pepSeqID
-            ModSequenceID  = modSeqID
-            PSMId          = psmID
-            PrecursorMZ    = precMZ
-            ScanTime       = scanTime
-            Sequence       = sequence
-            GlobalMod      = globalMod
-            PercolatorScore= percolatorScore
+            Charge           = charge
+            Iontype          = iontype
+            Number           = number
+            MassOverCharge   = mOverZ
+            Intensity        = intensity
+            RelIntensitySpec = relIntSpec
+            RelIntensityFrag = relIntFrag
+            RelIntensityRun  = relIntRun
+            PepSequenceID    = pepSeqID
+            ModSequenceID    = modSeqID
+            PSMId            = psmID
+            PrecursorMZ      = precMZ
+            ScanTime         = scanTime
+            Sequence         = sequence
+            GlobalMod        = globalMod
+            PercolatorScore  = percolatorScore
+            MzDelta          = mzDelta
         }
 
     /// Returns SearchDbParams of a existing database by filePath
@@ -127,18 +135,60 @@ module SpectralLibrary =
                     |> List.concat
                 let spec = inReader.ReadSpectrumPeaks psm.PSMId
                 let assigned =
+                    let maxIntSpec =
+                        spec.Peaks
+                        |> Seq.maxBy (fun (x: MzIO.Binary.Peak1D) -> x.Intensity)
+                        |> fun x -> x.Intensity
                     spec.Peaks
                     |> Seq.collect (fun (peak: MzIO.Binary.Peak1D) ->
                         frag
                         |> Seq.choose (fun ion ->
-                            if (abs (ion.MassOverCharge - peak.Mz)) <= (Mass.deltaMassByPpm matchingTolerance peak.Mz) then
-                                Some (createIonInformation ion.Charge ion.Iontype ion.MassOverCharge ion.Number peak.Intensity psm.PepSequenceID psm.ModSequenceID psm.PSMId psm.TheoMass psm.ScanTime sequence.StringSequence psm.GlobalMod psm.PercolatorScore)
+                            let deltaMass = abs (ion.MassOverCharge - peak.Mz)
+                            if deltaMass <= (Mass.deltaMassByPpm matchingTolerance peak.Mz) then
+                                Some 
+                                    (createIonInformation
+                                        ion.Charge
+                                        ion.Iontype
+                                        ion.Number
+                                        ion.MassOverCharge
+                                        peak.Intensity
+                                        (peak.Intensity/maxIntSpec)
+                                        nan
+                                        nan
+                                        psm.PepSequenceID
+                                        psm.ModSequenceID
+                                        psm.PSMId
+                                        psm.TheoMass
+                                        psm.ScanTime
+                                        sequence.StringSequence
+                                        psm.GlobalMod
+                                        psm.PercolatorScore
+                                        deltaMass
+                                    )
                             else
                                 None
                         )
                     )
+                    |> fun fragments ->
+                        let maxIntFrag =
+                            fragments
+                            |> Seq.maxBy (fun x -> x.Intensity)
+                            |> fun x -> x.Intensity
+                        fragments
+                        |> Seq.map (fun fragment ->
+                            {fragment with RelIntensityFrag = fragment.Intensity/maxIntFrag}
+                        )
                 assigned
             )
+            |> fun run ->
+                let maxIntRun =
+                    run
+                    |> Seq.maxBy (fun x -> x.Intensity)
+                    |> fun x -> x.Intensity
+                run
+                |> Seq.map (fun fragment ->
+                    {fragment with RelIntensityRun = fragment.Intensity/maxIntRun}
+                )
 
         let ionInformations =
             assignIntensitiesToMasses psmFile spectralLibraryParams.ChargeList spectralLibraryParams.MatchingTolerancePPM
