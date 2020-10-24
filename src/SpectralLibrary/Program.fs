@@ -19,7 +19,7 @@ module console1 =
         let o = results.GetResult OutputDirectory
         let p = results.GetResult ParamFile
         Logging.generateConfig o
-        let logger = Logging.createLogger "TableSort"
+        let logger = Logging.createLogger "SpectralLibrary"
         logger.Info (sprintf "InputFilePath -i = %s" i)
         logger.Info (sprintf "Peptide data base -d = %s" d)
         logger.Info (sprintf "PSMStatisticsResult -ii = %s" ii)
@@ -40,20 +40,33 @@ module console1 =
         if File.Exists i && File.Exists ii then
             logger.Info (sprintf "single file")
             logger.Trace (sprintf "Scoring spectra for %s and %s" i ii)
-            createSpectralLibrary o p dbConnection (i,ii)
+            createSpectralLibrary o p dbConnection  (i, ii, iii)
         elif Directory.Exists i && Directory.Exists ii then
             logger.Info (sprintf "multiple files")
             let instrumentFiles =
                 Directory.GetFiles(i,("*.mzlite"))
             let resultFiles =
                 Directory.GetFiles(ii,("*.qpsm"))
+            let quantFiles =
+                Directory.GetFiles(iii,("*.quant"))
             let matchedFiles =
-                instrumentFiles
-                |> Array.collect (fun instrumentFile ->
-                    resultFiles
-                    |> Array.choose (fun resultFile ->
-                        if Path.GetFileNameWithoutExtension instrumentFile = Path.GetFileNameWithoutExtension resultFile then
-                            Some (instrumentFile, resultFile)
+                let instrumentPsm =
+                    instrumentFiles
+                    |> Array.collect (fun instrumentFile ->
+                        resultFiles
+                        |> Array.choose (fun resultFile ->
+                            if Path.GetFileNameWithoutExtension instrumentFile = Path.GetFileNameWithoutExtension resultFile then
+                                Some (instrumentFile, resultFile)
+                            else
+                                None
+                        )
+                    )
+                instrumentPsm
+                |> Array.collect (fun (instrument,psm) ->
+                    quantFiles
+                    |> Array.choose (fun quantFiles ->
+                        if Path.GetFileNameWithoutExtension instrument = Path.GetFileNameWithoutExtension quantFiles then
+                            Some (instrument, psm, quantFiles)
                         else
                             None
                     )
