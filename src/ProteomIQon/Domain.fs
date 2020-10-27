@@ -238,10 +238,22 @@ module Domain =
         }
    
 
-    type ConsensusSpectralLibraryParams =
-        {
-            RTTolerance: float
-            iRTPeptides: string list
+    ///
+    type ConsensusSpectralLibraryParams = {
+        // InitialPeptideSelection
+        BinningWindowWidth                          : float
+        FractionOfMostAbundandIonsPerBin            : float
+        MinFragmentCount                            : int
+        MinFragmentLadderIdx                        : int
+        MinPeptideLength                            : int
+        // XicExtraction
+        RtWindowWidth                               : float
+        // Matching
+        FragMatchingBinWidth                        : float
+        FragMatchingBinOffset                       : float
+        MS2ScanRange                                : float*float
+        // Filtering
+        MinRatioMostAbundandVsSecondAbundandPeak    : float
         }
 
     type SpectrumSelection =

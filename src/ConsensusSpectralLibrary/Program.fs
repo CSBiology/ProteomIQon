@@ -11,12 +11,14 @@ module console1 =
     let main argv =
         let parser = ArgumentParser.Create<CLIArguments>(programName =  (System.Reflection.Assembly.GetExecutingAssembly().GetName().Name))
         let results = parser.Parse argv
-        let i = results.GetResult SpectralLibrary
+        let i  = results.GetResult InstrumentOutput
+        let ii = results.GetResult SpectralLibrary
         let o = results.GetResult OutputDirectory
         let p = results.GetResult ParamFile
         Logging.generateConfig o
         let logger = Logging.createLogger "SpectralLibrary"
         logger.Info (sprintf "InputFilePath -i = %s" i)
+        logger.Info (sprintf "SpectralLibrary -ii = %s" ii)
         logger.Info (sprintf "OutputFilePath -o = %s" o)
         logger.Info (sprintf "InputParameterPath -p = %s" p)
         logger.Trace (sprintf "CLIArguments: %A" results)
@@ -27,13 +29,14 @@ module console1 =
         if File.Exists i then
             logger.Info (sprintf "single file")
             logger.Trace (sprintf "Generating consensus library for %s.\nIt is recommended to use at least two libraries for a consensus library" i)
-            buildConsens [|i|] p.RTTolerance o
+            createSpectralLibrary logger p o ii i 
         elif Directory.Exists i then
             logger.Info (sprintf "multiple files")
-            let libraryFiles =
-                Directory.GetFiles(i,("*.sl"))
-            logger.Trace (sprintf "Generating consensus library for: %A" libraryFiles)
-            buildConsens libraryFiles p.RTTolerance o
+            let swathFiles =
+                Directory.GetFiles(i,("*.mzlite"))
+            logger.Trace (sprintf "Generating consensus library for: %A" swathFiles)
+            swathFiles
+            |> Array.iter (fun i -> createSpectralLibrary logger p o ii i) 
         else
             failwith "The given paths to the instrument output and PSMStatistics result are neither valid file paths nor valid directory paths."
         logger.Info "Done"
