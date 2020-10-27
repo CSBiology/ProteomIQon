@@ -758,18 +758,48 @@ module Dto =
                 AggregatorPepToProt         = dtoTableSortParams.AggregatorPepToProt
                 Tukey                       = dtoTableSortParams.Tukey
             }
-    type ConsensusSpectralLibraryParams =
-        {
-            RTTolerance: float
-            iRTPeptides: string list
+    //type ConsensusSpectralLibraryParams =
+    //    {
+    //        RTTolerance: float
+    //        iRTPeptides: string list
+    //    }
+
+    ///
+    type ConsensusSpectralLibraryParams = {
+        // InitialPeptideSelection
+        BinningWindowWidth                          : float
+        FractionOfMostAbundandIonsPerBin            : float
+        MinFragmentCount                            : int
+        MinFragmentLadderIdx                        : int
+        MinPeptideLength                            : int
+        // XicExtraction
+        RtWindowWidth                               : float
+        // Matching
+        FragMatchingBinWidth                        : float
+        FragMatchingBinOffset                       : float
+        MS2ScanRange                                : float*float
+        // Filtering
+        MinRatioMostAbundandVsSecondAbundandPeak    : float
         }
 
     module ConsensusSpectralLibraryParams =
 
         let toDomain (dtoConsensusSpectralLibraryParams: ConsensusSpectralLibraryParams): Domain.ConsensusSpectralLibraryParams =
             {
-                RTTolerance = dtoConsensusSpectralLibraryParams.RTTolerance
-                iRTPeptides = dtoConsensusSpectralLibraryParams.iRTPeptides
+                // InitialPeptideSelection
+                BinningWindowWidth                          = dtoConsensusSpectralLibraryParams.BinningWindowWidth                          
+                FractionOfMostAbundandIonsPerBin            = dtoConsensusSpectralLibraryParams.FractionOfMostAbundandIonsPerBin            
+                MinFragmentCount                            = dtoConsensusSpectralLibraryParams.MinFragmentCount                            
+                MinFragmentLadderIdx                        = dtoConsensusSpectralLibraryParams.MinFragmentLadderIdx                        
+                MinPeptideLength                            = dtoConsensusSpectralLibraryParams.MinPeptideLength                            
+                // XicExtraction                            = // XicExtraction
+                RtWindowWidth                               = dtoConsensusSpectralLibraryParams.RtWindowWidth                               
+                // Matching                                 = // Matching
+                FragMatchingBinWidth                        = dtoConsensusSpectralLibraryParams.FragMatchingBinWidth                        
+                FragMatchingBinOffset                       = dtoConsensusSpectralLibraryParams.FragMatchingBinOffset                       
+                MS2ScanRange                                = dtoConsensusSpectralLibraryParams.MS2ScanRange                                
+                // Filtering                                = // Filtering
+                MinRatioMostAbundandVsSecondAbundandPeak    = dtoConsensusSpectralLibraryParams.MinRatioMostAbundandVsSecondAbundandPeak    
             }
 
     type SWATHAnalysisParams =

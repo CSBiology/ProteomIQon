@@ -8,8 +8,20 @@ open ProteomIQon.Dto
 
 let defaultConsensusSpectralLibraryParams: Dto.ConsensusSpectralLibraryParams =
     {
-        RTTolerance = 10.
-        iRTPeptides = []
+        // InitialPeptideSelection
+        BinningWindowWidth                          = 10.
+        FractionOfMostAbundandIonsPerBin            = 0.1
+        MinFragmentCount                            = 3
+        MinFragmentLadderIdx                        = 3
+        MinPeptideLength                            = 8
+        // XicExtraction                            = // XicExtraction
+        RtWindowWidth                               = 10.                               
+        // Matching                                 = // Matching
+        FragMatchingBinWidth                        = 0.01                        
+        FragMatchingBinOffset                       = 0.0
+        MS2ScanRange                                = 100.,2000.
+        // Filtering                                = // Filtering
+        MinRatioMostAbundandVsSecondAbundandPeak    = 0.2
     }
 
 let serialized = 

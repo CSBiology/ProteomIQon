@@ -14,7 +14,6 @@
     </PostBuildEvent>
   </PropertyGroup>
   <ItemGroup>
-    <None Include="ConsensusLibraryTest.fsx" />
     <Compile Include="ConsensusSpectralLibrary.fs" />
     <Compile Include="CLIArgumentParsing.fs" />
     <Compile Include="Program.fs" />
