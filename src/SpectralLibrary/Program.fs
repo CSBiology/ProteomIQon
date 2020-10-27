@@ -15,7 +15,7 @@ module console1 =
         let i = results.GetResult InstrumentOutput
         let d = results.GetResult PeptideDataBase
         let ii = results.GetResult PSMStatisticsResult
-        let iii = results.GetResult PSMStatisticsResult
+        let iii = results.GetResult QuantResult
         let o = results.GetResult OutputDirectory
         let p = results.GetResult ParamFile
         Logging.generateConfig o
