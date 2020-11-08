@@ -253,7 +253,7 @@ module Domain =
         FragMatchingBinOffset                       : float
         MS2ScanRange                                : float*float
         // Filtering
-        MinRatioMostAbundandVsSecondAbundandPeak    : float
+        MaxRatioMostAbundandVsSecondAbundandPeak    : float
         }
 
     type SpectrumSelection =
