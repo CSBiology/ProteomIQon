@@ -779,7 +779,7 @@ module Dto =
         FragMatchingBinOffset                       : float
         MS2ScanRange                                : float*float
         // Filtering
-        MinRatioMostAbundandVsSecondAbundandPeak    : float
+        MaxRatioMostAbundandVsSecondAbundandPeak    : float
         }
 
     module ConsensusSpectralLibraryParams =
@@ -799,7 +799,7 @@ module Dto =
                 FragMatchingBinOffset                       = dtoConsensusSpectralLibraryParams.FragMatchingBinOffset                       
                 MS2ScanRange                                = dtoConsensusSpectralLibraryParams.MS2ScanRange                                
                 // Filtering                                = // Filtering
-                MinRatioMostAbundandVsSecondAbundandPeak    = dtoConsensusSpectralLibraryParams.MinRatioMostAbundandVsSecondAbundandPeak    
+                MaxRatioMostAbundandVsSecondAbundandPeak    = dtoConsensusSpectralLibraryParams.MaxRatioMostAbundandVsSecondAbundandPeak    
             }
 
     type SWATHAnalysisParams =

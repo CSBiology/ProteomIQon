@@ -21,7 +21,7 @@ let defaultConsensusSpectralLibraryParams: Dto.ConsensusSpectralLibraryParams =
         FragMatchingBinOffset                       = 0.0
         MS2ScanRange                                = 100.,2000.
         // Filtering                                = // Filtering
-        MinRatioMostAbundandVsSecondAbundandPeak    = 0.2
+        MaxRatioMostAbundandVsSecondAbundandPeak    = 0.2
     }
 
 let serialized = 
