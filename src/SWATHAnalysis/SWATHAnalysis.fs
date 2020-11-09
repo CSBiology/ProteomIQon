@@ -1,10 +1,19 @@
 namespace ProteomIQon
 
-open Argu
-open System
 open System.IO
-open ProteomIQon
+open System
+open FSharpAux.Colors.Table.StatisticalGraphics24
+open FSharpAux.IO
+open FSharp.Stats
+open FSharpAux.IO.SchemaReader
+open FSharp.Plotly
 open BioFSharp
+open Microsoft
+open Microsoft.ML
+open Microsoft.ML.Data   
+open Dto
+open Dto.QuantificationResult
+open Newtonsoft.Json
 open MzIO.IO
 open MzIO.Processing
 open MzIO.Processing.MzIOLinq
@@ -16,88 +25,102 @@ open MzIO.Model
 open MzIO.Model.CvParam
 open MzIO.Commons.Arrays
 open System.Linq
-open FSharpAux
-open FSharpAux.IO
-open FSharp.Stats
+open BioFSharp.Mz.SearchDB
 
-module SWATHAnalysis =
+module SwathAnalysis =
+    let quantifyPeptides p o dbConnection i ii = ()
+    ///
+    type SparsePeakArray = { 
+        Length: int
+        Data: System.Collections.Generic.IDictionary<int,float>
+        }
+   
+    ///
+    let dot (x:SparsePeakArray) (y:SparsePeakArray) =
+        x.Data
+        |> Seq.fold (fun (acc:float) xi -> 
+            let present,yi = y.Data.TryGetValue xi.Key
+            if present then acc + (yi * xi.Value) else acc
+            ) 0.
+           
+    ///
+    let getBinIdx' width offset x = int ((x / width) + offset)
 
-    type LibraryEntry =
+    ///
+    let peaksToNearestBinVector binWidth offset (pkarr:BioFSharp.Mz.PeakArray<_>) (minMassBoarder:float) (maxMassBoarder:float) = 
+        let minMassBoarder = getBinIdx' binWidth offset minMassBoarder
+        let maxMassBoarder = getBinIdx' binWidth offset maxMassBoarder
+        let maxIndex = maxMassBoarder - minMassBoarder + 1        
+        let keyValues = 
+            pkarr 
+            |> Array.choose (fun p ->  
+                let index = (getBinIdx' binWidth offset p.Mz) - minMassBoarder
+                if index < maxIndex-1 && index > -1 then Some (index, p.Intensity) else None
+                )
+            |> Array.groupBy fst 
+            |> Array.map (fun (idx,data) -> idx, data |> Array.sumBy snd)
+        { 
+            Length = maxIndex
+            Data = keyValues |> dict
+        } 
+    ///
+    type Library =
         {
-            Charge         : float
-            Iontype        : string
-            MassOverCharge : float
-            Number         : int
-            Intensity      : float
-            PepSequenceID  : int
-            ModSequenceID  : int
-            PSMId          : string
-            PrecursorMZ    : float
-            ScanTime       : float
-            Count          : float
-            Version        : int
-            Sequence       : string
-            GlobalMod      : int
-            PercolatorScore: float
+        FileName: string
+        Data: ProteomIQon.Dto.PeptideIon[]
         }
 
-    type LibraryEntryQuant =
+    ///
+    let readLibraryFrom path= 
+        let tmp: ProteomIQon.Dto.PeptideIon[] = ProteomIQon.Json.ReadAndDeserialize path
         {
-            Charge         : float
-            Iontype        : string
-            MassOverCharge : float
-            Number         : int
-            Intensity      : float
-            PepSequenceID  : int
-            ModSequenceID  : int
-            PSMId          : string
-            PrecursorMZ    : float
-            ScanTime       : float
-            Count          : float
-            Version        : int
-            Sequence       : string
-            GlobalMod      : int
-            PercolatorScore: float
-            Quant          : float
+            FileName = Path.GetFileNameWithoutExtension path
+            Data = tmp
         }
 
-    /// Contains the three dimensional information of a peak, consisting of one intensity and the corresponding m/z amd retention time value.
-    type Peak2DInfo(intensity:float, mz:float, rt:float, fragmentInfo: LibraryEntry) =
-    
-        inherit Peak1D(intensity, mz)
 
-        new () = Peak2DInfo(0., 0., 0.,
-                    {
-                        Charge         = -1.
-                        Iontype        = ""
-                        MassOverCharge = -1.
-                        Number         = -1
-                        Intensity      = -1.
-                        PepSequenceID  = -1
-                        ModSequenceID  = -1
-                        PSMId          = ""
-                        PrecursorMZ    = -1.
-                        ScanTime       = -1.
-                        Count          = -1.
-                        Version        = -1
-                        Sequence       = ""
-                        GlobalMod      = -1
-                        PercolatorScore= -1.
-                    }
-        )
+    type IonSpecies = {
+        ModSequenceID                               : int
+        Charge                                      : int
+        GlobalMod                                   : int
+        }
     
-        member this.Rt
-            with get() = rt
-
-        member this.FragmentInfo
-            with get() = fragmentInfo
+    let createIonSpecies modSequenceID charge globalMod = {
+        ModSequenceID  = modSequenceID
+        Charge         = charge
+        GlobalMod      = globalMod
+        }
     
-        override this.ToString() =
-            String.Format("intensity={0}, mz={1}, rt={2}, fragment Info={3}", this.Intensity, this.Mz, this.Rt, this.FragmentInfo)
+    type QuantifiedFragment = {
+        Fragment                : Dto.FragmentIon
+        CorrelationWithTrace    : float
+        Quant                   : float
+        }
+    
+    let createQuantifiedFragment fragment correlationWithTrace quant = {
+        Fragment                = fragment
+        CorrelationWithTrace    = correlationWithTrace
+        Quant                   = quant
+        }
 
-    type SwathIndexer.SwathIndexer with
+    type QuantifiedPepIon = {
+        PeptideIon              : PeptideIon
+        QuantifiedFragments     : QuantifiedFragment list
+        FittedScanTime          : float
+        }
+
+    let createQuantifiedPepIon peptideIon quantifiedFragments fittedScanTime = {
+        PeptideIon              = peptideIon
+        QuantifiedFragments     = quantifiedFragments
+        FittedScanTime          = fittedScanTime
+        }
         
-        member this.GetRTProfiles2(dataReader:IMzIODataReader, query: SwathQuery, entries: LibraryEntry[], getLockMz: bool, spectrumSelector: seq<SwathIndexer.MSSwath> -> seq<SwathIndexer.MSSwath> list ,?mzRangeSelector: Peak1DArray * RangeQuery -> Peak1D) =
+
+
+    ///
+    type SwathIndexer.SwathIndexer with
+            
+        member this.GetRTProfilesFirstWnd(dataReader:IMzIODataReader, query: SwathQuery, getLockMz: bool, spectrumSelector: seq<SwathIndexer.MSSwath> -> seq<SwathIndexer.MSSwath> list ,?mzRangeSelector: Peak1DArray * RangeQuery -> Peak1D) =
 
             let getClosestMz (peaks: Peak1DArray, mzRange: RangeQuery) =
                 peaks.Peaks
@@ -108,7 +131,7 @@ module SWATHAnalysis =
 
             let swathSpectra = 
                 this.SwathList.SearchAllTargetMz(query.TargetMz)
-                    |> spectrumSelector
+                |> spectrumSelector
 
             swathSpectra
             |> List.map (fun spec ->
@@ -116,7 +139,7 @@ module SWATHAnalysis =
 
                 if swathSpectrum.Length > 0 then
 
-                    let profile = Array2D.create query.CountMS2Masses swathSpectrum.Length (new Peak2DInfo())
+                    let profile = Array2D.create query.CountMS2Masses swathSpectrum.Length (new Peak2D())
 
                     for specIdx = 0 to swathSpectrum.Length - 1 do
 
@@ -124,138 +147,21 @@ module SWATHAnalysis =
                         let pa = dataReader.ReadSpectrumPeaks(swathSpec.SpectrumID)
 
                         for ms2MassIndex = 0 to query.CountMS2Masses - 1 do
-                        
+                
                             let mzRange = query.Ms2Masses.[ms2MassIndex]
                             let p = mzRangeSelector(pa, mzRange)
 
                             if getLockMz then
-                                profile.[ms2MassIndex, specIdx] <- new Peak2DInfo(p.Intensity, mzRange.LockValue, swathSpec.Rt, entries.[ms2MassIndex])
+                                profile.[ms2MassIndex, specIdx] <- new Peak2D(p.Intensity, mzRange.LockValue, swathSpec.Rt)
                             else
-                                profile.[ms2MassIndex, specIdx] <- new Peak2DInfo(p.Intensity, p.Mz, swathSpec.Rt,  entries.[ms2MassIndex])
+                                profile.[ms2MassIndex, specIdx] <- new Peak2D(p.Intensity, p.Mz, swathSpec.Rt)
 
                     Some profile
                 else
                     None
             )
 
-    type PeptideInformation =
-        {
-            PepSequenceID  : int
-            ModSequenceID  : int
-            PrecursorMZ    : float
-            Sequence       : string
-            GlobalMod      : int
-            PercolatorScore: float
-        }
-
-    let createPeptideInformation pepSeqID modSeqID precMz seq globalMod percolatorScore =
-        {
-            PepSequenceID   = pepSeqID
-            ModSequenceID   = modSeqID
-            PrecursorMZ     = precMz
-            Sequence        = seq
-            GlobalMod       = globalMod
-            PercolatorScore = percolatorScore
-        }
-
-    type PeptideInformationQuant =
-        {
-            PepSequenceID  : int
-            ModSequenceID  : int
-            PrecursorMZ    : float
-            StringSequence : string
-            GlobalMod      : int
-            PercolatorScore: float
-            Quantification : float
-        }
-
-    let createPeptideInformationQuant pepSeqID modSeqID precMz seq globalMod percolatorScore quant=
-        {
-            PepSequenceID   = pepSeqID
-            ModSequenceID   = modSeqID
-            PrecursorMZ     = precMz
-            StringSequence  = seq
-            GlobalMod       = globalMod
-            PercolatorScore = percolatorScore
-            Quantification  = quant
-        }
-
-
-    type PeptideInformationQuantJoined =
-        {
-            PepSequenceID  : int
-            PrecursorMZ_L  : float
-            PrecursorMZ_H  : float 
-            StringSequence : string
-            PercolatorScore: float
-            PercScoreL     : float
-            PercScoreH     : float
-            Quant_Light    : float
-            Quant_Heavy    : float
-        }
-
-    let createPeptideInformationQuantJoined pepSeqID precMzL precMzH stringSeq percScore percScoreL percScoreH quantL quantH=
-        {
-            PepSequenceID  = pepSeqID
-            PrecursorMZ_L  = precMzL
-            PrecursorMZ_H  = precMzH
-            StringSequence = stringSeq
-            PercolatorScore= percScore
-            PercScoreL     = percScoreL
-            PercScoreH     = percScoreL
-            Quant_Light    = quantL
-            Quant_Heavy    = quantH
-        }
-
-    let parseSpectrumSelection (swathParam: Domain.SWATHAnalysisParams) =
-        match swathParam.SpectrumSelectionF with
-        |Domain.SpectrumSelection.All -> (fun x -> x |> Seq.fold (fun acc y -> seq[y]::acc)[])
-        |Domain.SpectrumSelection.First -> (fun x -> [x.Take(1)])
-
-    let aggregationMethodArray (agMethod: Domain.AggregationMethod): float[] -> float =
-        match agMethod with
-        | Domain.AggregationMethod.Sum ->
-            fun (x: float[]) ->
-                if x.Length = 0 then nan
-                else Array.sum x
-        | Domain.AggregationMethod.Mean ->
-            fun (x: float[]) ->
-                if x.Length = 0 then nan
-                else Array.average x
-        | Domain.AggregationMethod.Median ->
-            fun (x: float[]) ->
-                if x.Length = 0 then nan
-                else Array.median x
-
-    let createPeptideQuery (entries: LibraryEntry[]) matchingTolerance offsetRange =
-
-        let offset, averageRT =
-            let upperRT =
-                entries
-                |> Array.maxBy (fun entry -> entry.ScanTime)
-                |> (fun entry -> entry.ScanTime)
-            let lowerRT =
-                entries
-                |> Array.minBy (fun entry -> entry.ScanTime)
-                |> (fun entry -> entry.ScanTime)
-            let averageRT =
-                entries
-                |> Array.averageBy (fun entry -> entry.ScanTime)
-            let offset =
-                if abs (averageRT-upperRT) > abs (averageRT-lowerRT) then
-                    abs (averageRT-upperRT) + offsetRange
-                else
-                    abs (averageRT-lowerRT) + offsetRange
-            offset, averageRT
-        let rangeQueryRt = MzIO.Processing.Query.createRangeQuery averageRT offset
-        let rangeQueriesMz =
-            entries
-            |> Array.map (fun entry ->
-                MzIO.Processing.Query.createRangeQuery entry.MassOverCharge (Mass.deltaMassByPpm matchingTolerance entry.MassOverCharge)
-            )
-        let swathQuery = MzIO.Processing.Query.createSwathQuery entries.[0].PrecursorMZ rangeQueryRt rangeQueriesMz
-        averageRT, swathQuery
-
+    ///
     let getClosestMz (peaks: Peak1DArray, mzRange: RangeQuery) =
         let p1d = 
             peaks.Peaks
@@ -266,155 +172,238 @@ module SWATHAnalysis =
         else
             p1d
 
-    let getRTProfiles (swathIndexer: SwathIndexer.SwathIndexer) (reader: IMzIODataReader) (spectrumSelector: seq<SwathIndexer.MSSwath> -> seq<SwathIndexer.MSSwath> list) (entries: LibraryEntry[]) (swathQuery: SwathQuery) =
-        swathIndexer.GetRTProfiles2(reader, swathQuery, entries, false, spectrumSelector ,getClosestMz)
+    ///
+    let getRTProfiles (swathIndexer: SwathIndexer.SwathIndexer) (reader: IMzIODataReader) (*(spectrumSelector: seq<SwathIndexer.MSSwath> -> seq<SwathIndexer.MSSwath> list)*) (swathQuery: SwathQuery) =
+        swathIndexer.GetRTProfilesFirstWnd(reader, swathQuery, false, (fun x -> [x.Take(1)]) ,getClosestMz)
+    
+    ///
+    let getPlotFilePathFilePath outputDir (swathFileName:string) (plotName:string) (libraryFileName:string) =
+        let swathFileName = swathFileName + "_" + (libraryFileName) + "_" + plotName 
+        Path.Combine [|outputDir;swathFileName|]
+    
+    let filterePepions (processParams:Domain.ConsensusSpectralLibraryParams) (pepIons:PeptideIon[]) = 
+        pepIons
+        |> Array.map (fun pepIons -> {pepIons with Fragments = pepIons.Fragments |> List.filter (fun x -> x.Number > processParams.MinFragmentLadderIdx) })
+        |> Array.filter (fun pepIons -> pepIons.Fragments.Length > processParams.MinFragmentCount)
+        |> Array.filter (fun pepIons -> pepIons.StringSequence |> String.filter Char.IsUpper |> String.length >= processParams.MinPeptideLength)
+            
 
-    let optimizeWindowWidth polOrder (windowWidthToTest:int[]) noiseAutoCorr (signalOfInterest:float[]) =
-        let signalOfInterest' = signalOfInterest |> vector
-        //let noiseAutoCorr = Correlation.Vector.autoCorrelation 1 (blankSignal |> vector)
-        let filterF w yData = FSharp.Stats.Signal.Filtering.savitzky_golay w polOrder 0 0 yData
-        let windowWidthToTest' = windowWidthToTest |> Array.filter (fun x -> x%2 <> 0)
-        let optimizedWindowWidth =
-            windowWidthToTest'
-            |> Array.map (fun w ->
-                let smoothedY = filterF w signalOfInterest
-                let noise = smoothedY - (signalOfInterest')
-                w, Correlation.Vector.autoCorrelation 1 noise
-                )
-            |> Array.minBy (fun (w,ac) -> (ac - noiseAutoCorr) |> abs)
-            |> fst
-        optimizedWindowWidth
+    /// Retrieves the Stabw based on the fitted parameter values (HULQ output).
+    let tryGetApexIntensity (fit:BioFSharp.Mz.Quantification.HULQ.QuantifiedPeak) = 
+        if Array.length fit.EstimatedParams < 3 then 
+            None
+        else 
+            Some fit.EstimatedParams.[0] 
+
+    /// Retrieves the scan time based on the fitted parameter values (HULQ output).
+    let tryGetScanTime (fit:BioFSharp.Mz.Quantification.HULQ.QuantifiedPeak) = 
+        if Array.length fit.EstimatedParams < 3 then 
+            None
+        else 
+            Some fit.EstimatedParams.[1] 
+
+    /// Retrieves the Stabw based on the fitted parameter values (HULQ output).
+    let tryGetStdev (fit:BioFSharp.Mz.Quantification.HULQ.QuantifiedPeak) = 
+        if Array.length fit.EstimatedParams < 3 then 
+            None
+        else 
+            Some fit.EstimatedParams.[2] 
 
     ///
-    let initGetWindowWidth (windowEst:Domain.WindowSize) polynomOrder (windowWidthToTest:int[]) =
-        match windowEst with
-        | Domain.WindowSize.Fixed w  -> fun yData -> w
-        | Domain.WindowSize.EstimateUsingAutoCorrelation noiseAutoCorr -> fun yData -> optimizeWindowWidth polynomOrder windowWidthToTest noiseAutoCorr yData
+    let checkApex fittedApex measuredApex = 
+        fittedApex > 0.5 * measuredApex && fittedApex < 1.5 * measuredApex
+    
+    ///
+    let checkStdev fittedstdev (peakXData:float[]) = 
+        let minDist = 
+            FSharp.Stats.Signal.Padding.HelperFunctions.getMinimumSpacing 
+                (Array.map (fun x -> x,1.) peakXData) 
+                FSharp.Stats.Signal.Padding.HelperFunctions.Float.getDiffFloat 
+        let minMinusMax = 
+            let min = Array.min peakXData
+            let max = Array.max peakXData
+            min - max
+            |> abs
+        fittedstdev > minDist && fittedstdev < minMinusMax
+    
+    let quantifyPepIon getPlotFilePathFilePath getRTProfiles (processParams:Domain.ConsensusSpectralLibraryParams) pepIon = 
+        let targetFragmentMzs = 
+            pepIon.Fragments
+            |> List.map (fun f -> f.MeanFragMz,f.MeanRelativeIntensity_Frags)
+            |> Array.ofSeq
+            |> BioFSharp.Mz.PeakArray.zipMzInt
+        let targetFragmentVector = 
+            targetFragmentMzs 
+            //|> fun x -> BioFSharp.Mz.PeakArray.peaksToNearestUnitDaltonBinVector x 100. 2000.
+            |> fun (x) -> peaksToNearestBinVector processParams.FragMatchingBinWidth processParams.FragMatchingBinOffset x (processParams.MS2ScanRange |> fst) (processParams.MS2ScanRange |> snd)
+        let rtQuery   = MzIO.Processing.Query.createRangeQuery pepIon.ScanTime processParams.RtWindowWidth
+        let mzQueries = 
+            targetFragmentMzs 
+            |> Array.map (fun pk -> MzIO.Processing.Query.createRangeQuery pk.Mz 0.05)                    
+        let targetSwathQuery = MzIO.Processing.Query.createSwathQuery pepIon.PrecursorMZ rtQuery mzQueries
+        let fragVecs  = 
+            let tmp :Peak2D [,] option list  = getRTProfiles targetSwathQuery
+            match tmp with 
+            | (Some queryRes)::t ->
+                let fragVecs = 
+                    queryRes
+                    //Out: mz inner: intensitäten zu rts 
+                    |> JaggedArray.ofArray2D
+                    |> JaggedArray.transpose
+                    |> Array.map (fun rtGroup ->
+                        rtGroup.[0].Rt, 
+                        rtGroup
+                        |> Array.map (fun p -> p.Mz,p.Intensity)
+                        |> Array.ofSeq
+                        |> BioFSharp.Mz.PeakArray.zipMzInt
+                        |> fun (x) -> peaksToNearestBinVector processParams.FragMatchingBinWidth processParams.FragMatchingBinOffset x (processParams.MS2ScanRange |> fst) (processParams.MS2ScanRange |> snd)          
+                        )
+                    |> Array.sortBy fst
+                Some fragVecs
+            | _ -> None
+        let quantifiedCorrelationProfile = 
+            match fragVecs with 
+            | Some fragVecs -> 
+                let correlationTrace = 
+                    fragVecs
+                    |> Array.map (fun (rt, measuredFrags) -> 
+                        rt, dot targetFragmentVector measuredFrags
+                        )
+                let xData,yData = correlationTrace |> Array.unzip
+                try
+                let s = FSharpStats'.Wavelet.identify FSharpStats'.Wavelet.p xData yData
+                if Array.isEmpty s then 
+                    None
+                elif s.Length = 1 then
+                    let peakToQuantify =s.[0]
+                    let quantP = BioFSharp.Mz.Quantification.HULQ.quantifyPeak peakToQuantify 
+                    Some (quantP,peakToQuantify,correlationTrace)
+                else
+                    let sorted = s |> Array.sortByDescending (fun x -> x.Apex.YVal)
+                    let mainPeak,sndPeak = sorted.[0],sorted.[1]
+                    let ratio = sndPeak.Apex.YVal / mainPeak.Apex.YVal
+                    if ratio > processParams.MaxRatioMostAbundandVsSecondAbundandPeak then None else
+                    let peakToQuantify = BioFSharp.Mz.Quantification.HULQ.getPeakBy s pepIon.ScanTime
+                    let quantP = BioFSharp.Mz.Quantification.HULQ.quantifyPeak peakToQuantify 
+                    Some (quantP,peakToQuantify,correlationTrace)
+            
+                with 
+                | _ -> None
+            | _ -> None
+
+        match quantifiedCorrelationProfile with 
+        | Some (quantifiedProfile,profile,correlationTrace) -> 
+            let targetApex     = tryGetApexIntensity quantifiedProfile
+            let targetScanTime = tryGetScanTime quantifiedProfile 
+            let targetStdev    = tryGetStdev quantifiedProfile
+            match targetApex, targetScanTime, targetStdev, fragVecs with 
+            | Some apex, Some targetScanTime, Some stdev, Some fragVecs -> 
+                if checkApex apex quantifiedProfile.MeasuredApexIntensity && checkStdev stdev profile.XData then
+                    let profileMinRT = profile.XData |> Array.min
+                    let profileMaxRT = profile.XData |> Array.max
+                    let filteredfragVecs = 
+                        fragVecs
+                        |> Array.filter (fun (rt, mzData) -> 
+                                rt >= profileMinRT && rt <= profileMaxRT
+                            )
+                    let fragCorrQuant =
+                        pepIon.Fragments
+                        |> List.map (fun frag -> 
+                                let minMassBoarder = getBinIdx' processParams.FragMatchingBinWidth processParams.FragMatchingBinOffset (processParams.MS2ScanRange |> fst)
+                                let idx = (getBinIdx' processParams.FragMatchingBinWidth processParams.FragMatchingBinOffset frag.MeanFragMz) - minMassBoarder 
+                                let fragTrace = 
+                                    filteredfragVecs 
+                                    |> Array.map (fun (rt, mzData) -> 
+                                        // can probably be checked earlier
+                                        if mzData.Data.ContainsKey idx then 
+                                            mzData.Data.[idx] 
+                                        else 0.
+                                        )
+                                let corr = FSharp.Stats.Correlation.Seq.pearson profile.YData fragTrace
+                                let max = fragTrace |> Array.max 
+                                createQuantifiedFragment frag corr max
+                            )
+                        |> List.filter (fun quantFrag -> 
+                            quantFrag.CorrelationWithTrace > 0.75
+                            )
+                    [
+                        [
+                        Chart.Point(correlationTrace)
+                        Chart.Point([targetScanTime],[apex])
+                        ]
+                        |> Chart.Combine
+                        Chart.Point(fragCorrQuant |> List.map (fun x -> targetScanTime,x.Quant))
+                    ]
+                    |> Chart.Combine
+                    |> Chart.SaveHtmlAs (getPlotFilePathFilePath ((pepIon.StringSequence |> String.filter (fun x -> x <> '*')) + "_GMod_" + pepIon.GlobalMod.ToString() + "Ch" + pepIon.Charge.ToString()) ("_") ) 
+                    createQuantifiedPepIon pepIon fragCorrQuant targetScanTime
+                    |> Some
+                else None 
+
+            | _ -> 
+                None 
+        | None -> None
+    
+    ///
+    let labledQuantification (logger:NLog.Logger) (*(peptideLookUp:string -> int -> LookUpResult<AminoAcids.AminoAcid>)*) getPlotFilePathFilePath getRTProfiles (processParams:Domain.ConsensusSpectralLibraryParams) (pepIons:PeptideIon[]) = 
+        let mutable c = 0
+        pepIons
+        |> Array.choose (fun pepIon -> 
+                if c % 100 = 0 then logger.Trace (sprintf "peps quantified: %i" c)
+                c <- c + 1
+                //let unlabledPeptide = peptideLookUp pepIon.StringSequence 0
+                //let labeledPeptide  = peptideLookUp pepIon.StringSequence 1
+                //let targetPeptide = if pepIon.GlobalMod = 0 then unlabledPeptide else labeledPeptide 
+                let quantifiedTargetIon = quantifyPepIon getPlotFilePathFilePath getRTProfiles processParams pepIon
+                quantifiedTargetIon
+            )
 
 
     ///
-    let initIdentifyPeaks (peakDetectionParams:Domain.XicProcessing) =
-        match peakDetectionParams with 
-        | Domain.XicProcessing.SecondDerivative parameters ->
-            let getWindowWidth = initGetWindowWidth parameters.WindowSize parameters.PolynomOrder [|5 .. 2 .. 60|] 
-            (fun xData yData -> 
-                let  windowSize = getWindowWidth yData
-                FSharp.Stats.Signal.PeakDetection.SecondDerivative.getPeaks parameters.MinSNR parameters.PolynomOrder windowSize xData yData
-                )
-        | Domain.XicProcessing.Wavelet parameters ->
-            (fun xData yData -> 
-                FSharpStats'.Wavelet.identify parameters xData yData
-                )
+    let quantify (processParams:Domain.ConsensusSpectralLibraryParams) (outputDir:string) (targetSwathFile:string) (libraryFile:string) = 
+        let logger = Logging.createLogger (Path.GetFileNameWithoutExtension libraryFile)
+        logger.Trace (sprintf "Input directory containing library: %s" libraryFile)
+        logger.Trace (sprintf "Input Swath file to quantify to: %s" targetSwathFile)
+        logger.Trace (sprintf "Output directory: %s" outputDir)
+        logger.Trace (sprintf "Parameters: %A" processParams)
+        let outFilePath =
+            let fileName = (Path.GetFileNameWithoutExtension targetSwathFile) + ".squant"
+            Path.Combine [|outputDir;fileName|]
+         
+        logger.Trace "Reading and preparing .csl file for quantification"
+        let libraryFile = readLibraryFrom libraryFile
+        logger.Trace "Reading and preparing .csl file for quantification: finished"
+        
+        logger.Trace "Init connection to swath mass spectrum data."
+        let inReader = Core.MzIO.Reader.getReader targetSwathFile :?> MzIO.MzSQL.MzSQL
+        inReader.Connection.Open()
+        let inRunID  = Core.MzIO.Reader.getDefaultRunID inReader
+        let inTr = inReader.BeginTransaction()
+        logger.Trace "Init connection to swath mass spectrum data.:finished"
 
-    let quantify (library: string) (swathAnalysisParams: Domain.SWATHAnalysisParams) (instrumentOutput: string) (outFolder: string) =
-        let outFilePath = outFolder + "/" + (System.IO.Path.GetFileNameWithoutExtension instrumentOutput) + ".squant"
-        let consensusLibrary =
-            Seq.fromFileWithCsvSchema<LibraryEntry>(library, '\t', true,schemaMode = FSharpAux.IO.SchemaReader.Csv.SchemaModes.Fill)
-            |> Seq.toArray
+        logger.Trace "Create Swath RetentionTime index"
+        let retTimeIdxed = Query.getSwathIdx inReader inRunID
+        let getRTProfiles = getRTProfiles retTimeIdxed inReader
+        logger.Trace "Create Swath RetentionTime index:finished"
 
-        let inReader = Core.MzIO.Reader.getReader instrumentOutput
-        let tr = inReader.BeginTransaction()
-        let runID = Core.MzIO.Reader.getDefaultRunID inReader
-        let swathIdx = SwathIndexer.SwathIndexer.Create(inReader, runID)
-        let identifyPeaks = initIdentifyPeaks swathAnalysisParams.XicProcessing
-        let peptideList =
-            match swathAnalysisParams.PeptideList with
-            | Some x ->
-                consensusLibrary
-                |> Array.groupBy (fun x -> x.Sequence, x.GlobalMod, x.ModSequenceID, x.PepSequenceID)
-                |> Array.map snd
-                |> Array.filter (fun y -> x.Contains y.[0].Sequence)
-            | None ->
-                consensusLibrary
-                |> Array.groupBy (fun x -> x.Sequence, x.GlobalMod, x.ModSequenceID, x.PepSequenceID)
-                |> Array.map snd
-        let queries =
-            peptideList
-            |> Array.map (fun entries -> entries, createPeptideQuery entries swathAnalysisParams.MatchingTolerancePPM swathAnalysisParams.QueryOffsetRange)
-        let quant =
-            queries
-            |> Array.map (fun (entries,(rt,query)) ->
-                let profiles = getRTProfiles swathIdx inReader (parseSpectrumSelection swathAnalysisParams) entries query
-                profiles
-                |> List.choose (fun profile ->
-                // Match to look if RTProfile was found. If none was found, quantification is skipped.
-                    match profile with
-                    | Some rtProfile ->
-                        let rtProfiles =
-                            rtProfile
-                            |> Array2D.toJaggedArray
-                            |> Array.map (fun peak2DArr ->
-                                peak2DArr
-                                |> Array.map (fun peak2D ->
-                                    peak2D.Rt, peak2D.Intensity, peak2D.FragmentInfo
-                                )
-                            )
-                        let quants = 
-                            rtProfiles
-                            |> Array.choose (fun retInt ->
-                                retInt
-                                //process XIC
-                                |> Array.mapi (fun i (rt,intensity,lib) ->
-                                    if i = 0 || i = retInt.Length-1 || intensity > 0. then
-                                        Some (rt,intensity,lib)
-                                    else
-                                        let rt',intensity',lib' = retInt.[i-1]
-                                        if intensity' = 0. then
-                                            Some (rt,intensity,lib)
-                                        elif intensity' > (100. * (intensity+1.)) then
-                                            None
-                                        else
-                                            Some (rt,intensity,lib)
-                                  )
-                                |> Array.choose id
-                                |> Array.unzip3
-                                |> fun (ret, intensity, libEntry) ->
-                                    let checkSameLibEntry =
-                                        libEntry
-                                        |> Array.distinct
-                                        |> fun x ->
-                                            if x.Length > 1 then failwith "Too many Library Entries for one fragment"
-                                            else
-                                                x.[0]
-                                    identifyPeaks ret intensity, checkSameLibEntry
-                                |> fun (peaks,libEntry) ->
-                                    match peaks with
-                                    | [||] -> None
-                                    | _    -> Some ((BioFSharp.Mz.Quantification.HULQ.getPeakBy peaks rt), libEntry)
-                            )
-                            |> Array.map (fun (peak, libEntry) ->
-                                BioFSharp.Mz.Quantification.HULQ.quantifyPeak peak
-                                |> fun x -> x.Area, libEntry
-                            )
-                        Some (quants)
-                    | None -> None
-                )
-            )
-            |> List.concat
-            |> Array.concat
-            |> Array.map (fun (quant,x) ->
-                {
-                    Charge         = x.Charge
-                    Iontype        = x.Iontype
-                    MassOverCharge = x.MassOverCharge
-                    Number         = x.Number
-                    Intensity      = x.Intensity
-                    PepSequenceID  = x.PepSequenceID
-                    ModSequenceID  = x.ModSequenceID
-                    PSMId          = x.PSMId
-                    PrecursorMZ    = x.PrecursorMZ
-                    ScanTime       = x.ScanTime
-                    Count          = x.Count
-                    Version        = x.Version
-                    Sequence       = x.Sequence
-                    GlobalMod      = x.GlobalMod
-                    PercolatorScore= x.PercolatorScore
-                    Quant          = quant
-                }
-            )
-        tr.Dispose()
-        if quant.Length >= 1 then
-            FSharpAux.IO.SeqIO.Seq.CSV "\t" true false quant
-            |> FSharpAux.IO.SeqIO.Seq.writeOrAppend outFilePath
-        else
-            ()
+        logger.Trace "Quantify peptide ions in Swath file"
+        let swathFileName = Path.GetFileNameWithoutExtension targetSwathFile
+        let getPlotFilePathFilePath = getPlotFilePathFilePath outputDir swathFileName                    
+        let quantifiedIons = labledQuantification logger getPlotFilePathFilePath getRTProfiles processParams libraryFile.Data
+        logger.Trace "Quantify peptide ions in Swath file: finished"
+        
+        logger.Trace "Writing Output"
+        Json.serializeAndWrite outFilePath quantifiedIons
+        logger.Trace "Writing Output:finished"
+        
+        logger.Trace "Quantification: finished"
+        
+  
+        
+            
+
+
+        
+        
+            
+        
