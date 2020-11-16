@@ -8,7 +8,6 @@ open ProteomIQon.Dto
 
 let defaultSpectralLibraryParams: Dto.SpectralLibraryParams =
     {
-        ChargeList           = [1. .. 8.]
         MatchingTolerancePPM = 100.
     }
 

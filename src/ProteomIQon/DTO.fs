@@ -712,7 +712,6 @@ module Dto =
 
     type SpectralLibraryParams =
         {
-            ChargeList          : float list
             MatchingTolerancePPM: float
         }
 
@@ -720,7 +719,6 @@ module Dto =
 
         let toDomain (dtoSpectralLibraryParams: SpectralLibraryParams): Domain.SpectralLibraryParams =
             {
-                ChargeList           = dtoSpectralLibraryParams.ChargeList
                 MatchingTolerancePPM = dtoSpectralLibraryParams.MatchingTolerancePPM
             }
 
