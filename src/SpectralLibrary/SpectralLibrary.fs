@@ -148,7 +148,7 @@ module SpectralLibrary =
             Seq.fromFileWithCsvSchema<PSMStatisticsResult>(scoredPSMs, '\t', false,schemaMode = FSharpAux.IO.SchemaReader.Csv.SchemaModes.Fill, skipLines = 1)
             |> Seq.toArray
         logger.Trace "Creating library"
-        let createPeptideIons (quant: QuantificationResult []) (psmLookup: Map<(int*int),PSMStatisticsResult[]>) (chargeList: float list) (matchingTolerance: float) =
+        let createPeptideIons (quant: QuantificationResult []) (psmLookup: Map<(int*int),PSMStatisticsResult[]>) (matchingTolerance: float) =
             quant
             |> Array.map (fun qr ->
                 let psms =
@@ -159,7 +159,7 @@ module SpectralLibrary =
                         let sequence = peptideLookUp psm.ModSequenceID
                         let frag =
                             let ionSeries = (calcIonSeries sequence.BioSequence).TargetMasses
-                            ProteomIQon.Fragmentation'.ladderElement ionSeries chargeList
+                            ProteomIQon.Fragmentation'.ladderElement ionSeries [1. .. (float qr.Charge)]
                             |> List.map (fun frag -> frag.MainPeak::frag.DependentPeaks)
                             |> List.concat
                         let spec = inReader.ReadSpectrumPeaks psm.PSMId
@@ -277,7 +277,7 @@ module SpectralLibrary =
                             RelativeMeasuredApex = peptideIon.MeasuredApex/maxMeasuredApex
                     }
                 )
-        let peptideIons = createPeptideIons quantifiedPeptides psmLookupMap  spectralLibraryParams.ChargeList spectralLibraryParams.MatchingTolerancePPM
+        let peptideIons = createPeptideIons quantifiedPeptides psmLookupMap spectralLibraryParams.MatchingTolerancePPM
         Json.serializeAndWrite outFile peptideIons
             
             //psms

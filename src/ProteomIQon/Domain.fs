@@ -165,7 +165,6 @@ module Domain =
 
     type SpectralLibraryParams =
         {
-            ChargeList          : float list
             MatchingTolerancePPM: float
         }
 
