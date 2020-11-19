@@ -853,9 +853,11 @@ module Dto =
         CountAbsolute                     : int
         CountFraction                     : float
         MeanFragMz                        : float 
+        MeanMzDelta                       : float
         CvMeanFragMz                      : float
-        MaxIntensity                      :float
-        MinIntensity                      :float
+        MaxIntensity                      : float
+        MinIntensity                      : float
+        MeanIntensity                     : float
         MeanRelativeIntensity_Total       : float
         CVRelativeIntensity_Total         : float
         MeanRelativeIntensity_Frags       : float
