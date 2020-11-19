@@ -208,17 +208,24 @@ module SpectralLibrary =
                             CountFraction                     = (float ions.Length)/(float totalIons)
                             MeanFragMz                        = ions |> List.averageBy (fun x -> x.MassOverCharge)
                             CvMeanFragMz                      = ions |> Seq.cvBy (fun x -> x.MassOverCharge)
+                            /// calculated fragment m/z - measured fragment m/z
+                            MeanMzDelta                       = ions |> List.averageBy (fun x -> x.MzDelta)
                             MaxIntensity                      = ions |> List.maxBy (fun x -> x.Intensity) |> fun x -> x.Intensity
                             MinIntensity                      = ions |> List.minBy (fun x -> x.Intensity) |> fun x -> x.Intensity
+                            MeanIntensity                     = ions |> List.averageBy (fun x -> x.Intensity)
                             // meinst du hier mit total das ganze spec?
+                            /// mean of intensitiy relative to the spectrum the fragment was measured in
                             MeanRelativeIntensity_Total       = ions |> List.averageBy (fun x -> x.RelIntensitySpec)
+                            /// cv of intensitiy relative to the spectrum the fragment was measured in
                             CVRelativeIntensity_Total         = ions |> Seq.cvBy (fun x -> x.RelIntensitySpec)
+                            /// mean of intensitiy relative to the fragments of the precursor
                             MeanRelativeIntensity_Frags       = 
                                 ions
                                 |> List.map (fun x ->
                                     x.Intensity/maxIntFrags
                                 )
                                 |> List.average
+                            /// cv of intensitiy relative to the fragments of the precursor
                             CVRelativeIntensity_Frags         =
                                 ions
                                 |> List.map (fun x ->
