@@ -179,7 +179,7 @@ module SpectralLibrary =
                                                 ion.Charge
                                                 ion.Iontype
                                                 ion.Number
-                                                ion.MassOverCharge
+                                                peak.Mz
                                                 peak.Intensity
                                                 (peak.Intensity/maxIntSpec)
                                                 deltaMass
