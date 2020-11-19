@@ -852,6 +852,7 @@ module Dto =
         GlobalMod                         : int
         CountAbsolute                     : int
         CountFraction                     : float
+        CalculatedMz                      : float
         MeanFragMz                        : float 
         MeanMzDelta                       : float
         CvMeanFragMz                      : float

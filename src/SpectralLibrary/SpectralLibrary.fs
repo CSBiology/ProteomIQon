@@ -33,18 +33,20 @@ module SpectralLibrary =
             Charge          : float
             Iontype         : Ions.IonTypeFlag
             Number          : int
-            MassOverCharge  : float
+            MeasuredMz      : float
+            CalculatedMz    : float
             Intensity       : float
             RelIntensitySpec: float
             MzDelta         : float
         }
 
-    let createIonInformation charge iontype number mOverZ intensity relIntSpec mzDelta=
+    let createIonInformation charge iontype number mesauredMz calcMz intensity relIntSpec mzDelta=
         {
             Charge           = charge
             Iontype          = iontype
             Number           = number
-            MassOverCharge   = mOverZ
+            MeasuredMz       = mesauredMz
+            CalculatedMz     = calcMz
             Intensity        = intensity
             RelIntensitySpec = relIntSpec
             MzDelta          = mzDelta
@@ -180,6 +182,7 @@ module SpectralLibrary =
                                                 ion.Iontype
                                                 ion.Number
                                                 peak.Mz
+                                                ion.MassOverCharge
                                                 peak.Intensity
                                                 (peak.Intensity/maxIntSpec)
                                                 deltaMass
@@ -206,8 +209,9 @@ module SpectralLibrary =
                             GlobalMod                         = qr.GlobalMod
                             CountAbsolute                     = ions.Length
                             CountFraction                     = (float ions.Length)/(float totalIons)
-                            MeanFragMz                        = ions |> List.averageBy (fun x -> x.MassOverCharge)
-                            CvMeanFragMz                      = ions |> Seq.cvBy (fun x -> x.MassOverCharge)
+                            CalculatedMz                      = ions.[0].CalculatedMz
+                            MeanFragMz                        = ions |> List.averageBy (fun x -> x.MeasuredMz)
+                            CvMeanFragMz                      = ions |> Seq.cvBy (fun x -> x.MeasuredMz)
                             /// calculated fragment m/z - measured fragment m/z
                             MeanMzDelta                       = ions |> List.averageBy (fun x -> x.MzDelta)
                             MaxIntensity                      = ions |> List.maxBy (fun x -> x.Intensity) |> fun x -> x.Intensity
