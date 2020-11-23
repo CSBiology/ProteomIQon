@@ -30,17 +30,18 @@ module SpectralLibrary =
     /// Holds information about ion and in which spectrum it is found.
     type IonInformation =
         {
-            Charge          : float
-            Iontype         : Ions.IonTypeFlag
-            Number          : int
-            MeasuredMz      : float
-            CalculatedMz    : float
-            Intensity       : float
-            RelIntensitySpec: float
-            MzDelta         : float
+            Charge           : float
+            Iontype          : Ions.IonTypeFlag
+            Number           : int
+            MeasuredMz       : float
+            CalculatedMz     : float
+            Intensity        : float
+            RelIntensitySpec : float
+            AbsMzDelta       : float
+            TheoMinusXMzDelta: float
         }
 
-    let createIonInformation charge iontype number mesauredMz calcMz intensity relIntSpec mzDelta=
+    let createIonInformation charge iontype number mesauredMz calcMz intensity relIntSpec absMzDelta theoMinusXMzDelta=
         {
             Charge           = charge
             Iontype          = iontype
@@ -49,7 +50,8 @@ module SpectralLibrary =
             CalculatedMz     = calcMz
             Intensity        = intensity
             RelIntensitySpec = relIntSpec
-            MzDelta          = mzDelta
+            AbsMzDelta       = absMzDelta
+            TheoMinusXMzDelta= theoMinusXMzDelta
         }
 
     /// Returns SearchDbParams of a existing database by filePath
@@ -174,8 +176,9 @@ module SpectralLibrary =
                             |> Seq.collect (fun (peak: MzIO.Binary.Peak1D) ->
                                 frag
                                 |> Seq.choose (fun ion ->
-                                    let deltaMass = abs (ion.MassOverCharge - peak.Mz)
-                                    if deltaMass <= (Mass.deltaMassByPpm matchingTolerance peak.Mz) then
+                                    let theMinusXDeltaMass = ion.MassOverCharge - peak.Mz
+                                    let absDeltaMass = abs (ion.MassOverCharge - peak.Mz)
+                                    if absDeltaMass <= (Mass.deltaMassByPpm matchingTolerance peak.Mz) then
                                         Some 
                                             (createIonInformation
                                                 ion.Charge
@@ -185,7 +188,8 @@ module SpectralLibrary =
                                                 ion.MassOverCharge
                                                 peak.Intensity
                                                 (peak.Intensity/maxIntSpec)
-                                                deltaMass
+                                                absDeltaMass
+                                                theMinusXDeltaMass
                                             )
                                     else
                                         None
@@ -213,7 +217,8 @@ module SpectralLibrary =
                             MeanFragMz                        = ions |> List.averageBy (fun x -> x.MeasuredMz)
                             CvMeanFragMz                      = ions |> Seq.cvBy (fun x -> x.MeasuredMz)
                             /// calculated fragment m/z - measured fragment m/z
-                            MeanMzDelta                       = ions |> List.averageBy (fun x -> x.MzDelta)
+                            MeanAbsMzDelta                    = ions |> List.averageBy (fun x -> x.AbsMzDelta)
+                            MeanTheoMinusXMzDelta             = ions |> List.averageBy (fun x -> x.TheoMinusXMzDelta)
                             MaxIntensity                      = ions |> List.maxBy (fun x -> x.Intensity) |> fun x -> x.Intensity
                             MinIntensity                      = ions |> List.minBy (fun x -> x.Intensity) |> fun x -> x.Intensity
                             MeanIntensity                     = ions |> List.averageBy (fun x -> x.Intensity)

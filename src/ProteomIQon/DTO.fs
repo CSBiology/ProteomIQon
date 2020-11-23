@@ -854,7 +854,8 @@ module Dto =
         CountFraction                     : float
         CalculatedMz                      : float
         MeanFragMz                        : float 
-        MeanMzDelta                       : float
+        MeanAbsMzDelta                    : float
+        MeanTheoMinusXMzDelta             : float
         CvMeanFragMz                      : float
         MaxIntensity                      : float
         MinIntensity                      : float
