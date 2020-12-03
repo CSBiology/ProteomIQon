@@ -28,40 +28,40 @@ open System.Linq
 
 module ConsensusSpectralLibrary =
     
-    ///
-    type SparsePeakArray = { 
-        Length: int
-        Data: System.Collections.Generic.IDictionary<int,float>
-        }
+    /////
+    //type SparsePeakArray = { 
+    //    Length: int
+    //    Data: System.Collections.Generic.IDictionary<int,float>
+    //    }
    
-    ///
-    let dot (x:SparsePeakArray) (y:SparsePeakArray) =
-        x.Data
-        |> Seq.fold (fun (acc:float) xi -> 
-            let present,yi = y.Data.TryGetValue xi.Key
-            if present then acc + (yi * xi.Value) else acc
-            ) 0.
+    /////
+    //let dot (x:SparsePeakArray) (y:SparsePeakArray) =
+    //    x.Data
+    //    |> Seq.fold (fun (acc:float) xi -> 
+    //        let present,yi = y.Data.TryGetValue xi.Key
+    //        if present then acc + (yi * xi.Value) else acc
+    //        ) 0.
            
-    ///
-    let getBinIdx' width offset x = int ((x / width) + offset)
+    /////
+    //let getBinIdx' width offset x = int ((x / width) + offset)
 
-    ///
-    let peaksToNearestBinVector binWidth offset (pkarr:BioFSharp.Mz.PeakArray<_>) (minMassBoarder:float) (maxMassBoarder:float) = 
-        let minMassBoarder = getBinIdx' binWidth offset minMassBoarder
-        let maxMassBoarder = getBinIdx' binWidth offset maxMassBoarder
-        let maxIndex = maxMassBoarder - minMassBoarder + 1        
-        let keyValues = 
-            pkarr 
-            |> Array.choose (fun p ->  
-                let index = (getBinIdx' binWidth offset p.Mz) - minMassBoarder
-                if index < maxIndex-1 && index > -1 then Some (index, p.Intensity) else None
-                )
-            |> Array.groupBy fst 
-            |> Array.map (fun (idx,data) -> idx, data |> Array.sumBy snd)
-        { 
-            Length = maxIndex
-            Data = keyValues |> dict
-        } 
+    /////
+    //let peaksToNearestBinVector binWidth offset (pkarr:BioFSharp.Mz.PeakArray<_>) (minMassBoarder:float) (maxMassBoarder:float) = 
+    //    let minMassBoarder = getBinIdx' binWidth offset minMassBoarder
+    //    let maxMassBoarder = getBinIdx' binWidth offset maxMassBoarder
+    //    let maxIndex = maxMassBoarder - minMassBoarder + 1        
+    //    let keyValues = 
+    //        pkarr 
+    //        |> Array.choose (fun p ->  
+    //            let index = (getBinIdx' binWidth offset p.Mz) - minMassBoarder
+    //            if index < maxIndex-1 && index > -1 then Some (index, p.Intensity) else None
+    //            )
+    //        |> Array.groupBy fst 
+    //        |> Array.map (fun (idx,data) -> idx, data |> Array.sumBy snd)
+    //    { 
+    //        Length = maxIndex
+    //        Data = keyValues |> dict
+    //    } 
 
     ///
     [<CLIMutable>]
@@ -296,7 +296,7 @@ module ConsensusSpectralLibrary =
                     let fragmentVector = 
                         fragmentMzs 
                         //|> fun x -> BioFSharp.Mz.PeakArray.peaksToNearestUnitDaltonBinVector x 100. 2000.
-                        |> fun (x) -> peaksToNearestBinVector processParams.FragMatchingBinWidth processParams.FragMatchingBinOffset x (processParams.MS2ScanRange |> fst) (processParams.MS2ScanRange |> snd)
+                        |> SparsePeakArray'.peaksToNearestBinVector processParams.FragMatchingBinWidth processParams.FragMatchingBinOffset (processParams.MS2ScanRange |> fst) (processParams.MS2ScanRange |> snd)
                     let rtQuery   = MzIO.Processing.Query.createRangeQuery pepIon.ScanTime processParams.RtWindowWidth
                     let mzQueries = 
                         fragmentMzs 
@@ -318,15 +318,14 @@ module ConsensusSpectralLibrary =
                                     |> Array.map (fun p -> p.Mz,p.Intensity)
                                     |> Array.ofSeq
                                     |> BioFSharp.Mz.PeakArray.zipMzInt
-                                    //|> fun x -> BioFSharp.Mz.PeakArray.peaksToNearestUnitDaltonBinVector x 100. 2000.
-                                    |> fun (x) -> peaksToNearestBinVector processParams.FragMatchingBinWidth processParams.FragMatchingBinOffset x (processParams.MS2ScanRange |> fst) (processParams.MS2ScanRange |> snd)
+                                    |> SparsePeakArray'.peaksToNearestBinVector processParams.FragMatchingBinWidth processParams.FragMatchingBinOffset (processParams.MS2ScanRange |> fst) (processParams.MS2ScanRange |> snd)
                     
                                     )
                                 |> Array.sortBy fst
                             let correlationTrace = 
                                 fragVecs
                                 |> Array.map (fun (rt, measuredFrags) -> 
-                                    rt, dot fragmentVector measuredFrags
+                                    rt, SparsePeakArray'.dot fragmentVector measuredFrags
                                     )
                             [
                             Chart.Point correlationTrace
@@ -374,6 +373,18 @@ module ConsensusSpectralLibrary =
         |> Chart.Combine
         |> Chart.withSize(1200.,1200.)
         |> Chart.SaveHtmlAs (getPlotFilePathFilePath "identifiedPepFeatures" "" )
+
+    let plotDifferencesBeforeAlignment getPlotFilePathFilePath libraryFiles swathFileFeatures =         
+        Array.map2 (fun (lib:Library) (d:PeptideForLearning []) ->
+            d
+            |> Array.map (fun x -> x.SourceScanTime - x.TargetScanTime)
+            |> Chart.BoxPlot
+            |> Chart.withX_AxisStyle "Differences before Alignment"
+            |> Chart.withTraceName lib.FileName
+            ) libraryFiles swathFileFeatures 
+        |> Chart.Combine
+        |> Chart.withSize(1200.,1200.)
+        |> Chart.SaveHtmlAs (getPlotFilePathFilePath "differencesBeforeAlignment" "" )
 
 
     ///
@@ -428,6 +439,8 @@ module ConsensusSpectralLibrary =
             |> createAlignmentResult pepIon
         metrics, predict
 
+
+
     let plotAlignments getPlotFilePathFilePath alignedLibs =         
         alignedLibs
         |> Array.map (fun (alignedLib:AlignedLib) ->
@@ -452,13 +465,34 @@ module ConsensusSpectralLibrary =
             ]
             |> Chart.Combine
             |> Chart.withTraceName (sprintf "%s, Rsquared:%f" alignedLib.FileName alignedLib.RegressionMetric.RSquared)
-            |> Chart.withX_AxisStyle "Source ScanTime"
-            |> Chart.withY_AxisStyle "Target ScanTime"
             ) 
         |> Chart.Combine
+        |> Chart.withX_AxisStyle "Differences after Alignment"
         |> Chart.withSize(1200.,1200.)
         |> Chart.SaveHtmlAs (getPlotFilePathFilePath "Alignments" "" )
 
+    let plotDifferencesAfterAlignment getPlotFilePathFilePath alignedLibs =         
+        alignedLibs
+        |> Array.map (fun (alignedLib:AlignedLib) ->
+            let source = 
+                alignedLib.IdentifiedPeptideFeatures
+                |> Array.map (fun x -> (x.ModSequenceID,x.GlobalMod,x.Charge),x)
+                |> Map.ofSeq
+            alignedLib.AlignedPeptideIons
+            |> Array.choose (fun x -> 
+                    match Map.tryFind (x.ModSequenceID,x.GlobalMod,x.Charge) source with 
+                    | Some identPep -> 
+                            (float identPep.TargetScanTime - x.ScanTime)
+                            |> Some
+                    | None -> None
+                )
+            |> Chart.BoxPlot
+            |> Chart.withTraceName (sprintf "%s, Rsquared:%f" alignedLib.FileName alignedLib.RegressionMetric.RSquared)
+            |> Chart.withX_AxisStyle "Source ScanTime"
+            ) 
+        |> Chart.Combine
+        |> Chart.withSize(1200.,1200.)
+        |> Chart.SaveHtmlAs (getPlotFilePathFilePath "differencesAfterAlignment" "" )
     /////
     //let performAlignment outDir align (source: LibToAlign) =
     
@@ -511,6 +545,7 @@ module ConsensusSpectralLibrary =
             libraryFiles 
             |> Array.map (fun libraryToAlign -> identifyFeatures getPlotFilePathFilePath getRTProfiles processParams libraryToAlign)
         plotIdentifiedFeatures getPlotFilePathFilePath libraryFiles swathFileFeatures
+        plotDifferencesBeforeAlignment getPlotFilePathFilePath libraryFiles swathFileFeatures
         logger.Trace "Identify features in Swath file: finished"
         
         logger.Trace "Pruning peptide features across libaries"
@@ -527,6 +562,7 @@ module ConsensusSpectralLibrary =
                 )
             |> Array.sortByDescending (fun (alib) -> alib.RegressionMetric.RSquared)
         plotAlignments getPlotFilePathFilePath alignedLibs
+        plotDifferencesAfterAlignment getPlotFilePathFilePath alignedLibs
         logger.Trace "Performing alignments:finished"
         logger.Trace "Transfering PeptideIons to Consensus library"
         let missingPeptideIons = 
