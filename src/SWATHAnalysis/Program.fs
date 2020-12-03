@@ -28,8 +28,8 @@ module console1 =
         logger.Trace (sprintf "CLIArguments: %A" results)
         Directory.CreateDirectory(o) |> ignore
         let p =
-            Json.ReadAndDeserialize<Dto.ConsensusSpectralLibraryParams> p
-            |> Dto.ConsensusSpectralLibraryParams.toDomain
+            Json.ReadAndDeserialize<Dto.SWATHAnalysisParams> p
+            |> Dto.SWATHAnalysisParams.toDomain
         let dbConnection =
             if File.Exists d then
                 logger.Trace (sprintf "Database found at given location (%s)" d)
