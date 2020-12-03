@@ -30,24 +30,28 @@ module SpectralLibrary =
     /// Holds information about ion and in which spectrum it is found.
     type IonInformation =
         {
-            Charge          : float
-            Iontype         : Ions.IonTypeFlag
-            Number          : int
-            MassOverCharge  : float
-            Intensity       : float
-            RelIntensitySpec: float
-            MzDelta         : float
+            Charge           : float
+            Iontype          : Ions.IonTypeFlag
+            Number           : int
+            MeasuredMz       : float
+            CalculatedMz     : float
+            Intensity        : float
+            RelIntensitySpec : float
+            AbsMzDelta       : float
+            TheoMinusXMzDelta: float
         }
 
-    let createIonInformation charge iontype number mOverZ intensity relIntSpec mzDelta=
+    let createIonInformation charge iontype number mesauredMz calcMz intensity relIntSpec absMzDelta theoMinusXMzDelta=
         {
             Charge           = charge
             Iontype          = iontype
             Number           = number
-            MassOverCharge   = mOverZ
+            MeasuredMz       = mesauredMz
+            CalculatedMz     = calcMz
             Intensity        = intensity
             RelIntensitySpec = relIntSpec
-            MzDelta          = mzDelta
+            AbsMzDelta       = absMzDelta
+            TheoMinusXMzDelta= theoMinusXMzDelta
         }
 
     /// Returns SearchDbParams of a existing database by filePath
@@ -148,7 +152,7 @@ module SpectralLibrary =
             Seq.fromFileWithCsvSchema<PSMStatisticsResult>(scoredPSMs, '\t', false,schemaMode = FSharpAux.IO.SchemaReader.Csv.SchemaModes.Fill, skipLines = 1)
             |> Seq.toArray
         logger.Trace "Creating library"
-        let createPeptideIons (quant: QuantificationResult []) (psmLookup: Map<(int*int),PSMStatisticsResult[]>) (chargeList: float list) (matchingTolerance: float) =
+        let createPeptideIons (quant: QuantificationResult []) (psmLookup: Map<(int*int),PSMStatisticsResult[]>) (matchingTolerance: float) =
             quant
             |> Array.map (fun qr ->
                 let psms =
@@ -159,7 +163,7 @@ module SpectralLibrary =
                         let sequence = peptideLookUp psm.ModSequenceID
                         let frag =
                             let ionSeries = (calcIonSeries sequence.BioSequence).TargetMasses
-                            ProteomIQon.Fragmentation'.ladderElement ionSeries chargeList
+                            ProteomIQon.Fragmentation'.ladderElement ionSeries [1. .. (float qr.Charge)]
                             |> List.map (fun frag -> frag.MainPeak::frag.DependentPeaks)
                             |> List.concat
                         let spec = inReader.ReadSpectrumPeaks psm.PSMId
@@ -172,17 +176,20 @@ module SpectralLibrary =
                             |> Seq.collect (fun (peak: MzIO.Binary.Peak1D) ->
                                 frag
                                 |> Seq.choose (fun ion ->
-                                    let deltaMass = abs (ion.MassOverCharge - peak.Mz)
-                                    if deltaMass <= (Mass.deltaMassByPpm matchingTolerance peak.Mz) then
+                                    let theMinusXDeltaMass = ion.MassOverCharge - peak.Mz
+                                    let absDeltaMass = abs (ion.MassOverCharge - peak.Mz)
+                                    if absDeltaMass <= (Mass.deltaMassByPpm matchingTolerance peak.Mz) then
                                         Some 
                                             (createIonInformation
                                                 ion.Charge
                                                 ion.Iontype
                                                 ion.Number
+                                                peak.Mz
                                                 ion.MassOverCharge
                                                 peak.Intensity
                                                 (peak.Intensity/maxIntSpec)
-                                                deltaMass
+                                                absDeltaMass
+                                                theMinusXDeltaMass
                                             )
                                     else
                                         None
@@ -206,19 +213,28 @@ module SpectralLibrary =
                             GlobalMod                         = qr.GlobalMod
                             CountAbsolute                     = ions.Length
                             CountFraction                     = (float ions.Length)/(float totalIons)
-                            MeanFragMz                        = ions |> List.averageBy (fun x -> x.MassOverCharge)
-                            CvMeanFragMz                      = ions |> Seq.cvBy (fun x -> x.MassOverCharge)
+                            CalculatedMz                      = ions.[0].CalculatedMz
+                            MeanFragMz                        = ions |> List.averageBy (fun x -> x.MeasuredMz)
+                            CvMeanFragMz                      = ions |> Seq.cvBy (fun x -> x.MeasuredMz)
+                            /// calculated fragment m/z - measured fragment m/z
+                            MeanAbsMzDelta                    = ions |> List.averageBy (fun x -> x.AbsMzDelta)
+                            MeanTheoMinusXMzDelta             = ions |> List.averageBy (fun x -> x.TheoMinusXMzDelta)
                             MaxIntensity                      = ions |> List.maxBy (fun x -> x.Intensity) |> fun x -> x.Intensity
                             MinIntensity                      = ions |> List.minBy (fun x -> x.Intensity) |> fun x -> x.Intensity
+                            MeanIntensity                     = ions |> List.averageBy (fun x -> x.Intensity)
                             // meinst du hier mit total das ganze spec?
+                            /// mean of intensitiy relative to the spectrum the fragment was measured in
                             MeanRelativeIntensity_Total       = ions |> List.averageBy (fun x -> x.RelIntensitySpec)
+                            /// cv of intensitiy relative to the spectrum the fragment was measured in
                             CVRelativeIntensity_Total         = ions |> Seq.cvBy (fun x -> x.RelIntensitySpec)
+                            /// mean of intensitiy relative to the fragments of the precursor
                             MeanRelativeIntensity_Frags       = 
                                 ions
                                 |> List.map (fun x ->
                                     x.Intensity/maxIntFrags
                                 )
                                 |> List.average
+                            /// cv of intensitiy relative to the fragments of the precursor
                             CVRelativeIntensity_Frags         =
                                 ions
                                 |> List.map (fun x ->
@@ -277,7 +293,7 @@ module SpectralLibrary =
                             RelativeMeasuredApex = peptideIon.MeasuredApex/maxMeasuredApex
                     }
                 )
-        let peptideIons = createPeptideIons quantifiedPeptides psmLookupMap  spectralLibraryParams.ChargeList spectralLibraryParams.MatchingTolerancePPM
+        let peptideIons = createPeptideIons quantifiedPeptides psmLookupMap spectralLibraryParams.MatchingTolerancePPM
         Json.serializeAndWrite outFile peptideIons
             
             //psms

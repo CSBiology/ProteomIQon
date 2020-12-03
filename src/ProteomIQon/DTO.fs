@@ -712,7 +712,6 @@ module Dto =
 
     type SpectralLibraryParams =
         {
-            ChargeList          : float list
             MatchingTolerancePPM: float
         }
 
@@ -720,7 +719,6 @@ module Dto =
 
         let toDomain (dtoSpectralLibraryParams: SpectralLibraryParams): Domain.SpectralLibraryParams =
             {
-                ChargeList           = dtoSpectralLibraryParams.ChargeList
                 MatchingTolerancePPM = dtoSpectralLibraryParams.MatchingTolerancePPM
             }
 
@@ -866,10 +864,14 @@ module Dto =
         GlobalMod                         : int
         CountAbsolute                     : int
         CountFraction                     : float
+        CalculatedMz                      : float
         MeanFragMz                        : float 
+        MeanAbsMzDelta                    : float
+        MeanTheoMinusXMzDelta             : float
         CvMeanFragMz                      : float
-        MaxIntensity                      :float
-        MinIntensity                      :float
+        MaxIntensity                      : float
+        MinIntensity                      : float
+        MeanIntensity                     : float
         MeanRelativeIntensity_Total       : float
         CVRelativeIntensity_Total         : float
         MeanRelativeIntensity_Frags       : float
