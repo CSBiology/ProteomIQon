@@ -8,7 +8,7 @@ module CLIArgumentParsing =
     type CLIArguments =
         | [<AltCommandLine("-i")>] InputFolder      of path:string
         | [<AltCommandLine("-d")>] PeptideDataBase  of path:string 
-        | [<AltCommandLine("-g")>] GFF3             of path:string
+        | [<AltCommandLine("-g")>] GFF3             of path:string 
         | [<AltCommandLine("-o")>] OutputDirectory  of path:string 
         | [<AltCommandLine("-p")>] ParamFile        of path:string
 
