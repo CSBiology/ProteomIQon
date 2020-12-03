@@ -420,7 +420,7 @@ module AlignmentBasedQuantification =
     
     
     ///
-    let quantifyPeptides (processParams:Domain.AlignmentBasedQuantificationParams) (outputDir:string) (cn:SQLiteConnection) (instrumentOutput:string) (psmbasedQuant:string) (alignmentMetrics:string) (alignmentResults:string)  =
+    let quantifyPeptides (processParams:Domain.AlignmentBasedQuantificationParams) (outputDir:string) (d:string) (instrumentOutput:string) (psmbasedQuant:string) (alignmentMetrics:string) (alignmentResults:string)  =
 
         let logger = Logging.createLogger (Path.GetFileNameWithoutExtension alignmentResults)
         logger.Trace (sprintf "Input file: %s" instrumentOutput)
@@ -448,7 +448,14 @@ module AlignmentBasedQuantification =
         logger.Trace (sprintf "plotDirectory:%s" plotDirectory)
         
         logger.Trace "Copy peptide DB into Memory"
+        let cn =
+            if File.Exists d then
+                logger.Trace (sprintf "Database found at given location (%s)" d)
+                SearchDB.getDBConnection d
+            else
+                failwith "The given path to the instrument output is neither a valid file path nor a valid directory path."
         let memoryDB = SearchDB.copyDBIntoMemory cn
+        cn.Dispose()
         logger.Trace "Copy peptide DB into Memory: finished"
         
         logger.Trace "Get peptide lookUp function"
@@ -458,7 +465,8 @@ module AlignmentBasedQuantification =
         logger.Trace "Get peptide lookUp function: finished"
         // initialize Reader and Transaction
         logger.Trace "Init connection to mass spectrum data."
-        let inReader = Core.MzIO.Reader.getReader instrumentOutput
+        let inReader = Core.MzIO.Reader.getReader instrumentOutput :?> MzIO.MzSQL.MzSQL
+        inReader.Connection.Open()
         let inRunID  = Core.MzIO.Reader.getDefaultRunID inReader
         let inTr = inReader.BeginTransaction()
 
@@ -803,5 +811,10 @@ module AlignmentBasedQuantification =
             )
         |> SeqIO'.csv "\t" true false
         |> FSharpAux.IO.SeqIO.Seq.writeOrAppend (outFilePath)
+        inTr.Commit()
+        inTr.Dispose()
+        inReader.Dispose()
+        memoryDB.Dispose()
         logger.Trace "executing quantification:finished"
+
         

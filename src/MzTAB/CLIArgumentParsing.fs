@@ -10,7 +10,6 @@ module CLIArgumentParsing =
         | [<Mandatory>] [<AltCommandLine("-iprot")>] ProtFile of path:string
         | [<Mandatory>] [<AltCommandLine("-ipep")>] QuantFile of path:string
         | [<Mandatory>] [<AltCommandLine("-ipsm")>] QpsmFile of path:string
-        | [<Mandatory>] [<AltCommandLine("-d")>] PeptideDataBase of path:string 
         | [<Mandatory>] [<AltCommandLine("-o")>] OutputFile  of path:string 
         | [<Mandatory>] [<AltCommandLine("-p")>] ParamFile of path:string
         | [<AltCommandLine("-l")>] Log_Level of level:int
@@ -26,5 +25,4 @@ module CLIArgumentParsing =
                 | OutputFile  _      -> "specify output file path"
                 | ParamFile _        -> "specify param file For centroidization"
                 | Log_Level _        -> "set the log level."
-                | PeptideDataBase  _ -> "Specify the file path of the peptide data base."
                 | Verbosity_Level _  -> "set the verbosity level."

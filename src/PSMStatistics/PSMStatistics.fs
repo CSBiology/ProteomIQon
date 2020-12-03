@@ -133,7 +133,7 @@ module PSMStatistics =
         }
              
     ///
-    let pepValueCalcAndProteinInference (processParams:PSMStatisticsParams) (outputDir:string) (cn:SQLiteConnection) (psms:string) =
+    let pepValueCalcAndProteinInference (processParams:PSMStatisticsParams) (outputDir:string) (d:string) (psms:string) =
 
         let logger = Logging.createLogger (Path.GetFileNameWithoutExtension psms)
 
@@ -165,7 +165,14 @@ module PSMStatistics =
         logger.Trace (sprintf "outFilePath:%s" outFilePath)
 
         logger.Trace "Copy peptide DB into Memory"
-        let memoryDB = SearchDB.copyDBIntoMemory cn 
+        let cn =
+            if File.Exists d then
+                logger.Trace (sprintf "Database found at given location (%s)" d)
+                SearchDB.getDBConnection d
+            else
+                failwith "The given path to the instrument output is neither a valid file path nor a valid directory path."
+        let memoryDB = SearchDB.copyDBIntoMemory cn
+        cn.Dispose() 
         let pepDBTr = memoryDB.BeginTransaction()
         logger.Trace "Copy peptide DB into Memory: finished"
         
