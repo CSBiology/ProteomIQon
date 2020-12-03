@@ -1007,12 +1007,31 @@ module MzTAB =
                     corrQuant
                     |> Array.choose snd
                 )
-
+            let proteinGroup =
+                (fst protGroup.[0]).Protein
+                |> String.split ';'
             {
-                accession                                 = (fst protGroup.[0]).Protein
+                accession                                 = proteinGroup |> Array.head
                 description                               = ""
                 taxid                                     = 3055
-                species                                   = "Chlamydomonas reinhardtii"
+                species                                   =
+                    let experimentsIdentifeidNumber =
+                        protGroup
+                        |> Array.map (fun (ts,_) ->
+                            experimentNames
+                            |> Array.find (fun (name,_) -> name = ts.Experiment)
+                            |> fun (name,number) -> number
+                        )
+                    match mzTABParams.MetaData.sample_species with
+                    |None -> "null"
+                    |Some species -> 
+                        let valSpecies =
+                            species
+                            |> Array.filter (fun (_,expN) -> experimentsIdentifeidNumber |> Array.contains expN)
+                        valSpecies
+                        |> Array.collect fst
+                        |> Array.distinct
+                        |> String.concat "|"
                 database                                  = "Chlamy.db"
                 database_version                          = "19-Apr-20 21:44"
                 search_engine                             =
@@ -1049,9 +1068,14 @@ module MzTAB =
                 num_peptides_unique_ms_run                =
                     findValueNumberedProt experimentNames (protGroup |> Array.map fst) "DistinctPeptideCount"
                     |> Array.sortBy fst
-                ambiguity_members                         = [|"No decision yet"|]
+                ambiguity_members                         = 
+                    if proteinGroup.Length = 1 then
+                        [||]
+                    else
+                        proteinGroup.[1..]
                 modifications                             = null
-                uri                                       = @"C:\Users\jonat\source\repos\mzTAB\Chlamy.db"
+                // have to look how to handle uri with protein identifications from different sources
+                uri                                       = "null"
                 go_terms                                  = [||]
                 // remember sequence
                 protein_coverage                          = 0.
