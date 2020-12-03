@@ -26,43 +26,28 @@ open MzIO.Model.CvParam
 open MzIO.Commons.Arrays
 open System.Linq
 open BioFSharp.Mz.SearchDB
+open BioFSharp.Mz.Quantification
+open SparsePeakArray'
 
 module SwathAnalysis =
-    let quantifyPeptides p o dbConnection i ii = ()
-    ///
-    type SparsePeakArray = { 
-        Length: int
-        Data: System.Collections.Generic.IDictionary<int,float>
-        }
-   
-    ///
-    let dot (x:SparsePeakArray) (y:SparsePeakArray) =
-        x.Data
-        |> Seq.fold (fun (acc:float) xi -> 
-            let present,yi = y.Data.TryGetValue xi.Key
-            if present then acc + (yi * xi.Value) else acc
-            ) 0.
-           
-    ///
-    let getBinIdx' width offset x = int ((x / width) + offset)
 
-    ///
-    let peaksToNearestBinVector binWidth offset (pkarr:BioFSharp.Mz.PeakArray<_>) (minMassBoarder:float) (maxMassBoarder:float) = 
-        let minMassBoarder = getBinIdx' binWidth offset minMassBoarder
-        let maxMassBoarder = getBinIdx' binWidth offset maxMassBoarder
-        let maxIndex = maxMassBoarder - minMassBoarder + 1        
-        let keyValues = 
-            pkarr 
-            |> Array.choose (fun p ->  
-                let index = (getBinIdx' binWidth offset p.Mz) - minMassBoarder
-                if index < maxIndex-1 && index > -1 then Some (index, p.Intensity) else None
-                )
-            |> Array.groupBy fst 
-            |> Array.map (fun (idx,data) -> idx, data |> Array.sumBy snd)
-        { 
-            Length = maxIndex
-            Data = keyValues |> dict
-        } 
+    /// Return Option
+    let getPeakClosestPeakBy (peaks:FSharp.Stats.Signal.PeakDetection.IdentifiedPeak []) x =
+        let isPartOfPeak x (p:FSharp.Stats.Signal.PeakDetection.IdentifiedPeak)  = 
+            p.LeftEnd.XVal < x && p.RightEnd.XVal > x       
+        match Array.tryFind (isPartOfPeak x) peaks with
+        | Some p        ->  p
+        | Option.None   -> Array.minBy (fun p -> abs(p.Apex.XVal - x)) peaks 
+
+    ///// Return Option
+    //let getHighestPeakBy (peaks:FSharp.Stats.Signal.PeakDetection.IdentifiedPeak []) x =
+    //    let isPartOfPeak x (p:FSharp.Stats.Signal.PeakDetection.IdentifiedPeak)  = 
+    //        p.LeftEnd.XVal < x && p.RightEnd.XVal > x       
+    //    match Array.tryFind (isPartOfPeak x) peaks with
+    //    | Some p        ->  p
+    //    | Option.None   -> Array.minBy (fun p -> abs(p.Apex.XVal - x)) peaks 
+
+
     ///
     type Library =
         {
@@ -94,13 +79,21 @@ module SwathAnalysis =
     type QuantifiedFragment = {
         Fragment                : Dto.FragmentIon
         CorrelationWithTrace    : float
-        Quant                   : float
+        Quant_Max               : float
+        Quant_Sum               : float
+        QuantArea_Uni           : float  
+        QuantArea_Trap          : float  
+        QuantArea_Fit           : float  
         }
     
-    let createQuantifiedFragment fragment correlationWithTrace quant = {
+    let createQuantifiedFragment fragment correlationWithTrace quant_Max quant_Sum quantArea_Uni quantArea_Trap quantArea_Fit = {
         Fragment                = fragment
         CorrelationWithTrace    = correlationWithTrace
-        Quant                   = quant
+        Quant_Max               = quant_Max
+        Quant_Sum               = quant_Sum
+        QuantArea_Uni           = quantArea_Uni           
+        QuantArea_Trap          = quantArea_Trap           
+        QuantArea_Fit           = quantArea_Fit 
         }
 
     type QuantifiedPepIon = {
@@ -181,7 +174,7 @@ module SwathAnalysis =
         let swathFileName = swathFileName + "_" + (libraryFileName) + "_" + plotName 
         Path.Combine [|outputDir;swathFileName|]
     
-    let filterePepions (processParams:Domain.ConsensusSpectralLibraryParams) (pepIons:PeptideIon[]) = 
+    let filterPepions (processParams:Domain.ConsensusSpectralLibraryParams) (pepIons:PeptideIon[]) = 
         pepIons
         |> Array.map (fun pepIons -> {pepIons with Fragments = pepIons.Fragments |> List.filter (fun x -> x.Number > processParams.MinFragmentLadderIdx) })
         |> Array.filter (fun pepIons -> pepIons.Fragments.Length > processParams.MinFragmentCount)
@@ -224,9 +217,146 @@ module SwathAnalysis =
             let max = Array.max peakXData
             min - max
             |> abs
-        fittedstdev > minDist && fittedstdev < minMinusMax
+        (2.*fittedstdev) > minDist && fittedstdev < minMinusMax
     
-    let quantifyPepIon getPlotFilePathFilePath getRTProfiles (processParams:Domain.ConsensusSpectralLibraryParams) pepIon = 
+    let identifyPeak pepIon (processParams:Domain.SWATHAnalysisParams) targetFragmentVector fragVecs = 
+        match fragVecs with 
+        | Some fragVecs -> 
+            let correlationTrace = 
+                fragVecs
+                |> Array.map (fun (rt, measuredFrags) -> 
+                    rt, dot targetFragmentVector measuredFrags
+                    )
+            let xData,yData = correlationTrace |> Array.unzip
+            try
+            let s = FSharpStats'.Wavelet.identify FSharpStats'.Wavelet.p xData yData
+            if Array.isEmpty s then 
+                Result.Error "No Peak detected in Correlation Trace"
+            elif s.Length = 1 then
+                let peakToQuantify =s.[0]
+                let quantP = BioFSharp.Mz.Quantification.HULQ.quantifyPeak peakToQuantify 
+                Result.Ok (quantP,peakToQuantify,correlationTrace)
+            else
+                let sorted = s |> Array.sortByDescending (fun x -> x.Apex.YVal)
+                let mainPeak,sndPeak = sorted.[0],sorted.[1]
+                let ratio = sndPeak.Apex.YVal / mainPeak.Apex.YVal
+                if ratio > processParams.MaxRatioMostAbundandVsSecondAbundandPeak then 
+                    Result.Error (sprintf "sndPeak.Apex.YVal / mainPeak.Apex.YVal > %f" processParams.MaxRatioMostAbundandVsSecondAbundandPeak) 
+                else
+                    let peakToQuantify = BioFSharp.Mz.Quantification.HULQ.getPeakBy s pepIon.ScanTime
+                    let quantP = BioFSharp.Mz.Quantification.HULQ.quantifyPeak peakToQuantify 
+                    Result.Ok (quantP,peakToQuantify,correlationTrace)
+            with 
+            | _ -> Result.Error "PrecursorMz not covered by Swath windows."
+        | _ -> Result.Error "PrecursorMz not covered by Swath windows."
+    
+    ///
+    let quantifyPeakBy estApex estMeanX estStabw (x: float []) (y: float []) =
+        //match estimateMoments p with 
+        //| Some moments -> 
+            let gaussian = BioFSharp.Mz.Quantification.HULQ.tryFitGaussian estApex estMeanX estStabw x y
+            //let emg      = BioFSharp.Mz.Quantification.HULQ.tryFitEMG moments.ModeY moments.MeanX moments.Std moments.Tau p.XData p.YData
+            match gaussian(*, emg*) with 
+            | Some g(*, Some emg*) -> 
+                let finalFit   = g // selectModel [|g;emg|]
+                BioFSharp.Mz.Quantification.HULQ.createQuantifiedPeak  (Some finalFit.Model) finalFit.YPredicted finalFit.EstimatedParams finalFit.StandardErrorOfPrediction finalFit.Area estApex
+            //| Some finalFit, Option.None  | Option.None, Some finalFit -> 
+            //    createQuantifiedPeak  (Some finalFit.Model) finalFit.YPredicted finalFit.EstimatedParams finalFit.StandardErrorOfPrediction finalFit.Area  p.Apex.YVal
+            | _                       ->
+                let area = BioFSharp.Mz.Quantification.Integration.trapezEstAreaOf x y
+                BioFSharp.Mz.Quantification.HULQ.createQuantifiedPeak Option.None [||] [||] nan area estApex
+        //| Option.None   -> 
+        //    let area = trapezEstAreaOf p.XData p.YData
+        //    createQuantifiedPeak Option.None [||] [||] nan area p.Apex.YVal  
+
+    let quantifyFragments (logger:NLog.Logger) getPlotFilePathFilePath (processParams:Domain.SWATHAnalysisParams) pepIon (fragVecs:(float*SparsePeakArray)[] option) (quantifiedCorrelationProfile:(Mz.Quantification.HULQ.QuantifiedPeak*Signal.PeakDetection.IdentifiedPeak*((float*float) []))) = 
+        let (quantifiedProfile,profile,correlationTrace) = quantifiedCorrelationProfile 
+        let targetApex     = tryGetApexIntensity quantifiedProfile
+        let targetScanTime = tryGetScanTime quantifiedProfile 
+        let targetStdev    = tryGetStdev quantifiedProfile
+        match targetApex, targetScanTime, targetStdev, fragVecs with 
+        | Some apex, Some targetScanTime, Some stdev, Some fragVecs -> 
+            if checkApex apex quantifiedProfile.MeasuredApexIntensity |> not then 
+                logger.Trace (sprintf "checkApex failed with apex: %f quantifiedProfile.MeasuredApexIntensity: %f" apex quantifiedProfile.MeasuredApexIntensity)
+                Result.Error ("checkApex failed.")
+            elif checkStdev stdev profile.XData |> not then
+                logger.Trace (sprintf "checkStdev failed with stdev: %f xData: %A" stdev profile.XData)
+                Result.Error ("checkStdev failed.")
+            else
+                try
+                let xCorrelationTrace,yCorrelationTrace = correlationTrace |> Array.unzip
+                let profileMinRT = 
+                    match xCorrelationTrace |> Array.tryFindBack (fun rt -> rt <= (targetScanTime - (2.*stdev))) with
+                    | Some x -> x
+                    | None   -> xCorrelationTrace |> Array.min
+                let profileMaxRT = 
+                    match xCorrelationTrace |> Array.tryFind (fun rt -> rt >= (targetScanTime + (2.*stdev))) with 
+                    | Some x -> x
+                    | None   -> xCorrelationTrace |> Array.max
+                let correlationTraceToCorrelate = 
+                    correlationTrace 
+                    |> Array.filter (fun (rt,y) -> rt >= profileMinRT && rt <= profileMaxRT)
+                    |> Array.map snd
+                let filteredfragVecs = 
+                    fragVecs
+                    |> Array.filter (fun (rt, mzData) -> 
+                            rt >= profileMinRT && rt <= profileMaxRT
+                        )
+                let fragCorrQuant,xFrags,yFrags =
+                    try
+                    pepIon.Fragments
+                    |> List.map (fun frag -> 
+                            let idx = initMzToBinIdx processParams.FragMatchingBinWidth processParams.FragMatchingBinOffset frag.MeanFragMz
+                            let fragTraceX,fragTraceY = 
+                                filteredfragVecs 
+                                |> Array.map (fun (rt, mzData) -> 
+                                    // can probably be checked earlier
+                                    if mzData.Data.ContainsKey idx then 
+                                        rt,mzData.Data.[idx] 
+                                    else rt,0.
+                                    )
+                                |> Array.unzip
+                            let corr = FSharp.Stats.Correlation.Seq.pearson correlationTraceToCorrelate fragTraceY
+                            let max = if fragTraceY |> Array.isEmpty then 0. else fragTraceY |> Array.max 
+                            let sum = fragTraceY |> Array.sum       
+                            let trapAreaUni = BioFSharp.Mz.Quantification.Integration.trapezEstAreaOfUniform fragTraceX fragTraceY
+                            let trapArea = BioFSharp.Mz.Quantification.Integration.trapezEstAreaOf fragTraceX fragTraceY
+                            let qp = quantifyPeakBy max targetScanTime stdev fragTraceX fragTraceY
+                            createQuantifiedFragment frag corr max sum trapAreaUni trapArea qp.Area,fragTraceX,fragTraceY
+                        )
+                    |> List.filter (fun (quantFrag,_,_) -> 
+                        quantFrag.CorrelationWithTrace > 0.75
+                        )
+                    |> List.unzip3
+                    with 
+                    | _ -> [],[],[]
+                [
+                    [
+                    Chart.Point(correlationTrace)
+                    Chart.Point([targetScanTime],[apex])
+                    ]
+                    |> Chart.Combine
+                    Chart.Point(fragCorrQuant |> List.map (fun x -> targetScanTime,x.Quant_Max))
+                    |> Chart.withTraceName "Max"
+                    Chart.Point(fragCorrQuant |> List.map (fun x -> targetScanTime,x.Quant_Sum))
+                    |> Chart.withTraceName "Sum"
+                    List.map2 (fun (x:float[]) (y:float[]) -> Chart.Line(x,y)) xFrags yFrags
+                    |> Chart.Combine 
+                ]
+                |> Chart.Combine
+                |> Chart.SaveHtmlAs (getPlotFilePathFilePath ((pepIon.StringSequence |> String.filter (fun x -> x <> '*')) + "_GMod_" + pepIon.GlobalMod.ToString() + "Ch" + pepIon.Charge.ToString()) ("_") ) 
+                
+                match fragCorrQuant with 
+                | [] -> 
+                    Result.Error "No Fragments with Correlation > 0.75"
+                | _  ->
+                    createQuantifiedPepIon pepIon fragCorrQuant targetScanTime
+                    |> Result.Ok
+                with 
+                |_ -> Result.Error ("No Fragments.")
+        | _ -> Result.Error "Fit did not return all Parameters"
+
+    let quantifyPepIon logger getPlotFilePathFilePath getRTProfiles (processParams:Domain.SWATHAnalysisParams) pepIon = 
         let targetFragmentMzs = 
             pepIon.Fragments
             |> List.map (fun f -> f.MeanFragMz,f.MeanRelativeIntensity_Frags)
@@ -234,12 +364,11 @@ module SwathAnalysis =
             |> BioFSharp.Mz.PeakArray.zipMzInt
         let targetFragmentVector = 
             targetFragmentMzs 
-            //|> fun x -> BioFSharp.Mz.PeakArray.peaksToNearestUnitDaltonBinVector x 100. 2000.
-            |> fun (x) -> peaksToNearestBinVector processParams.FragMatchingBinWidth processParams.FragMatchingBinOffset x (processParams.MS2ScanRange |> fst) (processParams.MS2ScanRange |> snd)
+            |> peaksToNearestBinVector processParams.FragMatchingBinWidth processParams.FragMatchingBinOffset (processParams.MS2ScanRange |> fst) (processParams.MS2ScanRange |> snd)
         let rtQuery   = MzIO.Processing.Query.createRangeQuery pepIon.ScanTime processParams.RtWindowWidth
         let mzQueries = 
             targetFragmentMzs 
-            |> Array.map (fun pk -> MzIO.Processing.Query.createRangeQuery pk.Mz 0.05)                    
+            |> Array.map (fun pk -> MzIO.Processing.Query.createRangeQuery pk.Mz processParams.FragMatchingBinWidth)                    
         let targetSwathQuery = MzIO.Processing.Query.createSwathQuery pepIon.PrecursorMZ rtQuery mzQueries
         let fragVecs  = 
             let tmp :Peak2D [,] option list  = getRTProfiles targetSwathQuery
@@ -256,111 +385,49 @@ module SwathAnalysis =
                         |> Array.map (fun p -> p.Mz,p.Intensity)
                         |> Array.ofSeq
                         |> BioFSharp.Mz.PeakArray.zipMzInt
-                        |> fun (x) -> peaksToNearestBinVector processParams.FragMatchingBinWidth processParams.FragMatchingBinOffset x (processParams.MS2ScanRange |> fst) (processParams.MS2ScanRange |> snd)          
+                        |> peaksToNearestBinVector processParams.FragMatchingBinWidth processParams.FragMatchingBinOffset (processParams.MS2ScanRange |> fst) (processParams.MS2ScanRange |> snd)          
                         )
                     |> Array.sortBy fst
                 Some fragVecs
             | _ -> None
-        let quantifiedCorrelationProfile = 
-            match fragVecs with 
-            | Some fragVecs -> 
-                let correlationTrace = 
-                    fragVecs
-                    |> Array.map (fun (rt, measuredFrags) -> 
-                        rt, dot targetFragmentVector measuredFrags
-                        )
-                let xData,yData = correlationTrace |> Array.unzip
-                try
-                let s = FSharpStats'.Wavelet.identify FSharpStats'.Wavelet.p xData yData
-                if Array.isEmpty s then 
-                    None
-                elif s.Length = 1 then
-                    let peakToQuantify =s.[0]
-                    let quantP = BioFSharp.Mz.Quantification.HULQ.quantifyPeak peakToQuantify 
-                    Some (quantP,peakToQuantify,correlationTrace)
-                else
-                    let sorted = s |> Array.sortByDescending (fun x -> x.Apex.YVal)
-                    let mainPeak,sndPeak = sorted.[0],sorted.[1]
-                    let ratio = sndPeak.Apex.YVal / mainPeak.Apex.YVal
-                    if ratio > processParams.MaxRatioMostAbundandVsSecondAbundandPeak then None else
-                    let peakToQuantify = BioFSharp.Mz.Quantification.HULQ.getPeakBy s pepIon.ScanTime
-                    let quantP = BioFSharp.Mz.Quantification.HULQ.quantifyPeak peakToQuantify 
-                    Some (quantP,peakToQuantify,correlationTrace)
-            
-                with 
-                | _ -> None
-            | _ -> None
 
-        match quantifiedCorrelationProfile with 
-        | Some (quantifiedProfile,profile,correlationTrace) -> 
-            let targetApex     = tryGetApexIntensity quantifiedProfile
-            let targetScanTime = tryGetScanTime quantifiedProfile 
-            let targetStdev    = tryGetStdev quantifiedProfile
-            match targetApex, targetScanTime, targetStdev, fragVecs with 
-            | Some apex, Some targetScanTime, Some stdev, Some fragVecs -> 
-                if checkApex apex quantifiedProfile.MeasuredApexIntensity && checkStdev stdev profile.XData then
-                    let profileMinRT = profile.XData |> Array.min
-                    let profileMaxRT = profile.XData |> Array.max
-                    let filteredfragVecs = 
-                        fragVecs
-                        |> Array.filter (fun (rt, mzData) -> 
-                                rt >= profileMinRT && rt <= profileMaxRT
-                            )
-                    let fragCorrQuant =
-                        pepIon.Fragments
-                        |> List.map (fun frag -> 
-                                let minMassBoarder = getBinIdx' processParams.FragMatchingBinWidth processParams.FragMatchingBinOffset (processParams.MS2ScanRange |> fst)
-                                let idx = (getBinIdx' processParams.FragMatchingBinWidth processParams.FragMatchingBinOffset frag.MeanFragMz) - minMassBoarder 
-                                let fragTrace = 
-                                    filteredfragVecs 
-                                    |> Array.map (fun (rt, mzData) -> 
-                                        // can probably be checked earlier
-                                        if mzData.Data.ContainsKey idx then 
-                                            mzData.Data.[idx] 
-                                        else 0.
-                                        )
-                                let corr = FSharp.Stats.Correlation.Seq.pearson profile.YData fragTrace
-                                let max = fragTrace |> Array.max 
-                                createQuantifiedFragment frag corr max
-                            )
-                        |> List.filter (fun quantFrag -> 
-                            quantFrag.CorrelationWithTrace > 0.75
-                            )
-                    [
-                        [
-                        Chart.Point(correlationTrace)
-                        Chart.Point([targetScanTime],[apex])
-                        ]
-                        |> Chart.Combine
-                        Chart.Point(fragCorrQuant |> List.map (fun x -> targetScanTime,x.Quant))
-                    ]
-                    |> Chart.Combine
-                    |> Chart.SaveHtmlAs (getPlotFilePathFilePath ((pepIon.StringSequence |> String.filter (fun x -> x <> '*')) + "_GMod_" + pepIon.GlobalMod.ToString() + "Ch" + pepIon.Charge.ToString()) ("_") ) 
-                    createQuantifiedPepIon pepIon fragCorrQuant targetScanTime
-                    |> Some
-                else None 
-
-            | _ -> 
-                None 
-        | None -> None
-    
+        //let quantifiedCorrelationProfile = identifyPeak pepIon processParams targetFragmentVector fragVecs
+        identifyPeak pepIon processParams targetFragmentVector fragVecs
+        |> Result.bind (quantifyFragments logger getPlotFilePathFilePath processParams pepIon fragVecs)           
+     
     ///
-    let labledQuantification (logger:NLog.Logger) (*(peptideLookUp:string -> int -> LookUpResult<AminoAcids.AminoAcid>)*) getPlotFilePathFilePath getRTProfiles (processParams:Domain.ConsensusSpectralLibraryParams) (pepIons:PeptideIon[]) = 
-        let mutable c = 0
-        pepIons
-        |> Array.choose (fun pepIon -> 
-                if c % 100 = 0 then logger.Trace (sprintf "peps quantified: %i" c)
-                c <- c + 1
-                //let unlabledPeptide = peptideLookUp pepIon.StringSequence 0
-                //let labeledPeptide  = peptideLookUp pepIon.StringSequence 1
-                //let targetPeptide = if pepIon.GlobalMod = 0 then unlabledPeptide else labeledPeptide 
-                let quantifiedTargetIon = quantifyPepIon getPlotFilePathFilePath getRTProfiles processParams pepIon
-                quantifiedTargetIon
+    let labledQuantification (logger:NLog.Logger) (*(peptideLookUp:string -> int -> LookUpResult<AminoAcids.AminoAcid>)*) getPlotFilePathFilePath getRTProfiles (processParams:Domain.SWATHAnalysisParams) (pepIons:PeptideIon[]) = 
+        let results = 
+            pepIons
+            |> Array.mapi (fun i pepIon -> 
+                    if i % 100 = 0 then logger.Trace (sprintf "peps quantified: %i" i)
+                    //let unlabledPeptide = peptideLookUp pepIon.StringSequence 0
+                    //let labeledPeptide  = peptideLookUp pepIon.StringSequence 1
+                    //let targetPeptide = if pepIon.GlobalMod = 0 then unlabledPeptide else labeledPeptide 
+                    let quantifiedTargetIon = quantifyPepIon logger getPlotFilePathFilePath getRTProfiles processParams pepIon
+                    quantifiedTargetIon
+                )
+        results
+        |> Array.groupBy (fun x ->
+            match x with 
+            | Result.Ok x    -> "Result"
+            | Result.Error s -> s
+        )
+        |> Array.map (fun (message,items) -> 
+                message,items.Length
+            )
+        |> Chart.Column
+        |> Chart.SaveHtmlAs (getPlotFilePathFilePath ("Errors") ("_") ) 
+        results
+        |> Array.choose (fun x ->
+                match x with 
+                | Result.Ok x -> Some x
+                | _           -> None
             )
 
 
     ///
-    let quantify (processParams:Domain.ConsensusSpectralLibraryParams) (outputDir:string) (targetSwathFile:string) (libraryFile:string) = 
+    let quantify (processParams:Domain.SWATHAnalysisParams) (outputDir:string) (targetSwathFile:string) (libraryFile:string) = 
         let logger = Logging.createLogger (Path.GetFileNameWithoutExtension libraryFile)
         logger.Trace (sprintf "Input directory containing library: %s" libraryFile)
         logger.Trace (sprintf "Input Swath file to quantify to: %s" targetSwathFile)
