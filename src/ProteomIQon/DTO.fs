@@ -802,26 +802,38 @@ module Dto =
                 MaxRatioMostAbundandVsSecondAbundandPeak    = dtoConsensusSpectralLibraryParams.MaxRatioMostAbundandVsSecondAbundandPeak    
             }
 
-    type SWATHAnalysisParams =
-        {
-            PeptideList         : string [] option
-            MatchingTolerancePPM: float
-            QueryOffsetRange    : float
-            SpectrumSelectionF  : SpectrumSelection
-            AggregationF        : AggregationMethod
-            XicProcessing       : XicProcessing
+    type SWATHAnalysisParams = {
+        // InitialPeptideSelection
+        BinningWindowWidth                          : float
+        FractionOfMostAbundandIonsPerBin            : float
+        MinFragmentCount                            : int
+        MinFragmentLadderIdx                        : int
+        MinPeptideLength                            : int
+        // XicExtraction
+        RtWindowWidth                               : float
+        // Matching
+        FragMatchingBinWidth                        : float
+        FragMatchingBinOffset                       : float
+        MS2ScanRange                                : float*float
+        // Filtering
+        MaxRatioMostAbundandVsSecondAbundandPeak    : float
         }
 
     module SWATHAnalysisParams =
 
         let toDomain (dtoSWATHAnalysisParams: SWATHAnalysisParams): Domain.SWATHAnalysisParams =
             {
-                PeptideList          = dtoSWATHAnalysisParams.PeptideList
-                MatchingTolerancePPM = dtoSWATHAnalysisParams.MatchingTolerancePPM
-                QueryOffsetRange     = dtoSWATHAnalysisParams.QueryOffsetRange
-                SpectrumSelectionF   = dtoSWATHAnalysisParams.SpectrumSelectionF
-                AggregationF         = dtoSWATHAnalysisParams.AggregationF
-                XicProcessing        = dtoSWATHAnalysisParams.XicProcessing
+            
+            BinningWindowWidth                         = dtoSWATHAnalysisParams.BinningWindowWidth                       
+            FractionOfMostAbundandIonsPerBin           = dtoSWATHAnalysisParams.FractionOfMostAbundandIonsPerBin         
+            MinFragmentCount                           = dtoSWATHAnalysisParams.MinFragmentCount                         
+            MinFragmentLadderIdx                       = dtoSWATHAnalysisParams.MinFragmentLadderIdx                     
+            MinPeptideLength                           = dtoSWATHAnalysisParams.MinPeptideLength                                                          
+            RtWindowWidth                              = dtoSWATHAnalysisParams.RtWindowWidth                                                                 
+            FragMatchingBinWidth                       = dtoSWATHAnalysisParams.FragMatchingBinWidth                     
+            FragMatchingBinOffset                      = dtoSWATHAnalysisParams.FragMatchingBinOffset                    
+            MS2ScanRange                               = dtoSWATHAnalysisParams.MS2ScanRange                                                                
+            MaxRatioMostAbundandVsSecondAbundandPeak   = dtoSWATHAnalysisParams.MaxRatioMostAbundandVsSecondAbundandPeak 
             }
 
     type MzTABParams =

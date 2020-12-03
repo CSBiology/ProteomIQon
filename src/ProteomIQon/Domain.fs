@@ -34,6 +34,7 @@ module Domain =
     type CentroidizationMode =
         | Manufacturer
         | Wavelet of WaveletPeakPickingParams
+        //| Binning of BinningParams
         
     type PeakPicking = 
         | ProfilePeaks
@@ -260,15 +261,24 @@ module Domain =
         |First
         |All
 
-    type SWATHAnalysisParams =
-        {
-            PeptideList         : string [] option
-            MatchingTolerancePPM: float
-            QueryOffsetRange    : float
-            SpectrumSelectionF  : SpectrumSelection
-            AggregationF        : AggregationMethod
-            XicProcessing       : XicProcessing
+    ///
+    type SWATHAnalysisParams = {
+        // InitialPeptideSelection
+        BinningWindowWidth                          : float
+        FractionOfMostAbundandIonsPerBin            : float
+        MinFragmentCount                            : int
+        MinFragmentLadderIdx                        : int
+        MinPeptideLength                            : int
+        // XicExtraction
+        RtWindowWidth                               : float
+        // Matching
+        FragMatchingBinWidth                        : float
+        FragMatchingBinOffset                       : float
+        MS2ScanRange                                : float*float
+        // Filtering
+        MaxRatioMostAbundandVsSecondAbundandPeak    : float
         }
+
 
     type MetaDataSection =
         {
