@@ -1092,10 +1092,10 @@ module MzTAB =
                     |> Array.sortBy fst
                 ambiguity_members                         = 
                     if proteinGroup.Length = 1 then
-                        [||]
+                        [|"null"|]
                     else
                         proteinGroup.[1..]
-                modifications                             = null
+                modifications                             = "null"
                 // have to look how to handle uri with protein identifications from different sources
                 uri                                       = "null"
                 go_terms                                  = [||]
@@ -1236,9 +1236,9 @@ module MzTAB =
                     else
                         1
                 database                                  =
-                    "Chlamy.db"
+                    "null"
                 database_version                          =
-                    "19-Apr-20 21:44"
+                    "null"
                 search_engine                             =
                     mzTABParams.MetaData.peptide_search_engine_score.Value
                     |> Array.map (fun (x,_,_) -> x.toParam)
@@ -1256,7 +1256,7 @@ module MzTAB =
                 reliability                               =
                     3
                 modifications                             =
-                    ""
+                    "null"
                 retention_time                            =
                     pepGroup
                     |> Array.sortBy (fun x -> (fst x).MeanPercolatorScore)
@@ -1293,7 +1293,7 @@ module MzTAB =
                     |> Array.head
                     |> fun (peptide,rest) -> peptide.PrecursorMZ
                 uri                                       =
-                    ""
+                    "null"
                 spectra_ref                               =
                     "null"
                 peptide_abundance_assay                   =
@@ -1372,9 +1372,9 @@ module MzTAB =
                     else
                         1
                 database                                  =
-                    "Chlamy.db"
+                    "null"
                 database_version                          =
-                    "19-Apr-20 21:44"
+                    "null"
                 search_engine                             =
                     mzTABParams.MetaData.psm_search_engine_score.Value
                     |> Array.map (fun (x,_,_) -> x.toParam)
@@ -1528,7 +1528,8 @@ module MzTAB =
                     |> concatRuns "null"
                 )
                 |> String.concat "\t",
-                prot.reliability,
+                //prot.reliability,
+                "null",
                 prot.num_psms_ms_run
                 |> concatRuns "0",
                 prot.num_peptides_distinct_ms_run
@@ -1578,7 +1579,8 @@ module MzTAB =
                         |> concatRuns "null"
                     )
                     |> String.concat "\t",
-                    pep.reliability,
+                    //pep.reliability,
+                    "null",
                     pep.modifications,
                     pep.retention_time
                     |> fun (x,y) ->
@@ -1636,8 +1638,10 @@ module MzTAB =
                     psm.spectra_ref,
                     psm.pre,
                     psm.post,
-                    psm.start,
-                    psm.ending
+                    //psm.start,
+                    //psm.ending
+                    "null",
+                    "null"
                 ) |> ignore
                 sb.AppendLine()
                 |> ignore
