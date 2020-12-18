@@ -827,11 +827,17 @@ module MzTAB =
             let f =
                 let pickF =
                     sortAndPick snd fst
+                let paramF (p: Ontologies.Labeling[]) =
+                    p
+                    |> Array.map (fun x ->
+                        x.toParam
+                    )
                 let strF =
                     formatOneMD (sprintf "MTD\tassay[%i]-quantification_reagent\t%s")
-                pickF >> strF
+                pickF >> paramF >> strF
             md.assay_quantification_reagent
-            |> matchOption f sb
+            |> f
+            |> sb.AppendLine
         let assayQuantificationMod =
             let f =
                 let pickF =
@@ -839,9 +845,17 @@ module MzTAB =
                 let pickF2 i =
                     i
                     |> Array.map (sortAndPick snd fst)
+                let paramF (p: Ontologies.Modification[][]) =
+                    p
+                    |> Array.map (fun y -> 
+                        y
+                        |> Array.map (fun x ->
+                            x.toParam
+                        )
+                    )
                 let strF =
                     formatTwoMD (sprintf "MTD\tassay[%i]-quantification_mod[%i]\t%s")
-                pickF >> pickF2 >> strF
+                pickF >> pickF2 >> paramF >> strF
             md.assay_quantification_mod
             |> matchOption f sb
         let assayQuantificationModSite =
@@ -863,9 +877,17 @@ module MzTAB =
                 let pickF2 i =
                     i
                     |> Array.map (sortAndPick snd fst)
+                let paramF (p: Ontologies.ModificationPosition[][]) =
+                    p
+                    |> Array.map (fun y -> 
+                        y
+                        |> Array.map (fun x ->
+                            x.toParam
+                        )
+                    )
                 let strF =
                     formatTwoMD (sprintf "MTD\tassay[%i]-quantification_mod[%i]-position\t%s")
-                pickF >> pickF2 >> strF
+                pickF >> pickF2 >> paramF >> strF
             md.assay_quantification_mod_position
             |> matchOption f sb
         let assaySampleRef =
@@ -1489,7 +1511,8 @@ module MzTAB =
                 |> String.concat ",",
                 prot.modifications,
                 prot.uri,
-                prot.go_terms,
+                prot.go_terms
+                |> String.concat "|",
                 prot.protein_coverage,
                 prot.protein_abundance_assay
                 |> concatRuns "null",

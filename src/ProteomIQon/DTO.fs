@@ -841,6 +841,7 @@ module Dto =
             SearchEngineNamesProt: (Ontologies.SearchEngineScore*string*int)[]
             SearchEngineNamesPep : (Ontologies.SearchEngineScore*string*int)[]
             SearchEngineNamesPSM : (Ontologies.SearchEngineScore*string*int)[]
+            Labeled              : bool
             MetaData             : MetaDataSection
         }
 
@@ -853,6 +854,7 @@ module Dto =
                 SearchEngineNamesProt = dtoMzTABParams.SearchEngineNamesProt
                 SearchEngineNamesPep  = dtoMzTABParams.SearchEngineNamesPep
                 SearchEngineNamesPSM  = dtoMzTABParams.SearchEngineNamesPSM
+                Labeled               = dtoMzTABParams.Labeled
                 MetaData              = dtoMzTABParams.MetaData
             }
 
