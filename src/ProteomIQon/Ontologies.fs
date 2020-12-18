@@ -185,3 +185,17 @@ module Ontologies =
                 "[MS, MS:1000563, Thermo RAW format, ]"
             |WIFF ->
                 "[MS, MS:1000562, ABI WIFF format, ]"
+
+    type Labeling =
+        |N15
+        |N14
+        |Unlabeled
+
+        member this.toParam =
+            match this with
+            |N15 ->
+                "[MS, MS:1002068, metabolic labelling: heavy N (mainly 15N), ]"
+            |N14 ->
+                "[MS, MS:1002062, metabolic labelling: natural N (mainly 14N), ]"
+            |Unlabeled ->
+                "[MS,MS:1002038,unlabeled sample, ]"

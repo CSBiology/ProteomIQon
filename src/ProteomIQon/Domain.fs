@@ -326,10 +326,10 @@ module Domain =
             sample_disease                   : ((string[]*int)[])option
             sample_description               : ((string*int)[])option
             sample_custom                    : ((string[]*int)[])option
-            assay_quantification_reagent     : ((string*int)[])option
-            assay_quantification_mod         : (((string*int)[]*int)[])option
+            assay_quantification_reagent     : ((Ontologies.Labeling*int)[])
+            assay_quantification_mod         : (((Ontologies.Modification*int)[]*int)[])option
             assay_quantification_mod_site    : (((string*int)[]*int)[])option
-            assay_quantification_mod_position: (((string*int)[]*int)[])option
+            assay_quantification_mod_position: (((Ontologies.ModificationPosition*int)[]*int)[])option
             assay_sample_ref                 : ((string*int)[])option
             assay_ms_run_ref                 : ((string*int)[])option
             study_variable_assay_refs        : ((int[]*int)[])option
@@ -352,5 +352,6 @@ module Domain =
             SearchEngineNamesProt: (Ontologies.SearchEngineScore*string*int)[]
             SearchEngineNamesPep : (Ontologies.SearchEngineScore*string*int)[]
             SearchEngineNamesPSM : (Ontologies.SearchEngineScore*string*int)[]
+            Labeled              : bool
             MetaData             : MetaDataSection
         }

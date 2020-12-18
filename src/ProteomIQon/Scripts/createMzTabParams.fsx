@@ -6,7 +6,12 @@ open ProteomIQon.Dto
 open ProteomIQon.Domain
 open ProteomIQon.Ontologies
 
-let defaultMzTabParams :Dto.MzTABParams = 
+let defaultMzTabParams :Dto.MzTABParams =
+    let light = Labeling.N14
+    let heavy = Labeling.N15
+    let unlabeled = Labeling.Unlabeled
+    let labeled = true
+    let numberOfRuns = 9
     let metaData =
         {
             mzTab_version                     = "1.0.0"
@@ -87,7 +92,20 @@ let defaultMzTabParams :Dto.MzTABParams =
             sample_disease                    = None
             sample_description                = None
             sample_custom                     = None
-            assay_quantification_reagent      = None
+            assay_quantification_reagent      = 
+                if labeled then
+                    [|1 .. numberOfRuns*2|]
+                    |> Array.map (fun x ->
+                        if x%2 <> 0 then
+                            light,x
+                        else
+                            heavy,x
+                    )
+                else
+                    [|1 .. numberOfRuns|]
+                    |> Array.map (fun x ->
+                        unlabeled,x
+                    )
             assay_quantification_mod          = None
             assay_quantification_mod_site     = None
             assay_quantification_mod_position = None
@@ -106,15 +124,16 @@ let defaultMzTabParams :Dto.MzTABParams =
             colunit_small_molecule            = None
         }
     {
-        ExperimentNames =
+        ExperimentNames       =
             [|"20170517 TM FScon3001",1; "20170517 TM FScon3003",2; "20170517 TM FScon3005",3;
             "20170517 TM FScon3007",4; "20170517 TM FScon3009",5; "20170517 TM FScon3011",6;
             "20170517 TM FScon3013",7; "20170517 TM FScon3015",8; "20170517 TM FScon3017",9|]
         StudyVariables = [|"Ratios",[|1 .. 9|],1|]
         SearchEngineNamesProt = metaData.protein_search_engine_score.Value
-        SearchEngineNamesPep = metaData.peptide_search_engine_score.Value
-        SearchEngineNamesPSM = metaData.psm_search_engine_score.Value
-        MetaData = metaData
+        SearchEngineNamesPep  = metaData.peptide_search_engine_score.Value
+        SearchEngineNamesPSM  = metaData.psm_search_engine_score.Value
+        Labeled               = labeled
+        MetaData              = metaData
     }
     
 
