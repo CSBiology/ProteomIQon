@@ -110,7 +110,20 @@ let defaultMzTabParams :Dto.MzTABParams =
             assay_quantification_mod_site     = None
             assay_quantification_mod_position = None
             assay_sample_ref                  = None
-            assay_ms_run_ref                  = None
+            assay_ms_run_ref                  =
+                Some (
+                    if labeled then
+                        Array.concat [|[|1 .. numberOfRuns|]; [|1 .. numberOfRuns|]|]
+                        |> Array.sort
+                        |> Array.mapi (fun i x ->
+                            sprintf "ms_run[%i]" x, i
+                        )
+                    else
+                        [|1 .. numberOfRuns|]
+                        |> Array.mapi (fun i x ->
+                            sprintf "ms_run[%i]" x, i
+                        )
+                )
             study_variable_assay_refs         = None
             study_variable_sample_refs        = None
             study_variable_description        = None
