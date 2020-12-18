@@ -1102,8 +1102,19 @@ module MzTAB =
                 // remember sequence
                 protein_coverage                          = 0.
                 protein_abundance_assay                   =
-                    findValueNumberedProt experimentNames (protGroup |> Array.map fst) "Ratio"
-                    |> Array.sortBy fst
+                    if mzTABParams.Labeled then
+                        let light =
+                            findValueNumberedProt experimentNames (protGroup |> Array.map fst) "Quant_Light"
+                            |> Array.sortBy fst
+                        let heavy =
+                            findValueNumberedProt experimentNames (protGroup |> Array.map fst) "Quant_Heavy"
+                            |> Array.sortBy fst
+                        Array.map2 (fun light heavy -> [|light; heavy|]) light heavy
+                        |> Array.concat
+                        
+                    else
+                        findValueNumberedProt experimentNames (protGroup |> Array.map fst) "Quant_Light"
+                        |> Array.sortBy fst
                 protein_abundance_study_variable          =
                     studyVars
                     |> Array.map (fun (number,variables) ->
@@ -1182,7 +1193,7 @@ module MzTAB =
                     |> Array.map (fun x -> x.TableSort.Protein)
                 )
                 |> Array.distinct
-            let abundanceAssay =
+            let ratio =
                 let light =
                     findValueNumberedPep experimentNames forF "Quant_Light"
                     |> Array.sortBy fst
@@ -1201,7 +1212,7 @@ module MzTAB =
                 mzTABParams.StudyVariables
                 |> Array.map (fun (name,assays,number) ->
                     let corrQuant =
-                        abundanceAssay
+                        ratio
                         |> Array.filter (fun x -> assays.Contains (fst x))
                     number,
                     corrQuant
@@ -1286,7 +1297,18 @@ module MzTAB =
                 spectra_ref                               =
                     "null"
                 peptide_abundance_assay                   =
-                    abundanceAssay
+                    if mzTABParams.Labeled then
+                        let light =
+                            findValueNumberedPep experimentNames forF "Quant_Light"
+                            |> Array.sortBy fst
+                        let heavy =
+                            findValueNumberedPep experimentNames forF "Quant_Heavy"
+                            |> Array.sortBy fst
+                        Array.map2 (fun light heavy -> [|light; heavy|]) light heavy
+                        |> Array.concat
+                    else
+                        findValueNumberedPep experimentNames forF "Quant_Light"
+                        |> Array.sortBy fst
                 peptide_abundance_study_variable          =
                     studyVars
                     |> Array.map (fun (number,variables) ->
@@ -1415,7 +1437,10 @@ module MzTAB =
         let pepsUniqueMSRun =
             formatOne expCount (sprintf "num_peptides_unique_ms_run[%i]")
         let protAbundanceAssay =
-            formatOne expCount (sprintf "protein_abundance_assay[%i]")
+            if mzTABParams.Labeled then
+                formatOne (expCount*2) (sprintf "protein_abundance_assay[%i]")
+            else
+                formatOne expCount (sprintf "protein_abundance_assay[%i]")
         let protAbundanceStudVar =
             formatOne stVarCount (sprintf "protein_abundance_study_variable[%i]")
         let protAbundanceStDevStudVar =
@@ -1446,23 +1471,26 @@ module MzTAB =
             formatOne searchEnginecount (sprintf "best_search_engine_score[%i]")
         let searchEngineScoreMS =
             formatTwo searchEnginecount expCount (sprintf "search_engine_score[%i]_ms_run[%i]")
-        let protAbundanceAssay =
-            formatOne expCount (sprintf "peptide_abundance_assay[%i]")
-        let protAbundanceStudVar =
+        let pepAbundanceAssay =
+            if mzTABParams.Labeled then
+                formatOne (expCount*2) (sprintf "peptide_abundance_assay[%i]")
+            else
+                formatOne expCount (sprintf "peptide_abundance_assay[%i]")
+        let pepAbundanceStudVar =
             formatOne stVarCount (sprintf "peptide_abundance_study_variable[%i]")
-        let protAbundanceStDevStudVar =
+        let pepAbundanceStDevStudVar =
             formatOne stVarCount (sprintf "peptide_abundance_stdev_study_variable[%i]")
-        let protAbundanceStdErrStudVar =
+        let pepAbundanceStdErrStudVar =
             formatOne stVarCount (sprintf "peptide_abundance_std_error_study_variable[%i]")
         let sb = new Text.StringBuilder()
         sb.AppendFormat(
             "PEH\tsequence\taccession\tunique\tdatabase\tdatabase_version\tsearch_engine\t{0}\t{1}\treliability\tmodifications\tretention_time\tretention_time_window\tcharge\tmass_to_charge\turi\tspectra_ref\t\t{2}\t{3}\t{4}\t{5}",
             bestSearchEngineScore,
             searchEngineScoreMS,
-            protAbundanceAssay,
-            protAbundanceStudVar,
-            protAbundanceStDevStudVar,
-            protAbundanceStdErrStudVar
+            pepAbundanceAssay,
+            pepAbundanceStudVar,
+            pepAbundanceStDevStudVar,
+            pepAbundanceStdErrStudVar
         ) |> ignore
         sb.AppendLine() |> ignore
         IO.File.AppendAllText(path, sb.ToString())
