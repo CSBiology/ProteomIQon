@@ -151,7 +151,7 @@ module MzTAB =
             database                                  : string
             database_version                          : string
             search_engine                             : string
-            best_search_engine_score                  : float
+            best_search_engine_score                  : (int*float) []
             search_engine_score_ms_run                : (int*float option)[][]
             reliability                               : int
             modifications                             : string
@@ -219,6 +219,7 @@ module MzTAB =
         |> Seq.toArray
 
     let readProt (path: string) =
+        printfn "%A" path
         SeqIO.Seq.fromFileWithCsvSchema<InferredProteinClassItemOut>(path, '\t', true)
         |> Seq.toArray
         |> Array.map (fun x ->
@@ -281,7 +282,11 @@ module MzTAB =
                 // looks for the prot file from the same experiment as the tab group
                 let _,correspondingProts =
                     prot
-                    |> Array.find (fun (exp',_) -> exp'=exp)
+                    |> Array.find (fun (exp',_) ->
+                        printfn "prot %s" exp'
+                        printfn "tab %s" exp
+                        exp'=exp)
+                printfn "findprot done"
                 // maps over the tab entries of that experiment and finds the corresponding prot entries
                 tabs
                 |> Array.map (fun x ->
@@ -1160,8 +1165,11 @@ module MzTAB =
         let experimentNames = mzTABParams.ExperimentNames
         let groupedTab =
             allAligned
+            // all same peptide ions (no distinction between global mods) are put into an array
+            // expected: 2 peptide ions per experiment in an array
             |> Array.groupBy (fun pep -> pep.Quant.StringSequence, pep.Quant.Charge)
             |> Array.map snd
+            // sort peptides by experiment
             |> Array.map (fun x ->
                 x
                 |> Array.sortBy (fun y -> y.TableSort.Experiment)
@@ -1201,6 +1209,7 @@ module MzTAB =
                     findValueNumberedPep experimentNames forF "Quant_Heavy"
                     |> Array.sortBy fst
                 Array.map2 (fun (i,l) (j,h) ->
+                    if i <> j then failwith "Experimental data for peptide ratios missing"
                     match l,h with
                     | Some x, Some y ->
                         printfn "%f,%f" x y
@@ -1244,9 +1253,16 @@ module MzTAB =
                     |> Array.map (fun (x,_,_) -> x.toParam)
                     |> String.concat "|"
                 best_search_engine_score                  =
-                    pepGroup
-                    |> Array.maxBy (fun (peptide,rest) -> peptide.MeanPercolatorScore)
-                    |> fun (peptide,rest) -> peptide.MeanPercolatorScore
+                // must be adapted to search engine entries in metadata
+                    let percolator =
+                        pepGroup
+                        |> Array.maxBy (fun (peptide,rest) -> peptide.MeanPercolatorScore)
+                        |> fun (peptide,rest) -> peptide.MeanPercolatorScore
+                    let qVal =
+                        pepGroup
+                        |> Array.minBy (fun (peptide,rest) -> peptide.QValue)
+                        |> fun (peptide,rest) -> peptide.QValue
+                    [|1,percolator; 2,qVal|]
                 search_engine_score_ms_run                =
                     mzTABParams.SearchEngineNamesPep
                     |> Array.map (fun (searchengine,fieldName,number) ->
@@ -1484,7 +1500,7 @@ module MzTAB =
             formatOne stVarCount (sprintf "peptide_abundance_std_error_study_variable[%i]")
         let sb = new Text.StringBuilder()
         sb.AppendFormat(
-            "PEH\tsequence\taccession\tunique\tdatabase\tdatabase_version\tsearch_engine\t{0}\t{1}\treliability\tmodifications\tretention_time\tretention_time_window\tcharge\tmass_to_charge\turi\tspectra_ref\t\t{2}\t{3}\t{4}\t{5}",
+            "PEH\tsequence\taccession\tunique\tdatabase\tdatabase_version\tsearch_engine\t{0}\t{1}\treliability\tmodifications\tretention_time\tretention_time_window\tcharge\tmass_to_charge\turi\tspectra_ref\t{2}\t{3}\t{4}\t{5}",
             bestSearchEngineScore,
             searchEngineScoreMS,
             pepAbundanceAssay,
@@ -1534,15 +1550,17 @@ module MzTAB =
                 |> concatRuns "0",
                 prot.num_peptides_distinct_ms_run
                 |> concatRuns "0",
-                prot.num_peptides_unique_ms_run
-                |> concatRuns "0",
+                //prot.num_peptides_unique_ms_run
+                //|> concatRuns "0",
+                "null",
                 prot.ambiguity_members
                 |> String.concat ",",
                 prot.modifications,
                 prot.uri,
                 prot.go_terms
                 |> String.concat "|",
-                prot.protein_coverage,
+                //prot.protein_coverage,
+                "null",
                 prot.protein_abundance_assay
                 |> concatRuns "null",
                 prot.protein_abundance_study_variable
@@ -1572,7 +1590,11 @@ module MzTAB =
                     pep.database_version,
                     pep.search_engine,
                     //needs to be adapted for different search engines
-                    pep.best_search_engine_score,
+                    pep.best_search_engine_score
+                    |> Array.sortBy fst
+                    |> Array.map (string << snd)
+                    |> String.concat "\t"
+                    ,
                     pep.search_engine_score_ms_run
                     |> Array.map (fun score ->
                         score
@@ -1589,7 +1611,8 @@ module MzTAB =
                         |Some a, None -> sprintf "%f|null" a
                         |Some a, Some b -> sprintf "%f|%f" a b
                     ,
-                    pep.retention_time_window,
+                    //pep.retention_time_window,
+                    "null",
                     pep.charge,
                     pep.mass_to_charge,
                     pep.uri,
