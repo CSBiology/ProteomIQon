@@ -165,6 +165,7 @@ module MzTAB =
             peptide_abundance_study_variable          : (int*float option)[]
             peptide_abundance_stdev_study_variable    : (int*float option)[]
             peptide_abundance_std_error_study_variable: (int*float option)[]
+            labeling                                  : Ontologies.Labeling
         }
 
     type PSMSection =
@@ -219,7 +220,6 @@ module MzTAB =
         |> Seq.toArray
 
     let readProt (path: string) =
-        printfn "%A" path
         SeqIO.Seq.fromFileWithCsvSchema<InferredProteinClassItemOut>(path, '\t', true)
         |> Seq.toArray
         |> Array.map (fun x ->
@@ -282,11 +282,7 @@ module MzTAB =
                 // looks for the prot file from the same experiment as the tab group
                 let _,correspondingProts =
                     prot
-                    |> Array.find (fun (exp',_) ->
-                        printfn "prot %s" exp'
-                        printfn "tab %s" exp
-                        exp'=exp)
-                printfn "findprot done"
+                    |> Array.find (fun (exp',_) -> exp'=exp)
                 // maps over the tab entries of that experiment and finds the corresponding prot entries
                 tabs
                 |> Array.map (fun x ->
@@ -1165,9 +1161,8 @@ module MzTAB =
         let experimentNames = mzTABParams.ExperimentNames
         let groupedTab =
             allAligned
-            // all same peptide ions (no distinction between global mods) are put into an array
-            // expected: 2 peptide ions per experiment in an array
-            |> Array.groupBy (fun pep -> pep.Quant.StringSequence, pep.Quant.Charge)
+            // all same peptide ions are put into an array
+            |> Array.groupBy (fun pep -> pep.Quant.StringSequence, pep.Quant.Charge, pep.Quant.GlobalMod)
             |> Array.map snd
             // sort peptides by experiment
             |> Array.map (fun x ->
@@ -1211,9 +1206,7 @@ module MzTAB =
                 Array.map2 (fun (i,l) (j,h) ->
                     if i <> j then failwith "Experimental data for peptide ratios missing"
                     match l,h with
-                    | Some x, Some y ->
-                        printfn "%f,%f" x y
-                        i, Some (x/y)
+                    | Some x, Some y -> i, Some (x/y)
                     | _, None -> i, None
                     | None, _ -> i, None
                 ) light heavy
@@ -1305,8 +1298,7 @@ module MzTAB =
                     (fst pepGroup.[0]).Charge
                 mass_to_charge                            =
                     pepGroup
-                    |> Array.sortBy (fun x -> (fst x).MeanPercolatorScore)
-                    |> Array.head
+                    |> Array.maxBy (fun x -> (fst x).MeanPercolatorScore)
                     |> fun (peptide,rest) -> peptide.PrecursorMZ
                 uri                                       =
                     "null"
@@ -1363,6 +1355,18 @@ module MzTAB =
                                     stDev / (sqrt (float x.Length))
                             )
                     )
+                labeling =
+                    let gMod =
+                        pepGroup
+                        |> Array.map (fun (x,_) ->
+                            x.GlobalMod
+                        )
+                        |> Array.distinct
+                    if gMod.Length <> 1 then failwith "gmod"
+                    match gMod.[0] with
+                    | 0 -> Ontologies.Labeling.N14
+                    | 1 -> Ontologies.Labeling.N15
+                    | _ -> failwith "Unexpected GlobalMod. GlobalMod must be either 0 or 1"
             }
         )
 
@@ -1403,7 +1407,10 @@ module MzTAB =
                 reliability                               =
                     3
                 modifications                             =
-                    null
+                    match psm.GlobalMod with
+                    | 0 -> Ontologies.Labeling.N14.toParam
+                    | 1 -> Ontologies.Labeling.N15.toParam
+                    | _ -> failwith "Unexpected GlobalMod. GlobalMod must be either 0 or 1"
                 retention_time                            =
                     psm.ScanTime
                 charge                                    =
@@ -1500,7 +1507,7 @@ module MzTAB =
             formatOne stVarCount (sprintf "peptide_abundance_std_error_study_variable[%i]")
         let sb = new Text.StringBuilder()
         sb.AppendFormat(
-            "PEH\tsequence\taccession\tunique\tdatabase\tdatabase_version\tsearch_engine\t{0}\t{1}\treliability\tmodifications\tretention_time\tretention_time_window\tcharge\tmass_to_charge\turi\tspectra_ref\t{2}\t{3}\t{4}\t{5}",
+            "PEH\tsequence\taccession\tunique\tdatabase\tdatabase_version\tsearch_engine\t{0}\t{1}\treliability\tmodifications\tretention_time\tretention_time_window\tcharge\tmass_to_charge\turi\tspectra_ref\t{2}\t{3}\t{4}\t{5}\topt_global_global_mod",
             bestSearchEngineScore,
             searchEngineScoreMS,
             pepAbundanceAssay,
@@ -1512,7 +1519,7 @@ module MzTAB =
         IO.File.AppendAllText(path, sb.ToString())
 
     let psmHeader path (mzTABParams: Domain.MzTABParams) =
-        let searchEnginecount = mzTABParams.SearchEngineNamesPep.Length
+        let searchEnginecount = mzTABParams.SearchEngineNamesPSM.Length
         let searchEngineScoreMS =
             formatOne searchEnginecount (sprintf "search_engine_score[%i]")
         let sb = new Text.StringBuilder()
@@ -1578,11 +1585,10 @@ module MzTAB =
         let sb = new Text.StringBuilder()
         peptideS
         |> Array.map (fun pep ->
-            printfn "%A" pep.accession
             pep.accession
             |> Array.iter (fun prot ->
                 sb.AppendFormat(
-                    "PEP\t{0}\t{1}\t{2}\t{3}\t{4}\t{5}\t{6}\t{7}\t{8}\t{9}\t{10}\t{11}\t{12}\t{13}\t{14}\t{15}\t{16}\t{17}\t{18}\t{19}",
+                    "PEP\t{0}\t{1}\t{2}\t{3}\t{4}\t{5}\t{6}\t{7}\t{8}\t{9}\t{10}\t{11}\t{12}\t{13}\t{14}\t{15}\t{16}\t{17}\t{18}\t{19}\t{20}",
                     pep.sequence,
                     prot,
                     pep.unique,
@@ -1624,7 +1630,8 @@ module MzTAB =
                     pep.peptide_abundance_stdev_study_variable
                     |> concatRuns "null",
                     pep.peptide_abundance_std_error_study_variable
-                    |> concatRuns "null"
+                    |> concatRuns "null",
+                    pep.labeling.toParam
                 ) |> ignore
                 sb.AppendLine()
                 |> ignore
