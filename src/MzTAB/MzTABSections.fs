@@ -914,16 +914,18 @@ module MzTABSections =
                     |> Array.map (fun (x,_,_) -> x.toParam)
                     |> String.concat "|"
                 best_search_engine_score                  =
-                // must be adapted to search engine entries in metadata
-                    let percolator =
-                        pepGroup
-                        |> Array.maxBy (fun (peptide,rest) -> peptide.MeanPercolatorScore)
-                        |> fun (peptide,rest) -> peptide.MeanPercolatorScore
-                    let qVal =
-                        pepGroup
-                        |> Array.minBy (fun (peptide,rest) -> peptide.QValue)
-                        |> fun (peptide,rest) -> peptide.QValue
-                    [|1,percolator; 2,qVal|]
+                    mzTABParams.SearchEngineNamesPep
+                    |> Array.map (fun (searchengine,fieldName,number) ->
+                        findValueNumberedPep experimentNames forF fieldName
+                        |> Array.sortBy fst
+                    )
+                    |> Array.map (Array.choose (fun (i,x) ->
+                        match x with
+                        | None -> None
+                        | Some v -> Some (i, v)
+                    )
+                    )
+                    |> Array.map (Array.maxBy snd)
                 search_engine_score_ms_run                =
                     mzTABParams.SearchEngineNamesPep
                     |> Array.map (fun (searchengine,fieldName,number) ->
