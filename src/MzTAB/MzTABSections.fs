@@ -690,11 +690,43 @@ module MzTABSections =
                 x
                 |> Array.groupBy (fun y -> y.TableSort)
             )
+        let initRatio names tablesort =
+            findValueNumberedProt names tablesort "Ratio"
+        let initStDev names tablesort =
+            findValueNumberedProt names tablesort "Ratio_StDev"
+        let initSEM names tablesort =
+            findValueNumberedProt names tablesort "Ratio_SEM"
         groupedTab
         |> Array.map (fun protGroup ->
             let studyVars =
                 let quant =
-                    findValueNumberedProt experimentNames (protGroup |> Array.map fst) "Ratio"
+                    initRatio experimentNames (protGroup |> Array.map fst)
+                    |> Array.sortBy fst
+                mzTABParams.StudyVariables
+                |> Array.map (fun (name,assays,number) ->
+                    let corrQuant =
+                        quant
+                        |> Array.filter (fun x -> assays.Contains (fst x))
+                    number,
+                    corrQuant
+                    |> Array.choose snd
+                )
+            let studyVarsStDev =
+                let quant =
+                    initStDev experimentNames (protGroup |> Array.map fst)
+                    |> Array.sortBy fst
+                mzTABParams.StudyVariables
+                |> Array.map (fun (name,assays,number) ->
+                    let corrQuant =
+                        quant
+                        |> Array.filter (fun x -> assays.Contains (fst x))
+                    number,
+                    corrQuant
+                    |> Array.choose snd
+                )
+            let studyVarsStdErr =
+                let quant =
+                    initSEM experimentNames (protGroup |> Array.map fst)
                     |> Array.sortBy fst
                 mzTABParams.StudyVariables
                 |> Array.map (fun (name,assays,number) ->
@@ -805,7 +837,7 @@ module MzTABSections =
                             )
                     )
                 protein_abundance_stdev_study_variable    =
-                    studyVars
+                    studyVarsStDev
                     |> Array.map (fun (number,variables) ->
                         number,
                         match variables with
@@ -813,11 +845,11 @@ module MzTABSections =
                         | _ ->
                             Some (
                                 variables
-                                |> Seq.stDev
+                                |> Array.average
                             )
                     )
                 protein_abundance_std_error_study_variable=
-                    studyVars
+                    studyVarsStdErr
                     |> Array.map (fun (number,variables) ->
                         number,
                         match variables with
@@ -825,9 +857,7 @@ module MzTABSections =
                         | _ ->
                             Some (
                                 variables
-                                |> fun x ->
-                                    let stDev = Seq.stDev x
-                                    stDev / (sqrt (float x.Length))
+                                |> Array.average
                             )
                     )
                     
