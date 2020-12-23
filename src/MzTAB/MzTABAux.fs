@@ -5,6 +5,7 @@ open MzIO
 open FSharp.Stats
 open FSharpAux
 open FSharpAux.IO
+open FSharpAux.IO.SchemaReader
 open FSharpAux.IO.SchemaReader.Attribute
 open FSharp.Plotly
 
@@ -68,52 +69,6 @@ module MzTABAux =
         ProteinNames                 : string
         }
 
-    type QuantificationResult = {
-        StringSequence                              : string
-        GlobalMod                                   : int
-        Charge                                      : int
-        PepSequenceID                               : int
-        ModSequenceID                               : int
-        PrecursorMZ                                 : float
-        MeasuredMass                                : float
-        TheoMass                                    : float
-        AbsDeltaMass                                : float
-        MeanPercolatorScore                         : float
-        QValue                                      : float
-        PEPValue                                    : float
-        ProteinNames                                : string
-        QuantMz_Light                               : float
-        Quant_Light                                 : float
-        MeasuredApex_Light                          : float
-        Seo_Light                                   : float
-        Params_Light                                : string
-        Difference_SearchRT_FittedRT_Light          : float
-        KLDiv_Observed_Theoretical_Light            : float
-        KLDiv_CorrectedObserved_Theoretical_Light   : float
-        QuantMz_Heavy                               : float
-        Quant_Heavy                                 : float
-        MeasuredApex_Heavy                          : float
-        Seo_Heavy                                   : float
-        Params_Heavy                                : string
-        Difference_SearchRT_FittedRT_Heavy          : float
-        KLDiv_Observed_Theoretical_Heavy            : float
-        KLDiv_CorrectedObserved_Theoretical_Heavy   : float
-        Correlation_Light_Heavy                     : float
-        QuantificationSource                        : string
-        IsotopicPatternMz_Light                     : string
-        IsotopicPatternIntensity_Observed_Light     : string
-        IsotopicPatternIntensity_Corrected_Light    : string
-        RtTrace_Light                               : string
-        IntensityTrace_Observed_Light               : string
-        IntensityTrace_Corrected_Light              : string
-        IsotopicPatternMz_Heavy                     : string
-        IsotopicPatternIntensity_Observed_Heavy     : string
-        IsotopicPatternIntensity_Corrected_Heavy    : string
-        RtTrace_Heavy                               : string
-        IntensityTrace_Observed_Heavy               : string
-        IntensityTrace_Corrected_Heavy              : string
-        }
-
     type ProteinSection =
         {
             accession                                 : string
@@ -152,7 +107,7 @@ module MzTABAux =
             search_engine_score_ms_run                : (int*float option)[][]
             reliability                               : int
             modifications                             : string
-            retention_time                            : (float option * float option)
+            retention_time                            : float
             retention_time_window                     : float*float
             charge                                    : int
             mass_to_charge                            : float
@@ -193,7 +148,7 @@ module MzTABAux =
         {
             ProtInf  : InferredProteinClassItemOut
             Qpsm     : PSMStatisticsResult
-            Quant    : QuantificationResult
+            Quant    : Dto.QuantificationResult
             TableSort: TableSort
         }
 
@@ -213,7 +168,7 @@ module MzTABAux =
         |> Seq.toArray
 
     let readQuant (path: string) =
-        SeqIO.Seq.fromFileWithCsvSchema<QuantificationResult>(path, '\t', true)
+        SeqIO.Seq.fromFileWithCsvSchema<Dto.QuantificationResult>(path, '\t', false, schemaMode=SchemaReader.Csv.SchemaModes.Fill, skipLines=1)
         |> Seq.toArray
 
     let readProt (path: string) =
@@ -275,8 +230,8 @@ module MzTABAux =
             number, value
         )
 
-    let findValueNumberedPep (expNames: (string*int)[]) (peptides: (QuantificationResult*string) []) (fieldName: string) =
-        let fieldFunc (tableSort: QuantificationResult) =
+    let findValueNumberedPep (expNames: (string*int)[]) (peptides: (Dto.QuantificationResult*string) []) (fieldName: string) =
+        let fieldFunc (tableSort: Dto.QuantificationResult) =
             let res = ReflectionHelper.tryGetPropertyValue tableSort fieldName
             match res with
             |None -> failwith (sprintf "Field %s doesn't exist" fieldName)
@@ -356,3 +311,13 @@ module MzTABAux =
             |> format
             |> fun x -> sb.AppendLine(x)
         |None -> sb
+
+    /// Retrieves the scan time based on the fitted parameter values (HULQ output).
+    let getTargetScanTime (qp:Dto.QuantificationResult) = 
+        try
+        if qp.GlobalMod = 0 then
+            qp.Params_Light.[1] 
+        else
+            qp.Params_Heavy.[1] 
+        with
+        | _ -> nan
