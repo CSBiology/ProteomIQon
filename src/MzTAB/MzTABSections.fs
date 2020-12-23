@@ -703,7 +703,7 @@ module MzTABSections =
                 |> String.split ';'
             {
                 accession                                 = proteinGroup |> Array.head
-                description                               = ""
+                description                               = "null"
                 taxid                                     = 3055
                 species                                   =
                     let experimentsIdentifeidNumber =
@@ -767,7 +767,7 @@ module MzTABSections =
                 modifications                             = "null"
                 // have to look how to handle uri with protein identifications from different sources
                 uri                                       = "null"
-                go_terms                                  = [||]
+                go_terms                                  = [|"null"|]
                 // remember sequence
                 protein_coverage                          = 0.
                 protein_abundance_assay                   =
@@ -864,6 +864,9 @@ module MzTABSections =
                     |> Array.map (fun x -> x.TableSort.Protein)
                 )
                 |> Array.distinct
+                |> Array.collect (fun x ->
+                    x |> String.split ';'
+                )
             let ratio =
                 let light =
                     findValueNumberedPep experimentNames forF "Quant_Light"
@@ -940,28 +943,7 @@ module MzTABSections =
                     pepGroup
                     |> Array.sortBy (fun x -> (fst x).MeanPercolatorScore)
                     |> Array.head
-                    |> fun (peptide,rest) ->
-                        let labeled =
-                            rest
-                            |> Array.filter (fun x ->
-                                x.Qpsm.GlobalMod = 1
-                            )
-                            |> fun x ->
-                                if x.Length > 0 then
-                                    Some (x |> Array.averageBy (fun y -> y.Qpsm.ScanTime))
-                                else
-                                    None
-                        let unlabeled =
-                            rest
-                            |> Array.filter (fun x ->
-                                x.Qpsm.GlobalMod = 0
-                            )
-                            |> fun x ->
-                                if x.Length > 0 then
-                                    Some (x |> Array.averageBy (fun y -> y.Qpsm.ScanTime))
-                                else
-                                    None
-                        labeled,unlabeled
+                    |> fun (quant,rest) -> MzTABAux.getTargetScanTime quant
                 retention_time_window                     =
                     1.,2.
                 charge                                    =
@@ -1046,56 +1028,68 @@ module MzTABSections =
             |> Array.groupBy (fun x -> x.Qpsm)
         groupedTab
             |> Array.map (fun (psm,rest) ->
-            let corrProt =
-                rest
-                |> Array.map (fun x -> x.TableSort.Protein)
-                |> Array.distinct
-            {
-                sequence                                  =
-                    psm.StringSequence
-                PSM_ID = psm.ScanNr
-                accession                                 =
-                    corrProt
-                unique                                    =
-                    if corrProt.Length <> 1 then
-                        0
-                    else
-                        1
-                database                                  =
-                    "null"
-                database_version                          =
-                    "null"
-                search_engine                             =
-                    mzTABParams.MetaData.psm_search_engine_score.Value
-                    |> Array.map (fun (x,_,_) -> x.toParam)
-                    |> String.concat "|"
-                search_engine_score                       =
-                    mzTABParams.SearchEngineNamesPSM
-                    |> Array.map (fun (searchengine,fieldName,number) ->
-                        fieldFuncPSM psm fieldName
-                    )
-                reliability                               =
-                    3
-                modifications                             =
-                    match psm.GlobalMod with
-                    | 0 -> Ontologies.Labeling.N14.toParam
-                    | 1 -> Ontologies.Labeling.N15.toParam
-                    | _ -> failwith "Unexpected GlobalMod. GlobalMod must be either 0 or 1"
-                retention_time                            =
-                    psm.ScanTime
-                charge                                    =
-                    psm.Charge
-                exp_mass_to_charge                            =
-                    psm.PrecursorMZ
-                calc_mass_to_charge                            =
-                    BioFSharp.Mass.toMZ psm.TheoMass (float psm.Charge)
-                uri                                       =
-                    "null"
-                spectra_ref                               =
-                    psm.PSMId
-                pre="null"
-                post="null"
-                start=1
-                ending=1
-            }
+                if rest.Length <> 1 then failwith "Unexpected number of entries for a single psm"
+                let corrProt =
+                    rest.[0].TableSort.Protein
+                    |> String.split ';'
+                {
+                    sequence                                  =
+                        psm.StringSequence
+                    PSM_ID = psm.ScanNr
+                    accession                                 =
+                        corrProt
+                    unique                                    =
+                        if corrProt.Length <> 1 then
+                            0
+                        else
+                            1
+                    database                                  =
+                        "null"
+                    database_version                          =
+                        "null"
+                    search_engine                             =
+                        mzTABParams.MetaData.psm_search_engine_score.Value
+                        |> Array.map (fun (x,_,_) -> x.toParam)
+                        |> String.concat "|"
+                    search_engine_score                       =
+                        mzTABParams.SearchEngineNamesPSM
+                        |> Array.map (fun (searchengine,fieldName,number) ->
+                            fieldFuncPSM psm fieldName
+                        )
+                    reliability                               =
+                        3
+                    modifications                             =
+                        match psm.GlobalMod with
+                        | 0 -> Ontologies.Labeling.N14.toParam
+                        | 1 -> Ontologies.Labeling.N15.toParam
+                        | _ -> failwith "Unexpected GlobalMod. GlobalMod must be either 0 or 1"
+                    retention_time                            =
+                        psm.ScanTime
+                    charge                                    =
+                        psm.Charge
+                    exp_mass_to_charge                            =
+                        psm.PrecursorMZ
+                    calc_mass_to_charge                            =
+                        BioFSharp.Mass.toMZ psm.TheoMass (float psm.Charge)
+                    uri                                       =
+                        "null"
+                    spectra_ref                               =
+                        let exp =
+                            rest 
+                            |> Array.map (fun x ->
+                                x.TableSort.Experiment
+                            )
+                            |> Array.distinct
+                        if exp.Length <> 1 then failwith "unexpected number of runs for psm"
+                        let expNum =
+                            mzTABParams.ExperimentNames
+                            |> Array.find (fun (name,number) -> name=exp.[0])
+                            |> snd
+
+                        sprintf ("ms_run[%i]:%s") expNum psm.PSMId
+                    pre="null"
+                    post="null"
+                    start=1
+                    ending=1
+                }
         )

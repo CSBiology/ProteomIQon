@@ -118,12 +118,12 @@ module MzTABFormater =
                 //prot.reliability,
                 "null",
                 prot.num_psms_ms_run
-                |> concatRuns "0",
+                |> concatRuns "null",
                 prot.num_peptides_distinct_ms_run
-                |> concatRuns "0",
-                //prot.num_peptides_unique_ms_run
-                //|> concatRuns "0",
-                "null",
+                |> concatRuns "null",
+                prot.num_peptides_unique_ms_run
+                |> Array.map (fun x -> "null")
+                |> String.concat "\t",
                 prot.ambiguity_members
                 |> String.concat ",",
                 prot.modifications,
@@ -175,12 +175,7 @@ module MzTABFormater =
                     "null",
                     pep.modifications,
                     pep.retention_time
-                    |> fun (x,y) ->
-                        match (x,y) with
-                        |None, Some b -> sprintf "null|%f" b
-                        |Some a, None -> sprintf "%f|null" a
-                        |Some a, Some b -> sprintf "%f|%f" a b
-                    ,
+                    |> string,
                     //pep.retention_time_window,
                     "null",
                     pep.charge,
