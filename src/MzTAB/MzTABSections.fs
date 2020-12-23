@@ -701,6 +701,7 @@ module MzTABSections =
             let proteinGroup =
                 (fst protGroup.[0]).Protein
                 |> String.split ';'
+                |> Array.sort
             {
                 accession                                 = proteinGroup |> Array.head
                 description                               = "null"
@@ -822,6 +823,8 @@ module MzTABSections =
                                     stDev / (sqrt (float x.Length))
                             )
                     )
+                protein_group = proteinGroup |> String.concat ";"
+                    
             }
         )
 
@@ -861,12 +864,13 @@ module MzTABSections =
                 pepGroup
                 |> Array.collect (fun (peptide,rest) ->
                     rest
-                    |> Array.map (fun x -> x.TableSort.Protein)
+                    |> Array.map (fun x -> 
+                        x.TableSort.Protein
+                        |> String.split ';'
+                    )
+                    |> Array.sort
                 )
                 |> Array.distinct
-                |> Array.collect (fun x ->
-                    x |> String.split ';'
-                )
             let ratio =
                 let light =
                     findValueNumberedPep experimentNames forF "Quant_Light"
@@ -1032,6 +1036,7 @@ module MzTABSections =
                 let corrProt =
                     rest.[0].TableSort.Protein
                     |> String.split ';'
+                    |> Array.sort
                 {
                     sequence                                  =
                         psm.StringSequence

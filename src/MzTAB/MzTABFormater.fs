@@ -36,7 +36,7 @@ module MzTABFormater =
             formatOne stVarCount (sprintf "protein_abundance_std_error_study_variable[%i]")
         let sb = new Text.StringBuilder()
         sb.AppendFormat(
-            "PRH\taccession\tdescription\ttaxid\tspecies\tdatabase\tdatabase_version\tsearch_engine\t{0}\t{1}\treliability\t{2}\t{3}\t{4}\tambiguity_members\tmodifications\turi\tgo_terms\tprotein_coverage\t{5}\t{6}\t{7}\t{8}",
+            "PRH\taccession\tdescription\ttaxid\tspecies\tdatabase\tdatabase_version\tsearch_engine\t{0}\t{1}\treliability\t{2}\t{3}\t{4}\tambiguity_members\tmodifications\turi\tgo_terms\tprotein_coverage\t{5}\t{6}\t{7}\t{8}\topt_global_protein_group",
             bestSearchEngineScore,
             searchEngineScoreMS,
             psmsMSRun,
@@ -71,7 +71,7 @@ module MzTABFormater =
             formatOne stVarCount (sprintf "peptide_abundance_std_error_study_variable[%i]")
         let sb = new Text.StringBuilder()
         sb.AppendFormat(
-            "PEH\tsequence\taccession\tunique\tdatabase\tdatabase_version\tsearch_engine\t{0}\t{1}\treliability\tmodifications\tretention_time\tretention_time_window\tcharge\tmass_to_charge\turi\tspectra_ref\t{2}\t{3}\t{4}\t{5}\topt_global_global_mod",
+            "PEH\tsequence\taccession\tunique\tdatabase\tdatabase_version\tsearch_engine\t{0}\t{1}\treliability\tmodifications\tretention_time\tretention_time_window\tcharge\tmass_to_charge\turi\tspectra_ref\t{2}\t{3}\t{4}\t{5}\topt_global_global_mod\topt_global_protein_group",
             bestSearchEngineScore,
             searchEngineScoreMS,
             pepAbundanceAssay,
@@ -88,7 +88,7 @@ module MzTABFormater =
             formatOne searchEnginecount (sprintf "search_engine_score[%i]")
         let sb = new Text.StringBuilder()
         sb.AppendFormat(
-            "PSH\tsequence\tPSM_ID\taccession\tunique\tdatabase\tdatabase_version\tsearch_engine\t{0}\treliability\tmodifications\tretention_time\tcharge\texp_mass_to_charge\tcalc_mass_to_charge\turi\tspectra_ref\tpre\tpost\tstart\tend",
+            "PSH\tsequence\tPSM_ID\taccession\tunique\tdatabase\tdatabase_version\tsearch_engine\t{0}\treliability\tmodifications\tretention_time\tcharge\texp_mass_to_charge\tcalc_mass_to_charge\turi\tspectra_ref\tpre\tpost\tstart\tend\topt_global_protein_group",
             searchEngineScoreMS
         ) |> ignore
         sb.AppendLine() |> ignore
@@ -99,7 +99,7 @@ module MzTABFormater =
         proteinS
         |> Array.map (fun prot ->
             sb.AppendFormat(
-                "PRT\t{0}\t{1}\t{2}\t{3}\t{4}\t{5}\t{6}\t{7}\t{8}\t{9}\t{10}\t{11}\t{12}\t{13}\t{14}\t{15}\t{16}\t{17}\t{18}\t{19}\t{20}\t{21}",
+                "PRT\t{0}\t{1}\t{2}\t{3}\t{4}\t{5}\t{6}\t{7}\t{8}\t{9}\t{10}\t{11}\t{12}\t{13}\t{14}\t{15}\t{16}\t{17}\t{18}\t{19}\t{20}\t{21}\t{22}",
                 prot.accession,
                 prot.description,
                 prot.taxid,
@@ -139,7 +139,8 @@ module MzTABFormater =
                 prot.protein_abundance_stdev_study_variable
                 |> concatRuns "null",
                 prot.protein_abundance_std_error_study_variable
-                |> concatRuns "null"
+                |> concatRuns "null",
+                prot.protein_group
             ) |> ignore
             sb.AppendLine()
         ) |> ignore
@@ -152,9 +153,9 @@ module MzTABFormater =
             pep.accession
             |> Array.iter (fun prot ->
                 sb.AppendFormat(
-                    "PEP\t{0}\t{1}\t{2}\t{3}\t{4}\t{5}\t{6}\t{7}\t{8}\t{9}\t{10}\t{11}\t{12}\t{13}\t{14}\t{15}\t{16}\t{17}\t{18}\t{19}\t{20}",
+                    "PEP\t{0}\t{1}\t{2}\t{3}\t{4}\t{5}\t{6}\t{7}\t{8}\t{9}\t{10}\t{11}\t{12}\t{13}\t{14}\t{15}\t{16}\t{17}\t{18}\t{19}\t{20}\t{21}",
                     pep.sequence,
-                    prot,
+                    prot.[0],
                     pep.unique,
                     pep.database,
                     pep.database_version,
@@ -190,7 +191,9 @@ module MzTABFormater =
                     |> concatRuns "null",
                     pep.peptide_abundance_std_error_study_variable
                     |> concatRuns "null",
-                    pep.labeling.toParam
+                    pep.labeling.toParam,
+                    prot
+                    |> String.concat ";"
                 ) |> ignore
                 sb.AppendLine()
                 |> ignore
@@ -201,39 +204,39 @@ module MzTABFormater =
     let psmBody path (psmS: PSMSection[]) =
         let sb = new Text.StringBuilder()
         psmS
-        |> Array.map (fun psm ->
-            psm.accession
-            |> Array.iter (fun prot ->
-                sb.AppendFormat(
-                    "PSM\t{0}\t{1}\t{2}\t{3}\t{4}\t{5}\t{6}\t{7}\t{8}\t{9}\t{10}\t{11}\t{12}\t{13}\t{14}\t{15}\t{16}\t{17}\t{18}\t{19}",
-                    psm.sequence,
-                    psm.PSM_ID,
-                    prot,
-                    psm.unique,
-                    psm.database,
-                    psm.database_version,
-                    psm.search_engine,
-                    //needs to be adapted for different search engines
-                    psm.search_engine_score
-                    |> Array.map string
-                    |> String.concat "\t",
-                    psm.reliability,
-                    psm.modifications,
-                    psm.retention_time,
-                    psm.charge,
-                    psm.exp_mass_to_charge,
-                    psm.calc_mass_to_charge,
-                    psm.uri,
-                    psm.spectra_ref,
-                    psm.pre,
-                    psm.post,
-                    //psm.start,
-                    //psm.ending
-                    "null",
-                    "null"
-                ) |> ignore
-                sb.AppendLine()
-                |> ignore
-            )
+        |> Array.iter (fun psm ->
+            sb.AppendFormat(
+                "PSM\t{0}\t{1}\t{2}\t{3}\t{4}\t{5}\t{6}\t{7}\t{8}\t{9}\t{10}\t{11}\t{12}\t{13}\t{14}\t{15}\t{16}\t{17}\t{18}\t{19}",
+                psm.sequence,
+                psm.PSM_ID,
+                psm.accession.[0],
+                psm.unique,
+                psm.database,
+                psm.database_version,
+                psm.search_engine,
+                //needs to be adapted for different search engines
+                psm.search_engine_score
+                |> Array.map string
+                |> String.concat "\t",
+                //psm.reliability,
+                "null",
+                psm.modifications,
+                psm.retention_time,
+                psm.charge,
+                psm.exp_mass_to_charge,
+                psm.calc_mass_to_charge,
+                psm.uri,
+                psm.spectra_ref,
+                psm.pre,
+                psm.post,
+                //psm.start,
+                //psm.ending
+                "null",
+                "null",
+                psm.accession
+                |> String.concat ";"
+            ) |> ignore
+            sb.AppendLine()
+            |> ignore
         ) |> ignore
         IO.File.AppendAllText(path, sb.ToString())
