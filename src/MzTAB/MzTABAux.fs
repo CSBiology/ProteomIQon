@@ -71,7 +71,7 @@ module MzTABAux =
 
     type ProteinSection =
         {
-            accession                                 : string
+            accession                                 : string[]
             description                               : string
             taxid                                     : int
             species                                   : string
@@ -93,7 +93,6 @@ module MzTABAux =
             protein_abundance_study_variable          : (int*float option)[]
             protein_abundance_stdev_study_variable    : (int*float option)[]
             protein_abundance_std_error_study_variable: (int*float option)[]
-            protein_group                             : string
         }
 
     type PeptideSection =
@@ -322,3 +321,20 @@ module MzTABAux =
             qp.Params_Heavy.[1] 
         with
         | _ -> nan
+
+    let groupsWithSameProteinAccession (protGroups: string[][]) =
+        protGroups
+        |> Array.distinct
+        |> Array.groupBy (fun x -> x |> Array.head)
+        |> Array.map snd
+        |> Array.filter (fun groups ->
+            groups.Length > 1
+        )
+        |> Array.map (fun groups ->
+            groups
+            |> Array.mapi (fun i group ->
+                group, (sprintf "_%i" i)
+            )
+        )
+        |> Array.concat
+        |> Map.ofArray

@@ -92,7 +92,14 @@ module MzTABSections =
         alignedProtTabQuantQpsm
         |> Array.concat
 
-
+    let getSameAccessions (allAligned: AlignedComplete[]) =
+        let proteinGroups =
+            allAligned |> Array.map (fun x ->
+                x.TableSort.Protein
+                |> String.split ';'
+                |> Array.sort
+            )
+        groupsWithSameProteinAccession proteinGroups
 
     let metaDataSection path (md: MetaDataSection) =
         let sb = new Text.StringBuilder()
@@ -703,7 +710,7 @@ module MzTABSections =
                 |> String.split ';'
                 |> Array.sort
             {
-                accession                                 = proteinGroup |> Array.head
+                accession                                 = proteinGroup
                 description                               = "null"
                 taxid                                     = 3055
                 species                                   =
@@ -823,7 +830,6 @@ module MzTABSections =
                                     stDev / (sqrt (float x.Length))
                             )
                     )
-                protein_group = proteinGroup |> String.concat ";"
                     
             }
         )
