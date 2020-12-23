@@ -93,12 +93,13 @@ module MzTABAux =
             protein_abundance_study_variable          : (int*float option)[]
             protein_abundance_stdev_study_variable    : (int*float option)[]
             protein_abundance_std_error_study_variable: (int*float option)[]
+            protein_group                             : string
         }
 
     type PeptideSection =
         {
             sequence                                  : string
-            accession                                 : string[]
+            accession                                 : string[][]
             unique                                    : int
             database                                  : string
             database_version                          : string
