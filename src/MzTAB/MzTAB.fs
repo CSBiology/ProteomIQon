@@ -18,6 +18,8 @@ module MzTAB =
             IO.Directory.GetFiles(qpsm,("*.qpsm"))
         let allAligned =
             allignAllFiles tab protFiles quantFiles qpsmFiles
+        let sameAccession =
+            getSameAccessions allAligned
         let protSection =
             proteinSection allAligned param
         let pepSection =
@@ -26,8 +28,8 @@ module MzTAB =
             psmSection allAligned param
         metaDataSection path param.MetaData
         protHeader path param
-        protBody path protSection
+        protBody path protSection sameAccession
         pepHeader path param
-        pepBody path pepSection
+        pepBody path pepSection sameAccession
         psmHeader path param
-        psmBody path psmSection'
+        psmBody path psmSection' sameAccession

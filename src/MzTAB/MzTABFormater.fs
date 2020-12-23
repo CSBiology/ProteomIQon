@@ -94,13 +94,23 @@ module MzTABFormater =
         sb.AppendLine() |> ignore
         IO.File.AppendAllText(path, sb.ToString())
 
-    let protBody path (proteinS: ProteinSection[]) =
+    let protBody path (proteinS: ProteinSection[]) (sameProteinAcc: Map<string[],string>) =
         let sb = new Text.StringBuilder()
+        printfn "%A" sameProteinAcc
         proteinS
         |> Array.map (fun prot ->
             sb.AppendFormat(
                 "PRT\t{0}\t{1}\t{2}\t{3}\t{4}\t{5}\t{6}\t{7}\t{8}\t{9}\t{10}\t{11}\t{12}\t{13}\t{14}\t{15}\t{16}\t{17}\t{18}\t{19}\t{20}\t{21}\t{22}",
-                prot.accession,
+                (
+                    let number = 
+                        sameProteinAcc
+                        |> Map.tryFind prot.accession
+                    if number.IsSome then
+                        prot.accession.[0] + number.Value
+                    else
+                        prot.accession.[0]
+                )
+                ,
                 prot.description,
                 prot.taxid,
                 prot.species,
@@ -140,13 +150,14 @@ module MzTABFormater =
                 |> concatRuns "null",
                 prot.protein_abundance_std_error_study_variable
                 |> concatRuns "null",
-                prot.protein_group
+                prot.accession
+                |> String.concat ";"
             ) |> ignore
             sb.AppendLine()
         ) |> ignore
         IO.File.AppendAllText(path, sb.ToString())
 
-    let pepBody path (peptideS: PeptideSection[]) =
+    let pepBody path (peptideS: PeptideSection[]) (sameProteinAcc: Map<string[],string>) =
         let sb = new Text.StringBuilder()
         peptideS
         |> Array.map (fun pep ->
@@ -155,7 +166,16 @@ module MzTABFormater =
                 sb.AppendFormat(
                     "PEP\t{0}\t{1}\t{2}\t{3}\t{4}\t{5}\t{6}\t{7}\t{8}\t{9}\t{10}\t{11}\t{12}\t{13}\t{14}\t{15}\t{16}\t{17}\t{18}\t{19}\t{20}\t{21}",
                     pep.sequence,
-                    prot.[0],
+                    (
+                        let number = 
+                            sameProteinAcc
+                            |> Map.tryFind prot
+                        if number.IsSome then
+                            prot.[0] + number.Value
+                        else
+                            prot.[0]
+                    )
+                    ,
                     pep.unique,
                     pep.database,
                     pep.database_version,
@@ -201,7 +221,7 @@ module MzTABFormater =
         ) |> ignore
         IO.File.AppendAllText(path, sb.ToString())
 
-    let psmBody path (psmS: PSMSection[]) =
+    let psmBody path (psmS: PSMSection[]) (sameProteinAcc: Map<string[],string>) =
         let sb = new Text.StringBuilder()
         psmS
         |> Array.iter (fun psm ->
@@ -209,7 +229,16 @@ module MzTABFormater =
                 "PSM\t{0}\t{1}\t{2}\t{3}\t{4}\t{5}\t{6}\t{7}\t{8}\t{9}\t{10}\t{11}\t{12}\t{13}\t{14}\t{15}\t{16}\t{17}\t{18}\t{19}",
                 psm.sequence,
                 psm.PSM_ID,
-                psm.accession.[0],
+                (
+                    let number = 
+                        sameProteinAcc
+                        |> Map.tryFind psm.accession
+                    if number.IsSome then
+                        psm.accession.[0] + number.Value
+                    else
+                        psm.accession.[0]
+                )
+                ,
                 psm.unique,
                 psm.database,
                 psm.database_version,
