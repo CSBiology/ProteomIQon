@@ -182,7 +182,6 @@ module MzTABFormater =
                     pep.search_engine,
                     //needs to be adapted for different search engines
                     pep.best_search_engine_score
-                    |> Array.sortBy fst
                     |> Array.map (string << snd)
                     |> String.concat "\t"
                     ,
