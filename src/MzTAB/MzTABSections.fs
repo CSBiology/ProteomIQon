@@ -1086,10 +1086,13 @@ module MzTABSections =
                     accession                                 =
                         corrProt
                     unique                                    =
-                        if corrProt.Length <> 1 then
-                            0
-                        else
-                            1
+                        // with the current check for a rest length of 1, only unique psms are possible
+                        // as far as i know, the proteininference assigns peptides to one protein only
+                        1
+                        //if corrProt.Length <> 1 then
+                        //    0
+                        //else
+                        //    1
                     database                                  =
                         "null"
                     database_version                          =
