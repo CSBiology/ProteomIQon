@@ -989,6 +989,7 @@ module MzTABSections =
                     |> Array.sortBy (fun x -> (fst x).MeanPercolatorScore)
                     |> Array.head
                     |> fun (quant,rest) -> MzTABAux.getTargetScanTime quant
+                    |> fun x -> x * 60.
                 retention_time_window                     =
                     1.,2.
                 charge                                    =
@@ -1111,6 +1112,7 @@ module MzTABSections =
                         | _ -> failwith "Unexpected GlobalMod. GlobalMod must be either 0 or 1"
                     retention_time                            =
                         psm.ScanTime
+                        |> fun x -> x * 60.
                     charge                                    =
                         psm.Charge
                     exp_mass_to_charge                            =
