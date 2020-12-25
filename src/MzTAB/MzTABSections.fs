@@ -771,7 +771,7 @@ module MzTABSections =
                     |> String.concat "|"
                 best_search_engine_score                  =
                     protGroup
-                    |> Array.maxBy (fun (prot,peps) -> prot.QValue)
+                    |> Array.minBy (fun (prot,peps) -> prot.QValue)
                     |> fun (prot,peps) -> prot.QValue
                 search_engine_score_ms_run                =
                     mzTABParams.SearchEngineNamesProt
@@ -961,14 +961,19 @@ module MzTABSections =
                     |> Array.map (fun (searchengine,fieldName,number) ->
                         findValueNumberedPep experimentNames forF fieldName
                         |> Array.sortBy fst
+                        |>Array.choose (fun (i,x) ->
+                            match x with
+                            | None -> None
+                            | Some v -> Some (i, v)
+                        )
+                        // need to add an identifier for search engines whether a high or low score is better
+                        |> fun x ->
+                            if fieldName = "QValue" then
+                                x |> Array.minBy snd
+                            else
+                                x |> Array.maxBy snd
+                            
                     )
-                    |> Array.map (Array.choose (fun (i,x) ->
-                        match x with
-                        | None -> None
-                        | Some v -> Some (i, v)
-                    )
-                    )
-                    |> Array.map (Array.maxBy snd)
                 search_engine_score_ms_run                =
                     mzTABParams.SearchEngineNamesPep
                     |> Array.map (fun (searchengine,fieldName,number) ->
