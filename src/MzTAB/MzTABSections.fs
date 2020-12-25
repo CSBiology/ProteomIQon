@@ -682,10 +682,10 @@ module MzTABSections =
             allAligned
             |> Array.groupBy (fun x -> x.TableSort.Protein)
             |> Array.map snd
-            |> Array.map (fun x ->
-                x
-                |> Array.sortBy (fun y -> y.TableSort.Experiment)
-            )
+            //|> Array.map (fun x ->
+            //    x
+            //    |> Array.sortBy (fun y -> y.TableSort.Experiment)
+            //)
             |> Array.map (fun x ->
                 x
                 |> Array.groupBy (fun y -> y.TableSort)
@@ -872,10 +872,10 @@ module MzTABSections =
             |> Array.groupBy (fun pep -> pep.Quant.StringSequence, pep.Quant.Charge, pep.Quant.GlobalMod)
             |> Array.map snd
             // sort peptides by experiment
-            |> Array.map (fun x ->
-                x
-                |> Array.sortBy (fun y -> y.TableSort.Experiment)
-            )
+            //|> Array.map (fun x ->
+            //    x
+            //    |> Array.sortBy (fun y -> y.TableSort.Experiment)
+            //)
             |> Array.map (fun x ->
                 x
                 |> Array.groupBy (fun y -> y.Quant)
