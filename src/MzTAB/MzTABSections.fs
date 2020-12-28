@@ -763,8 +763,8 @@ module MzTABSections =
                         |> Array.collect fst
                         |> Array.distinct
                         |> String.concat "|"
-                database                                  = "Chlamy.db"
-                database_version                          = "19-Apr-20 21:44"
+                database                                  = "Chlamy_JGI5_5(Cp_Mp).fasta"
+                database_version                          = "2016_09"
                 search_engine                             =
                     mzTABParams.MetaData.protein_search_engine_score.Value
                     |> Array.map (fun (x,_,_) -> x.toParam)

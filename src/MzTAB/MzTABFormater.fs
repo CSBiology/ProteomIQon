@@ -223,7 +223,7 @@ module MzTABFormater =
     let psmBody path (psmS: PSMSection[]) (sameProteinAcc: Map<string[],string>) =
         let sb = new Text.StringBuilder()
         psmS
-        |> Array.iter (fun psm ->
+        |> Array.iteri (fun i psm ->
             sb.AppendFormat(
                 "PSM\t{0}\t{1}\t{2}\t{3}\t{4}\t{5}\t{6}\t{7}\t{8}\t{9}\t{10}\t{11}\t{12}\t{13}\t{14}\t{15}\t{16}\t{17}\t{18}\t{19}\t{20}",
                 psm.sequence,
@@ -266,5 +266,8 @@ module MzTABFormater =
             ) |> ignore
             sb.AppendLine()
             |> ignore
+            if i%10000 = 0 then
+                IO.File.AppendAllText(path, sb.ToString())
+                sb.Clear() |> ignore
         ) |> ignore
         IO.File.AppendAllText(path, sb.ToString())
