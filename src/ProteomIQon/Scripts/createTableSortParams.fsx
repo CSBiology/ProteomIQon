@@ -27,7 +27,8 @@ let defaultTableSortParams: Dto.TableSortParams =
         // when heavy labeled peptides are present. "DistinctPeptideCount" is calculated from the amount of different peptides used
         // for the ratio calculation and can be included.
         QuantColumnsOfInterest      = [|"Quant_Light";"Quant_Heavy"|]
-        ProtColumnsOfInterest       = [|"DistinctPeptideCount"; "QValue"|]
+        ProtColumnsOfInterest       = [|"QValue", "float"|]
+        DistinctPeptideCount        = true
         StatisticalMeasurements     = [|("Ratio", StatisticalMeasurement.CV); ("Ratio", StatisticalMeasurement.SEM); ("Ratio", StatisticalMeasurement.StDev)|]
         AggregatorFunction          = AggregationMethod.Median
         AggregatorFunctionIntensity = AggregationMethod.Median
