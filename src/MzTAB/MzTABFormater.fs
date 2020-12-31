@@ -118,7 +118,11 @@ module MzTABFormater =
                 prot.database_version,
                 prot.search_engine,
                 //needs to be adapted for different search engines
-                prot.best_search_engine_score,
+                if prot.best_search_engine_score.IsSome then
+                    string prot.best_search_engine_score.Value
+                else
+                    "null"
+                ,
                 prot.search_engine_score_ms_run
                 |> Array.map (fun score ->
                     score
