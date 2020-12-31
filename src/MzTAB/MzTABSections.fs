@@ -771,8 +771,15 @@ module MzTABSections =
                     |> String.concat "|"
                 best_search_engine_score                  =
                     protGroup
-                    |> Array.minBy (fun (prot,peps) -> prot.QValue)
-                    |> fun (prot,peps) -> prot.QValue
+                    |> Array.filter (fun (prot,peps) -> prot.QValue  |> System.Double.IsNaN |> not)
+                    |> fun x ->
+                        if x.Length = 0 then
+                            printfn "ProteinGroup %s has no valid search engine score" (fst protGroup.[0]).Protein
+                            None
+                        else
+                            x
+                            |> Array.minBy (fun (prot,peps) -> prot.QValue)
+                            |> fun (prot,peps) -> Some prot.QValue
                 search_engine_score_ms_run                =
                     mzTABParams.SearchEngineNamesProt
                     |> Array.map (fun (searchengine,fieldName,number) ->

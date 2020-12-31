@@ -78,7 +78,7 @@ module MzTABAux =
             database                                  : string
             database_version                          : string
             search_engine                             : string
-            best_search_engine_score                  : float
+            best_search_engine_score                  : float option
             search_engine_score_ms_run                : (int*float option)[][]
             reliability                               : int
             num_psms_ms_run                           : (int*float option)[]
