@@ -14,6 +14,11 @@ module TableSort =
         |> Array.map (fun s -> sprintf "%s=%s"s fieldType)
         |> String.concat ","
 
+    let createSchemaProt (nameAndType: (string*string)[]) =
+        nameAndType
+        |> Array.map (fun (name,fieldType) -> sprintf "%s=%s" name fieldType)
+        |> String.concat ","
+
     let aggregationMethodSeries (agMethod: Domain.AggregationMethod): Series<'K0,'V1> -> float =
         match agMethod with
         | Domain.AggregationMethod.Sum    -> Stats.sum
@@ -185,6 +190,7 @@ module TableSort =
         logger.Trace (sprintf "Quant cloumns with values that are kept for analysis: %A" quantColsWithValues)
         let quantColumnTypes =
             createSchema "float" quantColsWithValues
+        let protColumnTypes = createSchemaProt param.ProtColumnsOfInterest
         let labeled = param.EssentialFields.Heavy.IsSome
         logger.Trace (sprintf "Labeled experiment: %b" labeled)
         let quantColumnsOfInterest =
@@ -208,7 +214,7 @@ module TableSort =
                     Frame.ReadCsv(path=quantFile ,separators=param.SeparatorIn, schema=quantColumnTypes)
                 loggerFile.Trace "Reading prot table"
                 let protTable : Frame<string*string,string> =
-                    Frame.ReadCsv(path=protFile ,separators=param.SeparatorIn)
+                    Frame.ReadCsv(path=protFile ,separators=param.SeparatorIn, schema=protColumnTypes)
                     |> Frame.groupRowsBy param.EssentialFields.ProteinIDs
                     |> Frame.groupRowsBy param.EssentialFields.PepSequences
                     |> Frame.mapRowKeys (fun (ss,(id,_)) -> id,ss)
@@ -257,7 +263,7 @@ module TableSort =
                         let allFields =
                             let duplicateProtectedProtCols = 
                                 param.ProtColumnsOfInterest
-                                |> Array.map (fun col ->
+                                |> Array.map (fun (col,_) ->
                                     if uniqueKeyTables.sameKeys.Contains col then
                                         col + "_Prot"
                                     else
@@ -278,7 +284,7 @@ module TableSort =
                     // calculates distinct peptide count based on the amount of peptides used for ratio calculation before tukey filtering
                     loggerFile.Trace "calculating distinct peptide count"
                     let distinctPeptideCount =
-                        if param.ProtColumnsOfInterest |> Array.contains "DistinctPeptideCount" && labeled then
+                        if param.DistinctPeptideCount && labeled then
                             [|"Ratio"|]
                             |> Array.map (fun name ->
                                 alignedTables
