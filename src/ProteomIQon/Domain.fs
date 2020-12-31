@@ -229,7 +229,8 @@ module Domain =
             QuantFieldsToFilterOn       : FilterOnField[]
             ProtFieldsToFilterOn        : FilterOnField[]
             QuantColumnsOfInterest      : string[]
-            ProtColumnsOfInterest       : string[]
+            ProtColumnsOfInterest       : (string*string)[]
+            DistinctPeptideCount        : bool
             StatisticalMeasurements     : (string*StatisticalMeasurement)[]
             AggregatorFunction          : AggregationMethod
             AggregatorFunctionIntensity : AggregationMethod
