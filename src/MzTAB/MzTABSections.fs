@@ -820,16 +820,16 @@ module MzTABSections =
                 protein_abundance_assay                   =
                     if mzTABParams.Labeled then
                         let light =
-                            findValueNumberedProt experimentNames (protGroup |> Array.map fst) "Quant_Light"
+                            findValueNumberedProt experimentNames (protGroup |> Array.map fst) "MeasuredApex_Light"
                             |> Array.sortBy fst
                         let heavy =
-                            findValueNumberedProt experimentNames (protGroup |> Array.map fst) "Quant_Heavy"
+                            findValueNumberedProt experimentNames (protGroup |> Array.map fst) "MeasuredApex_Heavy"
                             |> Array.sortBy fst
                         Array.map2 (fun light heavy -> [|light; heavy|]) light heavy
                         |> Array.concat
                     
                     else
-                        findValueNumberedProt experimentNames (protGroup |> Array.map fst) "Quant_Light"
+                        findValueNumberedProt experimentNames (protGroup |> Array.map fst) "MeasuredApex_Light"
                         |> Array.sortBy fst
                 protein_abundance_study_variable          =
                     studyVars
@@ -916,10 +916,10 @@ module MzTABSections =
                 |> Array.distinct
             let ratio =
                 let light =
-                    findValueNumberedPep experimentNames forF "Quant_Light"
+                    findValueNumberedPep experimentNames forF "MeasuredApex_Light"
                     |> Array.sortBy fst
                 let heavy =
-                    findValueNumberedPep experimentNames forF "Quant_Heavy"
+                    findValueNumberedPep experimentNames forF "MeasuredApex_Heavy"
                     |> Array.sortBy fst
                 Array.map2 (fun (i,l) (j,h) ->
                     if i <> j then failwith "Experimental data for peptide ratios missing"
@@ -1012,15 +1012,15 @@ module MzTABSections =
                 peptide_abundance_assay                   =
                     if mzTABParams.Labeled then
                         let light =
-                            findValueNumberedPep experimentNames forF "Quant_Light"
+                            findValueNumberedPep experimentNames forF "MeasuredApex_Light"
                             |> Array.sortBy fst
                         let heavy =
-                            findValueNumberedPep experimentNames forF "Quant_Heavy"
+                            findValueNumberedPep experimentNames forF "MeasuredApex_Heavy"
                             |> Array.sortBy fst
                         Array.map2 (fun light heavy -> [|light; heavy|]) light heavy
                         |> Array.concat
                     else
-                        findValueNumberedPep experimentNames forF "Quant_Light"
+                        findValueNumberedPep experimentNames forF "MeasuredApex_Light"
                         |> Array.sortBy fst
                 peptide_abundance_study_variable          =
                     studyVars
