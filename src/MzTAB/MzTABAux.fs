@@ -18,7 +18,9 @@ module MzTABAux =
             [<FieldAttribute("\"Key #2\"")>]
             Experiment: string
             DistinctPeptideCount: float
+            [<FieldAttribute(3)>]
             Quant_Heavy: float
+            [<FieldAttribute(4)>]
             Quant_Light: float
             QValue: float
             Ratio: float
