@@ -845,6 +845,7 @@ module Dto =
             SearchEngineNamesPSM : (Ontologies.SearchEngineScore*string*int)[]
             Labeled              : bool
             MetaData             : MetaDataSection
+            FieldNames           : TableSortFieldNames
         }
 
     module MzTABParams =
@@ -858,6 +859,7 @@ module Dto =
                 SearchEngineNamesPSM  = dtoMzTABParams.SearchEngineNamesPSM
                 Labeled               = dtoMzTABParams.Labeled
                 MetaData              = dtoMzTABParams.MetaData
+                FieldNames            = dtoMzTABParams.FieldNames
             }
 
     type FragmentIon = {

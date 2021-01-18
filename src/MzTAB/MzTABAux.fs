@@ -8,25 +8,35 @@ open FSharpAux.IO
 open FSharpAux.IO.SchemaReader
 open FSharpAux.IO.SchemaReader.Attribute
 open FSharp.Plotly
+open Deedle
+open Domain
 
 module MzTABAux =
 
     type TableSort =
         {
-            [<FieldAttribute("\"Key #1\"")>]
             Protein: string
-            [<FieldAttribute("\"Key #2\"")>]
             Experiment: string
             DistinctPeptideCount: float
-            [<FieldAttribute(3)>]
-            Quant_Heavy: float
-            [<FieldAttribute(4)>]
+            Quant_Heavy: float option
             Quant_Light: float
             QValue: float
-            Ratio: float
-            Ratio_CV: float
-            Ratio_SEM: float
-            Ratio_StDev: float
+            StudySubject: float
+            Subject_SEM: float option
+            Subject_StDev: float option
+        }
+
+    let createTableSort protein experiment distPepCount quantHeavy quantLight qVal studySubject subjectSEM subjectStDev =
+        {
+            Protein              = protein
+            Experiment           = experiment
+            DistinctPeptideCount = distPepCount
+            Quant_Heavy          = quantHeavy
+            Quant_Light          = quantLight
+            QValue               = qVal
+            StudySubject         = studySubject
+            Subject_SEM          = subjectSEM
+            Subject_StDev        = subjectStDev
         }
 
     type InferredProteinClassItemOut =
@@ -162,6 +172,46 @@ module MzTABAux =
             TableSort = tableSort
         }
 
+    let createSchema (nameAndType: (string*string)[]) =
+        nameAndType
+        |> Array.map (fun (name,fieldType) -> sprintf "%s=%s" name fieldType)
+        |> String.concat ","
+
+    let frameToTableSort (fieldNames: TableSortFieldNames) (frame: Frame<int,string>) =
+        frame
+        |> Frame.mapRows (fun r os -> 
+            os.Keys |> Seq.iter (printfn "%A")
+            createTableSort
+                (
+                    os.GetAs<string>(fieldNames.Proteingroup)
+                    |> String.split ';'
+                    |> Seq.map (fun y ->
+                        y
+                        |> String.replace "\"" ""
+                    )
+                    |> Seq.sort
+                    |> String.concat ";"
+                )
+                (
+                    os.GetAs<string>(fieldNames.Experiment)
+                    |> String.replace "\"" ""
+                )
+                (os.GetAs<float>(fieldNames.DistinctPeptideCount))
+                (
+                    if fieldNames.Quant_Heavy.IsSome then
+                        Some (os.GetAs<float>(fieldNames.Quant_Heavy.Value))
+                    else
+                        None
+                )
+                (os.GetAs<float>(fieldNames.Quant_Light))
+                (os.GetAs<float>(fieldNames.QValue))
+                (os.GetAs<float>(fieldNames.StudySubject))
+                (os.TryGetAs<float>(fieldNames.Subject_SEM) |> OptionalValue.asOption)
+                (os.TryGetAs<float>(fieldNames.Subject_StDev) |> OptionalValue.asOption)
+        )
+        |> Series.values
+        |> Seq.toArray
+
     let getFilePaths path identifier =
         IO.Directory.GetFiles (path, identifier)
 
@@ -191,29 +241,27 @@ module MzTABAux =
             }
         )
 
-    let readTab (path: string) =
-        SeqIO.Seq.fromFileWithCsvSchema<TableSort>(path, '\t', true)
-        |> Seq.toArray
-        |> Array.map (fun x ->
-            {
-                x with
-                    Protein =
-                        x.Protein
-                        |> String.split ';'
-                        |> Seq.map (fun y ->
-                            y
-                            |> String.replace "\"" ""
-                        )
-                        |> Seq.sort
-                        |> String.concat ";"
-                    Experiment =
-                        x.Experiment
-                        |> String.replace "\"" ""
-            }
-        )
+    let readTab (path: string) (fieldNames: TableSortFieldNames) =
+        let schemaTab =
+            createSchema [|
+                fieldNames.Proteingroup, "string";
+                fieldNames.Experiment, "string";
+                fieldNames.DistinctPeptideCount, "float";
+                if fieldNames.Quant_Heavy.IsSome then
+                    fieldNames.Quant_Heavy.Value, "float";
+                fieldNames.Quant_Light, "float";
+                fieldNames.QValue, "float";
+                if fieldNames.Quant_Light <> fieldNames.StudySubject then
+                    fieldNames.StudySubject, "float";
+                fieldNames.Subject_SEM, "float";
+                fieldNames.Subject_StDev, "float"
+            |]
+        Frame.ReadCsv(path=path ,separators="\t", schema=schemaTab)
+        |> frameToTableSort fieldNames
         |> Array.groupBy (fun x -> x.Experiment)
 
-    let findValueNumberedProt (expNames: (string*int)[]) (proteins: TableSort []) (fieldName: string) =
+    // TODO: The following three functions are rather slow and can be improved upon
+    let findValueNumberedProt (expNames: (string*int)[]) (proteins: TableSort []) (fieldName: string) (optionColumns: Map<string,bool>) =
         let fieldFunc (tableSort: TableSort) =
             let res = ReflectionHelper.tryGetPropertyValue tableSort fieldName
             match res with
@@ -228,7 +276,13 @@ module MzTABAux =
                     match x with
                     |None -> None
                     |Some y ->
-                        Some ((fieldFunc y) :?> float)
+                        if (optionColumns.TryFind fieldName).IsSome then
+                            let res = ((fieldFunc y) :?> float option)
+                            match res with
+                            | Some x -> Some x
+                            | None -> None
+                        else
+                            Some ((fieldFunc y) :?> float)
             number, value
         )
 

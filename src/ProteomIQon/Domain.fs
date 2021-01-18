@@ -346,6 +346,19 @@ module Domain =
             colunit_small_molecule           : (string)option
         }
 
+    type TableSortFieldNames =
+        {
+            Proteingroup: string
+            Experiment: string
+            DistinctPeptideCount: string
+            Quant_Heavy: string option
+            Quant_Light: string
+            QValue: string
+            StudySubject: string
+            Subject_SEM: string
+            Subject_StDev: string
+        }
+
     type MzTABParams =
         {
             ExperimentNames      : (string*int)[]
@@ -355,4 +368,5 @@ module Domain =
             SearchEngineNamesPSM : (Ontologies.SearchEngineScore*string*int)[]
             Labeled              : bool
             MetaData             : MetaDataSection
+            FieldNames           : TableSortFieldNames
         }
