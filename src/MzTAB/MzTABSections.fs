@@ -366,10 +366,10 @@ module MzTABSections =
             |> matchOption (sprintf "MTD\tquantification_method\t%s") sb
         let proteinQuantificationUnit =
             md.protein_quantification_unit
-            |> matchOption (sprintf "MTD\tprotein_quantification_unit\t%s") sb
+            |> matchOption (sprintf "MTD\tprotein-quantification_unit\t%s") sb
         let peptideQuantificationUnit =
             md.peptide_quantification_unit
-            |> matchOption (sprintf "MTD\tpeptide_quantification_unit\t%s") sb
+            |> matchOption (sprintf "MTD\tpeptide-quantification_unit\t%s") sb
         let msRunFormat =
             let f =
                 let pickF =
@@ -698,17 +698,16 @@ module MzTABSections =
                 x
                 |> Array.groupBy (fun y -> y.TableSort)
             )
-        let initStudySubject names tablesort =
-            findValueNumberedProt names tablesort "StudySubject" optionColumns
-        let initStDev names tablesort =
-            findValueNumberedProt names tablesort "Subject_StDev" optionColumns
-        let initSEM names tablesort =
-            findValueNumberedProt names tablesort "Subject_SEM" optionColumns
         groupedTab
         |> Array.map (fun protGroup ->
+            let tabSort = protGroup |> Array.map fst
+            let tabSortExperiments = tabSort |> Array.map (fun x -> x.Experiment)
+            let makeMapOfExperimentAndValue (values: float option[]) =
+                Array.zip tabSortExperiments values
+                |> Map.ofArray
             let studyVars =
                 let quant =
-                    initStudySubject experimentNames (protGroup |> Array.map fst)
+                    findValueNumberedProt experimentNames (makeMapOfExperimentAndValue (tabSort |> Array.map (fun x -> Some x.StudySubject)))
                     |> Array.sortBy fst
                 mzTABParams.StudyVariables
                 |> Array.map (fun (name,assays,number) ->
@@ -721,7 +720,7 @@ module MzTABSections =
                 )
             let studyVarsStDev =
                 let quant =
-                    initStDev experimentNames (protGroup |> Array.map fst)
+                    findValueNumberedProt experimentNames (makeMapOfExperimentAndValue (tabSort |> Array.map (fun x -> x.Subject_StDev)))
                     |> Array.sortBy fst
                 mzTABParams.StudyVariables
                 |> Array.map (fun (name,assays,number) ->
@@ -734,7 +733,7 @@ module MzTABSections =
                 )
             let studyVarsStdErr =
                 let quant =
-                    initSEM experimentNames (protGroup |> Array.map fst)
+                    findValueNumberedProt experimentNames (makeMapOfExperimentAndValue (tabSort |> Array.map (fun x -> x.Subject_SEM)))
                     |> Array.sortBy fst
                 mzTABParams.StudyVariables
                 |> Array.map (fun (name,assays,number) ->
@@ -789,11 +788,13 @@ module MzTABSections =
                             |> Array.minBy (fun (prot,peps) -> prot.QValue)
                             |> fun (prot,peps) -> Some prot.QValue
                 search_engine_score_ms_run                =
-                    mzTABParams.SearchEngineNamesProt
-                    |> Array.map (fun (searchengine,fieldName,number) ->
-                        findValueNumberedProt experimentNames (protGroup |> Array.map fst) fieldName optionColumns
+                    // This is now hardcoded to only include the QValue as search engine Score.
+                    // It depends on the inputtype of tablesort, which currently only has QValue as a field.
+                    // If TableSort gets another search engine, this must be adapted
+                    [|
+                        findValueNumberedProt experimentNames (makeMapOfExperimentAndValue (tabSort |> Array.map (fun x -> Some x.QValue)))
                         |> Array.sortBy fst
-                    )
+                    |]
                 reliability                               = 3
                 num_psms_ms_run                           =
                     experimentNames
@@ -808,11 +809,11 @@ module MzTABSections =
                         |Some (prot,psms) -> number, Some (float psms.Length)
                     )
                 num_peptides_distinct_ms_run              =
-                    findValueNumberedProt experimentNames (protGroup |> Array.map fst) "DistinctPeptideCount" optionColumns
+                    findValueNumberedProt experimentNames (makeMapOfExperimentAndValue (tabSort |> Array.map (fun x -> Some x.DistinctPeptideCount)))
                     |> Array.sortBy fst
                 // TODO: check uniqueness for all peptides
                 num_peptides_unique_ms_run                =
-                    findValueNumberedProt experimentNames (protGroup |> Array.map fst) "DistinctPeptideCount" optionColumns
+                    findValueNumberedProt experimentNames (makeMapOfExperimentAndValue (tabSort |> Array.map (fun x -> Some x.DistinctPeptideCount)))
                     |> Array.sortBy fst
                 ambiguity_members                         = 
                     if proteinGroup.Length = 1 then
@@ -828,16 +829,16 @@ module MzTABSections =
                 protein_abundance_assay                   =
                     if mzTABParams.Labeled then
                         let light =
-                            findValueNumberedProt experimentNames (protGroup |> Array.map fst) "Quant_Light" optionColumns
+                            findValueNumberedProt experimentNames (makeMapOfExperimentAndValue (tabSort |> Array.map (fun x -> Some x.Quant_Light)))
                             |> Array.sortBy fst
                         let heavy =
-                            findValueNumberedProt experimentNames (protGroup |> Array.map fst) "Quant_Heavy" optionColumns
+                            findValueNumberedProt experimentNames (makeMapOfExperimentAndValue (tabSort |> Array.map (fun x -> x.Quant_Heavy)))
                             |> Array.sortBy fst
                         Array.map2 (fun light heavy -> [|light; heavy|]) light heavy
                         |> Array.concat
                     
                     else
-                        findValueNumberedProt experimentNames (protGroup |> Array.map fst) "Quant_Light" optionColumns
+                        findValueNumberedProt experimentNames (makeMapOfExperimentAndValue (tabSort |> Array.map (fun x -> Some x.Quant_Light)))
                         |> Array.sortBy fst
                 protein_abundance_study_variable          =
                     studyVars
