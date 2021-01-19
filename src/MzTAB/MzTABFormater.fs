@@ -28,24 +28,22 @@ module MzTABFormater =
                 formatOne (expCount*2) (sprintf "protein_abundance_assay[%i]")
             else
                 formatOne expCount (sprintf "protein_abundance_assay[%i]")
-        let protAbundanceStudVar =
-            formatOne stVarCount (sprintf "protein_abundance_study_variable[%i]")
-        let protAbundanceStDevStudVar =
-            formatOne stVarCount (sprintf "protein_abundance_stdev_study_variable[%i]")
-        let protAbundanceStdErrStudVar =
-            formatOne stVarCount (sprintf "protein_abundance_std_error_study_variable[%i]")
+        let protAbundanceStudVarParts =
+            formatOneForThree 
+                stVarCount
+                (sprintf "protein_abundance_study_variable[%i]")
+                (sprintf "protein_abundance_stdev_study_variable[%i]")
+                (sprintf "protein_abundance_std_error_study_variable[%i]")
         let sb = new Text.StringBuilder()
         sb.AppendFormat(
-            "PRH\taccession\tdescription\ttaxid\tspecies\tdatabase\tdatabase_version\tsearch_engine\t{0}\t{1}\treliability\t{2}\t{3}\t{4}\tambiguity_members\tmodifications\turi\tgo_terms\tprotein_coverage\t{5}\t{6}\t{7}\t{8}\topt_global_protein_group",
+            "PRH\taccession\tdescription\ttaxid\tspecies\tdatabase\tdatabase_version\tsearch_engine\t{0}\t{1}\treliability\t{2}\t{3}\t{4}\tambiguity_members\tmodifications\turi\tgo_terms\tprotein_coverage\t{5}\t{6}\topt_global_protein_group",
             bestSearchEngineScore,
             searchEngineScoreMS,
             psmsMSRun,
             pepsDistMSRun,
             pepsUniqueMSRun,
             protAbundanceAssay,
-            protAbundanceStudVar,
-            protAbundanceStDevStudVar,
-            protAbundanceStdErrStudVar
+            protAbundanceStudVarParts
         ) |> ignore
         sb.AppendLine() |> ignore
         IO.File.AppendAllText(path, sb.ToString())
@@ -63,21 +61,19 @@ module MzTABFormater =
                 formatOne (expCount*2) (sprintf "peptide_abundance_assay[%i]")
             else
                 formatOne expCount (sprintf "peptide_abundance_assay[%i]")
-        let pepAbundanceStudVar =
-            formatOne stVarCount (sprintf "peptide_abundance_study_variable[%i]")
-        let pepAbundanceStDevStudVar =
-            formatOne stVarCount (sprintf "peptide_abundance_stdev_study_variable[%i]")
-        let pepAbundanceStdErrStudVar =
-            formatOne stVarCount (sprintf "peptide_abundance_std_error_study_variable[%i]")
+        let pepAbundanceStudVarParts =
+            formatOneForThree
+                stVarCount
+                (sprintf "peptide_abundance_study_variable[%i]")
+                (sprintf "peptide_abundance_stdev_study_variable[%i]")
+                (sprintf "peptide_abundance_std_error_study_variable[%i]")
         let sb = new Text.StringBuilder()
         sb.AppendFormat(
-            "PEH\tsequence\taccession\tunique\tdatabase\tdatabase_version\tsearch_engine\t{0}\t{1}\treliability\tmodifications\tretention_time\tretention_time_window\tcharge\tmass_to_charge\turi\tspectra_ref\t{2}\t{3}\t{4}\t{5}\topt_global_global_mod\topt_global_protein_group",
+            "PEH\tsequence\taccession\tunique\tdatabase\tdatabase_version\tsearch_engine\t{0}\t{1}\treliability\tmodifications\tretention_time\tretention_time_window\tcharge\tmass_to_charge\turi\tspectra_ref\t{2}\t{3}\topt_global_global_mod\topt_global_protein_group",
             bestSearchEngineScore,
             searchEngineScoreMS,
             pepAbundanceAssay,
-            pepAbundanceStudVar,
-            pepAbundanceStDevStudVar,
-            pepAbundanceStdErrStudVar
+            pepAbundanceStudVarParts
         ) |> ignore
         sb.AppendLine() |> ignore
         IO.File.AppendAllText(path, sb.ToString())
@@ -100,7 +96,7 @@ module MzTABFormater =
         proteinS
         |> Array.map (fun prot ->
             sb.AppendFormat(
-                "PRT\t{0}\t{1}\t{2}\t{3}\t{4}\t{5}\t{6}\t{7}\t{8}\t{9}\t{10}\t{11}\t{12}\t{13}\t{14}\t{15}\t{16}\t{17}\t{18}\t{19}\t{20}\t{21}\t{22}",
+                "PRT\t{0}\t{1}\t{2}\t{3}\t{4}\t{5}\t{6}\t{7}\t{8}\t{9}\t{10}\t{11}\t{12}\t{13}\t{14}\t{15}\t{16}\t{17}\t{18}\t{19}\t{20}",
                 (
                     let number = 
                         sameProteinAcc
@@ -148,12 +144,12 @@ module MzTABFormater =
                 "null",
                 prot.protein_abundance_assay
                 |> concatRuns "null",
-                prot.protein_abundance_study_variable
-                |> concatRuns "null",
-                prot.protein_abundance_stdev_study_variable
-                |> concatRuns "null",
-                prot.protein_abundance_std_error_study_variable
-                |> concatRuns "null",
+                [|
+                    prot.protein_abundance_study_variable;
+                    prot.protein_abundance_stdev_study_variable;
+                    prot.protein_abundance_std_error_study_variable
+                |]
+                |> concatRunsForDifferent "null",
                 prot.accession
                 |> String.concat ";"
             ) |> ignore
@@ -168,7 +164,7 @@ module MzTABFormater =
             pep.accession
             |> Array.iter (fun prot ->
                 sb.AppendFormat(
-                    "PEP\t{0}\t{1}\t{2}\t{3}\t{4}\t{5}\t{6}\t{7}\t{8}\t{9}\t{10}\t{11}\t{12}\t{13}\t{14}\t{15}\t{16}\t{17}\t{18}\t{19}\t{20}\t{21}",
+                    "PEP\t{0}\t{1}\t{2}\t{3}\t{4}\t{5}\t{6}\t{7}\t{8}\t{9}\t{10}\t{11}\t{12}\t{13}\t{14}\t{15}\t{16}\t{17}\t{18}\t{19}",
                     pep.sequence,
                     (
                         let number = 
@@ -208,12 +204,12 @@ module MzTABFormater =
                     pep.spectra_ref,
                     pep.peptide_abundance_assay
                     |> concatRuns "null",
-                    pep.peptide_abundance_study_variable
-                    |> concatRuns "null",
-                    pep.peptide_abundance_stdev_study_variable
-                    |> concatRuns "null",
-                    pep.peptide_abundance_std_error_study_variable
-                    |> concatRuns "null",
+                    [|
+                        pep.peptide_abundance_study_variable
+                        pep.peptide_abundance_stdev_study_variable
+                        pep.peptide_abundance_std_error_study_variable
+                    |]
+                    |> concatRunsForDifferent "null",
                     pep.labeling.toParam,
                     prot
                     |> String.concat ";"

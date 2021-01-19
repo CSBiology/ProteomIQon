@@ -180,7 +180,6 @@ module MzTABAux =
     let frameToTableSort (fieldNames: TableSortFieldNames) (frame: Frame<int,string>) =
         frame
         |> Frame.mapRows (fun r os -> 
-            os.Keys |> Seq.iter (printfn "%A")
             createTableSort
                 (
                     os.GetAs<string>(fieldNames.Proteingroup)
@@ -325,6 +324,30 @@ module MzTABAux =
         )
         |> String.concat "\t"
 
+    let concatRunsForDifferent (fillEmpty: string) (data: (int*float option)[][]) =
+        let length =
+            data
+            |> Array.head
+            |> Array.length
+        data
+        |> Array.map (Array.sortBy fst)
+        |> fun x ->
+            [|0 .. (length-1)|]
+            |> Array.collect (fun i ->
+                x
+                |> Array.map (fun var ->
+                    let run,value = var.[i]
+                    match value with
+                    | None -> fillEmpty
+                    | Some s ->
+                        if System.Double.IsNaN s then
+                            "null"
+                        else
+                            string s
+                )
+            )
+            |> String.concat "\t"
+
     let sortAndPick (sortBy: 'T -> 'Key) (pick: 'T -> 'C) (input: 'T[]) =
         input
         |> Array.sortBy sortBy
@@ -349,6 +372,13 @@ module MzTABAux =
         [|
             for i=1 to n1 do
                 yield strF i
+        |]
+        |> String.concat "\t"
+
+    let formatOneForThree (n1: int) (strF1: int -> string) (strF2: int -> string) (strF3: int -> string) =
+        [|
+            for i=1 to n1 do
+                yield ([strF1 i; strF2 i ; strF3 i] |> String.concat "\t")
         |]
         |> String.concat "\t"
 
