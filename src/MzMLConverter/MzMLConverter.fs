@@ -100,4 +100,3 @@ module MzMLConverter =
         inTr.Commit()
         inTr.Dispose()
         inReader.Dispose()
-        outReader.Dispose()
