@@ -2,7 +2,7 @@
 namespace System
 open System.Reflection
 
-[<assembly: AssemblyTitleAttribute("Converter")>]
+[<assembly: AssemblyTitleAttribute("MzMLConverter")>]
 [<assembly: AssemblyProductAttribute("ProteomIQon")>]
 [<assembly: AssemblyDescriptionAttribute("Project has no summmary; update build.fsx")>]
 [<assembly: AssemblyVersionAttribute("0.0.1")>]
@@ -11,7 +11,7 @@ open System.Reflection
 do ()
 
 module internal AssemblyVersionInformation =
-    let [<Literal>] AssemblyTitle = "Converter"
+    let [<Literal>] AssemblyTitle = "MzMLConverter"
     let [<Literal>] AssemblyProduct = "ProteomIQon"
     let [<Literal>] AssemblyDescription = "Project has no summmary; update build.fsx"
     let [<Literal>] AssemblyVersion = "0.0.1"
