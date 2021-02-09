@@ -370,3 +370,10 @@ module Domain =
             MetaData             : MetaDataSection
             FieldNames           : TableSortFieldNames
         }
+
+    type MzMLConverterParams =
+        {
+            Compress                    : BinaryDataCompressionType
+            StartRetentionTime          : float option
+            EndRetentionTime            : float option
+        }

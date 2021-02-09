@@ -908,4 +908,20 @@ module Dto =
         ElutionWidth                                : float
         Fragments                                   : FragmentIon list
         }
+
+    type MzMLConverterParams =
+        {
+            Compress                    : BinaryDataCompressionType
+            StartRetentionTime          : float option
+            EndRetentionTime            : float option
+        }
+
+    module MzMLConverterParams =
+
+        let toDomain (dtoMzMLConverterParams: MzMLConverterParams ) : Domain.MzMLConverterParams =
+                {
+                    Compress                    = dtoMzMLConverterParams.Compress
+                    StartRetentionTime          = dtoMzMLConverterParams.StartRetentionTime
+                    EndRetentionTime            = dtoMzMLConverterParams.EndRetentionTime
+                }
  
