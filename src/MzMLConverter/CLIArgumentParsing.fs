@@ -21,3 +21,4 @@ module CLIArgumentParsing =
                 | ParamFile _        -> "specify param file For centroidization"
                 | Log_Level _        -> "set the log level."
                 | Verbosity_Level _  -> "set the verbosity level."
+                | Parallelism_Level _-> "Set the number of cores the programm can use. Parallelization occurs on file level. This flag is only of effect if a input directory (-i) is specified."
