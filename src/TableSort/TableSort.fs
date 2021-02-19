@@ -14,6 +14,11 @@ module TableSort =
         |> Array.map (fun s -> sprintf "%s=%s"s fieldType)
         |> String.concat ","
 
+    let createSchemaProt (nameAndType: (string*string)[]) =
+        nameAndType
+        |> Array.map (fun (name,fieldType) -> sprintf "%s=%s" name fieldType)
+        |> String.concat ","
+
     let aggregationMethodSeries (agMethod: Domain.AggregationMethod): Series<'K0,'V1> -> float =
         match agMethod with
         | Domain.AggregationMethod.Sum    -> Stats.sum
@@ -116,8 +121,9 @@ module TableSort =
                     Series.applyLevel levelSel op s)
         |> FrameUtils.fromColumns indexBuilder vectorBuilder
 
-    // checks for duplicate column keys in the tables and renames the second if duplicate is present
-    let ensureUniqueKeys (frame1: Frame<'a,string>) (frame2: Frame<'b,string>) (differentiator: string)=
+    // Looks for duplicate column keys between frame1 and frame2. Found duplicate keys are renamed in frame2 by adding the differentiator.
+    // The output is an anonymous record containing the original frame1, frame2 with renamed column keys and the renamed column keys.
+    let checkAndRenameDuplicateKeys (frame1: Frame<'a,string>) (frame2: Frame<'b,string>) (differentiator: string)=
         let colKeys1 = frame1.ColumnKeys |> Set.ofSeq
         let colKeys2 = frame2.ColumnKeys |> Set.ofSeq
         let sameKeys = Set.intersect colKeys1 colKeys2
@@ -185,6 +191,7 @@ module TableSort =
         logger.Trace (sprintf "Quant cloumns with values that are kept for analysis: %A" quantColsWithValues)
         let quantColumnTypes =
             createSchema "float" quantColsWithValues
+        let protColumnTypes = createSchemaProt param.ProtColumnsOfInterest
         let labeled = param.EssentialFields.Heavy.IsSome
         logger.Trace (sprintf "Labeled experiment: %b" labeled)
         let quantColumnsOfInterest =
@@ -208,7 +215,7 @@ module TableSort =
                     Frame.ReadCsv(path=quantFile ,separators=param.SeparatorIn, schema=quantColumnTypes)
                 loggerFile.Trace "Reading prot table"
                 let protTable : Frame<string*string,string> =
-                    Frame.ReadCsv(path=protFile ,separators=param.SeparatorIn)
+                    Frame.ReadCsv(path=protFile ,separators=param.SeparatorIn, schema=protColumnTypes)
                     |> Frame.groupRowsBy param.EssentialFields.ProteinIDs
                     |> Frame.groupRowsBy param.EssentialFields.PepSequences
                     |> Frame.mapRowKeys (fun (ss,(id,_)) -> id,ss)
@@ -243,7 +250,7 @@ module TableSort =
                     |> applyLevelWithException (fun (sequence,index) -> sequence) ([|Some param.EssentialFields.Light;param.EssentialFields.Heavy|] |> Array.choose id)
                         (aggregationMethodSeries param.AggregatorFunction) (aggregationMethodSeries param.AggregatorFunctionIntensity)
                 loggerFile.Trace "Ensuring unique Keys"
-                let uniqueKeyTables = ensureUniqueKeys quantTableAggregated protTableFiltered "_Prot"
+                let uniqueKeyTables = checkAndRenameDuplicateKeys quantTableAggregated protTableFiltered "_Prot"
                 loggerFile.Trace (sprintf "Keys in common that were changed: %A" uniqueKeyTables.sameKeys)
                 let alignedTables =
                     Frame.align snd id uniqueKeyTables.Frame2 uniqueKeyTables.Frame1
@@ -257,7 +264,7 @@ module TableSort =
                         let allFields =
                             let duplicateProtectedProtCols = 
                                 param.ProtColumnsOfInterest
-                                |> Array.map (fun col ->
+                                |> Array.map (fun (col,_) ->
                                     if uniqueKeyTables.sameKeys.Contains col then
                                         col + "_Prot"
                                     else
@@ -278,8 +285,14 @@ module TableSort =
                     // calculates distinct peptide count based on the amount of peptides used for ratio calculation before tukey filtering
                     loggerFile.Trace "calculating distinct peptide count"
                     let distinctPeptideCount =
-                        if param.ProtColumnsOfInterest |> Array.contains "DistinctPeptideCount" && labeled then
-                            [|"Ratio"|]
+                        if param.DistinctPeptideCount then
+                            // The number of entries in this column are taken as distinct peptide count
+                            let sourceDistPeptideCount =
+                                if param.DistinctPeptideCount && labeled then
+                                    [|"Ratio"|]
+                                else
+                                    [|param.EssentialFields.Light|]
+                            sourceDistPeptideCount
                             |> Array.map (fun name ->
                                 alignedTables
                                 |> Frame.sliceCols [name]
@@ -335,7 +348,7 @@ module TableSort =
         tables
         |> Frame.mergeAll
         |> fun frame ->
-            frame.SaveCsv (path=(outDirectory+(@"\TableSort.tab")), separator=(param.SeparatorOut))
+            frame.SaveCsv (path=(outDirectory+(@"\TableSort.tab")),keyNames=["Proteingroup"; "Experiment"], separator=(param.SeparatorOut))
             frame
             |> Frame.pivotTable
                 (fun (proteinGroup, experiment) os -> proteinGroup)
@@ -344,4 +357,4 @@ module TableSort =
                     f .GetRowAt<float> 0
                 )
                 |> Frame.expandAllCols 1
-            |> fun framePiv -> framePiv.SaveCsv (path=(outDirectory+(@"\TableSort_horizontal.tab")), separator=param.SeparatorOut)
+            |> fun framePiv -> framePiv.SaveCsv (path=(outDirectory+(@"\TableSort_horizontal.tab")),keyNames=["Proteingroup"], separator=param.SeparatorOut)
