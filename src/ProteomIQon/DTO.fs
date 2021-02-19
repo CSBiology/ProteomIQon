@@ -778,6 +778,7 @@ module Dto =
         MS2ScanRange                                : float*float
         // Filtering
         MaxRatioMostAbundandVsSecondAbundandPeak    : float
+        ConsensusAlignmentAlgorithm                 : ConsensusAlignmentAlgorithm
         }
 
     module ConsensusSpectralLibraryParams =
@@ -798,6 +799,7 @@ module Dto =
                 MS2ScanRange                                = dtoConsensusSpectralLibraryParams.MS2ScanRange                                
                 // Filtering                                = // Filtering
                 MaxRatioMostAbundandVsSecondAbundandPeak    = dtoConsensusSpectralLibraryParams.MaxRatioMostAbundandVsSecondAbundandPeak    
+                ConsensusAlignmentAlgorithm                 = dtoConsensusSpectralLibraryParams.ConsensusAlignmentAlgorithm
             }
 
     type SWATHAnalysisParams = {

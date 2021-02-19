@@ -1,1 +1,18 @@
-{"BinningWindowWidth":10.0,"FractionOfMostAbundandIonsPerBin":0.1,"MinFragmentCount":3,"MinFragmentLadderIdx":3,"MinPeptideLength":8,"RtWindowWidth":10.0,"FragMatchingBinWidth":0.01,"FragMatchingBinOffset":0.0,"MS2ScanRange":{"Item1":100.0,"Item2":2000.0},"MaxRatioMostAbundandVsSecondAbundandPeak":0.2}
+{
+  "BinningWindowWidth": 10.0,
+  "FractionOfMostAbundandIonsPerBin": 0.1,
+  "MinFragmentCount": 3,
+  "MinFragmentLadderIdx": 3,
+  "MinPeptideLength": 8,
+  "RtWindowWidth": 10.0,
+  "FragMatchingBinWidth": 0.01,
+  "FragMatchingBinOffset": 0.0,
+  "MS2ScanRange": {
+    "Item1": 100.0,
+    "Item2": 2000.0
+  },
+  "MaxRatioMostAbundandVsSecondAbundandPeak": 0.2,
+  "ConsensusAlignmentAlgorithm": {
+    "Case": "Spline"
+  }
+}
