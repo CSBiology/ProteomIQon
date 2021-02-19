@@ -238,6 +238,10 @@ module Domain =
         }
    
 
+    type ConsensusAlignmentAlgorithm = 
+        | FastTree
+        | Spline 
+
     ///
     type ConsensusSpectralLibraryParams = {
         // InitialPeptideSelection
@@ -254,6 +258,7 @@ module Domain =
         MS2ScanRange                                : float*float
         // Filtering
         MaxRatioMostAbundandVsSecondAbundandPeak    : float
+        ConsensusAlignmentAlgorithm :ConsensusAlignmentAlgorithm
         }
 
     type SpectrumSelection =

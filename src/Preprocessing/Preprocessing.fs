@@ -180,6 +180,7 @@ module Preprocessing =
             Path.Combine [|outputDir;fileName|]
 
         let outReader = new MzSQL(outFilePath)
+        let cn = outReader.Open()
         /// All files created by this application will have a unified runID.
         let outRunID  = Core.MzIO.Reader.getDefaultRunID outReader
         let outTr = outReader.BeginTransaction()

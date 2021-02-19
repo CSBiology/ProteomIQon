@@ -22,6 +22,7 @@ let defaultConsensusSpectralLibraryParams: Dto.ConsensusSpectralLibraryParams =
         MS2ScanRange                                = 100.,2000.
         // Filtering                                = // Filtering
         MaxRatioMostAbundandVsSecondAbundandPeak    = 0.2
+        ConsensusAlignmentAlgorithm = Domain.ConsensusAlignmentAlgorithm.Spline
     }
 
 let serialized = 

@@ -137,6 +137,10 @@ module ConsensusSpectralLibrary =
             IdentifiedPeptideFeatures   = identifiedFeatures
         }
 
+    type RegressionMetrics = {
+        RSquared: float
+        }
+        
     ///
     type AlignedLib = 
         {
@@ -421,7 +425,7 @@ module ConsensusSpectralLibrary =
         
 
     ///
-    let initAlign (ctx:MLContext) (pepsForLearning: PeptideForLearning []) = 
+    let initAlignFastTree (ctx:MLContext) (pepsForLearning: PeptideForLearning []) = 
         let data = ctx.Data.LoadFromEnumerable(pepsForLearning)
         let split = ctx.Data.TrainTestSplit(data, testFraction= 0.1)
         let trainer = ctx.Regression.Trainers.Gam(featureColumnName="Features",labelColumnName="TargetScanTime")
@@ -429,8 +433,9 @@ module ConsensusSpectralLibrary =
             (ctx.Transforms.Concatenate("Features","SourceScanTime")|> downcastPipeline)
               .Append(trainer)
         let model = pipeline.Fit(split.TrainSet)    
-        let metrics = ctx.Regression.Evaluate(model.Transform(split.TestSet),labelColumnName="TargetScanTime")
-        
+        let metrics = 
+            let tmp = ctx.Regression.Evaluate(model.Transform(split.TestSet),labelColumnName="TargetScanTime")
+            {RSquared = tmp.RSquared}
         let predF = ctx.Model.CreatePredictionEngine<PeptideForLearning,ScanTimePrediction>(model)
         let predict pepIon = 
             pepIon
@@ -439,6 +444,64 @@ module ConsensusSpectralLibrary =
             |> createAlignmentResult pepIon
         metrics, predict
 
+    ///
+    let initAlignSpline (processParams:Domain.ConsensusSpectralLibraryParams) (pepsForLearning: PeptideForLearning []) = 
+        let knotX,train,test = 
+            let knotX,train,test = 
+                pepsForLearning
+                |> Array.groupBy (fun ion -> getBinIdx processParams.BinningWindowWidth (float ion.SourceScanTime))
+                |> Array.map (fun (binIdx,ions) -> 
+                    let dataS = ions |> Array.shuffleFisherYates
+                    let knotX = 
+                        dataS 
+                        |> Array.map (fun x -> x.SourceScanTime)
+                        |> Array.max
+                    let train,test =
+                        let nTest = 
+                            (float dataS.Length) * 0.9
+                            |> int
+                        dataS.[.. nTest], dataS.[nTest+1 ..] 
+                    float knotX, train, test
+                    )
+                |> Array.unzip3
+            knotX |> Array.sort, train |> Array.concat |> Array.sortBy (fun x -> x.SourceScanTime), test |> Array.concat |> Array.sortBy (fun x -> x.SourceScanTime)
+        let trainer lambda = 
+            let train' = 
+                train 
+                |> Array.map (fun x -> float x.SourceScanTime, float x.TargetScanTime)
+            let test' = 
+                test 
+                |> Array.map (fun x -> float x.SourceScanTime, float x.TargetScanTime)
+            let fit = FSharp.Stats.Fitting.Spline.smoothingSpline train' (knotX) lambda 
+            let rSquared = 
+                let x,y,yHat = 
+                    test'
+                    |> Array.map (fun (x,y) -> 
+                        x, y, fit x
+                        )
+                    |> Array.unzip3
+                let rs = FSharp.Stats.Fitting.GoodnessOfFit.calculateDeterminationFromValue yHat y
+                [
+                Chart.Point(x,y)
+                Chart.Line(x,yHat)
+                ]
+                |> Chart.Combine
+                |> Chart.withTraceName (sprintf "rs: %f, l:%f" rs lambda)
+                |> Chart.Show
+                rs
+            rSquared, fit     
+        let rSquared,model = 
+            [|0.01.. 0.05 .. 0.5|]
+            |> Array.map trainer
+            |> Array.maxBy fst
+        let metrics = {RSquared = rSquared}          
+        let predict pepIon = 
+            (pepIon|> toPeptideForLearning None).SourceScanTime
+            |> float 
+            |> model
+            |> fun x -> {TargetScanTime = float32 x}
+            |> createAlignmentResult pepIon
+        metrics, predict
 
 
     let plotAlignments getPlotFilePathFilePath alignedLibs =         
@@ -516,9 +579,15 @@ module ConsensusSpectralLibrary =
             Path.Combine [|outputDir;fileName|]
         
         logger.Trace "Init align function"
-        let ctx = new ML.MLContext()
-        let rnd = new System.Random()
-        let align = initAlign ctx
+        let align = 
+            match processParams.ConsensusAlignmentAlgorithm with 
+            | Domain.ConsensusAlignmentAlgorithm.FastTree ->
+                let ctx = new ML.MLContext()
+                let align = initAlignFastTree ctx
+                align
+            | Domain.ConsensusAlignmentAlgorithm.Spline -> 
+                let align = initAlignSpline processParams
+                align
         logger.Trace "Init align function: finished"
          
         logger.Trace "Reading and preparing .sl files for alignment"
