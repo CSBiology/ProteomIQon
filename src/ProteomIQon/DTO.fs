@@ -847,6 +847,7 @@ module Dto =
             SearchEngineNamesPSM : (Ontologies.SearchEngineScore*string*int)[]
             Labeled              : bool
             MetaData             : MetaDataSection
+            FieldNames           : TableSortFieldNames
         }
 
     module MzTABParams =
@@ -860,6 +861,7 @@ module Dto =
                 SearchEngineNamesPSM  = dtoMzTABParams.SearchEngineNamesPSM
                 Labeled               = dtoMzTABParams.Labeled
                 MetaData              = dtoMzTABParams.MetaData
+                FieldNames            = dtoMzTABParams.FieldNames
             }
 
     type FragmentIon = {
@@ -908,4 +910,20 @@ module Dto =
         ElutionWidth                                : float
         Fragments                                   : FragmentIon list
         }
+
+    type MzMLConverterParams =
+        {
+            Compress                    : BinaryDataCompressionType
+            StartRetentionTime          : float option
+            EndRetentionTime            : float option
+        }
+
+    module MzMLConverterParams =
+
+        let toDomain (dtoMzMLConverterParams: MzMLConverterParams ) : Domain.MzMLConverterParams =
+                {
+                    Compress                    = dtoMzMLConverterParams.Compress
+                    StartRetentionTime          = dtoMzMLConverterParams.StartRetentionTime
+                    EndRetentionTime            = dtoMzMLConverterParams.EndRetentionTime
+                }
  
