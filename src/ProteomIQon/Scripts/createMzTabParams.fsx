@@ -10,8 +10,8 @@ let defaultMzTabParams :Dto.MzTABParams =
     let light = Labeling.N14
     let heavy = Labeling.N15
     let unlabeled = Labeling.Unlabeled
-    let labeled = true
-    let numberOfRuns = 9
+    let labeled = false
+    let numberOfRuns = 3
     let metaData =
         {
             mzTab_version                     = "1.0.0"
@@ -138,24 +138,31 @@ let defaultMzTabParams :Dto.MzTABParams =
         }
     {
         ExperimentNames       =
-            [|"20170517 TM FScon3001",1; "20170517 TM FScon3003",2; "20170517 TM FScon3005",3;
-            "20170517 TM FScon3007",4; "20170517 TM FScon3009",5; "20170517 TM FScon3011",6;
-            "20170517 TM FScon3013",7; "20170517 TM FScon3015",8; "20170517 TM FScon3017",9|]
-        StudyVariables = [|"Ratios",[|1 .. 9|],1|]
+            [|"20170517 TM FScon3001",1; "20170517 TM FScon3003",2; "20170517 TM FScon3005",3|]
+        StudyVariables = [|"Ratios",[|1|],1;"Ratios",[|2|],2;"Ratios",[|3|],3|]
         SearchEngineNamesProt = metaData.protein_search_engine_score.Value
         SearchEngineNamesPep  = metaData.peptide_search_engine_score.Value
         SearchEngineNamesPSM  = metaData.psm_search_engine_score.Value
         Labeled               = labeled
         MetaData              = metaData
+        FieldNames            = {
+                Proteingroup = "Proteingroup"
+                Experiment = "Experiment"
+                DistinctPeptideCount = "DistinctPeptideCount"
+                Quant_Heavy = None
+                Quant_Light = "MeasuredApex_Light"
+                QValue = "QValue"
+                StudySubject = "MeasuredApex_Light"
+                Subject_SEM = "MeasuredApex_Light_SEM"
+                Subject_StDev = "MeasuredApex_Light_StDev"
+        }
     }
-    
-
 
 let serialized = 
     defaultMzTabParams
     |> Json.serialize
 
-System.IO.File.WriteAllText(__SOURCE_DIRECTORY__ + @"/../defaultParams\MzTabParams.json",serialized)
+System.IO.File.WriteAllText(__SOURCE_DIRECTORY__ + @"/../defaultParams\MzTabParamsTestUnlabeled.json",serialized)
 
 let deserialized = 
     System.IO.File.ReadAllText(__SOURCE_DIRECTORY__ + @"/../defaultParams\MzTabParams.json")

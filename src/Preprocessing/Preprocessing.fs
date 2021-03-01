@@ -184,6 +184,8 @@ module Preprocessing =
         /// All files created by this application will have a unified runID.
         let outRunID  = Core.MzIO.Reader.getDefaultRunID outReader
         let outTr = outReader.BeginTransaction()
+        logger.Trace "Inserting Model."
+        outReader.InsertModel inReader.Model
         logger.Trace "Initiating peak picking functions."
         // Initialize PeakPickingFunctions
         let ms1PeakPicking = initPeakPicking inReader processParams.MS1PeakPicking outputDir instrumentOutput

@@ -17,7 +17,7 @@ module MzTAB =
         let qpsmFiles =
             IO.Directory.GetFiles(qpsm,("*.qpsm"))
         let allAligned =
-            allignAllFiles tab protFiles quantFiles qpsmFiles
+            allignAllFiles tab protFiles quantFiles qpsmFiles param.FieldNames
         let sameAccession =
             getSameAccessions allAligned
         let protSection =

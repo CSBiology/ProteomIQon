@@ -11,8 +11,8 @@ open MzTABAux
 
 module MzTABSections =
 
-    let allignAllFiles (tabFile:string) (protFiles: string[]) (quantFiles: string[]) (qpsmFiles: string[]) =
-        let tab = readTab tabFile
+    let allignAllFiles (tabFile:string) (protFiles: string[]) (quantFiles: string[]) (qpsmFiles: string[]) (fieldNames: TableSortFieldNames)=
+        let tab = readTab tabFile fieldNames
         let prot =
             protFiles
             |> Array.map (fun x ->
@@ -366,10 +366,10 @@ module MzTABSections =
             |> matchOption (sprintf "MTD\tquantification_method\t%s") sb
         let proteinQuantificationUnit =
             md.protein_quantification_unit
-            |> matchOption (sprintf "MTD\tprotein_quantification_unit\t%s") sb
+            |> matchOption (sprintf "MTD\tprotein-quantification_unit\t%s") sb
         let peptideQuantificationUnit =
             md.peptide_quantification_unit
-            |> matchOption (sprintf "MTD\tpeptide_quantification_unit\t%s") sb
+            |> matchOption (sprintf "MTD\tpeptide-quantification_unit\t%s") sb
         let msRunFormat =
             let f =
                 let pickF =
@@ -677,6 +677,14 @@ module MzTABSections =
         IO.File.AppendAllText(path, sb.ToString())
 
     let proteinSection (allAligned: AlignedComplete[]) (mzTABParams: Domain.MzTABParams) =
+        let optionColumns =
+            [|
+                if mzTABParams.FieldNames.Quant_Heavy.IsSome then
+                    "Quant_Heavy", true;
+                "Subject_StDev", true;
+                "Subject_SEM", true
+            |]
+            |> Map.ofArray
         let experimentNames = mzTABParams.ExperimentNames
         let groupedTab =
             allAligned
@@ -690,17 +698,16 @@ module MzTABSections =
                 x
                 |> Array.groupBy (fun y -> y.TableSort)
             )
-        let initRatio names tablesort =
-            findValueNumberedProt names tablesort "Ratio"
-        let initStDev names tablesort =
-            findValueNumberedProt names tablesort "Ratio_StDev"
-        let initSEM names tablesort =
-            findValueNumberedProt names tablesort "Ratio_SEM"
         groupedTab
         |> Array.map (fun protGroup ->
+            let tabSort = protGroup |> Array.map fst
+            let tabSortExperiments = tabSort |> Array.map (fun x -> x.Experiment)
+            let makeMapOfExperimentAndValue (values: float option[]) =
+                Array.zip tabSortExperiments values
+                |> Map.ofArray
             let studyVars =
                 let quant =
-                    initRatio experimentNames (protGroup |> Array.map fst)
+                    findValueNumberedProt experimentNames (makeMapOfExperimentAndValue (tabSort |> Array.map (fun x -> Some x.StudySubject)))
                     |> Array.sortBy fst
                 mzTABParams.StudyVariables
                 |> Array.map (fun (name,assays,number) ->
@@ -713,7 +720,7 @@ module MzTABSections =
                 )
             let studyVarsStDev =
                 let quant =
-                    initStDev experimentNames (protGroup |> Array.map fst)
+                    findValueNumberedProt experimentNames (makeMapOfExperimentAndValue (tabSort |> Array.map (fun x -> x.Subject_StDev)))
                     |> Array.sortBy fst
                 mzTABParams.StudyVariables
                 |> Array.map (fun (name,assays,number) ->
@@ -726,7 +733,7 @@ module MzTABSections =
                 )
             let studyVarsStdErr =
                 let quant =
-                    initSEM experimentNames (protGroup |> Array.map fst)
+                    findValueNumberedProt experimentNames (makeMapOfExperimentAndValue (tabSort |> Array.map (fun x -> x.Subject_SEM)))
                     |> Array.sortBy fst
                 mzTABParams.StudyVariables
                 |> Array.map (fun (name,assays,number) ->
@@ -781,11 +788,13 @@ module MzTABSections =
                             |> Array.minBy (fun (prot,peps) -> prot.QValue)
                             |> fun (prot,peps) -> Some prot.QValue
                 search_engine_score_ms_run                =
-                    mzTABParams.SearchEngineNamesProt
-                    |> Array.map (fun (searchengine,fieldName,number) ->
-                        findValueNumberedProt experimentNames (protGroup |> Array.map fst) fieldName
+                    // This is now hardcoded to only include the QValue as search engine Score.
+                    // It depends on the inputtype of tablesort, which currently only has QValue as a field.
+                    // If TableSort gets another search engine, this must be adapted
+                    [|
+                        findValueNumberedProt experimentNames (makeMapOfExperimentAndValue (tabSort |> Array.map (fun x -> Some x.QValue)))
                         |> Array.sortBy fst
-                    )
+                    |]
                 reliability                               = 3
                 num_psms_ms_run                           =
                     experimentNames
@@ -800,11 +809,11 @@ module MzTABSections =
                         |Some (prot,psms) -> number, Some (float psms.Length)
                     )
                 num_peptides_distinct_ms_run              =
-                    findValueNumberedProt experimentNames (protGroup |> Array.map fst) "DistinctPeptideCount"
+                    findValueNumberedProt experimentNames (makeMapOfExperimentAndValue (tabSort |> Array.map (fun x -> Some x.DistinctPeptideCount)))
                     |> Array.sortBy fst
                 // TODO: check uniqueness for all peptides
                 num_peptides_unique_ms_run                =
-                    findValueNumberedProt experimentNames (protGroup |> Array.map fst) "DistinctPeptideCount"
+                    findValueNumberedProt experimentNames (makeMapOfExperimentAndValue (tabSort |> Array.map (fun x -> Some x.DistinctPeptideCount)))
                     |> Array.sortBy fst
                 ambiguity_members                         = 
                     if proteinGroup.Length = 1 then
@@ -820,16 +829,16 @@ module MzTABSections =
                 protein_abundance_assay                   =
                     if mzTABParams.Labeled then
                         let light =
-                            findValueNumberedProt experimentNames (protGroup |> Array.map fst) "MeasuredApex_Light"
+                            findValueNumberedProt experimentNames (makeMapOfExperimentAndValue (tabSort |> Array.map (fun x -> Some x.Quant_Light)))
                             |> Array.sortBy fst
                         let heavy =
-                            findValueNumberedProt experimentNames (protGroup |> Array.map fst) "MeasuredApex_Heavy"
+                            findValueNumberedProt experimentNames (makeMapOfExperimentAndValue (tabSort |> Array.map (fun x -> x.Quant_Heavy)))
                             |> Array.sortBy fst
                         Array.map2 (fun light heavy -> [|light; heavy|]) light heavy
                         |> Array.concat
                     
                     else
-                        findValueNumberedProt experimentNames (protGroup |> Array.map fst) "MeasuredApex_Light"
+                        findValueNumberedProt experimentNames (makeMapOfExperimentAndValue (tabSort |> Array.map (fun x -> Some x.Quant_Light)))
                         |> Array.sortBy fst
                 protein_abundance_study_variable          =
                     studyVars
@@ -914,25 +923,30 @@ module MzTABSections =
                     |> Array.sort
                 )
                 |> Array.distinct
-            let ratio =
-                let light =
-                    findValueNumberedPep experimentNames forF "MeasuredApex_Light"
+            // TODO: Since Tablesort quant values are named after the columns in the quant file, the names of the Tablesort quant fields are taken. Maybe use other identifier.
+            let subject =
+                if mzTABParams.Labeled then
+                    let light =
+                        findValueNumberedPep experimentNames forF mzTABParams.FieldNames.Quant_Light
+                        |> Array.sortBy fst
+                    let heavy =
+                        findValueNumberedPep experimentNames forF mzTABParams.FieldNames.Quant_Heavy.Value
+                        |> Array.sortBy fst
+                    Array.map2 (fun (i,l) (j,h) ->
+                        if i <> j then failwith "Experimental data for peptide ratios missing"
+                        match l,h with
+                        | Some x, Some y -> i, Some (x/y)
+                        | _, None -> i, None
+                        | None, _ -> i, None
+                    ) light heavy
+                else
+                    findValueNumberedPep experimentNames forF mzTABParams.FieldNames.Quant_Light
                     |> Array.sortBy fst
-                let heavy =
-                    findValueNumberedPep experimentNames forF "MeasuredApex_Heavy"
-                    |> Array.sortBy fst
-                Array.map2 (fun (i,l) (j,h) ->
-                    if i <> j then failwith "Experimental data for peptide ratios missing"
-                    match l,h with
-                    | Some x, Some y -> i, Some (x/y)
-                    | _, None -> i, None
-                    | None, _ -> i, None
-                ) light heavy
             let studyVars =
                 mzTABParams.StudyVariables
                 |> Array.map (fun (name,assays,number) ->
                     let corrQuant =
-                        ratio
+                        subject
                         |> Array.filter (fun x -> assays.Contains (fst x))
                     number,
                     corrQuant
@@ -1012,15 +1026,15 @@ module MzTABSections =
                 peptide_abundance_assay                   =
                     if mzTABParams.Labeled then
                         let light =
-                            findValueNumberedPep experimentNames forF "MeasuredApex_Light"
+                            findValueNumberedPep experimentNames forF mzTABParams.FieldNames.Quant_Light
                             |> Array.sortBy fst
                         let heavy =
-                            findValueNumberedPep experimentNames forF "MeasuredApex_Heavy"
+                            findValueNumberedPep experimentNames forF mzTABParams.FieldNames.Quant_Heavy.Value
                             |> Array.sortBy fst
                         Array.map2 (fun light heavy -> [|light; heavy|]) light heavy
                         |> Array.concat
                     else
-                        findValueNumberedPep experimentNames forF "MeasuredApex_Light"
+                        findValueNumberedPep experimentNames forF mzTABParams.FieldNames.Quant_Light
                         |> Array.sortBy fst
                 peptide_abundance_study_variable          =
                     studyVars
