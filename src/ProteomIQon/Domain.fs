@@ -34,6 +34,7 @@ module Domain =
     type CentroidizationMode =
         | Manufacturer
         | Wavelet of WaveletPeakPickingParams
+        //| Binning of BinningParams
         
     type PeakPicking = 
         | ProfilePeaks
@@ -165,7 +166,6 @@ module Domain =
 
     type SpectralLibraryParams =
         {
-            ChargeList          : float list
             MatchingTolerancePPM: float
         }
 
@@ -229,7 +229,8 @@ module Domain =
             QuantFieldsToFilterOn       : FilterOnField[]
             ProtFieldsToFilterOn        : FilterOnField[]
             QuantColumnsOfInterest      : string[]
-            ProtColumnsOfInterest       : string[]
+            ProtColumnsOfInterest       : (string*string)[]
+            DistinctPeptideCount        : bool
             StatisticalMeasurements     : (string*StatisticalMeasurement)[]
             AggregatorFunction          : AggregationMethod
             AggregatorFunctionIntensity : AggregationMethod
@@ -238,25 +239,51 @@ module Domain =
         }
    
 
-    type ConsensusSpectralLibraryParams =
-        {
-            RTTolerance: float
-            iRTPeptides: string list
+    type ConsensusAlignmentAlgorithm = 
+        | FastTree
+        | Spline 
+
+    ///
+    type ConsensusSpectralLibraryParams = {
+        // InitialPeptideSelection
+        BinningWindowWidth                          : float
+        FractionOfMostAbundandIonsPerBin            : float
+        MinFragmentCount                            : int
+        MinFragmentLadderIdx                        : int
+        MinPeptideLength                            : int
+        // XicExtraction
+        RtWindowWidth                               : float
+        // Matching
+        FragMatchingBinWidth                        : float
+        FragMatchingBinOffset                       : float
+        MS2ScanRange                                : float*float
+        // Filtering
+        MaxRatioMostAbundandVsSecondAbundandPeak    : float
+        ConsensusAlignmentAlgorithm :ConsensusAlignmentAlgorithm
         }
 
     type SpectrumSelection =
         |First
         |All
 
-    type SWATHAnalysisParams =
-        {
-            PeptideList         : string [] option
-            MatchingTolerancePPM: float
-            QueryOffsetRange    : float
-            SpectrumSelectionF  : SpectrumSelection
-            AggregationF        : AggregationMethod
-            XicProcessing       : XicProcessing
+    ///
+    type SWATHAnalysisParams = {
+        // InitialPeptideSelection
+        BinningWindowWidth                          : float
+        FractionOfMostAbundandIonsPerBin            : float
+        MinFragmentCount                            : int
+        MinFragmentLadderIdx                        : int
+        MinPeptideLength                            : int
+        // XicExtraction
+        RtWindowWidth                               : float
+        // Matching
+        FragMatchingBinWidth                        : float
+        FragMatchingBinOffset                       : float
+        MS2ScanRange                                : float*float
+        // Filtering
+        MaxRatioMostAbundandVsSecondAbundandPeak    : float
         }
+
 
     type MetaDataSection =
         {
@@ -305,10 +332,10 @@ module Domain =
             sample_disease                   : ((string[]*int)[])option
             sample_description               : ((string*int)[])option
             sample_custom                    : ((string[]*int)[])option
-            assay_quantification_reagent     : ((string*int)[])option
-            assay_quantification_mod         : (((string*int)[]*int)[])option
+            assay_quantification_reagent     : ((Ontologies.Labeling*int)[])
+            assay_quantification_mod         : (((Ontologies.Modification*int)[]*int)[])option
             assay_quantification_mod_site    : (((string*int)[]*int)[])option
-            assay_quantification_mod_position: (((string*int)[]*int)[])option
+            assay_quantification_mod_position: (((Ontologies.ModificationPosition*int)[]*int)[])option
             assay_sample_ref                 : ((string*int)[])option
             assay_ms_run_ref                 : ((string*int)[])option
             study_variable_assay_refs        : ((int[]*int)[])option
@@ -331,5 +358,6 @@ module Domain =
             SearchEngineNamesProt: (Ontologies.SearchEngineScore*string*int)[]
             SearchEngineNamesPep : (Ontologies.SearchEngineScore*string*int)[]
             SearchEngineNamesPSM : (Ontologies.SearchEngineScore*string*int)[]
+            Labeled              : bool
             MetaData             : MetaDataSection
         }
