@@ -40,10 +40,10 @@ module console1 =
         logger.Trace "Set Index on data base if not present."
         SearchDB'.setIndexOnModSequenceAndGlobalMod dbConnection |> ignore
         logger.Trace "Set Index on data base if not present: finished"
-
+        dbConnection.Dispose()
         if File.Exists i then
             logger.Info "single file"
-            quantifyPeptides p o dbConnection i ii
+            quantifyPeptides p o d i ii
         elif Directory.Exists i && Directory.Exists ii then
             logger.Info "multiple files"
             let mzfiles =
@@ -70,10 +70,8 @@ module console1 =
                 | None      -> 1
             logger.Trace (sprintf "Program is running on %i cores" c)
             mzFilesAndPepFiles
-            |> FSharpAux.PSeq.map (fun (i,ii) -> quantifyPeptides p o dbConnection i ii)
             |> FSharpAux.PSeq.withDegreeOfParallelism c
-            |> Array.ofSeq
-            |> ignore
+            |> FSharpAux.PSeq.iter (fun (i,ii) -> quantifyPeptides p o d i ii)
         else
             failwith "The given path to the instrument output is neither a valid file path nor a valid directory path."
 

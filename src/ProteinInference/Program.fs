@@ -15,14 +15,15 @@ module console1 =
         let results = parser.Parse argv
         let i     = results.GetResult InputFolder
         let d     = results.GetResult PeptideDataBase
-        let gff3  = results.GetResult GFF3
+        let gff3  = results.TryGetResult GFF3              
         let o     = results.GetResult OutputDirectory
         let p     = results.GetResult ParamFile
         Logging.generateConfig o
         let logger = Logging.createLogger "ProteinInference"
+        
         logger.Info (sprintf "InputFilePath -i = %s" i)
         logger.Info (sprintf "Peptide data base -d = %s" d)
-        logger.Info (sprintf "InputGFF3Path -g = %s" gff3)
+        //logger.Info (sprintf "InputGFF3Path -g = %s" gff3)
         logger.Info (sprintf "OutputFilePath -o = %s" o)
         logger.Info (sprintf "InputParameterPath -p = %s" p)
         logger.Trace (sprintf "CLIArguments: %A" results)

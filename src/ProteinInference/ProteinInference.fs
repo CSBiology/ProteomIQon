@@ -14,7 +14,7 @@ open FSharpAux.IO.SchemaReader.Csv
 open Domain
 open FSharp.Plotly
 open FSharp.Stats
-
+open BioFSharp.IO.GFF3
 module ProteinInference =
 
     /// Represents one peptide-entry with its evidence class and the proteins it points to.
@@ -87,13 +87,26 @@ module ProteinInference =
         /// The proteinModelInfos
         logger.Trace "Reading GFF3 file"
         let proteinModelInfos =
-           try
-                GFF3.fromFileWithoutFasta gff3Path
+            match gff3Path with 
+            | Some gff3Path -> 
+                try
+                    GFF3.fromFileWithoutFasta gff3Path
+                    |> ProteomIQon.ProteinInference'.assignTranscriptsToGenes regexPattern
+                with
+                | err ->
+                    printfn "ERROR: Could not read gff3 file %s" gff3Path
+                    failwithf "%s" err.Message
+            | None ->                 
+                ProteomIQon.SearchDB'.selectProteins memoryDB
+                |> List.mapi (fun i (id,_) -> 
+                    [
+                    GFFEntryLine (createGFFEntry "Unknown" "." "gene" "." "." "." "." "." (sprintf "ID=%i" i) "");
+                    GFFEntryLine (createGFFEntry "Unknown" "." "mRNA" "." "." "." "." "." (sprintf "ID=%s;Parent=%i" id i) "")
+                    ]
+                )
+                |> Seq.concat
                 |> ProteomIQon.ProteinInference'.assignTranscriptsToGenes regexPattern
-            with
-            | err ->
-                printfn "ERROR: Could not read gff3 file %s" gff3Path
-                failwithf "%s" err.Message
+
         //reads from file to an array of FastaItems.
         logger.Trace "Assigning FastA sequences to protein model info"
         /// Assigned fasta sequences to model Infos
@@ -189,12 +202,14 @@ module ProteinInference =
                 try
                     psmInput
                     |> List.map (fun (s: ProteomIQon.ProteinInference'.PSMInput) ->
-                        let s =
-                            s.Seq
-
+                        let s = s.Seq
                         match Map.tryFind (ProteinInference'.removeModification s) classItemCollection with
                         | Some (x:ProteinClassItem<'sequence>) -> createProteinClassItem x.GroupOfProteinIDs x.Class s
-                        | None -> failwithf "Could not find sequence %s in classItemCollection" s
+                        | None ->
+                            match Map.tryFind (ProteinInference'.removeModification ("M" + s)) classItemCollection with
+                            | Some (x:ProteinClassItem<'sequence>) -> createProteinClassItem x.GroupOfProteinIDs x.Class s
+                            | None ->
+                                failwithf "Could not find sequence %s in classItemCollection" s
                         ),
                         outFile
                 with
@@ -403,7 +418,7 @@ module ProteinInference =
         let logger = Logging.createLogger "ProteinInference_inferProteins"
 
         logger.Trace (sprintf "InputFilePath = %s" rawFolderPath)
-        logger.Trace (sprintf "InputGFF3Path = %s" gff3Location)
+        logger.Trace (sprintf "InputGFF3Path = %A" gff3Location)
         logger.Trace (sprintf "OutputFilePath = %s" outDirectory)
         logger.Trace (sprintf "Protein inference parameters = %A" proteinInferenceParams)
 
