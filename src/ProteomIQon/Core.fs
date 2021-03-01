@@ -25,6 +25,7 @@ module Core =
             let getThermoRawFiles directoryPath = 
                 Array.append (Directory.GetFiles(directoryPath,("*.raw"))) (Directory.GetFiles(directoryPath,("*.RAW")))   
                 |> Array.distinct
+
             let getWiffFiles directoryPath = 
                 Directory.GetFiles(directoryPath,("*.wiff"))   
 

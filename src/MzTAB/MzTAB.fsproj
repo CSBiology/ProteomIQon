@@ -9,6 +9,9 @@
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="MzTABAux.fs" />
+    <Compile Include="MzTABSections.fs" />
+    <Compile Include="MzTABFormater.fs" />
     <Compile Include="MzTAB.fs" />
     <Compile Include="CLIArgumentParsing.fs" />
     <Compile Include="Program.fs" />

@@ -712,7 +712,6 @@ module Dto =
 
     type SpectralLibraryParams =
         {
-            ChargeList          : float list
             MatchingTolerancePPM: float
         }
 
@@ -720,7 +719,6 @@ module Dto =
 
         let toDomain (dtoSpectralLibraryParams: SpectralLibraryParams): Domain.SpectralLibraryParams =
             {
-                ChargeList           = dtoSpectralLibraryParams.ChargeList
                 MatchingTolerancePPM = dtoSpectralLibraryParams.MatchingTolerancePPM
             }
 
@@ -733,7 +731,8 @@ module Dto =
             QuantFieldsToFilterOn       : FilterOnField[]
             ProtFieldsToFilterOn        : FilterOnField[]
             QuantColumnsOfInterest      : string[]
-            ProtColumnsOfInterest       : string[]
+            ProtColumnsOfInterest       : (string*string)[]
+            DistinctPeptideCount        : bool
             StatisticalMeasurements     : (string*StatisticalMeasurement)[]
             AggregatorFunction          : AggregationMethod
             AggregatorFunctionIntensity : AggregationMethod
@@ -752,46 +751,91 @@ module Dto =
                 ProtFieldsToFilterOn        = dtoTableSortParams.ProtFieldsToFilterOn
                 QuantColumnsOfInterest      = dtoTableSortParams.QuantColumnsOfInterest
                 ProtColumnsOfInterest       = dtoTableSortParams.ProtColumnsOfInterest
+                DistinctPeptideCount        = dtoTableSortParams.DistinctPeptideCount
                 StatisticalMeasurements     = dtoTableSortParams.StatisticalMeasurements
                 AggregatorFunction          = dtoTableSortParams.AggregatorFunction
                 AggregatorFunctionIntensity = dtoTableSortParams.AggregatorFunctionIntensity
                 AggregatorPepToProt         = dtoTableSortParams.AggregatorPepToProt
                 Tukey                       = dtoTableSortParams.Tukey
             }
-    type ConsensusSpectralLibraryParams =
-        {
-            RTTolerance: float
-            iRTPeptides: string list
+    //type ConsensusSpectralLibraryParams =
+    //    {
+    //        RTTolerance: float
+    //        iRTPeptides: string list
+    //    }
+
+    ///
+    type ConsensusSpectralLibraryParams = {
+        // InitialPeptideSelection
+        BinningWindowWidth                          : float
+        FractionOfMostAbundandIonsPerBin            : float
+        MinFragmentCount                            : int
+        MinFragmentLadderIdx                        : int
+        MinPeptideLength                            : int
+        // XicExtraction
+        RtWindowWidth                               : float
+        // Matching
+        FragMatchingBinWidth                        : float
+        FragMatchingBinOffset                       : float
+        MS2ScanRange                                : float*float
+        // Filtering
+        MaxRatioMostAbundandVsSecondAbundandPeak    : float
+        ConsensusAlignmentAlgorithm                 : ConsensusAlignmentAlgorithm
         }
 
     module ConsensusSpectralLibraryParams =
 
         let toDomain (dtoConsensusSpectralLibraryParams: ConsensusSpectralLibraryParams): Domain.ConsensusSpectralLibraryParams =
             {
-                RTTolerance = dtoConsensusSpectralLibraryParams.RTTolerance
-                iRTPeptides = dtoConsensusSpectralLibraryParams.iRTPeptides
+                // InitialPeptideSelection
+                BinningWindowWidth                          = dtoConsensusSpectralLibraryParams.BinningWindowWidth                          
+                FractionOfMostAbundandIonsPerBin            = dtoConsensusSpectralLibraryParams.FractionOfMostAbundandIonsPerBin            
+                MinFragmentCount                            = dtoConsensusSpectralLibraryParams.MinFragmentCount                            
+                MinFragmentLadderIdx                        = dtoConsensusSpectralLibraryParams.MinFragmentLadderIdx                        
+                MinPeptideLength                            = dtoConsensusSpectralLibraryParams.MinPeptideLength                            
+                // XicExtraction                            = // XicExtraction
+                RtWindowWidth                               = dtoConsensusSpectralLibraryParams.RtWindowWidth                               
+                // Matching                                 = // Matching
+                FragMatchingBinWidth                        = dtoConsensusSpectralLibraryParams.FragMatchingBinWidth                        
+                FragMatchingBinOffset                       = dtoConsensusSpectralLibraryParams.FragMatchingBinOffset                       
+                MS2ScanRange                                = dtoConsensusSpectralLibraryParams.MS2ScanRange                                
+                // Filtering                                = // Filtering
+                MaxRatioMostAbundandVsSecondAbundandPeak    = dtoConsensusSpectralLibraryParams.MaxRatioMostAbundandVsSecondAbundandPeak    
+                ConsensusAlignmentAlgorithm                 = dtoConsensusSpectralLibraryParams.ConsensusAlignmentAlgorithm
             }
 
-    type SWATHAnalysisParams =
-        {
-            PeptideList         : string [] option
-            MatchingTolerancePPM: float
-            QueryOffsetRange    : float
-            SpectrumSelectionF  : SpectrumSelection
-            AggregationF        : AggregationMethod
-            XicProcessing       : XicProcessing
+    type SWATHAnalysisParams = {
+        // InitialPeptideSelection
+        BinningWindowWidth                          : float
+        FractionOfMostAbundandIonsPerBin            : float
+        MinFragmentCount                            : int
+        MinFragmentLadderIdx                        : int
+        MinPeptideLength                            : int
+        // XicExtraction
+        RtWindowWidth                               : float
+        // Matching
+        FragMatchingBinWidth                        : float
+        FragMatchingBinOffset                       : float
+        MS2ScanRange                                : float*float
+        // Filtering
+        MaxRatioMostAbundandVsSecondAbundandPeak    : float
         }
 
     module SWATHAnalysisParams =
 
         let toDomain (dtoSWATHAnalysisParams: SWATHAnalysisParams): Domain.SWATHAnalysisParams =
             {
-                PeptideList          = dtoSWATHAnalysisParams.PeptideList
-                MatchingTolerancePPM = dtoSWATHAnalysisParams.MatchingTolerancePPM
-                QueryOffsetRange     = dtoSWATHAnalysisParams.QueryOffsetRange
-                SpectrumSelectionF   = dtoSWATHAnalysisParams.SpectrumSelectionF
-                AggregationF         = dtoSWATHAnalysisParams.AggregationF
-                XicProcessing        = dtoSWATHAnalysisParams.XicProcessing
+            
+            BinningWindowWidth                         = dtoSWATHAnalysisParams.BinningWindowWidth                       
+            FractionOfMostAbundandIonsPerBin           = dtoSWATHAnalysisParams.FractionOfMostAbundandIonsPerBin         
+            MinFragmentCount                           = dtoSWATHAnalysisParams.MinFragmentCount                         
+            MinFragmentLadderIdx                       = dtoSWATHAnalysisParams.MinFragmentLadderIdx                     
+            MinPeptideLength                           = dtoSWATHAnalysisParams.MinPeptideLength                                                          
+            RtWindowWidth                              = dtoSWATHAnalysisParams.RtWindowWidth                                                                 
+            FragMatchingBinWidth                       = dtoSWATHAnalysisParams.FragMatchingBinWidth                     
+            FragMatchingBinOffset                      = dtoSWATHAnalysisParams.FragMatchingBinOffset                    
+            MS2ScanRange                               = dtoSWATHAnalysisParams.MS2ScanRange                                                                
+            MaxRatioMostAbundandVsSecondAbundandPeak   = dtoSWATHAnalysisParams.MaxRatioMostAbundandVsSecondAbundandPeak 
             }
 
     type MzTABParams =
@@ -801,6 +845,7 @@ module Dto =
             SearchEngineNamesProt: (Ontologies.SearchEngineScore*string*int)[]
             SearchEngineNamesPep : (Ontologies.SearchEngineScore*string*int)[]
             SearchEngineNamesPSM : (Ontologies.SearchEngineScore*string*int)[]
+            Labeled              : bool
             MetaData             : MetaDataSection
         }
 
@@ -813,5 +858,54 @@ module Dto =
                 SearchEngineNamesProt = dtoMzTABParams.SearchEngineNamesProt
                 SearchEngineNamesPep  = dtoMzTABParams.SearchEngineNamesPep
                 SearchEngineNamesPSM  = dtoMzTABParams.SearchEngineNamesPSM
+                Labeled               = dtoMzTABParams.Labeled
                 MetaData              = dtoMzTABParams.MetaData
             }
+
+    type FragmentIon = {
+        Charge                            : float
+        Iontype                           : string
+        Number                            : int
+        // Brauch man glaub ich nicht weil das in der Quantinfo steckt
+        GlobalMod                         : int
+        CountAbsolute                     : int
+        CountFraction                     : float
+        CalculatedMz                      : float
+        MeanFragMz                        : float 
+        MeanAbsMzDelta                    : float
+        MeanTheoMinusXMzDelta             : float
+        CvMeanFragMz                      : float
+        MaxIntensity                      : float
+        MinIntensity                      : float
+        MeanIntensity                     : float
+        MeanRelativeIntensity_Total       : float
+        CVRelativeIntensity_Total         : float
+        MeanRelativeIntensity_Frags       : float
+        CVRelativeIntensity_Frags         : float
+        }
+    
+    ///
+    type PeptideIon = {
+        StringSequence                              : string
+        GlobalMod                                   : int
+        Charge                                      : int
+        PepSequenceID                               : int
+        ModSequenceID                               : int
+        PrecursorMZ                                 : float
+        MeasuredMass                                : float 
+        TheoMass                                    : float
+        AbsDeltaMass                                : float
+        MeanPercolatorScore                         : float
+        QValue                                      : float
+        PEPValue                                    : float
+        ProteinNames                                : string
+        Quant                                       : float
+        RelativeQuant                               : float
+        MeasuredApex                                : float
+        RelativeMeasuredApex                        : float
+        Seo                                         : float
+        ScanTime                                    : float
+        ElutionWidth                                : float
+        Fragments                                   : FragmentIon list
+        }
+ 

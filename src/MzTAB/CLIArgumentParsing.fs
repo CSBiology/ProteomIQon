@@ -6,10 +6,10 @@ module CLIArgumentParsing =
     open System.IO
   
     type CLIArguments =
-        | [<Mandatory>] [<AltCommandLine("-itab")>] TableSortFile of path:string
-        | [<Mandatory>] [<AltCommandLine("-iprot")>] ProtFile of path:string
-        | [<Mandatory>] [<AltCommandLine("-ipep")>] QuantFile of path:string
-        | [<Mandatory>] [<AltCommandLine("-ipsm")>] QpsmFile of path:string
+        | [<Mandatory>] [<AltCommandLine("-i")>] TableSortFile of path:string
+        | [<Mandatory>] [<AltCommandLine("-ii")>] ProtFile of path:string
+        | [<Mandatory>] [<AltCommandLine("-iii")>] QuantFile of path:string
+        | [<Mandatory>] [<AltCommandLine("-iiii")>] QpsmFile of path:string
         | [<Mandatory>] [<AltCommandLine("-d")>] PeptideDataBase of path:string 
         | [<Mandatory>] [<AltCommandLine("-o")>] OutputFile  of path:string 
         | [<Mandatory>] [<AltCommandLine("-p")>] ParamFile of path:string
