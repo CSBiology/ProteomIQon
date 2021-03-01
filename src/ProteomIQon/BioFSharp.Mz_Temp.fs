@@ -1055,7 +1055,7 @@ module ProteinInference' =
         let attributes = entry.Attributes
         /// Same as in FastA file
         let spliceVariantID =
-            match Map.tryFind "Name" attributes with
+            match Map.tryFind "ID" attributes with
             | Some res ->
                 res.Head
             | None ->
@@ -1066,6 +1066,7 @@ module ProteinInference' =
             match entry.Strand with
             |'+' -> PeptideClassification.StrandDirection.Forward
             |'-' -> PeptideClassification.StrandDirection.Reverse
+            | _  -> PeptideClassification.StrandDirection.Forward
 
         PeptideClassification.createProteinModelInfo spliceVariantID chromosomeID direction locus i Seq.empty Seq.empty
 

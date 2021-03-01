@@ -26,8 +26,5 @@
     <ProjectReference Include="..\ProteomIQon\ProteomIQon.fsproj">
     </ProjectReference>
   </ItemGroup>
-  <ItemGroup>
-    <Reference Include="System.Transactions" />
-  </ItemGroup>
   <Import Project="..\..\.paket\Paket.Restore.targets" />
 </Project>

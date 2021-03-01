@@ -26,5 +26,4 @@ module CLIArgumentParsing =
                 | OutputFile  _      -> "specify output file path"
                 | ParamFile _        -> "specify param file For centroidization"
                 | Log_Level _        -> "set the log level."
-                | PeptideDataBase  _ -> "Specify the file path of the peptide data base."
                 | Verbosity_Level _  -> "set the verbosity level."

@@ -25,20 +25,17 @@ module console1 =
         logger.Info (sprintf "ParamFilePath -p = %s" p)
         logger.Info (sprintf "Peptide data base -d = %s" d)
         logger.Trace (sprintf "CLIArguments: %A" results)
+        if File.Exists d then
+           logger.Trace (sprintf "Database found at given location (%s)" d)
+        else
+           failwith "The given path to the instrument output is neither a valid file path nor a valid directory path."
         let p = 
             Json.ReadAndDeserialize<Dto.PeptideSpectrumMatchingParams> p
             |> Dto.PeptideSpectrumMatchingParams.toDomain
-        let dbConnection = 
-            if File.Exists d then
-                logger.Trace (sprintf "Database found at given location (%s)" d)
-                SearchDB.getDBConnection d
-            else
-                failwith "The given path to the instrument output is neither a valid file path nor a valid directory path."
-
         if File.Exists i then
             logger.Info (sprintf "single file")
             logger.Trace (sprintf "Scoring spectra for %s" i)
-            scoreSpectra p o dbConnection i
+            scoreSpectra p o d i
         elif Directory.Exists i then 
             logger.Info (sprintf "multiple files")
             let files = 
@@ -50,10 +47,8 @@ module console1 =
                 | None      -> 1
             logger.Trace (sprintf "Program is running on %i cores" c)
             files 
-            |> FSharpAux.PSeq.map (scoreSpectra p o dbConnection) 
             |> FSharpAux.PSeq.withDegreeOfParallelism c
-            |> Array.ofSeq
-            |> ignore
+            |> FSharpAux.PSeq.iter (scoreSpectra p o d)
         else 
             failwith "The given path to the instrument output is neither a valid file path nor a valid directory path."
 

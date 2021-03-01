@@ -5,7 +5,6 @@ open Argu
 module CLIArgumentParsing = 
     open System.IO
     
-
     type CLIArguments =
         | [<Mandatory>] [<AltCommandLine("-i")>]  InstrumentOutput of path:string
         | [<Mandatory>] [<AltCommandLine("-ii")>] ScoredPSMs of path:string
