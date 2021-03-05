@@ -1,7 +1,6 @@
 namespace ProteomIQon
 
 open System
-open System.Data.SQLite
 open BioFSharp
 open BioFSharp.Mz.SearchDB
 open Domain

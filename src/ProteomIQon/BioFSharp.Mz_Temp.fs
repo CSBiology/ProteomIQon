@@ -916,7 +916,7 @@ module ProteinInference' =
     open BioFSharp.IO.GFF3
     open FSharpAux.IO.SchemaReader.Attribute
     open FSharp.Stats.Interpolation
-    open FSharp.Plotly
+    open Plotly.NET
     open Fitting'.NonLinearRegression'.LevenbergMarquardtConstrained'
 
     /// For a group of proteins, contains information about all peptides that might be used for its quantification and score calculated for it.
@@ -1197,18 +1197,19 @@ module ProteinInference' =
                             |> Map.toArray
         let histogram =
             [
-                Chart.Column freqTarget |> Chart.withTraceName "Target"
-                    |> Chart.withAxisAnchor(Y=1);
+                Chart.Column freqTarget 
+                |> Chart.withTraceName "Target"
+                |> Chart.withAxisAnchor(Y=1);
                 Chart.Column freqDecoy |> Chart.withTraceName "Decoy"
-                    |> Chart.withAxisAnchor(Y=1);
+                |> Chart.withAxisAnchor(Y=1);
                 Chart.Column freqTarget1
-                    |> Chart.withAxisAnchor(Y=2)
-                    |> Chart.withMarkerStyle (Opacity = 0.)
-                    |> Chart.withTraceName (Showlegend = false);
+                |> Chart.withAxisAnchor(Y=2)
+                |> Chart.withMarkerStyle (Opacity = 0.)
+                |> Chart.withTraceName (Showlegend = false);
                 Chart.Column freqDecoy1
-                    |> Chart.withAxisAnchor(Y=2)
-                    |> Chart.withMarkerStyle (Opacity = 0.)
-                    |> Chart.withTraceName (Showlegend = false)
+                |> Chart.withAxisAnchor(Y=2)
+                |> Chart.withMarkerStyle (Opacity = 0.)
+                |> Chart.withTraceName (Showlegend = false)
             ]
             |> Chart.Combine
 
@@ -1238,7 +1239,7 @@ module ProteinInference' =
 
 module FDRControl' =
 
-    open FSharp.Plotly
+    open Plotly.NET
     open Fitting'.NonLinearRegression'.LevenbergMarquardtConstrained'
     open FSharp.Stats.Interpolation
     open FSharpAux.IO

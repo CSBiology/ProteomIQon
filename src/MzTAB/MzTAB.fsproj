@@ -1,6 +1,6 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFrameworks>net47;netcoreapp3.0</TargetFrameworks>
+    <TargetFrameworks>net5.0</TargetFrameworks>
     <RootNamespace>MzTAB</RootNamespace>
     <AssemblyName>MzTAB</AssemblyName>
     <Name>MzTAB</Name>
@@ -17,7 +17,17 @@
     <Compile Include="Program.fs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\ProteomIQon\ProteomIQon.fsproj"></ProjectReference>
+    <ProjectReference Include="..\ProteomIQon\ProteomIQon.fsproj" />
   </ItemGroup>
-  <Import Project="..\..\.paket\Paket.Restore.targets" />
+  <ItemGroup>
+    <PackageReference Include="Argu" Version="6.1.1" />
+    <PackageReference Include="MzIO" Version="0.1.0-beta" />
+    <PackageReference Include="MzIO.Processing" Version="0.1.0-beta" />
+    <PackageReference Include="MzIO.SQL" Version="0.1.0-beta" />
+    <PackageReference Include="MzIO.MzML" Version="0.1.0-beta" />
+    <PackageReference Include="FSharpAux" Version="1.0.0" />
+    <PackageReference Include="FSharpAux.IO" Version="1.0.0" />
+    <PackageReference Include="FSharp.Stats" Version="0.4.0" />
+    <PackageReference Include="Plotly.NET" Version="2.0.0-alpha5" />
+  </ItemGroup>
 </Project>

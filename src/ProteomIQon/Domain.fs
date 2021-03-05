@@ -28,6 +28,8 @@ module Domain =
             Centroid_MzTolerance    : float
             SNRS_Percentile         : float
             MinSNR                  : float
+            RefineMZ                : bool
+            SumIntensities          : bool
             PaddingParams           : PaddingParams option 
         } 
 

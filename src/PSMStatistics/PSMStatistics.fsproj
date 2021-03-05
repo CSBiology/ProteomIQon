@@ -1,19 +1,12 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFrameworks>net47;netcoreapp3.0</TargetFrameworks>
+    <TargetFrameworks>net5.0</TargetFrameworks>
     <RootNamespace>PSMStatistics</RootNamespace>
     <AssemblyName>PSMStatistics</AssemblyName>
     <Name>PSMStatistics</Name>
     <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
-    <PostBuildEvent>
-      cd $(TargetDir)
-      del SQLite.Interop.dll
-    </PostBuildEvent>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net47|AnyCPU'">
-    <PlatformTarget>AnyCPU</PlatformTarget>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="PSMStatistics.fs" />
@@ -21,22 +14,22 @@
     <Compile Include="Program.fs" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="percolator-v3-01\bin\msvcp120.dll">
+    <None Include="percolator-v3-01\binaries\msvcp120.dll">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Include="percolator-v3-01\bin\msvcr120.dll">
+    <None Include="percolator-v3-01\binaries\msvcr120.dll">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Include="percolator-v3-01\bin\percolator.exe">
+    <None Include="percolator-v3-01\binaries\percolator.exe">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Include="percolator-v3-01\bin\qvality.exe">
+    <None Include="percolator-v3-01\binaries\qvality.exe">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Include="percolator-v3-01\bin\vcomp120.dll">
+    <None Include="percolator-v3-01\binaries\vcomp120.dll">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Include="percolator-v3-01\bin\xerces-c_3_1.dll">
+    <None Include="percolator-v3-01\binaries\xerces-c_3_1.dll">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Include="percolator-v3-01\share\xml\percolator\xml-pin-1-3\percolator_in.xsd">
@@ -45,9 +38,15 @@
     <None Include="percolator-v3-01\share\xml\percolator\xml-pout-1-5\percolator_out.xsd">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+  </ItemGroup>  
+  <ItemGroup>
+    <ProjectReference Include="..\ProteomIQon\ProteomIQon.fsproj" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\ProteomIQon\ProteomIQon.fsproj"></ProjectReference>
+    <PackageReference Include="Argu" Version="6.1.1" />
+    <PackageReference Include="BioFSharp.Mz" Version="0.1.5-beta" />
+    <PackageReference Include="FSharpAux" Version="1.0.0" />
+    <PackageReference Include="FSharpAux.IO" Version="1.0.0" />
+    <PackageReference Include="System.Data.SQLite.Core" Version="1.0.113.7" />
   </ItemGroup>
-  <Import Project="..\..\.paket\Paket.Restore.targets" />
 </Project>

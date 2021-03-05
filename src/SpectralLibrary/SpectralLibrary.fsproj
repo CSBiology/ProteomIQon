@@ -1,17 +1,13 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFrameworks>net47;netcoreapp3.0</TargetFrameworks>
+    <TargetFrameworks>net5.0</TargetFrameworks>
     <RootNamespace>SpectralLibrary</RootNamespace>
     <AssemblyName>SpectralLibrary</AssemblyName>
     <Name>SpectralLibrary</Name>
     <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
-    <PostBuildEvent>
-      cd $(TargetDir)
-      del SQLite.Interop.dll
-    </PostBuildEvent>
   </PropertyGroup>
   <ItemGroup>
     <None Include="SpectralLibraryTest.fsx" />
@@ -20,8 +16,20 @@
     <Compile Include="Program.fs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\ProteomIQon\ProteomIQon.fsproj">
-    </ProjectReference>
+    <ProjectReference Include="..\ProteomIQon\ProteomIQon.fsproj" />
   </ItemGroup>
-  <Import Project="..\..\.paket\Paket.Restore.targets" />
+  <ItemGroup>
+    <PackageReference Include="Argu" Version="6.1.1" />
+    <PackageReference Include="MzIO" Version="0.1.0-beta" />
+    <PackageReference Include="MzIO.Processing" Version="0.1.0-beta" />
+    <PackageReference Include="MzIO.SQL" Version="0.1.0-beta" />
+    <PackageReference Include="MzIO.MzML" Version="0.1.0-beta" />
+    <PackageReference Include="BioFSharp" Version="2.0.0-beta5" />
+    <PackageReference Include="BioFSharp.Mz" Version="0.1.5-beta" />
+    <PackageReference Include="FSharp.Stats" Version="0.4.0" />
+    <PackageReference Include="FSharpAux" Version="1.0.0" />
+    <PackageReference Include="FSharpAux.IO" Version="1.0.0" />
+    <PackageReference Include="System.Data.SQLite.Core" Version="1.0.113.7" />
+    <PackageReference Include="Plotly.NET" Version="2.0.0-alpha5" />
+  </ItemGroup>
 </Project>

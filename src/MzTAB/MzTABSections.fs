@@ -5,7 +5,6 @@ open System.Linq
 open MzIO
 open FSharp.Stats
 open FSharpAux
-open FSharp.Plotly
 open ProteomIQon.Domain
 open MzTABAux
 

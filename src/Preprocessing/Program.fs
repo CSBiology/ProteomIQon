@@ -49,19 +49,6 @@ module console1 =
             |> Async.Parallel
             |> Async.RunSynchronously
             |> ignore
-
-            //files
-            //|> FSharpAux.PSeq.map (fun inp ->
-            //                        try
-            //                            Preprocessing.processFile processParams o inp
-            //                        with
-            //                        | ex ->
-            //                            printfn "%A" ex
-
-            //                      )
-            //|> FSharpAux.PSeq.withDegreeOfParallelism c
-            //|> Array.ofSeq
-            //|> ignore
             with
             | ex -> printfn "%A" ex
         else

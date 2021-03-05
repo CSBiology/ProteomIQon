@@ -2,12 +2,9 @@ namespace ProteomIQon
 
 open System
 open MzIO
-open FSharp.Stats
 open FSharpAux
 open FSharpAux.IO
-open FSharpAux.IO.SchemaReader
-open FSharpAux.IO.SchemaReader.Attribute
-open FSharp.Plotly
+open Plotly.NET
 open Deedle
 open Domain
 

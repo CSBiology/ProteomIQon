@@ -1,16 +1,12 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFrameworks>net47;netcoreapp3.0</TargetFrameworks>
+    <TargetFrameworks>net5.0</TargetFrameworks>
     <RootNamespace>SWATHAnalysis</RootNamespace>
     <AssemblyName>SWATHAnalysis</AssemblyName>
     <Name>SWATHAnalysis</Name>
     <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
-    <PostBuildEvent>
-      cd $(TargetDir)
-      del SQLite.Interop.dll
-    </PostBuildEvent>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="SWATHAnalysis.fs" />
@@ -18,7 +14,22 @@
     <Compile Include="Program.fs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\ProteomIQon\ProteomIQon.fsproj"></ProjectReference>
+    <ProjectReference Include="..\ProteomIQon\ProteomIQon.fsproj" />
   </ItemGroup>
-  <Import Project="..\..\.paket\Paket.Restore.targets" />
+  <ItemGroup>
+    <PackageReference Include="Argu" Version="6.1.1" />
+    <PackageReference Include="MzIO" Version="0.1.0-beta" />
+    <PackageReference Include="MzIO.Processing" Version="0.1.0-beta" />
+    <PackageReference Include="MzIO.SQL" Version="0.1.0-beta" />
+    <PackageReference Include="MzIO.MzML" Version="0.1.0-beta" />
+    <PackageReference Include="Microsoft.ML" Version="1.5.4" />
+    <PackageReference Include="Microsoft.ML.FastTree" Version="1.5.5" />
+    <PackageReference Include="BioFSharp" Version="2.0.0-beta5" />
+    <PackageReference Include="BioFSharp.IO" Version="2.0.0-beta5" />
+    <PackageReference Include="BioFSharp.Mz" Version="0.1.5-beta" />
+    <PackageReference Include="FSharpAux" Version="1.0.0" />
+    <PackageReference Include="FSharpAux.IO" Version="1.0.0" />
+    <PackageReference Include="FSharp.Stats" Version="0.4.0" />
+    <PackageReference Include="Plotly.NET" Version="2.0.0-alpha5" />
+  </ItemGroup>
 </Project>

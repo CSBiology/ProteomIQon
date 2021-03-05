@@ -1,68 +1,38 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFrameworks>net47;netcoreapp2.1</TargetFrameworks>
+    <TargetFrameworks>net47</TargetFrameworks>
     <RootNamespace>Preprocessing</RootNamespace>
     <AssemblyName>Preprocessing</AssemblyName>
     <Name>Preprocessing</Name>
     <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
-    <PostBuildEvent>
-      cd $(TargetDir)
-      del SQLite.Interop.dll
-    </PostBuildEvent>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net47|AnyCPU'">
     <PlatformTarget>AnyCPU</PlatformTarget>
     <Prefer32Bit>true</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
-    <EmbeddedResource Include="baf2sql_c.dll">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </EmbeddedResource>
     <Compile Include="Preprocessing.fs" />
     <Compile Include="CLIArgumentParsing.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\ProteomIQon\ProteomIQon.fsproj">
-    </ProjectReference>
+    <ProjectReference Include="..\ProteomIQon\ProteomIQon.fsproj" />
   </ItemGroup>
   <ItemGroup>
-    <Reference Include="Clearcore2.Compression">
-      <HintPath>..\..\lib\FsMzLite\Clearcore2.Compression.dll</HintPath>
-    </Reference>
-    <Reference Include="Clearcore2.Data">
-      <HintPath>..\..\lib\FsMzLite\Clearcore2.Data.dll</HintPath>
-    </Reference>
-    <Reference Include="Clearcore2.Data.AnalystDataProvider">
-      <HintPath>..\..\lib\FsMzLite\Clearcore2.Data.AnalystDataProvider.dll</HintPath>
-    </Reference>
-    <Reference Include="Clearcore2.Data.CommonInterfaces">
-      <HintPath>..\..\lib\FsMzLite\Clearcore2.Data.CommonInterfaces.dll</HintPath>
-    </Reference>
-    <Reference Include="Clearcore2.Data.WiffReader">
-      <HintPath>..\..\lib\FsMzLite\Clearcore2.Data.WiffReader.dll</HintPath>
-    </Reference>
-    <Reference Include="Clearcore2.InternalRawXYProcessing">
-      <HintPath>..\..\lib\FsMzLite\Clearcore2.InternalRawXYProcessing.dll</HintPath>
-    </Reference>
-    <Reference Include="Clearcore2.Muni">
-      <HintPath>..\..\lib\FsMzLite\Clearcore2.Muni.dll</HintPath>
-    </Reference>
-    <Reference Include="Clearcore2.ProjectUtilities">
-      <HintPath>..\..\lib\FsMzLite\Clearcore2.ProjectUtilities.dll</HintPath>
-    </Reference>
-    <Reference Include="Clearcore2.RawXYProcessing">
-      <HintPath>..\..\lib\FsMzLite\Clearcore2.RawXYProcessing.dll</HintPath>
-    </Reference>
-    <Reference Include="Clearcore2.StructuredStorage">
-      <HintPath>..\..\lib\FsMzLite\Clearcore2.StructuredStorage.dll</HintPath>
-    </Reference>
-    <Reference Include="Clearcore2.Utility">
-      <HintPath>..\..\lib\FsMzLite\Clearcore2.Utility.dll</HintPath>
-    </Reference>
+    <PackageReference Include="Argu" Version="6.1.1" />
+    <PackageReference Include="NLog" Version="4.7.8" />
+    <PackageReference Include="MzIO" Version="0.1.0-beta" />
+    <PackageReference Include="MzIO.Processing" Version="0.1.0-beta" />
+    <PackageReference Include="MzIO.SQL" Version="0.1.0-beta" />
+    <PackageReference Include="MzIO.MzML" Version="0.1.0-beta" />
+    <PackageReference Include="MzIO.Wiff" Version="0.1.0-beta2" />
+    <PackageReference Include="MzIO.Bruker" Version="0.1.0-beta" />
+    <PackageReference Include="MzIO.Thermo" Version="0.1.0-beta" />
+    <PackageReference Include="BioFSharp.Mz" Version="0.1.5-beta" />
+    <PackageReference Include="FSharp.Stats" Version="0.4.0" />
+    <PackageReference Include="System.Data.SQLite.Core" Version="1.0.113.7" />
   </ItemGroup>
-  <Import Project="..\..\.paket\Paket.Restore.targets" />
 </Project>

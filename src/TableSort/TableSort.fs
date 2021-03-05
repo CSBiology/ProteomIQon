@@ -1,30 +1,24 @@
 namespace ProteomIQon
-
 open Deedle
 open FSharpAux.IO
 open FSharpAux
 open FSharp.Stats
 open BioFSharp
 
-
 module TableSort =
-
     let createSchema (fieldType: string) (fields: string[]) =
         fields
         |> Array.map (fun s -> sprintf "%s=%s"s fieldType)
         |> String.concat ","
-
     let createSchemaProt (nameAndType: (string*string)[]) =
         nameAndType
         |> Array.map (fun (name,fieldType) -> sprintf "%s=%s" name fieldType)
         |> String.concat ","
-
     let aggregationMethodSeries (agMethod: Domain.AggregationMethod): Series<'K0,'V1> -> float =
         match agMethod with
         | Domain.AggregationMethod.Sum    -> Stats.sum
         | Domain.AggregationMethod.Mean   -> Stats.mean
         | Domain.AggregationMethod.Median -> Stats.median
-
     let aggregationMethodArray (agMethod: Domain.AggregationMethod): float[] -> float =
         match agMethod with
         | Domain.AggregationMethod.Sum ->
@@ -39,23 +33,19 @@ module TableSort =
             fun (x: float[]) ->
                 if x.Length = 0 then nan
                 else Array.median x
-
     let transform (method:Domain.Transform) =
         match method with
         |Domain.Transform.Log10       -> log10
         |Domain.Transform.Log2        -> log2
         |Domain.Transform.Ln          -> fun x -> System.Math.Log (x,System.Math.E)
         |Domain.Transform.NoTransform -> id
-
     let revertTransform (method:Domain.Transform) =
         match method with
         |Domain.Transform.Log10       -> fun x -> 10.**x
         |Domain.Transform.Log2        -> revLog2
         |Domain.Transform.Ln          -> fun x -> System.Math.E**x
         |Domain.Transform.NoTransform -> id
-
     let removeNan = Array.filter (System.Double.IsNaN >> not)
-
     let aggregateWithTukey ((tukeyC,method): float*Domain.Transform) (agMethod: Domain.AggregationMethod) (logger: NLog.Logger)(series: Series<'K1,float>): float =
         let values = 
             series.Values
@@ -82,19 +72,16 @@ module TableSort =
             |> (aggregationMethodArray agMethod)
         //logger.Trace (sprintf "Result: %f\n" res)
         res
-
     let seriesCV (series:Series<'R,float>) =
         series.Values
         |> Seq.toArray
         |> removeNan
         |> Seq.cv
-
     let seriesStDev (series:Series<'R,float>) =
         series.Values
         |> Seq.toArray
         |> removeNan
         |> Seq.stDev
-
     let seriesSEM (series:Series<'R,float>) =
         series.Values
         |> Seq.toArray
@@ -102,13 +89,11 @@ module TableSort =
         |> fun x -> 
             let stDev = Seq.stDev x
             stDev / (sqrt (float x.Length))
-
     let matchStatMeasurement (param:Domain.StatisticalMeasurement) =
         match param with
         |Domain.StatisticalMeasurement.CV    -> seriesCV, "_CV"
         |Domain.StatisticalMeasurement.StDev -> seriesStDev, "_StDev"
         |Domain.StatisticalMeasurement.SEM   -> seriesSEM, "_SEM"
-
     // works like applyLevel, but columns can be excluded and have a different function applied
     let applyLevelWithException (levelSel:_ -> 'K) (ex: 'C[]) (op:_ -> 'T) (exOp:_ -> 'T) (frame:Frame<'R, 'C>) =
         let indexBuilder = Deedle.Indices.Linear.LinearIndexBuilder.Instance
@@ -120,7 +105,6 @@ module TableSort =
                 else
                     Series.applyLevel levelSel op s)
         |> FrameUtils.fromColumns indexBuilder vectorBuilder
-
     // Looks for duplicate column keys between frame1 and frame2. Found duplicate keys are renamed in frame2 by adding the differentiator.
     // The output is an anonymous record containing the original frame1, frame2 with renamed column keys and the renamed column keys.
     let checkAndRenameDuplicateKeys (frame1: Frame<'a,string>) (frame2: Frame<'b,string>) (differentiator: string)=
@@ -135,7 +119,6 @@ module TableSort =
                 else ck
             )
         {|Frame1 = frame1; Frame2 = newFrame2; sameKeys = sameKeys|}
-
     let peptideEvidenceClassToFloat (ec: string) =
         match ec with
         | "Unknown" -> 0.
@@ -146,7 +129,6 @@ module TableSort =
         | "C3a" -> 5.
         | "C3b" -> 6.
         | _ -> failwith "invalid peptide evidence class"
-
     let filterFrame (filterOn: Domain.FilterOnField[]) (frame: Frame<'a,string>) =
         let rec filterLoop (i: int) (frameAcc: Frame<'a,string>) =
             if i = filterOn.Length then
@@ -178,9 +160,7 @@ module TableSort =
                     )
                 filterLoop (i+1) frame'
         filterLoop 0 frame
-
     let sortTables (quantFiles: string[]) (protFiles: string[]) outDirectory (param: Domain.TableSortParams) =
-
         let logger = Logging.createLogger "TableSort"
         // creates a schema that sets the column type of every column containing values to float
         let quantColsWithValues =
@@ -201,11 +181,9 @@ module TableSort =
                 |> Array.append [|"Ratio"|]
             else
                 param.QuantColumnsOfInterest
-
         let isQuantColumnOfInterest = 
             let s = quantColumnsOfInterest |> Set.ofArray
             fun x -> s.Contains x
-
         let tables =
             Array.map2 (fun (quantFile:string) protFile ->
                 let loggerFile = Logging.createLogger (System.IO.Path.GetFileNameWithoutExtension quantFile)
@@ -230,7 +208,6 @@ module TableSort =
                             let n15 = quantTable.GetColumn<float>param.EssentialFields.Heavy.Value
                             n14/n15
                         quantTable.AddColumn ("Ratio", ratios)
-
                     quantTable
                     |> filterFrame param.QuantFieldsToFilterOn
                 loggerFile.Trace "Filtering prot table"
@@ -303,47 +280,41 @@ module TableSort =
                                 |> Frame.mapColKeys (fun c -> "DistinctPeptideCount")
                             )
                         else
-                            None
+                            [||]
                     loggerFile.Trace "processing columns with tukey property"
                     let tukeyColumns =
                         param.Tukey
                         |> Array.map (fun (name,tukeyC,method) ->
-                            name,
                             alignedTables
-                            |> Frame.getCol name
-                            |> Series.applyLevel (fun (prot,pep,id) -> prot) (aggregateWithTukey (tukeyC, method) param.AggregatorPepToProt loggerFile)
+                            |> fun x -> 
+                                x
+                            |> Frame.sliceCols [name]
+                            |> fun x -> 
+                                x
+                            |> Frame.applyLevel (fun (prot,pep,id) -> prot) (aggregateWithTukey (tukeyC, method) param.AggregatorPepToProt loggerFile)
                         )
-                        |> Frame.ofColumns   
                     loggerFile.Trace "processing columns with no tukey property"
                     let noTukeyColumns =
                         fieldsWoTukey
-                        |> Array.filter (fun x -> x <> "DistinctPeptideCount")
                         |> Array.map (fun name ->
-                            name,
                             alignedTables
-                            |> Frame.getCol name
-                            |> Series.applyLevel (fun (prot,pep,id) -> prot) (aggregationMethodSeries param.AggregatorPepToProt)
+                            |> Frame.sliceCols [name]
+                            |> Frame.applyLevel (fun (prot,pep,id) -> prot) (aggregationMethodSeries param.AggregatorPepToProt)
                         )
-                        |> Frame.ofColumns
                     loggerFile.Trace (sprintf "calculating stats for %A" param.StatisticalMeasurements)
                     let statsColumns =
                         param.StatisticalMeasurements
                         |> Array.map (fun (name, method) ->
                             let seriesMethod, columnNameExtension = matchStatMeasurement method
-                            name + columnNameExtension,
                             alignedTables
-                            |> Frame.getCol name
-                            |> Series.applyLevel (fun (prot,pep,id) -> prot) seriesMethod
+                            |> Frame.sliceCols [name]
+                            |> Frame.applyLevel (fun (prot,pep,id) -> prot) seriesMethod
+                            |> Frame.mapColKeys (fun c -> c + columnNameExtension)
                         )
-                        |> Frame.ofColumns
                     loggerFile.Trace "combining all columns"
                     let combinedColumns =
-                        let s = (tukeyColumns |> Frame.addCol "DistinctPeptideCount" (distinctPeptideCount.Value))
-                        [
-                        s
-                        noTukeyColumns
-                        statsColumns
-                        ]
+                        [tukeyColumns;distinctPeptideCount;noTukeyColumns;statsColumns]
+                        |> Array.concat
                         |> Frame.mergeAll
                     combinedColumns
                     |> Frame.sortColsByKey

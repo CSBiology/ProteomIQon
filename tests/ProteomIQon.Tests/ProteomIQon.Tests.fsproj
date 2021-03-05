@@ -1,23 +1,24 @@
-<?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
+
   <PropertyGroup>
-    <TargetFramework>net47</TargetFramework>
-    <RootNamespace>ProteomIQon.Tests</RootNamespace>
-    <AssemblyName>ProteomIQon.Tests</AssemblyName>
-    <Name>ProteomIQon.Tests</Name>
     <OutputType>Exe</OutputType>
-    <AppDesignerFolder>Properties</AppDesignerFolder>
-    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <GenerateProgramFile>false</GenerateProgramFile>
   </PropertyGroup>
+
   <ItemGroup>
-    <Compile Include="Generators.fs" />
-    <Compile Include="Tests.fs" />
-    <Compile Include="RunTests.fs" />
-    <None Include="paket.references" />
+    <Compile Include="Sample.fs" />
+    <Compile Include="Main.fs" />
   </ItemGroup>
+
   <ItemGroup>
-    <ProjectReference Include="..\..\src\ProteomIQon\ProteomIQon.fsproj"></ProjectReference>
-    <ProjectReference Include="..\..\src\TableSort\TableSort.fsproj" />
+    <PackageReference Include="Expecto" Version="9.*" />
+    <PackageReference Include="YoloDev.Expecto.TestSdk" Version="0.*" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.*" />
+    <PackageReference Update="FSharp.Core" Version="4.*" />
   </ItemGroup>
-  <Import Project="..\..\.paket\Paket.Restore.targets" />
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\ProteomIQon\ProteomIQon.fsproj" />
+  </ItemGroup>
 </Project>

@@ -6,7 +6,7 @@ open System
 open FSharpAux.Colors.Table.StatisticalGraphics24
 open FSharp.Stats
 open FSharpAux.IO.SchemaReader
-open FSharp.Plotly
+open Plotly.NET
 open BioFSharp
 open Microsoft
 open Microsoft.ML
@@ -442,12 +442,12 @@ module QuantBasedAlignment =
             let charge        = evalView.GetColumn<int>("Charge")        |> Array.ofSeq
             let pepSequenceID = evalView.GetColumn<int>("PepSequenceID") |> Array.ofSeq
             let modSequenceID = evalView.GetColumn<int>("ModSequenceID") |> Array.ofSeq
-            let i             = evalView.GetColumn<float32>("SourceIntensity")  |> Seq.map float |> Array.ofSeq
-            let std           = evalView.GetColumn<float32>("SourceStabw")      |> Seq.map float |> Array.ofSeq
-            let x             = evalView.GetColumn<float32>("SourceScanTime")   |> Seq.map float |> Array.ofSeq
-            let y             = evalView.GetColumn<float32>("TargetScanTime")   |> Seq.map float |> Array.ofSeq
-            let yHat          = evalView.GetColumn<float32>("Score")            |> Seq.map float |> Array.ofSeq
-            let yIntensities    = evalView.GetColumn<float32>("TargetIntensity")  |> Seq.map float |> Array.ofSeq
+            let i             = evalView.GetColumn<float32>("SourceIntensity")     |> Seq.map float |> Array.ofSeq
+            let std           = evalView.GetColumn<float32>("SourceStabw")         |> Seq.map float |> Array.ofSeq
+            let x             = evalView.GetColumn<float32>("SourceScanTime")      |> Seq.map float |> Array.ofSeq
+            let y             = evalView.GetColumn<float32>("TargetScanTime")      |> Seq.map float |> Array.ofSeq
+            let yHat          = evalView.GetColumn<float32>("Score")               |> Seq.map float |> Array.ofSeq
+            let yIntensities    = evalView.GetColumn<float32>("TargetIntensity")   |> Seq.map float |> Array.ofSeq
             let xSource = evalView.GetColumn<float[]>("RtTrace_SourceFile")        |> Seq.map (Array.ofSeq) |> Array.ofSeq
             let ySource = evalView.GetColumn<float[]>("IntensityTrace_SourceFile") |> Seq.map (Array.ofSeq) |> Array.ofSeq
             let xTarget = evalView.GetColumn<float[]>("RtTrace_TargetFile")        |> Seq.map (Array.ofSeq) |> Array.ofSeq
