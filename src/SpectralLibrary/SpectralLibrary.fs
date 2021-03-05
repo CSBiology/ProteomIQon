@@ -19,7 +19,7 @@ open System
 open FSharpAux.Colors.Table.StatisticalGraphics24
 open FSharp.Stats
 open FSharpAux.IO.SchemaReader
-open FSharp.Plotly
+open Plotly.NET
 open BioFSharp
 open Microsoft
 

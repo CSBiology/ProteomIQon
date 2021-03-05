@@ -6,8 +6,6 @@ open FSharpAux.Colors.Table.StatisticalGraphics24
 open FSharpAux.IO
 open FSharp.Stats
 open FSharpAux.IO.SchemaReader
-open FSharp.Plotly
-open BioFSharp
 open Microsoft
 open Microsoft.ML
 open Microsoft.ML.Data   
@@ -25,6 +23,7 @@ open MzIO.Model
 open MzIO.Model.CvParam
 open MzIO.Commons.Arrays
 open System.Linq
+open Plotly.NET
 
 module ConsensusSpectralLibrary =
     
@@ -428,7 +427,7 @@ module ConsensusSpectralLibrary =
     let initAlignFastTree (ctx:MLContext) (pepsForLearning: PeptideForLearning []) = 
         let data = ctx.Data.LoadFromEnumerable(pepsForLearning)
         let split = ctx.Data.TrainTestSplit(data, testFraction= 0.1)
-        let trainer = ctx.Regression.Trainers.Gam(featureColumnName="Features",labelColumnName="TargetScanTime")
+        let trainer = ctx.Regression.Trainers.Gam (featureColumnName="Features",labelColumnName="TargetScanTime")
         let pipeline =    
             (ctx.Transforms.Concatenate("Features","SourceScanTime")|> downcastPipeline)
               .Append(trainer)

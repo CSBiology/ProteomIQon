@@ -8,10 +8,8 @@ open MzIO
 open MzIO.Binary
 open MzIO.Model
 open MzIO.Processing
-open MzIO.Bruker
 open MzIO.IO
 open MzIO.MzSQL
-open MzIO.Thermo
 open MzIO.IO.MzML
 
 module MzMLConverter =
@@ -23,22 +21,9 @@ module MzMLConverter =
 
     let getReader (instrumentOutput:string) = 
         match System.IO.Path.GetExtension instrumentOutput with 
-        | ".wiff" -> 
-            let wiffReader = new Wiff.WiffFileReader(instrumentOutput) 
-            wiffReader :> IMzIODataReader
-        | ".d" -> 
-            let bafPath = Path.Combine[|instrumentOutput;"analysis.baf"|]
-            let bafReader = new Bruker.BafFileReader(bafPath)
-            bafReader :> IMzIODataReader
         | ".mzlite" -> 
             let mzLiteReader = new MzSQL.MzSQL(instrumentOutput)
             mzLiteReader :> IMzIODataReader
-        | ".raw" -> 
-            let rawReader = new Thermo.ThermoRawFileReader(instrumentOutput)
-            rawReader :> IMzIODataReader
-        | ".RAW" -> 
-            let rawReader = new Thermo.ThermoRawFileReader(instrumentOutput)
-            rawReader :> IMzIODataReader
         | _ ->  
             failwith "Reader could not be opened. Only the formats .wiff (ABSciex), baf (Bruker), .raw (Thermo) or .mzlite (CSBiology) are supported."
 

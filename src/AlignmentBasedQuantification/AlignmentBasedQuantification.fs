@@ -2,7 +2,6 @@ namespace ProteomIQon
 
 open System.IO
 open Argu
-open System.Data.SQLite
 open System
 open ProteomIQon.Core
 open Core.MzIO
@@ -12,7 +11,7 @@ open BioFSharp.Mz.Quantification
 open BioFSharp.Mz
 open FSharpAux.IO.SchemaReader
 open FSharpAux.IO.SchemaReader.Attribute
-open FSharp.Plotly
+open Plotly.NET
 open BioFSharp
 open MzIO.Processing
 open BioFSharp.Mz.SearchDB
@@ -294,7 +293,7 @@ module AlignmentBasedQuantification =
     let optimizeWindowWidth polOrder (windowWidthToTest:int[]) noiseAutoCorr (signalOfInterest:float[]) =
         let signalOfInterest' = signalOfInterest |> vector
         //let noiseAutoCorr = Correlation.Vector.autoCorrelation 1 (blankSignal |> vector)
-        let filterF w yData = FSharp.Stats.Signal.Filtering.savitzky_golay w polOrder 0 0 yData
+        let filterF w yData = FSharp.Stats.Signal.Filtering.savitzkyGolay w polOrder 0 0 yData |> vector
         let windowWidthToTest' = windowWidthToTest |> Array.filter (fun x -> x%2 <> 0)
         let optimizedWindowWidth =
             windowWidthToTest'

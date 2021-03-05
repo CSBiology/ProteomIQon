@@ -12,7 +12,7 @@ open ProteomIQon
 open FSharpAux.IO
 open FSharpAux.IO.SchemaReader.Csv
 open Domain
-open FSharp.Plotly
+open Plotly.NET
 open FSharp.Stats
 open BioFSharp.IO.GFF3
 module ProteinInference =

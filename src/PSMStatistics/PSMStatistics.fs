@@ -220,7 +220,7 @@ module PSMStatistics =
         let executePercolator =
             let percPath = 
                 let assembly = Assembly.GetExecutingAssembly()
-                System.IO.FileInfo(assembly.Location).DirectoryName + @"\percolator-v3-01\bin\percolator.exe"
+                System.IO.FileInfo(assembly.Location).DirectoryName + @"\percolator-v3-01\binaries\percolator.exe"
             logger.Trace (sprintf "\tlooking for percolator at %s" percPath)
             let percolator = new PercolatorWrapper(OperatingSystem.Windows,percPath)
             percolator.Percolate percolatorParams

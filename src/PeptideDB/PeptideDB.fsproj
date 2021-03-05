@@ -1,19 +1,12 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFrameworks>net47;netcoreapp3.0</TargetFrameworks>
+    <TargetFrameworks>net5.0</TargetFrameworks>
     <RootNamespace>PeptideDB</RootNamespace>
     <AssemblyName>PeptideDB</AssemblyName>
     <Name>PeptideDB</Name>
     <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
-    <PostBuildEvent>
-      cd $(TargetDir)
-      del SQLite.Interop.dll
-    </PostBuildEvent>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net47|AnyCPU'">
-    <PlatformTarget>AnyCPU</PlatformTarget>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="PeptideDB.fs" />
@@ -21,7 +14,9 @@
     <Compile Include="Program.fs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\ProteomIQon\ProteomIQon.fsproj"></ProjectReference>
+    <ProjectReference Include="..\ProteomIQon\ProteomIQon.fsproj" />
+    <PackageReference Include="Argu" Version="6.1.1" />
+    <PackageReference Include="NLog" Version="4.7.8" />
+    <PackageReference Include="BioFSharp.Mz" Version="0.1.5-beta" />
   </ItemGroup>
-  <Import Project="..\..\.paket\Paket.Restore.targets" />
 </Project>

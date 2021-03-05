@@ -12,8 +12,6 @@ open MzIO.Bruker
 open MzIO.IO
 open MzIO.MzSQL
 open MzIO.Thermo
-open Core.MzIO
-open Core.MzIO.Reader
 open MzIO.Model
 
 module Preprocessing =
@@ -43,6 +41,7 @@ module Preprocessing =
                         pParams.Padding_MzTolerance
                         pParams.WindowSize
                         pParams.SpacingPerc
+
                 let initwaveletParameters yThreshold =
                     SignalDetection.Wavelet.createWaveletParameters
                         waveletParams.NumberOfScales
@@ -50,6 +49,8 @@ module Preprocessing =
                         waveletParams.Centroid_MzTolerance
                         waveletParams.SNRS_Percentile
                         waveletParams.MinSNR
+                        waveletParams.RefineMZ
+                        waveletParams.SumIntensities
                 match waveletParams.YThreshold with
                 | YThreshold.Fixed yThreshold ->
                     let paddingParams = initPaddingParameters yThreshold
@@ -81,6 +82,8 @@ module Preprocessing =
                         waveletParams.Centroid_MzTolerance
                         waveletParams.SNRS_Percentile
                         waveletParams.MinSNR
+                        waveletParams.RefineMZ
+                        waveletParams.SumIntensities
                 match waveletParams.YThreshold with
                 | YThreshold.Fixed yThreshold ->
                     logger.Trace (sprintf "ms1Centroidization with: %A" waveletParams)
@@ -170,7 +173,7 @@ module Preprocessing =
         logger.Trace "Init connection to input data base."
         // initialize Reader and Transaction
         let inReader = getReader instrumentOutput
-        let inRunID  = Core.MzIO.Reader.getDefaultRunID inReader
+        let inRunID  = getDefaultRunID inReader
         let inTr = inReader.BeginTransaction()
 
         logger.Trace "Creating mzlite file."

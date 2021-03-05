@@ -6,7 +6,7 @@ open FSharpAux.Colors.Table.StatisticalGraphics24
 open FSharpAux.IO
 open FSharp.Stats
 open FSharpAux.IO.SchemaReader
-open FSharp.Plotly
+open Plotly.NET
 open BioFSharp
 open Microsoft
 open Microsoft.ML
