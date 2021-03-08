@@ -3,6 +3,8 @@ namespace ProteomIQon
 open System.IO
 open CLIArgumentParsing
 open Argu
+open System.Reflection
+
 module console1 =
 
     [<EntryPoint>]
@@ -11,9 +13,13 @@ module console1 =
 
         let parser = ArgumentParser.Create<CLIArguments>(programName =  (System.Reflection.Assembly.GetExecutingAssembly().GetName().Name))
         let results = parser.Parse argv
-        let i = results.GetResult InstrumentOutput
-        let o = results.GetResult OutputDirectory
-        let p = results.GetResult ParamFile
+        let i' = results.GetResult InstrumentOutput
+        let o' = results.GetResult OutputDirectory
+        let p' = results.GetResult ParamFile
+        let directory = System.IO.Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)
+        let i = Path.Combine(directory, i')
+        let o = Path.Combine(directory, o')
+        let p = Path.Combine(directory, p')
         Directory.CreateDirectory(o) |> ignore
         Logging.generateConfig o
         let logger = Logging.createLogger "mzMLConverter"

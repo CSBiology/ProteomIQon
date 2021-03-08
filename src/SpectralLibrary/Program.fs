@@ -5,6 +5,7 @@ open CLIArgumentParsing
 open Argu
 open BioFSharp.Mz
 open SpectralLibrary
+open System.Reflection
 
 module console1 =
 
@@ -12,12 +13,19 @@ module console1 =
     let main argv =
         let parser = ArgumentParser.Create<CLIArguments>(programName =  (System.Reflection.Assembly.GetExecutingAssembly().GetName().Name))
         let results = parser.Parse argv
-        let i = results.GetResult InstrumentOutput
-        let d = results.GetResult PeptideDataBase
-        let ii = results.GetResult PSMStatisticsResult
-        let iii = results.GetResult QuantResult
-        let o = results.GetResult OutputDirectory
-        let p = results.GetResult ParamFile
+        let i' = results.GetResult InstrumentOutput
+        let d' = results.GetResult PeptideDataBase
+        let ii' = results.GetResult PSMStatisticsResult
+        let iii' = results.GetResult QuantResult
+        let o' = results.GetResult OutputDirectory
+        let p' = results.GetResult ParamFile
+        let directory = System.IO.Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)
+        let i = Path.Combine(directory, i')
+        let d = Path.Combine(directory, d')
+        let ii = Path.Combine(directory, ii')
+        let iii = Path.Combine(directory, iii')
+        let o = Path.Combine(directory, o')
+        let p = Path.Combine(directory, p')
         Logging.generateConfig o
         let logger = Logging.createLogger "SpectralLibrary"
         logger.Info (sprintf "InputFilePath -i = %s" i)

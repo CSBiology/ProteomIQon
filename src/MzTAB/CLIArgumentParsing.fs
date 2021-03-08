@@ -9,8 +9,8 @@ module CLIArgumentParsing =
         | [<Mandatory>] [<AltCommandLine("-i")>] TableSortFile of path:string
         | [<Mandatory>] [<AltCommandLine("-ii")>] ProtFile of path:string
         | [<Mandatory>] [<AltCommandLine("-iii")>] QuantFile of path:string
-        | [<Mandatory>] [<AltCommandLine("-iiii")>] QpsmFile of path:string
-        | [<Mandatory>] [<AltCommandLine("-d")>] PeptideDataBase of path:string 
+        | [<Mandatory>] [<AltCommandLine("-iv")>] QpsmFile of path:string
+        //| [<Mandatory>] [<AltCommandLine("-d")>] PeptideDataBase of path:string 
         | [<Mandatory>] [<AltCommandLine("-o")>] OutputFile  of path:string 
         | [<Mandatory>] [<AltCommandLine("-p")>] ParamFile of path:string
         | [<AltCommandLine("-l")>] Log_Level of level:int
