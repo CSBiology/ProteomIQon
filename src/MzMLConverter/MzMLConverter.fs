@@ -3,13 +3,10 @@ namespace ProteomIQon
 open Domain
 open Core
 open System.IO
-open BioFSharp.Mz
 open MzIO
-open MzIO.Binary
 open MzIO.Model
 open MzIO.Processing
 open MzIO.IO
-open MzIO.MzSQL
 open MzIO.IO.MzML
 
 module MzMLConverter =
@@ -18,14 +15,6 @@ module MzMLConverter =
         fun (massSpec:MassSpectrum) ->
             reader.ReadSpectrumPeaks(massSpec.ID).Peaks
             |> Core.MzIO.Peaks.unzipIMzliteArray
-
-    let getReader (instrumentOutput:string) = 
-        match System.IO.Path.GetExtension instrumentOutput with 
-        | ".mzlite" -> 
-            let mzLiteReader = new MzSQL.MzSQL(instrumentOutput)
-            mzLiteReader :> IMzIODataReader
-        | _ ->  
-            failwith "Reader could not be opened. Only the formats .wiff (ABSciex), baf (Bruker), .raw (Thermo) or .mzlite (CSBiology) are supported."
 
     let convertFile (converterParams: MzMLConverterParams)(outputDir:string) (instrumentOutput:string) =
 
@@ -37,7 +26,7 @@ module MzMLConverter =
 
         logger.Trace "Init connection to input data base."
         // initialize Reader and Transaction
-        let inReader = getReader instrumentOutput
+        let inReader = Core.MzIO.Reader.getReader instrumentOutput
         let inTr = inReader.BeginTransaction()
         let inRunID  = Core.MzIO.Reader.getDefaultRunID inReader
 
