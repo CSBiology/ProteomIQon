@@ -136,7 +136,7 @@ module SpectralLibrary =
 
         logger.Trace (sprintf "Creating Library using the following files:\n%s\n%s" instrumentOutput scoredPSMs)
 
-        let outFile = sprintf @"%s\%s.sl" outDir (System.IO.Path.GetFileNameWithoutExtension scoredPSMs)
+        let outFile = Path.Combine (outDir, ((System.IO.Path.GetFileNameWithoutExtension scoredPSMs) + ".sl"))
 
         let peptideLookUp = getThreadSafePeptideLookUpFromFileBy memoryDB dBParams
 

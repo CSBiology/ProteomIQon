@@ -15,6 +15,8 @@ open Domain
 open Plotly.NET
 open FSharp.Stats
 open BioFSharp.IO.GFF3
+open System.IO
+
 module ProteinInference =
 
     /// Represents one peptide-entry with its evidence class and the proteins it points to.
@@ -167,8 +169,7 @@ module ProteinInference =
         let outFiles: string list =
             rawFilePaths
             |> List.map (fun filePath ->
-                //let foldername = (rawFolderPath.Split ([|"\\"|], System.StringSplitOptions.None))
-                outDirectory + @"\" (*+ foldername.[foldername.Length - 1]*) + "\\" + (System.IO.Path.GetFileNameWithoutExtension filePath) + ".prot"
+                Path.Combine (outDirectory, ((System.IO.Path.GetFileNameWithoutExtension filePath) + ".prot"))
                 )
 
         let dbParams = ProteomIQon.SearchDB'.getSDBParams dbConnection

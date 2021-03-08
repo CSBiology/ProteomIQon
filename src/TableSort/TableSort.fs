@@ -4,6 +4,7 @@ open FSharpAux.IO
 open FSharpAux
 open FSharp.Stats
 open BioFSharp
+open System.IO
 
 module TableSort =
     let createSchema (fieldType: string) (fields: string[]) =
@@ -286,11 +287,7 @@ module TableSort =
                         param.Tukey
                         |> Array.map (fun (name,tukeyC,method) ->
                             alignedTables
-                            |> fun x -> 
-                                x
                             |> Frame.sliceCols [name]
-                            |> fun x -> 
-                                x
                             |> Frame.applyLevel (fun (prot,pep,id) -> prot) (aggregateWithTukey (tukeyC, method) param.AggregatorPepToProt loggerFile)
                         )
                     loggerFile.Trace "processing columns with no tukey property"
@@ -325,7 +322,7 @@ module TableSort =
         tables
         |> Frame.mergeAll
         |> fun frame ->
-            frame.SaveCsv (path=(outDirectory+(@"\TableSort.tab")),keyNames=["Proteingroup"; "Experiment"], separator=(param.SeparatorOut))
+            frame.SaveCsv (path=(Path.Combine (outDirectory, @"\TableSort.tab")),keyNames=["Proteingroup"; "Experiment"], separator=(param.SeparatorOut))
             frame
             |> Frame.pivotTable
                 (fun (proteinGroup, experiment) os -> proteinGroup)
