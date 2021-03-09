@@ -331,4 +331,4 @@ module TableSort =
                     f .GetRowAt<float> 0
                 )
                 |> Frame.expandAllCols 1
-            |> fun framePiv -> framePiv.SaveCsv (Path.Combine (outDirectory, @"TableSort_horizontal.tab")),keyNames=["Proteingroup"], separator=param.SeparatorOut)
+            |> fun framePiv -> framePiv.SaveCsv (Path.Combine (outDirectory, @"TableSort_horizontal.tab"),keyNames=["Proteingroup"], separator=param.SeparatorOut)
