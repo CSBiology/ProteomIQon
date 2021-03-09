@@ -1,11 +1,8 @@
 namespace ProteomIQon
 
-open ProteomIQon
 open NLog
 open NLog.Targets
 open NLog.Config
-open NLog.Web
-open System.Reflection
 open System.IO
 
 module Logging =
