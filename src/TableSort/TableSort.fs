@@ -322,7 +322,7 @@ module TableSort =
         tables
         |> Frame.mergeAll
         |> fun frame ->
-            frame.SaveCsv (path=(Path.Combine (outDirectory, @"\TableSort.tab")),keyNames=["Proteingroup"; "Experiment"], separator=(param.SeparatorOut))
+            frame.SaveCsv (path=(Path.Combine (outDirectory, @"TableSort.tab")),keyNames=["Proteingroup"; "Experiment"], separator=(param.SeparatorOut))
             frame
             |> Frame.pivotTable
                 (fun (proteinGroup, experiment) os -> proteinGroup)
@@ -331,4 +331,4 @@ module TableSort =
                     f .GetRowAt<float> 0
                 )
                 |> Frame.expandAllCols 1
-            |> fun framePiv -> framePiv.SaveCsv (path=(outDirectory+(@"\TableSort_horizontal.tab")),keyNames=["Proteingroup"], separator=param.SeparatorOut)
+            |> fun framePiv -> framePiv.SaveCsv (path=(outDirectory+(@"TableSort_horizontal.tab")),keyNames=["Proteingroup"], separator=param.SeparatorOut)

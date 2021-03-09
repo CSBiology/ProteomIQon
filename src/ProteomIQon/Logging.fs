@@ -1,8 +1,12 @@
 namespace ProteomIQon
 
+open ProteomIQon
 open NLog
 open NLog.Targets
 open NLog.Config
+open NLog.Web
+open System.Reflection
+open System.IO
 
 module Logging =
 
@@ -19,7 +23,7 @@ module Logging =
         //initialises base file target, can be modified
         let fileTarget = new FileTarget("file")
         //new parameters for file target
-        let fileName = new Layouts.SimpleLayout (sprintf @"%s\${logger}_log.txt" folderPath)
+        let fileName = new Layouts.SimpleLayout (Path.Combine (folderPath, @"${logger}_log.txt"))
         let layoutFile = new Layouts.SimpleLayout ("${longdate} ${logger} ${level:uppercase=true} ${message} ${exception}")
         fileTarget.FileName <- fileName
         fileTarget.Layout <- layoutFile
