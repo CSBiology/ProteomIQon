@@ -26,7 +26,8 @@ module MzMLConverter =
 
         logger.Trace "Init connection to input data base."
         // initialize Reader and Transaction
-        let inReader = Core.MzIO.Reader.getReader instrumentOutput
+        let inReader = Core.MzIO.Reader.getReader instrumentOutput :?> MzSQL.MzSQL
+        let cn = inReader.Open()
         let inTr = inReader.BeginTransaction()
         let inRunID  = Core.MzIO.Reader.getDefaultRunID inReader
 
