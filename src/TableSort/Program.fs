@@ -59,6 +59,5 @@ module console1 =
             failwith "Both, quant file path and prot file path, must be a folder."
         else
             failwith "The given paths are no valid folder paths"
-        printfn "Hit any key to exit."
-        System.Console.ReadKey() |> ignore
+        logger.Trace "Done"
         0
