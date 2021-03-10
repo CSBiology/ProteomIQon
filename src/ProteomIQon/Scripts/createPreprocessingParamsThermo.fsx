@@ -1,10 +1,10 @@
 // Learn more about F# at http://fsharp.org. See the 'F# Tutorial' project
 // for more guidance on F# programming.
-#r @"../../../packages\MzIO\lib\net45\MzIO.dll"
+#r @"../../../bin/preprocessing\net47\MzIO.dll"
+#r @"../../../bin/preprocessing\net47\BioFSharp.Mz.dll"
+#r @"../../../bin/preprocessing\net47\FSharpAux.IO.dll"
 #r "netstandard"
 #r @"../../../bin\ProteomIQon\netstandard2.0\ProteomIQon.dll"
-#r @"../../../packages\BioFSharp.Mz\lib\netstandard2.0\BioFSharp.Mz.dll"
-#r @"../../../packages\FSharpAux.IO\lib\netstandard2.0\FSharpAux.IO.dll"
 open ProteomIQon
 open ProteomIQon.Dto
 open ProteomIQon.Domain
@@ -20,6 +20,8 @@ let defaultPreprocessingParams :Dto.PreprocessingParams =
             SNRS_Percentile         = 95.
             MinSNR                  = 1.
             PaddingParams           = None
+            RefineMZ                = false
+            SumIntensities          = false
         }
 
          
