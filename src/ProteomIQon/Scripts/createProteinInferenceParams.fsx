@@ -1,9 +1,9 @@
 // Learn more about F# at http://fsharp.org. See the 'F# Tutorial' project
 // for more guidance on F# programming.
 #r "netstandard"
-#r @"../../../packages\BioFSharp\lib\netstandard2.0\BioFSharp.dll"
-#r @"../../../packages\FSharpAux.IO\lib\netstandard2.0\FSharpAux.IO.dll"
-#r @"../../../packages\BioFSharp.Mz\lib\netstandard2.0\BioFSharp.Mz.dll"
+#r @"../../../bin\proteininference\net5.0\BioFSharp.dll"
+#r @"../../../bin\proteininference\net5.0\FSharpAux.IO.dll"
+#r @"../../../bin\proteininference\net5.0\BioFSharp.Mz.dll"
 #r @"../../../bin\ProteomIQon\netstandard2.0\ProteomIQon.dll"
 
 open ProteomIQon
