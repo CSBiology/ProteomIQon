@@ -1,8 +1,8 @@
 #r "netstandard"
-#r @"../../../packages\FSharp.Stats\lib\netstandard2.0\FSharp.Stats.dll"
+#r @"../../../bin\psmbasedquantification\net5.0\FSharp.Stats.dll"
 #r @"../../../bin\ProteomIQon\netstandard2.0\ProteomIQon.dll"
-#r @"../../../packages\BioFSharp.Mz\lib\netstandard2.0\BioFSharp.Mz.dll"
-#r @"../../../packages\FSharpAux.IO\lib\netstandard2.0\FSharpAux.IO.dll"
+#r @"../../../bin\psmbasedquantification\net5.0\BioFSharp.Mz.dll"
+#r @"../../../bin\psmbasedquantification\net5.0\FSharpAux.IO.dll"
 
 open FSharp.Stats
 open FSharp.Stats.Signal

@@ -1,12 +1,12 @@
 // Learn more about F# at http://fsharp.org. See the 'F# Tutorial' project
 // for more guidance on F# programming.
 #r "netstandard"
-#r @"../../../packages\BioFSharp\lib\netstandard2.0\BioFSharp.dll"
-#r @"../../../packages\FSharpAux.IO\lib\netstandard2.0\FSharpAux.IO.dll"
-#r @"../../../packages\BioFSharp.Mz\lib\netstandard2.0\BioFSharp.Mz.dll"
+#r @"../../../bin\peptidespectrummatching\net5.0\BioFSharp.dll"
+#r @"../../../bin\peptidespectrummatching\net5.0\FSharpAux.IO.dll"
+#r @"../../../bin\peptidespectrummatching\net5.0\BioFSharp.Mz.dll"
 #r @"../../../bin\ProteomIQon\netstandard2.0\ProteomIQon.dll"
-#r @"../../../packages\FSharp.Stats\lib\netstandard2.0\FSharp.Stats.dll"
-#r @"../../../packages\FSharp.Plotly\lib\netstandard2.0\FSharp.Plotly.dll"
+#r @"../../../bin\peptidespectrummatching\net5.0\FSharp.Stats.dll"
+#r @"../../../bin\peptidespectrummatching\net5.0\Plotly.NET.dll"
 
 
 open ProteomIQon
@@ -62,7 +62,7 @@ let yData= [|83292.01773; 41548.27553; 79729.07472; 104574.355; 203244.4582; 198
 
 //let interpolate =
 //FSharp.Stats.Interpolation.LinearSpline.initInterpolate
-open FSharp.Plotly
+open Plotly.NET
 let InitialParamGuess= [|1805123.74; 23.73800891; 0.05807036296; nan|]
 let lowerBound= vector [|1263586.618; 23.56063791; 0.02903518148; nan|]
 let upperBound= vector [|2346660.862; 23.91537991; 0.08710554444; nan|]

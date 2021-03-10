@@ -2,8 +2,8 @@
 // for more guidance on F# programming.
 #r "netstandard"
 #r @"../../../bin\ProteomIQon\netstandard2.0\ProteomIQon.dll"
-#r @"../../../packages\FSharpAux.IO\lib\netstandard2.0\FSharpAux.IO.dll"
-#r @"../../../packages\FSharpAux.IO\lib\netstandard2.0\FSharpAux.dll"
+#r @"../../../bin\psmstatistics\net5.0\FSharpAux.IO.dll"
+#r @"../../../bin\psmstatistics\net5.0\FSharpAux.dll"
 
 open ProteomIQon
 open ProteomIQon.Domain
