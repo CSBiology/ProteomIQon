@@ -20,8 +20,8 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Argu" Version="6.1.1" />
-    <PackageReference Include="BioFSharp" Version="2.0.0-beta5" />
-    <PackageReference Include="BioFSharp.IO" Version="2.0.0-beta5" />
+    <PackageReference Include="BioFSharp" Version="2.0.0-beta4" />
+    <PackageReference Include="BioFSharp.IO" Version="2.0.0-beta4" />
     <PackageReference Include="BioFSharp.Mz" Version="0.1.5-beta" />
     <PackageReference Include="FSharp.Stats" Version="0.4.0" />
     <PackageReference Include="FSharpAux" Version="1.0.0" />
