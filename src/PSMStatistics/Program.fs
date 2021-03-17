@@ -35,10 +35,16 @@ module console1 =
         let p = 
             Json.ReadAndDeserialize<Dto.PSMStatisticsParams> p
             |> Dto.PSMStatisticsParams.toDomain
+        let dbConnection =
+            if File.Exists d then
+                logger.Trace (sprintf "Database found at given location (%s)" d)
+                SearchDB.getDBConnection d
+            else
+                failwith "The given path to the instrument output is neither a valid file path nor a valid directory path."
         if File.Exists i then
             logger.Info (sprintf "single file")
             logger.Trace (sprintf "Processing %s" i)
-            pepValueCalcAndProteinInference p o d i
+            pepValueCalcAndProteinInference p o dbConnection i
         elif Directory.Exists i then 
             printfn "multiple files"
             let files = 
@@ -50,12 +56,12 @@ module console1 =
                 | None      -> 1
             logger.Trace (sprintf "Program is running on %i cores" c)
             files 
-            |> FSharpAux.PSeq.map (pepValueCalcAndProteinInference p o d) 
+            |> FSharpAux.PSeq.map (pepValueCalcAndProteinInference p o dbConnection) 
             |> FSharpAux.PSeq.withDegreeOfParallelism c
             |> Array.ofSeq
             |> ignore
         else 
             failwith "The given path to the PSMs is neither a valid file path nor a valid directory path."
-
+        dbConnection.Dispose()
         logger.Info "Done"
         0

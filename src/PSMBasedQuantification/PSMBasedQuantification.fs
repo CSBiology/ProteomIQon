@@ -401,7 +401,7 @@ module PSMBasedQuantification =
         }
        
     ///
-    let quantifyPeptides (processParams:Domain.QuantificationParams) (outputDir:string) (d:string(*SQLiteConnection*)) (instrumentOutput:string) (scoredPSMs:string)  =
+    let quantifyPeptides (processParams:Domain.QuantificationParams) (outputDir:string) (cn:SQLiteConnection) (instrumentOutput:string) (scoredPSMs:string)  =
 
         let logger = Logging.createLogger (Path.GetFileNameWithoutExtension scoredPSMs)
         logger.Trace (sprintf "Input file: %s" instrumentOutput)
@@ -424,14 +424,7 @@ module PSMBasedQuantification =
                 path
         logger.Trace (sprintf "plotDirectory:%s" plotDirectory)
         logger.Trace "Copy peptide DB into Memory"
-        let cn =
-            if File.Exists d then
-                logger.Trace (sprintf "Database found at given location (%s)" d)
-                SearchDB.getDBConnection d
-            else
-                failwith "The given path to the instrument output is neither a valid file path nor a valid directory path."
         let memoryDB = SearchDB.copyDBIntoMemory cn
-        cn.Dispose()
         logger.Trace "Copy peptide DB into Memory: finished"
         logger.Trace "Get peptide lookUp function"
         let dBParams     = getSDBParams memoryDB

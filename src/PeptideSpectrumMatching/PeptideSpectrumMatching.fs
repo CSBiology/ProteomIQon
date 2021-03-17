@@ -337,7 +337,7 @@ module PeptideSpectrumMatching =
         resultWriter.Dispose()
     //    Logger.printTimenWithPre pre "Finished PSM"
 
-    let scoreSpectra (processParams:PeptideSpectrumMatchingParams) (outputDir:string) (d:string)  (instrumentOutput:string) =
+    let scoreSpectra (processParams:PeptideSpectrumMatchingParams) (outputDir:string) (cn:SQLite.SQLiteConnection)  (instrumentOutput:string) =
 
         let logger = Logging.createLogger (Path.GetFileNameWithoutExtension instrumentOutput)
 
@@ -352,15 +352,8 @@ module PeptideSpectrumMatching =
         logger.Trace (sprintf "Result file path: %s" outFilePath)
 
         logger.Trace "Copy peptide DB into Memory."
-        let cn =
-            if File.Exists d then
-                logger.Trace (sprintf "Database found at given location (%s)" d)
-                SearchDB.getDBConnection d
-            else
-                failwith "The given path to the instrument output is neither a valid file path nor a valid directory path."
         let memoryDB = SearchDB.copyDBIntoMemory cn
         let memoryDBTr = memoryDB.BeginTransaction()
-        cn.Dispose()
         logger.Trace "Copy peptide DB into Memory: finished."
 
         logger.Trace "Prepare processing functions."
