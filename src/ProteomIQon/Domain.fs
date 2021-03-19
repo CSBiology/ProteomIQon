@@ -94,10 +94,23 @@ module Domain =
             ///
         }
 
+    type StatisticalThreshold = {
+        QValueThreshold: float
+        PepValueThreshold:float 
+        }
+
+    type ScoreCutoff = {
+        SequestLike : float
+        Andromeda   :float 
+        }
+
+    type Threshold = 
+        | Estimate of StatisticalThreshold
+        | Fixed of ScoreCutoff
+
     type PSMStatisticsParams = 
         {
-            QValueThreshold             : float
-            PepValueThreshold           : float
+            Threshold                   : Threshold 
             FastaHeaderToName           : string -> string
             KeepTemporaryFiles          : bool
         }
@@ -124,6 +137,7 @@ module Domain =
             ScanTimeWindow               : float 
             MzWindow_Da                  : float 
             XicProcessing                : XicProcessing
+            TopKPSMs                     : int option
         }
        
     type BaseLineCorrection = 
