@@ -254,22 +254,22 @@ module Dto =
         ProteinNames                 : string
         }
 
-    type PSMStatisticsParams =
+
+    type PSMStatisticsParams = 
         {
-            QValueThreshold             : float
-            PepValueThreshold           : float
-            ParseProteinIDRegexPattern  : string
+            Threshold                   : Domain.Threshold 
+            ParseProteinIDRegexPattern  : string 
             KeepTemporaryFiles          : bool
         }
+
 
     module PSMStatisticsParams =
 
         let toDomain (dtoPSMStatisticsParams: PSMStatisticsParams ): Domain.PSMStatisticsParams =
             {
-                QValueThreshold                 = dtoPSMStatisticsParams.QValueThreshold
-                PepValueThreshold               = dtoPSMStatisticsParams.PepValueThreshold
-                FastaHeaderToName               = parseProteinIdUsing dtoPSMStatisticsParams.ParseProteinIDRegexPattern
-                KeepTemporaryFiles              = dtoPSMStatisticsParams.KeepTemporaryFiles
+                Threshold           = dtoPSMStatisticsParams.Threshold
+                FastaHeaderToName   = parseProteinIdUsing dtoPSMStatisticsParams.ParseProteinIDRegexPattern
+                KeepTemporaryFiles  = dtoPSMStatisticsParams.KeepTemporaryFiles
             }
 
     type PSMStatisticsResult = {

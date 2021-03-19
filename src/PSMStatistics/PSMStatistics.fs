@@ -180,62 +180,29 @@ module PSMStatistics =
         let proteinAndClvIdxLookUp = initProteinAndClvIdxLookUp memoryDB pepDBTr
         let toPercolatorIn = initToPercolatorIn maxCharge processParams.FastaHeaderToName proteinAndClvIdxLookUp
         logger.Trace "Finished preparing processing functions."
-        
-        logger.Trace "Converting psms to percolatorIn format."
-        let percolatorIn =
-            psms
-            |> Array.map toPercolatorIn
-            |> Array.filter (fun x -> nan.Equals(x.SequestNormDeltaNext) = false && nan.Equals(x.AndroNormDeltaNext) = false )
-
-        let pepSequenceIDToMissCleavagesAndProt =
-            percolatorIn
-            |> Array.filter (fun candidatePSM -> candidatePSM.Label = 1)
-            |> Array.map (fun candidatePSM -> candidatePSM.PSMId,(candidatePSM.Protein,candidatePSM.MissCleavages))
-            |> Map.ofArray
-        logger.Trace "Converting psms to percolatorIn format: finished"
-        
-        logger.Trace "Writing percolatorIn.tab. to disk"
-        percolatorIn
-        |> FSharpAux.IO.SeqIO.Seq.CSV "\t" true true
-        |> Seq.map (fun x -> FSharpAux.String.replace ";" "\t" x)
-        |> FSharpAux.IO.FileIO.writeToFile false percolatorInFilePath
-        logger.Trace "Writing percolatorIn.tab. to disk: finished"
- 
-
-        logger.Trace "Executing Percolator"
-        let percolatorParams =
-            [
-            PercolatorParams.GeneralOptions  [(GeneralOptions.PostProcessing_TargetDecoyCompetition)]
-            PercolatorParams.FileInputOptions [(FileInputOptions.PINTAB (System.IO.FileInfo(percolatorInFilePath)))]
-            PercolatorParams.FileOutputOptions [(FileOutputOptions.POUTTAB_PSMs (System.IO.FileInfo(percolatorOutFilePath)));];
-            PercolatorParams.FileOutputOptions [(FileOutputOptions.POUTTAB_DecoyPSMs (System.IO.FileInfo(percolatorDecoyOutFilePath)))]
-            ]
-        let executePercolator =
-            let percPath = 
-                let assembly = Assembly.GetExecutingAssembly()
-                System.IO.FileInfo(assembly.Location).DirectoryName + @"\percolator-v3-01\binaries\percolator.exe"
-            logger.Trace (sprintf "\tlooking for percolator at %s" percPath)
-            let percolator = new PercolatorWrapper(OperatingSystem.Windows,percPath)
-            percolator.Percolate percolatorParams
-        logger.Trace "Executing Percolator:finished"
-
-        try
-            let scoredPSMs =
-                FSharpAux.IO.SchemaReader.Csv.CsvReader<PercolatorPSMOut>(SchemaMode=SchemaModes.Fill,Verbose=false).ReadFile(percolatorOutFilePath,'\t',false,1)
-                |> Seq.filter (fun scoredPSM -> scoredPSM.QValue < processParams.QValueThreshold && scoredPSM.PosteriorErrorProbability < processParams.PepValueThreshold)
-                |> Seq.map (fun scoredPSM -> scoredPSM .PSMId,scoredPSM )
-                |> Map.ofSeq
-
-            let result: Dto.PSMStatisticsResult [] =
+        match processParams.Threshold with 
+        | Domain.Threshold.Fixed t -> 
+            let pepSequenceIDToMissCleavagesAndProt =
                 psms
-                |> Array.choose (fun candidatePSM ->
+                |> Array.map toPercolatorIn
+                |> Array.filter (fun candidatePSM -> candidatePSM.Label = 1)
+                |> Array.map (fun candidatePSM -> candidatePSM.PSMId,(candidatePSM.Protein,candidatePSM.MissCleavages))
+                |> Map.ofArray
+            let result : Dto.PSMStatisticsResult [] =
+                psms
+                |> Array.filter (fun x -> x.SequestScore > t.SequestLike && x.AndroScore > t.Andromeda)
+                |> Array.groupBy (fun x -> x.ScanNr)
+                |> Array.map (fun (scanNr,scans) ->
+                    scans
+                    |> Array.maxBy (fun x -> x.SequestScore)
+                    )
+                |> Array.choose (fun candidatePSM  ->
                                     match candidatePSM.Label with
                                     | x when x = 1 ->
-                                        match Map.tryFind candidatePSM.PSMId scoredPSMs with
-                                        | Some validPSM ->
-                                            let psmID = restorePSMID validPSM.PSMId 
-                                            let proteins,missCleavages = pepSequenceIDToMissCleavagesAndProt.[validPSM.PSMId]
-                                            Some {
+                                        let psmID = restorePSMID candidatePSM.PSMId 
+                                        let proteins,missCleavages = pepSequenceIDToMissCleavagesAndProt.[candidatePSM.PSMId]
+                                        let res : Dto.PSMStatisticsResult = 
+                                            {
                                             PSMId                       = psmID
                                             GlobalMod                   = candidatePSM.GlobalMod
                                             PepSequenceID               = candidatePSM.PepSequenceID
@@ -258,14 +225,14 @@ module PSMStatistics =
                                             XtandemScore                = candidatePSM.XtandemScore
                                             XtandemNormDeltaBestToRest  = candidatePSM.XtandemNormDeltaBestToRest
                                             XtandemNormDeltaNext        = candidatePSM.XtandemNormDeltaNext
-                                            PercolatorScore             = validPSM.PercolatorScore
-                                            QValue                      = validPSM.QValue
-                                            PEPValue                    = validPSM.PosteriorErrorProbability
+                                            PercolatorScore             = 0.
+                                            QValue                      = 0.
+                                            PEPValue                    = 0.
                                             StringSequence              = candidatePSM.StringSequence
                                             ProteinNames                = proteins 
                                             }
-                                        | None  -> 
-                                            None
+                                        res
+                                        |> Some
                                     | _ -> 
                                         None
                                 )
@@ -273,11 +240,105 @@ module PSMStatistics =
             result
             |> FSharpAux.IO.SeqIO.Seq.CSV "\t" true true
             |> FSharpAux.IO.FileIO.writeToFile false outFilePath
+                
+        | Domain.Threshold.Estimate t -> 
+            logger.Trace "Converting psms to percolatorIn format."
+            let percolatorIn =
+                psms
+                |> Array.map toPercolatorIn
+                |> Array.filter (fun x -> nan.Equals(x.SequestNormDeltaNext) = false && nan.Equals(x.AndroNormDeltaNext) = false )
 
-        with
-        | ex ->
-            logger.Trace (sprintf "%A" ex.Message)
-            printfn "%A" ex.Message
-            ()
-        logger.Trace "Done."
+            let pepSequenceIDToMissCleavagesAndProt =
+                percolatorIn
+                |> Array.filter (fun candidatePSM -> candidatePSM.Label = 1)
+                |> Array.map (fun candidatePSM -> candidatePSM.PSMId,(candidatePSM.Protein,candidatePSM.MissCleavages))
+                |> Map.ofArray
+            logger.Trace "Converting psms to percolatorIn format: finished"
+        
+            logger.Trace "Writing percolatorIn.tab. to disk"
+            percolatorIn
+            |> FSharpAux.IO.SeqIO.Seq.CSV "\t" true true
+            |> Seq.map (fun x -> FSharpAux.String.replace ";" "\t" x)
+            |> FSharpAux.IO.FileIO.writeToFile false percolatorInFilePath
+            logger.Trace "Writing percolatorIn.tab. to disk: finished"
+         
+
+            logger.Trace "Executing Percolator"
+            let percolatorParams =
+                [
+                PercolatorParams.GeneralOptions  [(GeneralOptions.PostProcessing_TargetDecoyCompetition)]
+                PercolatorParams.FileInputOptions [(FileInputOptions.PINTAB (System.IO.FileInfo(percolatorInFilePath)))]
+                PercolatorParams.FileOutputOptions [(FileOutputOptions.POUTTAB_PSMs (System.IO.FileInfo(percolatorOutFilePath)));];
+                PercolatorParams.FileOutputOptions [(FileOutputOptions.POUTTAB_DecoyPSMs (System.IO.FileInfo(percolatorDecoyOutFilePath)))]
+                ]
+            let executePercolator =
+                let percPath = 
+                    let assembly = Assembly.GetExecutingAssembly()
+                    System.IO.FileInfo(assembly.Location).DirectoryName + @"\percolator-v3-01\binaries\percolator.exe"
+                logger.Trace (sprintf "\tlooking for percolator at %s" percPath)
+                let percolator = new PercolatorWrapper(OperatingSystem.Windows,percPath)
+                percolator.Percolate percolatorParams
+            logger.Trace "Executing Percolator:finished"
+
+            try
+                let scoredPSMs =
+                    FSharpAux.IO.SchemaReader.Csv.CsvReader<PercolatorPSMOut>(SchemaMode=SchemaModes.Fill,Verbose=false).ReadFile(percolatorOutFilePath,'\t',false,1)
+                    |> Seq.filter (fun scoredPSM -> scoredPSM.QValue < t.QValueThreshold && scoredPSM.PosteriorErrorProbability < t.PepValueThreshold)
+                    |> Seq.map (fun scoredPSM -> scoredPSM .PSMId,scoredPSM )
+                    |> Map.ofSeq
+
+                let result: Dto.PSMStatisticsResult [] =
+                    psms
+                    |> Array.choose (fun candidatePSM ->
+                                        match candidatePSM.Label with
+                                        | x when x = 1 ->
+                                            match Map.tryFind candidatePSM.PSMId scoredPSMs with
+                                            | Some validPSM ->
+                                                let psmID = restorePSMID validPSM.PSMId 
+                                                let proteins,missCleavages = pepSequenceIDToMissCleavagesAndProt.[validPSM.PSMId]
+                                                Some {
+                                                PSMId                       = psmID
+                                                GlobalMod                   = candidatePSM.GlobalMod
+                                                PepSequenceID               = candidatePSM.PepSequenceID
+                                                ModSequenceID               = candidatePSM.ModSequenceID
+                                                Label                       = candidatePSM.Label
+                                                ScanNr                      = candidatePSM.ScanNr
+                                                ScanTime                    = candidatePSM.ScanTime
+                                                Charge                      = candidatePSM.Charge
+                                                PrecursorMZ                 = candidatePSM.PrecursorMZ
+                                                TheoMass                    = candidatePSM.TheoMass
+                                                AbsDeltaMass                = candidatePSM.AbsDeltaMass
+                                                PeptideLength               = candidatePSM.PeptideLength
+                                                MissCleavages               = missCleavages
+                                                SequestScore                = candidatePSM.SequestScore
+                                                SequestNormDeltaBestToRest  = candidatePSM.SequestNormDeltaBestToRest
+                                                SequestNormDeltaNext        = candidatePSM.SequestNormDeltaNext
+                                                AndroScore                  = candidatePSM.AndroScore
+                                                AndroNormDeltaBestToRest    = candidatePSM.AndroNormDeltaBestToRest
+                                                AndroNormDeltaNext          = candidatePSM.AndroNormDeltaNext
+                                                XtandemScore                = candidatePSM.XtandemScore
+                                                XtandemNormDeltaBestToRest  = candidatePSM.XtandemNormDeltaBestToRest
+                                                XtandemNormDeltaNext        = candidatePSM.XtandemNormDeltaNext
+                                                PercolatorScore             = validPSM.PercolatorScore
+                                                QValue                      = validPSM.QValue
+                                                PEPValue                    = validPSM.PosteriorErrorProbability
+                                                StringSequence              = candidatePSM.StringSequence
+                                                ProteinNames                = proteins 
+                                                }
+                                            | None  -> 
+                                                None
+                                        | _ -> 
+                                            None
+                                    )
+                logger.Trace (sprintf "Number of results: %i" result.Length)
+                result
+                |> FSharpAux.IO.SeqIO.Seq.CSV "\t" true true
+                |> FSharpAux.IO.FileIO.writeToFile false outFilePath
+
+            with
+            | ex ->
+                logger.Trace (sprintf "%A" ex.Message)
+                printfn "%A" ex.Message
+                ()
+            logger.Trace "Done."
          
