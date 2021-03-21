@@ -5,6 +5,7 @@ open CLIArgumentParsing
 open Argu
 open PeptideSpectrumMatching
 open System.Reflection
+open System
 
 module console1 =
     open BioFSharp.Mz
@@ -12,7 +13,7 @@ module console1 =
     [<EntryPoint>]
     let main argv = 
         printfn "%A" argv
-
+        printfn "ServerGC: %A" System.Runtime.GCSettings.IsServerGC
         let parser = ArgumentParser.Create<CLIArguments>(programName =  (System.Reflection.Assembly.GetExecutingAssembly().GetName().Name)) 
         let results = parser.Parse argv
         let i' = results.GetResult InstrumentOutput
