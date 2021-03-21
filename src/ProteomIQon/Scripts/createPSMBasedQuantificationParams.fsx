@@ -30,6 +30,7 @@ let defaultPreprocessingParams :Dto.QuantificationParams =
 
     let XicExtraction = 
         {
+            TopKPSMs                     = None
             ScanTimeWindow               = 2.
             MzWindow_Da                  = 0.07 
             XicProcessing                = Wavelet waveletParams
