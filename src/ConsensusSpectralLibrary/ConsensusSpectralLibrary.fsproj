@@ -9,6 +9,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <RuntimeIdentifier>win7-x64</RuntimeIdentifier>
+    <ServerGarbageCollection>true</ServerGarbageCollection>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="ConsensusSpectralLibrary.fs" />
