@@ -163,13 +163,14 @@ module Domain =
         }
 
     type FDRMethod =
-        |Conservative
-        |MAYU
-        |DecoyTargetRatio
+        | Conservative
+        | MAYU
+        | DecoyTargetRatio
 
     type QValueMethod =
-        |Storey
-        |LogisticRegression of FDRMethod
+        | Storey
+        | LogisticRegression of FDRMethod
+        | NoQValue
 
     type ProteinInferenceParams = 
         {
