@@ -30,17 +30,18 @@ module ProteinInference =
     /// Calculates the fdr with the chosen fdr method
     let initFDR (fdrMethod: FDRMethod) (data: ProteinInference'.InferredProteinClassItemScored[]) (proteinDB: (string*string)[]) =
         match fdrMethod with
-        |Conservative     -> 1.
-        |MAYU             -> FDRControl'.calculateFDRwithMAYU data proteinDB
-        |DecoyTargetRatio -> FDRControl'.calculateFDRwithDecoyTargetRatio data
+        | Conservative     -> 1.
+        | MAYU             -> FDRControl'.calculateFDRwithMAYU data proteinDB
+        | DecoyTargetRatio -> FDRControl'.calculateFDRwithDecoyTargetRatio data
 
     /// Calculates the q value with the chosen method
     let initQValue (qValueMethod: QValueMethod) bandwidth (data: ProteinInference'.InferredProteinClassItemScored[]) (proteinDB: (string*string)[]) =
         match qValueMethod with
-        |Storey-> FDRControl'.calculateQValueStorey data
-        |LogisticRegression fdrMethod ->
-            let fdr = initFDR fdrMethod data proteinDB
-            FDRControl'.calculateQValueLogReg fdr bandwidth data 
+        | Storey-> FDRControl'.calculateQValueStorey data
+        | LogisticRegression fdrMethod ->
+             let fdr = initFDR fdrMethod data proteinDB
+             FDRControl'.calculateQValueLogReg fdr bandwidth data 
+        | NoQValue -> (fun (a:'a -> bool) (i: 'i -> float) (ii: 'i -> float) -> fun x -> nan)
 
     /// Given a ggf3 and a fasta file, creates a collection of all theoretically possible peptides and the proteins they might
     /// originate from
