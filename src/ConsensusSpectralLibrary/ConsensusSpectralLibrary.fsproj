@@ -25,7 +25,7 @@
     <PackageReference Include="MzIO.Processing" Version="0.1.0-beta" />
     <PackageReference Include="MzIO.SQL" Version="0.1.0-beta" />
     <PackageReference Include="MzIO.MzML" Version="0.1.0-beta" />
-    <PackageReference Include="Microsoft.ML" Version="1.5.4" />
+    <PackageReference Include="Microsoft.ML" Version="1.5.5" />
     <PackageReference Include="Microsoft.ML.FastTree" Version="1.5.5" />
     <PackageReference Include="FSharp.Stats" Version="0.4.0" />
     <PackageReference Include="BioFSharp.Mz" Version="0.1.5-beta" />
