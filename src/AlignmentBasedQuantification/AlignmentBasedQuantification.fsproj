@@ -2,6 +2,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFrameworks>net5.0</TargetFrameworks>
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>ProteomIQon.AlignmentBasedQuantification</ToolCommandName>
     <RootNamespace>AlignmentBasedQuantification</RootNamespace>
     <AssemblyName>AlignmentBasedQuantification</AssemblyName>
     <Name>AlignmentBasedQuantification</Name>

@@ -2,6 +2,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFrameworks>net5.0</TargetFrameworks>
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>ProteomIQon.SpectralLibrary</ToolCommandName>
     <RootNamespace>SpectralLibrary</RootNamespace>
     <AssemblyName>SpectralLibrary</AssemblyName>
     <Name>SpectralLibrary</Name>

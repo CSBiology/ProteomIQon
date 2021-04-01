@@ -2,6 +2,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFrameworks>net5.0</TargetFrameworks>
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>ProteomIQon.PeptideSpectrumMatching</ToolCommandName>
     <RootNamespace>PeptideSpectrumMatching</RootNamespace>
     <AssemblyName>PeptideSpectrumMatching</AssemblyName>
     <Name>PeptideSpectrumMatching</Name>

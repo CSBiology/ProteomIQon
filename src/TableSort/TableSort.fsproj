@@ -1,6 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFrameworks>net5.0</TargetFrameworks>
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>ProteomIQon.TableSort</ToolCommandName>
     <RootNamespace>TableSort</RootNamespace>
     <AssemblyName>TableSort</AssemblyName>
     <Name>TableSort</Name>

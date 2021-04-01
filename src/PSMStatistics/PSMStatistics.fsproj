@@ -1,6 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFrameworks>net5.0</TargetFrameworks>
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>ProteomIQon.PSMStatistics</ToolCommandName>
     <RootNamespace>PSMStatistics</RootNamespace>
     <AssemblyName>PSMStatistics</AssemblyName>
     <Name>PSMStatistics</Name>

@@ -1,0 +1,15 @@
+from nuget source:
+
+dotnet tool install PeptideDB --version 0.0.1-beta --global
+
+
+
+local:
+
+important note: delete old version from local nuget cache, e.g. C:\Users\David Zimmer\.nuget\packages, or you will use the cached version instead - or you bump the version and will not
+have to do this.
+
+navigate to project root, type e.g.: 
+
+dotnet tool install --add-source pkg PSMBasedQuantification --version 0.0.1-beta --global
+dotnet tool install --add-source pkg PeptideSpectrumMatching --version 0.0.1-beta --global

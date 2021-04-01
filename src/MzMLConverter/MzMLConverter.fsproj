@@ -1,9 +1,11 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFrameworks>net5.0</TargetFrameworks>
-    <RootNamespace>Converter</RootNamespace>
-    <AssemblyName>Converter</AssemblyName>
-    <Name>Converter</Name>
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>ProteomIQon.MzMLConverter</ToolCommandName>
+    <RootNamespace>MzMLConverter</RootNamespace>
+    <AssemblyName>MzMLConverter</AssemblyName>
+    <Name>MzMLConverter</Name>
     <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>

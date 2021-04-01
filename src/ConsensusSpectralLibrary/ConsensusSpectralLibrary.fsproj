@@ -2,13 +2,15 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFrameworks>net5.0</TargetFrameworks>
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>ProteomIQon.ConsensusSpectralLibrary</ToolCommandName>
     <RootNamespace>ConsensusSpectralLibrary</RootNamespace>
     <AssemblyName>ConsensusSpectralLibrary</AssemblyName>
     <Name>ConsensusSpectralLibrary</Name>
     <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
-    <RuntimeIdentifier>win7-x64</RuntimeIdentifier>
+    <!--<RuntimeIdentifier>win7-x64</RuntimeIdentifier>-->
     <ServerGarbageCollection>true</ServerGarbageCollection>
   </PropertyGroup>
   <ItemGroup>
