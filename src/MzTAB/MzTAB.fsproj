@@ -1,6 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFrameworks>net5.0</TargetFrameworks>
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>ProteomIQon.MzTAB</ToolCommandName>
     <RootNamespace>MzTAB</RootNamespace>
     <AssemblyName>MzTAB</AssemblyName>
     <Name>MzTAB</Name>

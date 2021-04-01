@@ -197,5 +197,10 @@ module PackageTasks =
             failwith "aborted"
     }
 
+    //let packagedToolPath = Path.getFullName "./pkg/aglet/" 
+    
+    //Target.create "InstallLocalTool" (fun _ ->
+    //    runDotNet "tool install --add-source nupkg aglet" packagedToolPath
+    //)
 open BasicTasks
 BuildTask.runOrDefault copyBinaries

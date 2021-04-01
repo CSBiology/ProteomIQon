@@ -1,13 +1,15 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFrameworks>net5.0</TargetFrameworks>
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>ProteomIQon.QuantBasedAlignment</ToolCommandName>
     <RootNamespace>QuantBasedAlignment</RootNamespace>
     <AssemblyName>QuantBasedAlignment</AssemblyName>
     <Name>QuantBasedAlignment</Name>
     <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
-    <RuntimeIdentifier>win7-x64</RuntimeIdentifier>
+    <!--<RuntimeIdentifier>win7-x64</RuntimeIdentifier>-->
     <ServerGarbageCollection>true</ServerGarbageCollection>
   </PropertyGroup>
   <ItemGroup>

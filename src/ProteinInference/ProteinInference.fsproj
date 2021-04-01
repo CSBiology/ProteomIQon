@@ -2,6 +2,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFrameworks>net5.0</TargetFrameworks>
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>ProteomIQon.ProteinInference</ToolCommandName>
     <RootNamespace>ProteinInference</RootNamespace>
     <AssemblyName>ProteinInference</AssemblyName>
     <Name>ProteinInference</Name>
