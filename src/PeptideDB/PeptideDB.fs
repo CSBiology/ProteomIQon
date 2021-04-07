@@ -7,7 +7,7 @@ open BioFSharp.Mz
 
 module PeptideDB =
 
-    let createPeptideDB (processParams:PeptideDBParams) (outputDir:string) =
+    let createPeptideDB (processParams:PeptideDBParams) (outputDir:string) (fastaPath:string)=
 
         let logger = Logging.createLogger (sprintf "PeptideDB_%s" processParams.Name)
 
@@ -15,7 +15,7 @@ module PeptideDB =
             {
             Name                = processParams.Name
             DbFolder            = outputDir
-            FastaPath           = processParams.FastaPath
+            FastaPath           = fastaPath
             FastaHeaderToName   = processParams.FastaHeaderToName
             Protease            = processParams.Protease
             MinMissedCleavages  = processParams.MinMissedCleavages
