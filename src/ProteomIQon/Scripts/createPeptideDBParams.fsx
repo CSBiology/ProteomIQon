@@ -18,7 +18,6 @@ open BioFSharp.Mz.SearchDB
 let defaultPeptideDBParams: Dto.PeptideDBParams = 
         {
         Name                        = "AraTest"
-        FastaPath                   = @"D:\David\N15-test\db\Arabidopsis_thaliana.TAIR10.pep.all.fasta"
         ParseProteinIDRegexPattern  = "id"
         Protease                    = Protease.Trypsin
         MinMissedCleavages          = 0
