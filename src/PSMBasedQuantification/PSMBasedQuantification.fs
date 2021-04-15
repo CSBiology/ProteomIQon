@@ -155,7 +155,7 @@ module PSMBasedQuantification =
     let average getXic (psms:(PSMStatisticsResult*float) []) =
             let meanPrecMz   = psms |> Seq.meanBy (fun (psm,m) -> psm.PrecursorMZ)
             let meanScanTime = psms |> Seq.meanBy (fun (psm,m) -> psm.ScanTime)
-            let meanScore = psms |> Seq.averageBy (fun (psm,m) -> psm.PercolatorScore)
+            let meanScore = psms |> Seq.averageBy (fun (psm,m) -> psm.ModelScore)
             let psms' = 
                 let tmp = Array.sortByDescending (fun (psm,m) -> m) psms
                 if tmp.Length > 3 then tmp.[..2] else tmp 
