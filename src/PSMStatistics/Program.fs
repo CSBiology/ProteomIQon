@@ -44,7 +44,7 @@ module console1 =
         if File.Exists i then
             logger.Info (sprintf "single file")
             logger.Trace (sprintf "Processing %s" i)
-            pepValueCalcAndProteinInference p o dbConnection i
+            psmStats p o dbConnection i
         elif Directory.Exists i then 
             printfn "multiple files"
             let files = 
@@ -56,7 +56,7 @@ module console1 =
                 | None      -> 1
             logger.Trace (sprintf "Program is running on %i cores" c)
             files 
-            |> FSharpAux.PSeq.map (pepValueCalcAndProteinInference p o dbConnection) 
+            |> FSharpAux.PSeq.map (psmStats p o dbConnection) 
             |> FSharpAux.PSeq.withDegreeOfParallelism c
             |> Array.ofSeq
             |> ignore

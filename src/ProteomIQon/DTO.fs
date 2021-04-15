@@ -320,7 +320,7 @@ module Dto =
         [<FieldAttribute(21)>]
         XtandemNormDeltaNext         : float
         [<FieldAttribute(22)>]
-        PercolatorScore              : float
+        ModelScore                   : float
         [<FieldAttribute(23)>]
         QValue                       : float
         [<FieldAttribute(24)>]

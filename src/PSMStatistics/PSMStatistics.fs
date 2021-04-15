@@ -11,45 +11,92 @@ open FSharpAux.IO
 open FSharpAux.IO.SchemaReader
 open FSharpAux.IO.SchemaReader.Csv
 open FSharpAux.IO.SchemaReader.Attribute
-open BioFSharp.Mz.PercolatorWrapper
-open BioFSharp.Mz.PercolatorWrapper.Parameters
 open System.Reflection
-
+open Plotly.NET
+open Microsoft
+open Microsoft.ML
+open Microsoft.ML.Data 
 
 module PSMStatistics = 
     open System.IO
+    ///
+    let downcastPipeline (x : IEstimator<_>) = 
+        match x with 
+        | :? IEstimator<ITransformer> as y -> y
+        | _ -> failwith "downcastPipeline: expecting a IEstimator<ITransformer>"
 
-    type PercolatorIn = {
+    [<CLIMutable>]
+    type PSMToLearn = {
         // a combination of the spectrum ID in the rawFile, the ascending ms2 id and the chargeState in the search space seperated by '_'
+        [<ColumnName("PSMId")>]
         PSMId                        : string
-        Label                        : int
+        [<ColumnName("Label")>]
+        Label                        : bool
+        [<ColumnName("ScanNr")>]
         ScanNr                       : int
-        Charge                       : int []
-        PrecursorMZ                  : float
-        TheoMass                     : float
-        AbsDeltaMass                 : float
-        PeptideLength                : int
-        MissCleavages                : int
-        SequestScore                 : float
-        SequestNormDeltaBestToRest   : float
-        SequestNormDeltaNext         : float
-        AndroScore                   : float
-        AndroNormDeltaBestToRest     : float
-        AndroNormDeltaNext           : float
-        XtandemScore                 : float
-        XtandemNormDeltaBestToRest   : float
-        XtandemNormDeltaNext         : float
+        [<ColumnName("Charge")>]
+        Charge                       : int//float32 []
+        [<ColumnName("PrecursorMZ")>]
+        PrecursorMZ                  : float32
+        [<ColumnName("TheoMass")>]
+        TheoMass                     : float32
+        [<ColumnName("AbsDeltaMass")>]
+        AbsDeltaMass                 : float32
+        [<ColumnName("PeptideLength")>]
+        PeptideLength                : float32
+        [<ColumnName("MissCleavages")>]
+        MissCleavages                : float32
+        [<ColumnName("SequestScore")>]
+        SequestScore                 : float32
+        [<ColumnName("SequestNormDeltaBestToRest")>]
+        SequestNormDeltaBestToRest   : float32
+        [<ColumnName("SequestNormDeltaNext")>]
+        SequestNormDeltaNext         : float32
+        [<ColumnName("AndroScore")>]
+        AndroScore                   : float32
+        [<ColumnName("AndroNormDeltaBestToRest")>]
+        AndroNormDeltaBestToRest     : float32
+        [<ColumnName("AndroNormDeltaNext")>]
+        AndroNormDeltaNext           : float32
+        [<ColumnName("XtandemScore")>]
+        XtandemScore                 : float32
+        [<ColumnName("XtandemNormDeltaBestToRest")>]
+        XtandemNormDeltaBestToRest   : float32
+        [<ColumnName("XtandemNormDeltaNext")>]
+        XtandemNormDeltaNext         : float32
+        [<ColumnName("Peptide")>]
         Peptide                      : string
-        Protein                      : string 
+        [<ColumnName("Protein")>]
+        Protein                      : string
         }
 
+    [<CLIMutable>]
+    type PSMPrediction = 
+        { 
+            // ColumnName attribute is used to change the column name from
+            // its default value, which is the name of the field.
+            [<ColumnName("PredictedLabel")>]
+            PredictedLabel : bool; 
 
-    type PercolatorPSMOut = {
+            // No need to specify ColumnName attribute, because the field
+            // name "Probability" is the column name we want.
+            Probability : float32; 
+            Score : float32 
+        }
+
+    type AppliedModel = {
+        NPositivesAtFDR : int
+        CalcQValue      : float -> float
+        Model           : PSMToLearn -> PSMPrediction
+        }
+        
+
+    type PSMStats = {
         // a combination of the spectrum ID in the rawFile, the ascending ms2 id and the chargeState in the search space seperated by '_'
         [<FieldAttribute(0)>]
         PSMId                        : string;
         [<FieldAttribute(1)>]
-        PercolatorScore              : float
+        ModelScore              : float
         [<FieldAttribute(2)>]
         QValue                       : float
         [<FieldAttribute(3)>]
@@ -80,10 +127,7 @@ module PSMStatistics =
         |> String.concat " "
 
     ///
-    let initToPercolatorIn maxCharge fastaHeaderToName proteinAndClvIdxLookUp (psm:Dto.PeptideSpectrumMatchingResult) =
-        let charge =
-            let ch = psm.Charge
-            Array.init maxCharge (fun i -> if i = ch-1 then 1 else 0)
+    let initToPSMToLearn maxCharge fastaHeaderToName proteinAndClvIdxLookUp (psm:Dto.PeptideSpectrumMatchingResult) =
         let lookUp = proteinAndClvIdxLookUp psm.PepSequenceID
         let missCleavages,nTerminal,cTerminal =
             match lookUp with
@@ -111,29 +155,29 @@ module PSMStatistics =
             nTerminal + sequence + cTerminal
         {
             PSMId                        = psm.PSMId
-            Label                        = psm.Label
+            Label                        = if psm.Label = 1 then true else false 
             ScanNr                       = psm.ScanNr
-            Charge                       = charge
-            PrecursorMZ                  = psm.PrecursorMZ
-            TheoMass                     = psm.TheoMass
-            AbsDeltaMass                 = psm.AbsDeltaMass
-            PeptideLength                = psm.PeptideLength
-            MissCleavages                = missCleavages
-            SequestScore                 = psm.SequestScore
-            SequestNormDeltaBestToRest   = psm.SequestNormDeltaBestToRest
-            SequestNormDeltaNext         = psm.SequestNormDeltaNext
-            AndroScore                   = psm.AndroScore
-            AndroNormDeltaBestToRest     = psm.AndroNormDeltaBestToRest
-            AndroNormDeltaNext           = psm. AndroNormDeltaNext
-            XtandemScore                 = psm.XtandemScore
-            XtandemNormDeltaBestToRest   = psm.XtandemNormDeltaBestToRest
-            XtandemNormDeltaNext         = psm.XtandemNormDeltaNext
+            Charge                       = psm.Charge 
+            PrecursorMZ                  = float32 psm.PrecursorMZ
+            TheoMass                     = float32 psm.TheoMass
+            AbsDeltaMass                 = float32 psm.AbsDeltaMass
+            PeptideLength                = float32 psm.PeptideLength
+            MissCleavages                = float32 missCleavages
+            SequestScore                 = float32 psm.SequestScore
+            SequestNormDeltaBestToRest   = float32 psm.SequestNormDeltaBestToRest
+            SequestNormDeltaNext         = float32 psm.SequestNormDeltaNext
+            AndroScore                   = float32 psm.AndroScore
+            AndroNormDeltaBestToRest     = float32 psm.AndroNormDeltaBestToRest
+            AndroNormDeltaNext           = float32 psm.AndroNormDeltaNext
+            XtandemScore                 = float32 psm.XtandemScore
+            XtandemNormDeltaBestToRest   = float32 psm.XtandemNormDeltaBestToRest
+            XtandemNormDeltaNext         = float32 psm.XtandemNormDeltaNext
             Peptide                      = flankedPepSequence
             Protein                      = proteinNames
         }
              
     ///
-    let pepValueCalcAndProteinInference (processParams:PSMStatisticsParams) (outputDir:string) (cn:SQLiteConnection) (psms:string) =
+    let psmStats (processParams:PSMStatisticsParams) (outputDir:string) (cn:SQLiteConnection) (psms:string) =
 
         let logger = Logging.createLogger (Path.GetFileNameWithoutExtension psms)
 
@@ -143,29 +187,14 @@ module PSMStatistics =
 
         logger.Trace (sprintf "Now performing peptide spectrum matching: %s Results will be written to: %s" psms outputDir)
 
-        let percolatorInFilePath = 
-            let fileName = (Path.GetFileNameWithoutExtension psms).Replace(" ","") + ".pin"
-            Path.Combine [|outputDir;fileName|]
-
-        let percolatorOutFilePath = 
-            let fileName = (Path.GetFileNameWithoutExtension percolatorInFilePath) + ".spsm"
-            Path.Combine [|outputDir;fileName|]
-
-        let percolatorDecoyOutFilePath = 
-            let fileName = (Path.GetFileNameWithoutExtension percolatorInFilePath) + "_decoy.spsm"
-            Path.Combine [|outputDir;fileName|]
-
         let outFilePath = 
             let fileName = (Path.GetFileNameWithoutExtension psms) + ".qpsm"
             Path.Combine [|outputDir;fileName|]
 
-        logger.Trace (sprintf "percolatorInFilePath:%s" percolatorInFilePath)
-        logger.Trace (sprintf "percolatorOutFilePath:%s" percolatorOutFilePath)
-        logger.Trace (sprintf "percolatorDecoyOutFilePath:%s" percolatorDecoyOutFilePath)
         logger.Trace (sprintf "outFilePath:%s" outFilePath)
 
         logger.Trace "Copy peptide DB into Memory"
-        let memoryDB = SearchDB.copyDBIntoMemory cn
+        let memoryDB = SearchDB.copyDBIntoMemory cn 
         let pepDBTr = memoryDB.BeginTransaction()
         logger.Trace "Copy peptide DB into Memory: finished"
         
@@ -178,167 +207,274 @@ module PSMStatistics =
         logger.Trace "Prepare processing functions."
         let maxCharge = psms |> Array.map (fun x -> x.Charge) |> Array.max
         let proteinAndClvIdxLookUp = initProteinAndClvIdxLookUp memoryDB pepDBTr
-        let toPercolatorIn = initToPercolatorIn maxCharge processParams.FastaHeaderToName proteinAndClvIdxLookUp
+        let toPSMToLearn = initToPSMToLearn maxCharge processParams.FastaHeaderToName proteinAndClvIdxLookUp
         logger.Trace "Finished preparing processing functions."
-        match processParams.Threshold with 
-        | Domain.Threshold.Fixed t -> 
-            let pepSequenceIDToMissCleavagesAndProt =
-                psms
-                |> Array.map toPercolatorIn
-                |> Array.filter (fun candidatePSM -> candidatePSM.Label = 1)
-                |> Array.map (fun candidatePSM -> candidatePSM.PSMId,(candidatePSM.Protein,candidatePSM.MissCleavages))
-                |> Map.ofArray
-            let result : Dto.PSMStatisticsResult [] =
-                psms
-                |> Array.filter (fun x -> x.SequestScore > t.SequestLike && x.AndroScore > t.Andromeda)
-                |> Array.groupBy (fun x -> x.ScanNr)
-                |> Array.map (fun (scanNr,scans) ->
-                    scans
-                    |> Array.maxBy (fun x -> x.SequestScore)
-                    )
-                |> Array.choose (fun candidatePSM  ->
-                                    match candidatePSM.Label with
-                                    | x when x = 1 ->
-                                        let psmID = restorePSMID candidatePSM.PSMId 
-                                        let proteins,missCleavages = pepSequenceIDToMissCleavagesAndProt.[candidatePSM.PSMId]
-                                        let res : Dto.PSMStatisticsResult = 
-                                            {
-                                            PSMId                       = psmID
-                                            GlobalMod                   = candidatePSM.GlobalMod
-                                            PepSequenceID               = candidatePSM.PepSequenceID
-                                            ModSequenceID               = candidatePSM.ModSequenceID
-                                            Label                       = candidatePSM.Label
-                                            ScanNr                      = candidatePSM.ScanNr
-                                            ScanTime                    = candidatePSM.ScanTime
-                                            Charge                      = candidatePSM.Charge
-                                            PrecursorMZ                 = candidatePSM.PrecursorMZ
-                                            TheoMass                    = candidatePSM.TheoMass
-                                            AbsDeltaMass                = candidatePSM.AbsDeltaMass
-                                            PeptideLength               = candidatePSM.PeptideLength
-                                            MissCleavages               = missCleavages
-                                            SequestScore                = candidatePSM.SequestScore
-                                            SequestNormDeltaBestToRest  = candidatePSM.SequestNormDeltaBestToRest
-                                            SequestNormDeltaNext        = candidatePSM.SequestNormDeltaNext
-                                            AndroScore                  = candidatePSM.AndroScore
-                                            AndroNormDeltaBestToRest    = candidatePSM.AndroNormDeltaBestToRest
-                                            AndroNormDeltaNext          = candidatePSM.AndroNormDeltaNext
-                                            XtandemScore                = candidatePSM.XtandemScore
-                                            XtandemNormDeltaBestToRest  = candidatePSM.XtandemNormDeltaBestToRest
-                                            XtandemNormDeltaNext        = candidatePSM.XtandemNormDeltaNext
-                                            PercolatorScore             = 0.
-                                            QValue                      = 0.
-                                            PEPValue                    = 0.
-                                            StringSequence              = candidatePSM.StringSequence
-                                            ProteinNames                = proteins 
-                                            }
-                                        res
-                                        |> Some
-                                    | _ -> 
-                                        None
-                                )
-            logger.Trace (sprintf "Number of results: %i" result.Length)
-            result
-            |> FSharpAux.IO.SeqIO.Seq.CSV "\t" true true
-            |> FSharpAux.IO.FileIO.writeToFile false outFilePath
-                
-        | Domain.Threshold.Estimate t -> 
-            logger.Trace "Converting psms to percolatorIn format."
-            let percolatorIn =
-                psms
-                |> Array.map toPercolatorIn
-                |> Array.filter (fun x -> nan.Equals(x.SequestNormDeltaNext) = false && nan.Equals(x.AndroNormDeltaNext) = false )
-
-            let pepSequenceIDToMissCleavagesAndProt =
-                percolatorIn
-                |> Array.filter (fun candidatePSM -> candidatePSM.Label = 1)
-                |> Array.map (fun candidatePSM -> candidatePSM.PSMId,(candidatePSM.Protein,candidatePSM.MissCleavages))
-                |> Map.ofArray
-            logger.Trace "Converting psms to percolatorIn format: finished"
         
-            logger.Trace "Writing percolatorIn.tab. to disk"
-            percolatorIn
-            |> FSharpAux.IO.SeqIO.Seq.CSV "\t" true true
-            |> Seq.map (fun x -> FSharpAux.String.replace ";" "\t" x)
-            |> FSharpAux.IO.FileIO.writeToFile false percolatorInFilePath
-            logger.Trace "Writing percolatorIn.tab. to disk: finished"
-         
-
-            logger.Trace "Executing Percolator"
-            let percolatorParams =
+        logger.Trace "Prepare training pipeline"
+        let ctx = new ML.MLContext(1024)
+        let trainModel positives' negatives' =
+            let data = ctx.Data.LoadFromEnumerable(positives' + negatives')
+            let split = ctx.Data.TrainTestSplit(data, testFraction= 0.1)
+            let pipeline =    
+                (ctx.Transforms.Categorical.OneHotEncoding("OneHotCharge","Charge") |> downcastPipeline)
+                    .Append(
+                        ctx.Transforms.Concatenate(
+                            "Features",
+                            "OneHotCharge",
+                            "PrecursorMZ",
+                            "TheoMass",
+                            "AbsDeltaMass",
+                            "PeptideLength",
+                            "MissCleavages",
+                            "SequestScore",
+                            "SequestNormDeltaBestToRest",
+                            "SequestNormDeltaNext",
+                            "AndroScore",
+                            "AndroNormDeltaBestToRest",
+                            "AndroNormDeltaNext",
+                            "XtandemScore",
+                            "XtandemNormDeltaBestToRest",
+                            "XtandemNormDeltaNext"
+                            )
+                        )
+                    .Append(ctx.Transforms.NormalizeMeanVariance("featuresNorm","Features"))
+                    .Append(ctx.BinaryClassification.Trainers.FastTree(featureColumnName="featuresNorm",labelColumnName="Label"))
+             
+            let model = pipeline.Fit(split.TrainSet)    
+            let metrics = ctx.BinaryClassification.Evaluate(model.Transform(split.TestSet),labelColumnName="Label")
+            Chart.Column(
                 [
-                PercolatorParams.GeneralOptions  [(GeneralOptions.PostProcessing_TargetDecoyCompetition)]
-                PercolatorParams.FileInputOptions [(FileInputOptions.PINTAB (System.IO.FileInfo(percolatorInFilePath)))]
-                PercolatorParams.FileOutputOptions [(FileOutputOptions.POUTTAB_PSMs (System.IO.FileInfo(percolatorOutFilePath)));];
-                PercolatorParams.FileOutputOptions [(FileOutputOptions.POUTTAB_DecoyPSMs (System.IO.FileInfo(percolatorDecoyOutFilePath)))]
+                "Accuracy",metrics.Accuracy
+                "PositivePrecision",metrics.PositivePrecision
+                "PositiveRecall",metrics.PositiveRecall
+                "NegativePrecision",metrics.NegativePrecision
+                "NegativeRecall",metrics.NegativeRecall
+                "F1Score",metrics.F1Score
                 ]
-            let executePercolator =
-                let percPath = 
-                    let assembly = Assembly.GetExecutingAssembly()
-                    System.IO.FileInfo(assembly.Location).DirectoryName + @"\percolator-v3-01\binaries\percolator.exe"
-                logger.Trace (sprintf "\tlooking for percolator at %s" percPath)
-                let percolator = new PercolatorWrapper(OperatingSystem.Windows,percPath)
-                percolator.Percolate percolatorParams
-            logger.Trace "Executing Percolator:finished"
+                )
+            |> Chart.withTitle "Metrics"
+            |> Chart.Show      
+            let predF = ctx.Model.CreatePredictionEngine<PSMToLearn,PSMPrediction>(model)
+            let predict psm = 
+                psm 
+                |> predF.Predict
+            predict 
 
-            try
-                let scoredPSMs =
-                    FSharpAux.IO.SchemaReader.Csv.CsvReader<PercolatorPSMOut>(SchemaMode=SchemaModes.Fill,Verbose=false).ReadFile(percolatorOutFilePath,'\t',false,1)
-                    |> Seq.filter (fun scoredPSM -> scoredPSM.QValue < t.QValueThreshold && scoredPSM.PosteriorErrorProbability < t.PepValueThreshold)
-                    |> Seq.map (fun scoredPSM -> scoredPSM .PSMId,scoredPSM )
-                    |> Map.ofSeq
+        logger.Trace "Prepare training pipeline:finished"
 
-                let result: Dto.PSMStatisticsResult [] =
-                    psms
-                    |> Array.choose (fun candidatePSM ->
-                                        match candidatePSM.Label with
-                                        | x when x = 1 ->
-                                            match Map.tryFind candidatePSM.PSMId scoredPSMs with
-                                            | Some validPSM ->
-                                                let psmID = restorePSMID validPSM.PSMId 
-                                                let proteins,missCleavages = pepSequenceIDToMissCleavagesAndProt.[validPSM.PSMId]
-                                                Some {
-                                                PSMId                       = psmID
-                                                GlobalMod                   = candidatePSM.GlobalMod
-                                                PepSequenceID               = candidatePSM.PepSequenceID
-                                                ModSequenceID               = candidatePSM.ModSequenceID
-                                                Label                       = candidatePSM.Label
-                                                ScanNr                      = candidatePSM.ScanNr
-                                                ScanTime                    = candidatePSM.ScanTime
-                                                Charge                      = candidatePSM.Charge
-                                                PrecursorMZ                 = candidatePSM.PrecursorMZ
-                                                TheoMass                    = candidatePSM.TheoMass
-                                                AbsDeltaMass                = candidatePSM.AbsDeltaMass
-                                                PeptideLength               = candidatePSM.PeptideLength
-                                                MissCleavages               = missCleavages
-                                                SequestScore                = candidatePSM.SequestScore
-                                                SequestNormDeltaBestToRest  = candidatePSM.SequestNormDeltaBestToRest
-                                                SequestNormDeltaNext        = candidatePSM.SequestNormDeltaNext
-                                                AndroScore                  = candidatePSM.AndroScore
-                                                AndroNormDeltaBestToRest    = candidatePSM.AndroNormDeltaBestToRest
-                                                AndroNormDeltaNext          = candidatePSM.AndroNormDeltaNext
-                                                XtandemScore                = candidatePSM.XtandemScore
-                                                XtandemNormDeltaBestToRest  = candidatePSM.XtandemNormDeltaBestToRest
-                                                XtandemNormDeltaNext        = candidatePSM.XtandemNormDeltaNext
-                                                PercolatorScore             = validPSM.PercolatorScore
-                                                QValue                      = validPSM.QValue
-                                                PEPValue                    = validPSM.PosteriorErrorProbability
-                                                StringSequence              = candidatePSM.StringSequence
-                                                ProteinNames                = proteins 
-                                                }
-                                            | None  -> 
-                                                None
-                                        | _ -> 
-                                            None
-                                    )
-                logger.Trace (sprintf "Number of results: %i" result.Length)
-                result
-                |> FSharpAux.IO.SeqIO.Seq.CSV "\t" true true
-                |> FSharpAux.IO.FileIO.writeToFile false outFilePath
+        logger.Trace "Converting psms to PSMToLearn format."
+        let psmsToLearn =
+            psms
+            |> Array.map toPSMToLearn
+            |> Array.filter (fun x -> nan.Equals(x.SequestNormDeltaNext) = false && nan.Equals(x.AndroNormDeltaNext) = false )
+        logger.Trace "Converting psms to PSMToLearn format: finished"        
 
-            with
-            | ex ->
-                logger.Trace (sprintf "%A" ex.Message)
-                printfn "%A" ex.Message
-                ()
-            logger.Trace "Done."
-         
+        let bestPSMPerScan = 
+            psmsToLearn
+            |> Array.groupBy (fun x -> x.ScanNr)
+            |> Array.map (fun (psmId,psms) -> 
+                psms |> Array.maxBy (fun x -> x.SequestScore)
+                )
+        let q = BioFSharp.Mz.FDRControl.calculateQValueStorey bestPSMPerScan (fun s -> s.Label |> not) (fun s -> float s.SequestScore) (fun s -> float s.SequestScore) 
+
+        let scoreVsQ = 
+            bestPSMPerScan
+            |> Array.map (fun x -> x.SequestScore,q (float x.SequestScore))
+
+        let tar = 
+            bestPSMPerScan 
+            |> Array.filter (fun x -> x.Label) 
+            |> Array.map (fun x -> x.SequestScore )
+
+        let decoy = 
+            bestPSMPerScan 
+            |> Array.filter (fun x -> x.Label |> not) 
+            |> Array.map (fun x -> x.SequestScore)
+        [
+            [
+            Chart.Histogram(tar)
+            |> Chart.withTraceName "positives"
+
+            Chart.Histogram(decoy)
+            |> Chart.withTraceName "negatives"
+            ]
+            |> Chart.Combine
+            |> Chart.withAxisAnchor(Y=1)
+            Chart.Point(scoreVsQ)
+            |> Chart.withAxisAnchor(Y=2)
+        ]
+        |> Chart.Combine
+        |> Chart.withX_AxisStyle("Score")
+        |> Chart.withY_AxisStyle("Count",Side=StyleParam.Side.Left,Id=1,Showgrid=false)
+        |> Chart.withY_AxisStyle("FDR",Side=StyleParam.Side.Right,Id=2,Overlaying=StyleParam.AxisAnchorId.Y 1,Showgrid=false,MinMax=(0.,0.5))
+        |> Chart.withTitle (sprintf "#%i with q < 0.01" (scoreVsQ |> Array.filter (fun x -> snd x <= 0.01) |> Array.length))
+        |> Chart.Show
+
+        logger.Trace "Selecting nositives for training"
+        let positives' = 
+            bestPSMPerScan 
+            |> Array.filter (fun x -> q (float x.SequestScore) < 0.001)
+            |> Array.filter (fun x -> x.Label = true)
+            |> Array.map (fun x -> x.ScanNr,x)
+            |> Map.ofArray
+        logger.Trace "Selecting negatives for training"
+        let negatives' =
+            psmsToLearn
+            |> Array.filter (fun x -> positives' |> Map.containsKey x.ScanNr |> not)
+            |> Array.filter (fun x -> x.Label = false)
+            |> Set.ofArray
+        
+        let predict = trainModel (positives'|> Map.toArray |> Array.map snd |> Set.ofArray) negatives' 
+        
+        let applyModel iteration (trainedModel: PSMToLearn -> PSMPrediction) psms =
+            let bestPSMPerScan = 
+                psms
+                |> Array.groupBy (fun x -> x.ScanNr)
+                |> Array.map (fun (psmId,psms) -> 
+                    psms 
+                    |> Array.maxBy (fun x -> 
+                        (trainedModel x).Score
+                        )
+                    )
+            let getQ = BioFSharp.Mz.FDRControl.calculateQValueStorey bestPSMPerScan (fun x -> x.Label |> not) (fun x -> float (trainedModel x).Score ) (fun x -> float (trainedModel x).Score) 
+            
+            let scoreVsQ = 
+                bestPSMPerScan
+                |> Array.map (fun x -> (trainedModel x).Score, getQ (float (trainedModel x).Score))
+            let tar = 
+                bestPSMPerScan 
+                |> Array.filter (fun x -> x.Label) 
+                |> Array.map (fun x -> (trainedModel x).Score )
+            let decoy = 
+                bestPSMPerScan 
+                |> Array.filter (fun x -> x.Label |> not) 
+                |> Array.map (fun x -> (trainedModel x).Score )
+            let nPosTar = (scoreVsQ |> Array.filter (fun x -> snd x <= 0.001) |> Array.length)
+            [
+                [
+                Chart.Histogram(tar)
+                |> Chart.withTraceName "positives"
+
+                Chart.Histogram(decoy)
+                |> Chart.withTraceName "negatives"
+                ]
+                |> Chart.Combine
+                |> Chart.withAxisAnchor(Y=1)
+                Chart.Point(scoreVsQ)
+                |> Chart.withAxisAnchor(Y=2)
+            ]
+            |> Chart.Combine
+            |> Chart.withX_AxisStyle("Score")
+            |> Chart.withY_AxisStyle("Count",Side=StyleParam.Side.Left,Id=1,Showgrid=false)
+            |> Chart.withY_AxisStyle("FDR",Side=StyleParam.Side.Right,Id=2,Overlaying=StyleParam.AxisAnchorId.Y 1,Showgrid=false,MinMax=(0.,0.5))
+            |> Chart.withTitle (sprintf "#iteration: %i, %i with q < 0.01" iteration (scoreVsQ |> Array.filter (fun x -> snd x <= 0.01) |> Array.length))
+            |> Chart.Show
+            {
+                NPositivesAtFDR = nPosTar
+                CalcQValue     = getQ
+                Model          = trainedModel
+            }
+        
+        let initModel = applyModel 0 predict psmsToLearn
+        let refinedModel = 
+            [0 .. 20]
+            |> List.fold (fun (acc:AppliedModel) i -> 
+                    let bestPSMPerScan = 
+                        psmsToLearn
+                        |> Array.groupBy (fun x -> x.ScanNr)
+                        |> Array.map (fun (psmId,psms) -> 
+                            psms 
+                            |> Array.maxBy (fun x -> 
+                                (acc.Model x).Score
+                                )
+                            )   
+                    logger.Trace "Selecting positives for training"
+                    let positives' = 
+                        bestPSMPerScan 
+                        |> Array.filter (fun x -> (acc.Model x).Score |> float |> acc.CalcQValue  < 0.001)
+                        |> Array.filter (fun x -> x.Label = true)
+                        |> Array.map (fun x -> x.ScanNr,x)
+                        |> Map.ofArray
+                    logger.Trace "Selecting negatives for training"
+                    let negatives' =
+                        psmsToLearn
+                        |> Array.filter (fun x -> positives' |> Map.containsKey x.ScanNr |> not)
+                        |> Array.filter (fun x -> x.Label = false)
+                        |> Set.ofArray
+                    logger.Trace (sprintf "Training iteration #%i with %i positives and %i negatives" i positives'.Count negatives'.Count )
+                    let predict = trainModel (positives'|> Map.toArray |> Array.map snd |> Set.ofArray)  negatives' 
+                    let tmp = applyModel i predict psmsToLearn                    
+                    if tmp.NPositivesAtFDR > acc.NPositivesAtFDR then tmp else acc
+                ) initModel
+        
+        let bestPSMPerScan = 
+            psmsToLearn
+            |> Array.groupBy (fun x -> x.ScanNr)
+            |> Array.map (fun (psmId,psms) -> 
+                psms 
+                |> Array.maxBy (fun x -> 
+                    (refinedModel.Model x).Score
+                    )
+                )
+
+        let qpsm = 
+            bestPSMPerScan 
+            |> Array.filter (fun x -> (refinedModel.Model x).Score |> float |> refinedModel.CalcQValue  < 0.01)
+            |> Array.filter (fun x -> x.Label = true)
+            |> Array.map (fun x -> x.PSMId,x)
+            |> Map.ofArray
+
+        let result: Dto.PSMStatisticsResult [] =
+            psms
+            |> Array.choose (fun candidatePSM ->
+                                match candidatePSM.Label with
+                                | x when x = 1 ->
+                                    match Map.tryFind candidatePSM.PSMId qpsm with
+                                    | Some validPSM ->
+                                        let psmID = restorePSMID validPSM.PSMId 
+                                        let score = (refinedModel.Model validPSM).Score |> float 
+                                        let qValue = refinedModel.CalcQValue score 
+                                        Some {
+                                        PSMId                       = psmID
+                                        GlobalMod                   = candidatePSM.GlobalMod
+                                        PepSequenceID               = candidatePSM.PepSequenceID
+                                        ModSequenceID               = candidatePSM.ModSequenceID
+                                        Label                       = candidatePSM.Label
+                                        ScanNr                      = candidatePSM.ScanNr
+                                        ScanTime                    = candidatePSM.ScanTime
+                                        Charge                      = candidatePSM.Charge
+                                        PrecursorMZ                 = candidatePSM.PrecursorMZ
+                                        TheoMass                    = candidatePSM.TheoMass
+                                        AbsDeltaMass                = candidatePSM.AbsDeltaMass
+                                        PeptideLength               = candidatePSM.PeptideLength
+                                        MissCleavages               = int validPSM.MissCleavages
+                                        SequestScore                = candidatePSM.SequestScore
+                                        SequestNormDeltaBestToRest  = candidatePSM.SequestNormDeltaBestToRest
+                                        SequestNormDeltaNext        = candidatePSM.SequestNormDeltaNext
+                                        AndroScore                  = candidatePSM.AndroScore
+                                        AndroNormDeltaBestToRest    = candidatePSM.AndroNormDeltaBestToRest
+                                        AndroNormDeltaNext          = candidatePSM.AndroNormDeltaNext
+                                        XtandemScore                = candidatePSM.XtandemScore
+                                        XtandemNormDeltaBestToRest  = candidatePSM.XtandemNormDeltaBestToRest
+                                        XtandemNormDeltaNext        = candidatePSM.XtandemNormDeltaNext
+                                        ModelScore                  = score
+                                        QValue                      = qValue
+                                        PEPValue                    = nan
+                                        StringSequence              = candidatePSM.StringSequence
+                                        ProteinNames                = validPSM.Protein
+                                        }
+                                    | None  -> 
+                                        None
+                                | _ -> 
+                                    None
+                            )
+        logger.Trace (sprintf "Number of results: %i" result.Length)
+        result
+        |> FSharpAux.IO.SeqIO.Seq.CSV "\t" true true
+        |> FSharpAux.IO.FileIO.writeToFile false outFilePath
+
+        logger.Trace "Done."
+
+
+       
+
