@@ -13,9 +13,9 @@ open MzIO.Processing
 open FSharpAux.IO
 module PeptideSpectrumMatching =
 
-    let tryGet tolerance (xTar:float) (data:#seq<(float*float)>) = 
-        let xTmp,yTmp = data |> Seq.minBy (fun (x,y) -> abs(x-xTar))
-        if abs(xTmp-xTar) < tolerance then Some(xTmp,yTmp) else None
+    //let tryGet tolerance (xTar:float) (data:#seq<(float*float)>) = 
+    //    let xTmp,yTmp = data |> Seq.minBy (fun (x,y) -> abs(x-xTar))
+    //    if abs(xTmp-xTar) < tolerance then Some(xTmp,yTmp) else None
 
     open System.IO
     open System.Data
@@ -146,11 +146,11 @@ module PeptideSpectrumMatching =
                                             let recSpec =
                                                 Peaks.unzipIMzliteArray (reader.ReadSpectrumPeaks(ms2Id).Peaks)
                                                 |> fun (mzData,intensityData) -> PeakArray.zip mzData intensityData
-                                            let floorToClosest10 x = 
-                                                Math.Floor(x / 10.) * 10.            
-                                            let ceilToClosest10 x =
-                                                Math.Ceiling(x / 10.) * 10.
-                                            let scanRange = //processParams.MS2ScanRange
+                                            let scanRange = 
+                                                let floorToClosest10 x = 
+                                                    Math.Floor(x / 10.) * 10.            
+                                                let ceilToClosest10 x =
+                                                    Math.Ceiling(x / 10.) * 10.
                                                 let low = Math.Max(0.,System.Math.Round((recSpec |> Array.minBy (fun x -> x.Mz)).Mz,0) |> floorToClosest10)
                                                 let top = Math.Round((recSpec |> Array.maxBy (fun x -> x.Mz)).Mz,0)  |> ceilToClosest10
                                                 low,top
@@ -162,30 +162,10 @@ module PeptideSpectrumMatching =
                                                 let lookUpResults :SearchDB.LookUpResult<AminoAcids.AminoAcid> list =
                                                     lookUpF lowerMass upperMass
                                                 lookUpResults
-                                            let precMz' = 
-                                                let ms1Spec = 
-                                                    Peaks.unzipIMzliteArray (reader.ReadSpectrumPeaks(assCh.PrecursorSpecID).Peaks)
-                                                    ||> Seq.zip
-                                                let mz = assCh.PrecursorMZ
-                                                let monoIso = tryGet (3. * peakPosStdDev) mz ms1Spec
-                                                let mzMinusOne = mz - (Mass.Table.PMassInU / (float ch)) 
-                                                let minusOne = tryGet (3. * peakPosStdDev) mzMinusOne ms1Spec
-                                                match monoIso,minusOne with
-                                                //| Some (x,picked),Some (x2,minusOne) -> 
-                                                //    if (picked / minusOne) > 0.8 then Some x2 else None
-                                                //| Some (x,picked),None -> 
-                                                //    Some mzMinusOne
-                                                
-                                                | _ -> 
-                                                    //None
-                                                    Some mzMinusOne
+                                            let mzMinusOne = assCh.PrecursorMZ - (Mass.Table.PMassInU / (float ch)) 
                                             let lookUpResults = 
-                                                match precMz' with 
-                                                | Some pMz -> 
-                                                    (getLookUpsResults pMz)@(getLookUpsResults assCh.PrecursorMZ)
-                                                    |> List.distinctBy (fun x -> x.ModSequenceID)
-                                                | None -> 
-                                                    (getLookUpsResults assCh.PrecursorMZ)
+                                                (getLookUpsResults mzMinusOne)@(getLookUpsResults assCh.PrecursorMZ)
+                                                |> List.distinctBy (fun x -> x.ModSequenceID)
                                                 
                                             let theoSpecsN =
                                                 lookUpResults
