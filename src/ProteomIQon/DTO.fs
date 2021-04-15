@@ -140,7 +140,6 @@ module Dto =
         {
         // name of database i.e. Creinhardtii_236_protein_full_labeled
         Name                        : string
-        FastaPath                   : string
         ParseProteinIDRegexPattern  : string
         Protease                    : Protease
         MinMissedCleavages          : int
@@ -161,7 +160,6 @@ module Dto =
         let toDomain (dtoSearchDbParams: PeptideDBParams ) =
             {
             Name                = dtoSearchDbParams.Name
-            FastaPath           = dtoSearchDbParams.FastaPath
             FastaHeaderToName   = parseProteinIdUsing dtoSearchDbParams.ParseProteinIDRegexPattern
             Protease            = Protease.toDomain dtoSearchDbParams.Protease
             MinMissedCleavages  = dtoSearchDbParams.MinMissedCleavages
