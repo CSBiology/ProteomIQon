@@ -13,11 +13,13 @@ module console1 =
 
         let parser = ArgumentParser.Create<CLIArguments>(programName =  (System.Reflection.Assembly.GetExecutingAssembly().GetName().Name))
         let results = parser.Parse argv
+        let inputFasta = results.TryGetResult FastaPath
         let outputDir = results.TryGetResult OutputDirectory
         let paramF = results.TryGetResult ParamFile
         let directory = System.IO.Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)
-        match outputDir, paramF with
-        | Some o' , Some p' ->
+        match inputFasta, outputDir, paramF with
+        | Some i', Some o' , Some p' ->
+            let i = Path.Combine(directory, i')
             let o = Path.Combine(directory, o')
             let p = Path.Combine(directory, p')
             Logging.generateConfig outputDir.Value
@@ -30,6 +32,6 @@ module console1 =
                 Json.ReadAndDeserialize<Dto.PeptideDBParams> p
                 |> Dto.PeptideDBParams.toDomain
             
-            PeptideDB.createPeptideDB processParams o
+            PeptideDB.createPeptideDB processParams o i
         | _ -> failwith "parameterfile or output directory have no valid path or are no valid file"
         0

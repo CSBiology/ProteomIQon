@@ -1628,6 +1628,75 @@ module FDRControl' =
         else
             ProteinInference'.createInferredProteinClassItemQValue item.GroupOfProteinIDs item.Class item.PeptideSequence item.TargetScore item.DecoyScore (qValueF item.TargetScore) item.Decoy item.DecoyBigger true
 
+    /// Creates a Histogram based on a given score of a target/decoy dataset. Each bin contains the information of the total count, the decoy count and the median score.
+    /// (Bin, Count, DecoyCount, Median Score)
+    let createTargetDecoyHis bandwidth (isDecoy: 'a -> bool) (decoyScoreF: 'a -> float) (targetScoreF: 'a -> float) (data: 'a[]) =
+        let halfBw = bandwidth / 2.0
+        let scoreDecoyInfo =
+            data
+            |> Array.map (fun x -> 
+                if isDecoy x then
+                    {|Score = decoyScoreF x; Decoy = true|}
+                else
+                    {|Score = targetScoreF x; Decoy = false|}
+            )
+        scoreDecoyInfo
+        |> Array.groupBy (fun x ->
+            floor (x.Score / bandwidth)) 
+        |> Array.map (fun (k,values) -> 
+            let count = (Array.length(values))
+            let decoyCount = (values |> Array.filter (fun x -> x.Decoy = true) |> Array.length)
+            let medianScore = values |> Array.map (fun x -> x.Score) |> Array.median
+            // first part of the tuple only needed for debugging
+            if k < 0. then
+                ((k  * bandwidth) + halfBw, count, decoyCount, medianScore)
+            else
+                ((k + 1.) * bandwidth - halfBw, count, decoyCount, medianScore)
+        )
+
+    /// Calculates the PEP value based on the ratio of Decoys to targets at a given score
+    let calculatePEPValues (totalCountF: 'a -> float) (decoyCountF: 'a -> float) (scoreF: 'a -> float) (dataFreq: 'a[]) = 
+        dataFreq
+        |> Array.map (fun x -> 
+            scoreF x,(decoyCountF x)/(totalCountF x)
+        )
+        |> Array.sortBy fst
+        |> Array.toList
+
+    /// Monotonizes the calculated PEP values
+    let monotonizePepValues (scoreF: 'a -> float) (pepF: 'a -> float) (pepData: 'a list) =
+        let sortedPEPData =
+            pepData
+            |> List.sortBy (fun x -> scoreF x)
+            |> List.map (fun x -> scoreF x, pepF x)
+            |> List.rev
+        let monotone =
+            let head::tail = sortedPEPData
+            tail
+            |> List.fold (fun (acc: (float*float) list) (score, newPEPValue) ->
+                let _,pepValue = acc.Head
+                if newPEPValue < pepValue then
+                    (score, pepValue)::acc
+                else
+                    (score, newPEPValue)::acc
+            )[head]
+            |> Array.ofList
+            |> Array.sortBy fst
+            |> Array.unzip
+        monotone
+
+    /// Calculates monotonized PEP values for a target/decoy dataset based on the decoy/target ratio. Entries are binned with a given bandwidth based on the score. 
+    /// Returns a function which maps from score to PEP value based on a Linear Spline.
+    let initCalculateMonotonePEPValues bandwidth (isDecoy: 'a -> bool) (decoyScoreF: 'a -> float) (targetScoreF: 'a -> float) (data: 'a[]) =
+        let targetDecoyHis = createTargetDecoyHis bandwidth (isDecoy: 'a -> bool) (decoyScoreF: 'a -> float) (targetScoreF: 'a -> float) (data: 'a[])
+        let pep = calculatePEPValues (fun (_,count,_,_) -> float count) (fun (_,_,decoyCount,_) -> float decoyCount) (fun (_,_,_,medianScore) -> medianScore) targetDecoyHis
+        let score, monotonePEPVal = monotonizePepValues (fun (score,_) -> score) (fun (_,pep) -> pep) pep
+        // Linear Interpolation
+        let linearSplineCoeff = LinearSpline.initInterpolateSorted score monotonePEPVal
+        // takes a score from the dataset and assigns it a q value
+        let interpolation = LinearSpline.interpolate linearSplineCoeff
+        interpolation
+
 module Fragmentation' =
 
     type LadderedTaggedMass (iontype:Ions.IonTypeFlag,mass:float, number:int, charge: float) =

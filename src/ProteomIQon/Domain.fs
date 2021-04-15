@@ -54,7 +54,6 @@ module Domain =
     type PeptideDBParams = 
         {
         Name                : string
-        FastaPath           : string
         FastaHeaderToName   : string -> string
         Protease            : Digestion.Protease
         MinMissedCleavages  : int
