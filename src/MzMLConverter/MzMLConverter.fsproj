@@ -16,9 +16,6 @@
     <Prefer32Bit>true</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
-    <Content Remove="C:\Users\David Zimmer\.nuget\packages\mzio.wiff\0.1.0-beta\contentFiles\any\netstandard2.1\License\Clearcore2License_Placeholder.txt" />
-  </ItemGroup>
-  <ItemGroup>
     <Compile Include="MzMLConverter.fs" />
     <Compile Include="CLIArgumentParsing.fs" />
     <Compile Include="Program.fs" />
