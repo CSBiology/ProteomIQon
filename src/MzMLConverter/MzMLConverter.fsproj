@@ -10,10 +10,6 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <ServerGarbageCollection>true</ServerGarbageCollection>
-    <PostBuildEvent>
-      cd $(TargetDir)
-      del SQLite.Interop.dll
-    </PostBuildEvent>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net47|AnyCPU'">
     <PlatformTarget>AnyCPU</PlatformTarget>
