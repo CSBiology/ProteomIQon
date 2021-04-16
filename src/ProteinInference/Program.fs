@@ -5,6 +5,7 @@ open CLIArgumentParsing
 open Argu
 open BioFSharp.Mz
 open System.Reflection
+open FSharpAux
 
 module console1 =
 
@@ -20,7 +21,6 @@ module console1 =
         let o'     = results.GetResult OutputDirectory
         let p'     = results.GetResult ParamFile
         let directory = System.IO.Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)
-        let i = Path.Combine(directory, i')
         let d = Path.Combine(directory, d')
         let gff3 =
             match gff3' with
@@ -31,7 +31,7 @@ module console1 =
         let p = Path.Combine(directory, p')
         Logging.generateConfig o
         let logger = Logging.createLogger "ProteinInference"
-        logger.Info (sprintf "InputFilePath -i = %s" i)
+        logger.Info (sprintf "InputFilePath -i = %A" i')
         logger.Info (sprintf "Peptide data base -d = %s" d)
         //logger.Info (sprintf "InputGFF3Path -g = %s" gff3)
         logger.Info (sprintf "OutputFilePath -o = %s" o)
@@ -49,13 +49,43 @@ module console1 =
         let proteinInferenceParams = 
                 Json.ReadAndDeserialize<Dto.ProteinInferenceParams> p
                 |> Dto.ProteinInferenceParams.toDomain
-        if File.Exists i then
+        if i'.Contains(";") then
+            let stringList =
+                i'
+                |> String.replace "\"" ""
+                |> String.split ';'
+                |> Array.map (fun x -> x.Trim())
+            let pathList =
+                stringList
+                |> Array.map (fun path -> Path.Combine(directory, path))
+            let isFileList =
+                pathList
+                |> Array.map (fun path -> File.Exists path)
+                |> Array.forall (fun bool -> bool = true)
+            let isDirectoryList =
+                pathList
+                |> Array.map (fun path -> Directory.Exists path)
+                |> Array.forall (fun bool -> bool = true)
+            if isFileList then
+                logger.Info (sprintf "file list")
+                ProteinInference.inferProteins gff3 dbConnection proteinInferenceParams o pathList
+            elif isDirectoryList then
+                logger.Info (sprintf "directory list")
+                let fileList =
+                    pathList
+                    |> Array.collect (fun path ->
+                        Directory.GetFiles(path,("*.qpsm"))
+                    )
+                ProteinInference.inferProteins gff3 dbConnection proteinInferenceParams o fileList
+            else
+                failwith "The given list to the PSMs is neither a valid file list nor a valid directory list."
+        elif File.Exists (Path.Combine(directory, i')) then
             logger.Info (sprintf "single file")
-            ProteinInference.inferProteins gff3 dbConnection proteinInferenceParams o [|i|]
-        elif Directory.Exists i then
+            ProteinInference.inferProteins gff3 dbConnection proteinInferenceParams o [|Path.Combine(directory, i')|]
+        elif Directory.Exists (Path.Combine(directory, i')) then
             logger.Info (sprintf "multiple files")
             let files = 
-                Directory.GetFiles(i,("*.qpsm"))
+                Directory.GetFiles(Path.Combine(directory, i'),("*.qpsm"))
             ProteinInference.inferProteins gff3 dbConnection proteinInferenceParams o files
         else 
             failwith "The given path to the PSMs is neither a valid file path nor a valid directory path."
