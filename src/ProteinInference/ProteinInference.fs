@@ -50,18 +50,16 @@ module ProteinInference =
     /// its evidence class.
     ///
     /// No experimental data
-    let createClassItemCollection gff3Path (memoryDB: SQLiteConnection) regexPattern rawFolderPath=
+    let createClassItemCollection gff3Path (memoryDB: SQLiteConnection) regexPattern rawFilePaths=
 
         let logger = Logging.createLogger "ProteinInference_createClassItemCollection"
 
         logger.Trace (sprintf "Regex pattern: %s" regexPattern)
 
-        let rawFilePaths = System.IO.Directory.GetFiles (rawFolderPath, "*.qpsm")
-                           |> List.ofArray
-
         // retrieves peptide sequences and IDs from input files
         let psmInputs =
             rawFilePaths
+            |> List.ofArray
             |> List.map (fun filePath ->
                 Seq.fromFileWithCsvSchema<ProteomIQon.ProteinInference'.PSMInput>(filePath, '\t', true,schemaMode = SchemaModes.Fill)
                 |> Seq.toList
@@ -159,19 +157,16 @@ module ProteinInference =
             printfn "\nERROR: Could not build classification map"
             failwithf "\t%s" err.Message
 
-    let readAndInferFile classItemCollection protein peptide groupFiles outDirectory rawFolderPath psmInputs (dbConnection: SQLiteConnection) (qValMethod: Domain.QValueMethod) =
+    let readAndInferFile classItemCollection protein peptide groupFiles outDirectory (rawFilePaths: string []) psmInputs (dbConnection: SQLiteConnection) (qValMethod: Domain.QValueMethod) =
 
         let logger = Logging.createLogger "ProteinInference_readAndInferFile"
 
-        let rawFilePaths = 
-            System.IO.Directory.GetFiles (rawFolderPath, "*.qpsm")
-            |> Array.toList
-
         let outFiles: string list =
             rawFilePaths
+            |> List.ofArray
             |> List.map (fun filePath ->
                 Path.Combine (outDirectory, ((System.IO.Path.GetFileNameWithoutExtension filePath) + ".prot"))
-                )
+            )
 
         let dbParams = ProteomIQon.SearchDB'.getSDBParams dbConnection
 
@@ -415,11 +410,11 @@ module ProteinInference =
                 |> Seq.write outFile
             ) psmInputs
 
-    let inferProteins gff3Location dbConnection (proteinInferenceParams: ProteinInferenceParams) outDirectory rawFolderPath =
+    let inferProteins gff3Location dbConnection (proteinInferenceParams: ProteinInferenceParams) outDirectory rawFilePaths =
 
         let logger = Logging.createLogger "ProteinInference_inferProteins"
 
-        logger.Trace (sprintf "InputFilePath = %s" rawFolderPath)
+        logger.Trace (sprintf "InputFilePath = %A" rawFilePaths)
         logger.Trace (sprintf "InputGFF3Path = %A" gff3Location)
         logger.Trace (sprintf "OutputFilePath = %s" outDirectory)
         logger.Trace (sprintf "Protein inference parameters = %A" proteinInferenceParams)
@@ -429,7 +424,7 @@ module ProteinInference =
         logger.Trace "Copy peptide DB into Memory: finished."
 
         logger.Trace "Start building ClassItemCollection"
-        let classItemCollection, psmInputs = createClassItemCollection gff3Location memoryDB proteinInferenceParams.ProteinIdentifierRegex rawFolderPath
+        let classItemCollection, psmInputs = createClassItemCollection gff3Location memoryDB proteinInferenceParams.ProteinIdentifierRegex rawFilePaths
         logger.Trace "Classify and Infer Proteins"
         readAndInferFile classItemCollection proteinInferenceParams.Protein proteinInferenceParams.Peptide
-                         proteinInferenceParams.GroupFiles outDirectory rawFolderPath psmInputs dbConnection proteinInferenceParams.GetQValue
+                         proteinInferenceParams.GroupFiles outDirectory rawFilePaths psmInputs dbConnection proteinInferenceParams.GetQValue

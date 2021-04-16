@@ -31,7 +31,6 @@ module console1 =
         let p = Path.Combine(directory, p')
         Logging.generateConfig o
         let logger = Logging.createLogger "ProteinInference"
-        
         logger.Info (sprintf "InputFilePath -i = %s" i)
         logger.Info (sprintf "Peptide data base -d = %s" d)
         //logger.Info (sprintf "InputGFF3Path -g = %s" gff3)
@@ -50,6 +49,15 @@ module console1 =
         let proteinInferenceParams = 
                 Json.ReadAndDeserialize<Dto.ProteinInferenceParams> p
                 |> Dto.ProteinInferenceParams.toDomain
-        ProteinInference.inferProteins gff3 dbConnection proteinInferenceParams o i
+        if File.Exists i then
+            logger.Info (sprintf "single file")
+            ProteinInference.inferProteins gff3 dbConnection proteinInferenceParams o [|i|]
+        elif Directory.Exists i then
+            logger.Info (sprintf "multiple files")
+            let files = 
+                Directory.GetFiles(i,("*.qpsm"))
+            ProteinInference.inferProteins gff3 dbConnection proteinInferenceParams o files
+        else 
+            failwith "The given path to the PSMs is neither a valid file path nor a valid directory path."
         logger.Info "Done"
         0
