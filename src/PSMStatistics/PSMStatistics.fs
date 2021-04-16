@@ -390,7 +390,7 @@ module PSMStatistics =
                 |> Chart.withY_AxisStyle("Count",Side=StyleParam.Side.Left,Id=1,Showgrid=false)
                 |> Chart.withY_AxisStyle("FDR",Side=StyleParam.Side.Right,Id=2,Overlaying=StyleParam.AxisAnchorId.Y 1,Showgrid=false,MinMax=(0.,0.5))
                 |> Chart.withTitle (sprintf "#iteration: %i, %i with q < 0.01" iteration (scoreVsQ |> Array.filter (fun x -> snd x <= 0.01) |> Array.length))
-                |> Chart.SaveHtmlAs (Path.Combine [|plotDirectory;"separationAtIteration_";iteration.ToString()|])
+                |> Chart.SaveHtmlAs (Path.Combine [|plotDirectory;"separationAtIteration_" + iteration.ToString()|])
                 {
                     NPositivesAtFDR = nPosTar
                     CalcQValue     = getQ
