@@ -52,33 +52,24 @@ module console1 =
         if i'.Contains(";") then
             let stringList =
                 i'
+                // Replace and Trim not needed?
                 |> String.replace "\"" ""
                 |> String.split ';'
                 |> Array.map (fun x -> x.Trim())
             let pathList =
                 stringList
                 |> Array.map (fun path -> Path.Combine(directory, path))
-            let isFileList =
+            let fileList =
                 pathList
-                |> Array.map (fun path -> File.Exists path)
-                |> Array.forall (fun bool -> bool = true)
-            let isDirectoryList =
-                pathList
-                |> Array.map (fun path -> Directory.Exists path)
-                |> Array.forall (fun bool -> bool = true)
-            if isFileList then
-                logger.Info (sprintf "file list")
-                ProteinInference.inferProteins gff3 dbConnection proteinInferenceParams o pathList
-            elif isDirectoryList then
-                logger.Info (sprintf "directory list")
-                let fileList =
-                    pathList
-                    |> Array.collect (fun path ->
+                |> Array.collect (fun path ->
+                    if Directory.Exists path then
                         Directory.GetFiles(path,("*.qpsm"))
-                    )
-                ProteinInference.inferProteins gff3 dbConnection proteinInferenceParams o fileList
-            else
-                failwith "The given list to the PSMs is neither a valid file list nor a valid directory list."
+                    elif File.Exists path then
+                        [|path|]
+                    else
+                        failwith "The given path to the PSMs is neither a valid file path nor a valid directory path."
+                )
+            ProteinInference.inferProteins gff3 dbConnection proteinInferenceParams o fileList
         elif File.Exists (Path.Combine(directory, i')) then
             logger.Info (sprintf "single file")
             ProteinInference.inferProteins gff3 dbConnection proteinInferenceParams o [|Path.Combine(directory, i')|]
