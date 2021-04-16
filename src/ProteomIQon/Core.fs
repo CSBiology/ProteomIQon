@@ -74,4 +74,30 @@ module Core =
                     intensityData.[i] <- peak.Intensity
                 mzData,intensityData
 
+    module InputPaths =
+        
+        open FSharpAux
+        
+        let getFileArray (directory: string) (input: string) (fileEnding: string)=
+            let stringList =
+                input
+                // Replace and Trim not needed?
+                |> String.replace "\"" ""
+                |> String.split ';'
+                |> Array.map (fun x -> x.Trim())
+            let pathList =
+                stringList
+                |> Array.map (fun path -> Path.Combine(directory, path))
+            let fileList =
+                pathList
+                |> Array.collect (fun path ->
+                    if Directory.Exists path then
+                        Directory.GetFiles(path,(sprintf "*.%s" fileEnding))
+                    elif File.Exists path then
+                        [|path|]
+                    else
+                        failwith (sprintf "The path (%s) to the %s-files is neither a valid file path nor a valid directory path." path fileEnding)
+                )
+            fileList
+
 
