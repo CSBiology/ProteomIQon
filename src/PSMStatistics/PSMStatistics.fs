@@ -187,13 +187,19 @@ module PSMStatistics =
         logger.Trace (sprintf "Parameters: %A" processParams)
 
         logger.Trace (sprintf "Now performing peptide spectrum matching: %s Results will be written to: %s" psms outputDir)
-
         let outFilePath = 
             let fileName = (Path.GetFileNameWithoutExtension psms) + ".qpsm"
             Path.Combine [|outputDir;fileName|]
-
+        let plotDirectory =
+            let fileName = sprintf "%s_plots" (Path.GetFileNameWithoutExtension psms)
+            let path = Path.Combine [|outputDir;fileName|]
+            if System.IO.Directory.Exists path then
+                path
+            else
+                System.IO.Directory.CreateDirectory path |> ignore
+                path
         logger.Trace (sprintf "outFilePath:%s" outFilePath)
-
+        logger.Trace (sprintf "plotDirectory:%s" plotDirectory)
         logger.Trace "Copy peptide DB into Memory"
         let memoryDB = SearchDB.copyDBIntoMemory cn 
         let pepDBTr = memoryDB.BeginTransaction()
@@ -213,6 +219,7 @@ module PSMStatistics =
         
         match processParams.Threshold with 
         | Estimate estParams -> 
+
             logger.Trace "Prepare training pipeline"
             let ctx = new ML.MLContext(1024)
             let trainModel positives' negatives' =
@@ -256,7 +263,7 @@ module PSMStatistics =
                     ]
                     )
                 |> Chart.withTitle "Metrics"
-                |> Chart.Show      
+                |> Chart.SaveHtmlAs (Path.Combine [|plotDirectory;"Metrics"|])
                 let predF = ctx.Model.CreatePredictionEngine<PSMToLearn,PSMPrediction>(model)
                 let predict psm = 
                     psm 
@@ -311,7 +318,7 @@ module PSMStatistics =
             |> Chart.withY_AxisStyle("Count",Side=StyleParam.Side.Left,Id=1,Showgrid=false)
             |> Chart.withY_AxisStyle("FDR",Side=StyleParam.Side.Right,Id=2,Overlaying=StyleParam.AxisAnchorId.Y 1,Showgrid=false,MinMax=(0.,0.5))
             |> Chart.withTitle (sprintf "#%i with q < 0.01" (scoreVsQ |> Array.filter (fun x -> snd x <= 0.01) |> Array.length))
-            |> Chart.Show
+            |> Chart.SaveHtmlAs (Path.Combine [|plotDirectory;"InitialSeparation"|])
 
             logger.Trace "Selecting nositives for training"
             let positives' = 
@@ -383,7 +390,7 @@ module PSMStatistics =
                 |> Chart.withY_AxisStyle("Count",Side=StyleParam.Side.Left,Id=1,Showgrid=false)
                 |> Chart.withY_AxisStyle("FDR",Side=StyleParam.Side.Right,Id=2,Overlaying=StyleParam.AxisAnchorId.Y 1,Showgrid=false,MinMax=(0.,0.5))
                 |> Chart.withTitle (sprintf "#iteration: %i, %i with q < 0.01" iteration (scoreVsQ |> Array.filter (fun x -> snd x <= 0.01) |> Array.length))
-                |> Chart.Show
+                |> Chart.SaveHtmlAs (Path.Combine [|plotDirectory;"separationAtIteration_";iteration.ToString()|])
                 {
                     NPositivesAtFDR = nPosTar
                     CalcQValue     = getQ
