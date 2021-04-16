@@ -93,18 +93,20 @@ module Domain =
             ///
         }
 
-    type StatisticalThreshold = {
-        QValueThreshold: float
-        PepValueThreshold:float 
+    type EstimationParams = {
+        QValueThreshold                 : float
+        PepValueThreshold               : float 
+        MaxIterations                   : int
+        MinimumIncreaseBetweenIterations: float
         }
 
     type ScoreCutoff = {
         SequestLike : float
-        Andromeda   :float 
+        Andromeda   : float 
         }
 
     type Threshold = 
-        | Estimate of StatisticalThreshold
+        | Estimate of EstimationParams
         | Fixed of ScoreCutoff
 
     type PSMStatisticsParams = 
@@ -222,20 +224,20 @@ module Domain =
             }
 
     type AggregationMethod =
-        |Sum
-        |Mean
-        |Median
+        | Sum
+        | Mean
+        | Median
 
     type Transform =
-        |Log10
-        |Log2
-        |Ln
-        |NoTransform
+        | Log10
+        | Log2
+        | Ln
+        | NoTransform
 
     type StatisticalMeasurement =
-        |SEM
-        |StDev
-        |CV
+        | SEM
+        | StDev
+        | CV
 
     type TableSortParams =
         {
