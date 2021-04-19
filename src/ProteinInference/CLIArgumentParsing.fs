@@ -6,7 +6,7 @@ module CLIArgumentParsing =
     open System.IO
   
     type CLIArguments =
-        | [<AltCommandLine("-i")>] InputFolder      of path:string
+        | [<AltCommandLine("-i")>] InputFolder      of path:string list
         | [<AltCommandLine("-d")>] PeptideDataBase  of path:string 
         | [<AltCommandLine("-g")>] GFF3             of path:string 
         | [<AltCommandLine("-o")>] OutputDirectory  of path:string 

@@ -50,7 +50,21 @@ module console1 =
         let proteinInferenceParams = 
                 Json.ReadAndDeserialize<Dto.ProteinInferenceParams> p
                 |> Dto.ProteinInferenceParams.toDomain
-        let files = getFileArray directory i' "qpsm"
+        
+        let files = 
+            let parsePath (extension: string) fileOrDirectoryPath  = 
+                if File.Exists fileOrDirectoryPath then
+                    [|fileOrDirectoryPath |]
+                elif Directory.Exists fileOrDirectoryPath  then 
+                    let fps = Directory.GetFiles(fileOrDirectoryPath ,(extension))
+                    fps
+                else 
+                    [||]
+            let parsePaths (extension: string) (fileOrDirectoryPaths:seq<string>) =
+                fileOrDirectoryPaths
+                |> Seq.collect (parsePath extension)
+            parsePaths "qpsm" i'
+            |> Array.ofSeq
         ProteinInference.inferProteins gff3 dbConnection proteinInferenceParams o files
         logger.Info "Done"
         0
