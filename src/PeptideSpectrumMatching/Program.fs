@@ -6,6 +6,7 @@ open Argu
 open PeptideSpectrumMatching
 open System.Reflection
 open System
+open ProteomIQon.Core.InputPaths
 
 module console1 =
     open BioFSharp.Mz
@@ -14,17 +15,14 @@ module console1 =
     let main argv = 
         printfn "%A" argv
         printfn "ServerGC: %A" System.Runtime.GCSettings.IsServerGC
-        let parser = ArgumentParser.Create<CLIArguments>(programName =  (System.Reflection.Assembly.GetExecutingAssembly().GetName().Name)) 
-        let results = parser.Parse argv
-        let i' = results.GetResult InstrumentOutput
-        let o' = results.GetResult OutputDirectory
-        let p' = results.GetResult ParamFile
-        let d' = results.GetResult PeptideDataBase
+        let parser = ArgumentParser.Create<CLIArguments>(programName =  (System.Reflection.Assembly.GetExecutingAssembly().GetName().Name))
         let directory = System.IO.Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)
-        let i = Path.Combine(directory, i')
-        let o = Path.Combine(directory, o')
-        let p = Path.Combine(directory, p')
-        let d = Path.Combine(directory, d')
+        let getPathRelativeToDir = getRelativePath directory
+        let results = parser.Parse argv
+        let i = results.GetResult InstrumentOutput |> getPathRelativeToDir
+        let o = results.GetResult OutputDirectory  |> getPathRelativeToDir
+        let p = results.GetResult ParamFile        |> getPathRelativeToDir
+        let d = results.GetResult PeptideDataBase  |> getPathRelativeToDir
         Directory.CreateDirectory(o) |> ignore
         Logging.generateConfig o
         let logger = Logging.createLogger "PeptideSpectrumMatching"

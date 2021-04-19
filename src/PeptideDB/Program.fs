@@ -4,6 +4,7 @@ open System.IO
 open CLIArgumentParsing
 open Argu
 open System.Reflection
+open ProteomIQon.Core.InputPaths
 
 module console1 =
 
@@ -12,16 +13,17 @@ module console1 =
         printfn "%A" argv
 
         let parser = ArgumentParser.Create<CLIArguments>(programName =  (System.Reflection.Assembly.GetExecutingAssembly().GetName().Name))
+        let directory = System.IO.Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)
+        let getPathRelativeToDir = getRelativePath directory
         let results = parser.Parse argv
         let inputFasta = results.TryGetResult FastaPath
         let outputDir = results.TryGetResult OutputDirectory
         let paramF = results.TryGetResult ParamFile
-        let directory = System.IO.Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)
         match inputFasta, outputDir, paramF with
         | Some i', Some o' , Some p' ->
-            let i = Path.Combine(directory, i')
-            let o = Path.Combine(directory, o')
-            let p = Path.Combine(directory, p')
+            let i = i' |> getPathRelativeToDir
+            let o = o' |> getPathRelativeToDir
+            let p = p' |> getPathRelativeToDir
             Logging.generateConfig outputDir.Value
             let logger = Logging.createLogger "PeptideDB"
             logger.Trace (sprintf "CLIArguments %A" results)

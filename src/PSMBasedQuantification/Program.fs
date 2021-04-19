@@ -5,6 +5,7 @@ open CLIArgumentParsing
 open Argu
 open PSMBasedQuantification
 open System.Reflection
+open ProteomIQon.Core.InputPaths
 
 module console1 =
     open BioFSharp.Mz
@@ -14,18 +15,14 @@ module console1 =
         printfn "%A" argv
 
         let parser = ArgumentParser.Create<CLIArguments>(programName =  (System.Reflection.Assembly.GetExecutingAssembly().GetName().Name))
-        let results = parser.Parse argv
-        let i' = results.GetResult InstrumentOutput
-        let ii' = results.GetResult ScoredPSMs
-        let p' = results.GetResult ParamFile
-        let o' = results.GetResult OutputDirectory
-        let d' = results.GetResult PeptideDataBase
         let directory = System.IO.Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)
-        let i = Path.Combine(directory, i')
-        let ii = Path.Combine(directory, ii')
-        let p = Path.Combine(directory, p')
-        let o = Path.Combine(directory, o')
-        let d = Path.Combine(directory, d')
+        let getPathRelativeToDir = getRelativePath directory
+        let results = parser.Parse argv
+        let i = results.GetResult InstrumentOutput |> getPathRelativeToDir
+        let ii = results.GetResult ScoredPSMs      |> getPathRelativeToDir
+        let p = results.GetResult ParamFile        |> getPathRelativeToDir
+        let o = results.GetResult OutputDirectory  |> getPathRelativeToDir
+        let d = results.GetResult PeptideDataBase  |> getPathRelativeToDir
         Logging.generateConfig o
         let logger = Logging.createLogger "PSMBasedQuantification"
         logger.Info (sprintf "InputFilePath -i = %s" i)
