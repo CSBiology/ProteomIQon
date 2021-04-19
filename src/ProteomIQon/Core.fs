@@ -77,27 +77,19 @@ module Core =
     module InputPaths =
         
         open FSharpAux
+
+        let getRelativePath (reference: string) (path: string) =
+            Path.Combine(reference, path)
         
-        let getFileArray (directory: string) (input: string) (fileEnding: string)=
-            let stringList =
-                input
-                // Replace and Trim not needed?
-                |> String.replace "\"" ""
-                |> String.split ';'
-                |> Array.map (fun x -> x.Trim())
-            let pathList =
-                stringList
-                |> Array.map (fun path -> Path.Combine(directory, path))
-            let fileList =
-                pathList
-                |> Array.collect (fun path ->
-                    if Directory.Exists path then
-                        Directory.GetFiles(path,(sprintf "*.%s" fileEnding))
-                    elif File.Exists path then
-                        [|path|]
-                    else
-                        failwith (sprintf "The path (%s) to the %s-files is neither a valid file path nor a valid directory path." path fileEnding)
-                )
-            fileList
+        let parsePath (extension: string) fileOrDirectoryPath =
+            if File.Exists fileOrDirectoryPath then
+                [|fileOrDirectoryPath|]
+            elif Directory.Exists fileOrDirectoryPath then
+                let fps = Directory.GetFiles(fileOrDirectoryPath ,(sprintf "*.%s" extension))
+                fps
+            else 
+                [||]
 
-
+        let parsePaths (extension: string) (fileOrDirectoryPaths:seq<string>) =
+            fileOrDirectoryPaths
+            |> Seq.collect (parsePath extension)
