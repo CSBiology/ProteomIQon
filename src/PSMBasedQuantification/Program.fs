@@ -12,9 +12,8 @@ module console1 =
 
     [<EntryPoint>]
     let main argv =
-        printfn "%A" argv
-
-        let parser = ArgumentParser.Create<CLIArguments>(programName =  (System.Reflection.Assembly.GetExecutingAssembly().GetName().Name))
+        let errorHandler = ProcessExiter(colorizer = function ErrorCode.HelpText -> None | _ -> Some System.ConsoleColor.Red)
+        let parser = ArgumentParser.Create<CLIArguments>(programName =  (System.Reflection.Assembly.GetExecutingAssembly().GetName().Name),errorHandler=errorHandler)     
         let directory = System.IO.Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)
         let getPathRelativeToDir = getRelativePath directory
         let results = parser.Parse argv
