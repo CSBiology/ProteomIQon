@@ -195,3 +195,5 @@ temp
 /src/PSMBasedQuantification/testing_wavelet.fsx
 /src/PSMBasedQuantification/testing.fsx
 /pkg
+/output
+/.fsdocs
