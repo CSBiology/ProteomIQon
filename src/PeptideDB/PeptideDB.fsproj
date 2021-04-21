@@ -2,10 +2,10 @@
   <PropertyGroup>
     <TargetFrameworks>net5.0</TargetFrameworks>
     <PackAsTool>true</PackAsTool>
-    <ToolCommandName>ProteomIQon.PeptideDB</ToolCommandName>
+    <ToolCommandName>proteomiqon-peptidedb</ToolCommandName>
     <RootNamespace>PeptideDB</RootNamespace>
-    <AssemblyName>PeptideDB</AssemblyName>
-    <Name>PeptideDB</Name>
+    <AssemblyName>ProteomIQon.PeptideDB</AssemblyName>
+    <Name>ProteomIQon.PeptideDB</Name>
     <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
