@@ -2,10 +2,10 @@
   <PropertyGroup>
     <TargetFrameworks>net5.0</TargetFrameworks>
     <PackAsTool>true</PackAsTool>
-    <ToolCommandName>ProteomIQon.PSMStatistics</ToolCommandName>
+    <ToolCommandName>proteomiqon-psmstatistics</ToolCommandName>
     <RootNamespace>PSMStatistics</RootNamespace>
-    <AssemblyName>PSMStatistics</AssemblyName>
-    <Name>PSMStatistics</Name>
+    <AssemblyName>ProteomIQon.PSMStatistics</AssemblyName>
+    <Name>ProteomIQon.PSMStatistics</Name>
     <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
