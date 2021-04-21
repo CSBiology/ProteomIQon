@@ -3,10 +3,10 @@
   <PropertyGroup>
     <TargetFrameworks>net5.0</TargetFrameworks>
     <PackAsTool>true</PackAsTool>
-    <ToolCommandName>ProteomIQon.AlignmentBasedQuantification</ToolCommandName>
+    <ToolCommandName>proteomiqon-alignmentbasedquantification</ToolCommandName>
     <RootNamespace>AlignmentBasedQuantification</RootNamespace>
-    <AssemblyName>AlignmentBasedQuantification</AssemblyName>
-    <Name>AlignmentBasedQuantification</Name>
+    <AssemblyName>ProteomIQon.AlignmentBasedQuantification</AssemblyName>
+    <Name>ProteomIQon.AlignmentBasedQuantification</Name>
     <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
