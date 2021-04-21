@@ -3,8 +3,8 @@
   <PropertyGroup>
     <TargetFrameworks>net47</TargetFrameworks>
     <RootNamespace>Preprocessing</RootNamespace>
-    <AssemblyName>Preprocessing</AssemblyName>
-    <Name>Preprocessing</Name>
+    <AssemblyName>ProteomIQon.Preprocessing</AssemblyName>
+    <Name>ProteomIQon.Preprocessing</Name>
     <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
