@@ -128,6 +128,52 @@
             <div class="section pt-4">
                 <div class="container" id="fsdocs-content">
                     
+<h1><a name="Peptide-Spectrum-Matching" class="anchor" href="#Peptide-Spectrum-Matching">Peptide Spectrum Matching</a></h1>
+<p>This tool selects potential peptides for each measured spectrum and computes theoretical spectra for them. Those theoretical spectra are then compared to the measured specctrum and scored according to their similarity.
+This way, the most likely peptide from which the measured spectrum originated from can be identified using the similarity scores.</p>
+<h2><a name="Parameters" class="anchor" href="#Parameters">Parameters</a></h2>
+<table>
+<thead>
+<tr class="header">
+<th><p><strong>Parameter</strong></p></th>
+<th><p><strong>Default Value</strong></p></th>
+<th><p><strong>Description</strong></p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><p>ChargeStateDeterminationParams</p></td>
+<td><p>{ExpectedMinimalCharge = 2; ExpectedMaximumCharge = 5; Width = 1.1; MinIntensity = 0.15; DeltaMinIntensity = 0.3; NrOfRndSpectra = 10000}</p></td>
+<td><p>Parameters used for the charge state determination of the peptides</p></td>
+</tr>
+<tr class="even">
+<td><p>LookUpPPM</p></td>
+<td><p>30</p></td>
+<td><p>Mass range in Da in which potential peptides are selected</p></td>
+</tr>
+<tr class="odd">
+<td><p>MS2ScanRange</p></td>
+<td><p>100.,2000.</p></td>
+<td><p>m/z range for MS2 spectra</p></td>
+</tr>
+<tr class="even">
+<td><p>nTerminalSeries</p></td>
+<td><p>NTerminalSeries.B</p></td>
+<td><p>Considered ions starting from the N-Terminus</p></td>
+</tr>
+<tr class="odd">
+<td><p>cTerminalSeries</p></td>
+<td><p>CTerminalSeries.Y</p></td>
+<td><p>Considered ions starting from the C-Terminus</p></td>
+</tr>
+<tr class="even">
+<td><p>Andromeda</p></td>
+<td><p>{PMinPMax = 4,10; MatchingIonTolerancePPM = 100.}</p></td>
+<td><p>Andromeda scoring parameters</p></td>
+</tr>
+</tbody>
+</table>
+
 
                 </div>
             </div>
