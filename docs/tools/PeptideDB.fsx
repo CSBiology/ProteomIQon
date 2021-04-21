@@ -40,7 +40,7 @@ or use an F# script, which can be downloaded or run in Binder at the top of the 
 *)
 
 #r "nuget: BioFSharp.Mz, 0.1.5-beta"
-#r "nuget: Newtonsoft.Json, 13.0.1"
+#r "nuget: Newtonsoft.Json, 12.0.3"
 
 open BioFSharp.Mz.SearchDB
 open Newtonsoft.Json
