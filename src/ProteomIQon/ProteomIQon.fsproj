@@ -18,7 +18,7 @@
     <Description>ProteomIQon - computational proteomics</Description>
     <Summary>ProteomIQon - computational proteomics</Summary>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PackageProjectUrl>https://github.com/CSBiology/ProteomIQon/</PackageProjectUrl>
+    <PackageProjectUrl>https://csbiology.github.io/ProteomIQon/</PackageProjectUrl>
     <!--<PackageIconUrl>https://github.com/CSBiology/ProteomIQon</PackageIconUrl>-->
     <PackageTags>fsharp dotnet proteomics</PackageTags>
     <RepositoryUrl>https://github.com/CSBiology/ProteomIQon</RepositoryUrl>
