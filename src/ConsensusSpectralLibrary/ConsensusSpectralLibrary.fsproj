@@ -3,10 +3,10 @@
   <PropertyGroup>
     <TargetFrameworks>net5.0</TargetFrameworks>
     <PackAsTool>true</PackAsTool>
-    <ToolCommandName>ProteomIQon.ConsensusSpectralLibrary</ToolCommandName>
+    <ToolCommandName>proteomiqon-consensusspectrallibrary</ToolCommandName>
     <RootNamespace>ConsensusSpectralLibrary</RootNamespace>
-    <AssemblyName>ConsensusSpectralLibrary</AssemblyName>
-    <Name>ConsensusSpectralLibrary</Name>
+    <AssemblyName>ProteomIQon.ConsensusSpectralLibrary</AssemblyName>
+    <Name>ProteomIQon.ConsensusSpectralLibrary</Name>
     <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
