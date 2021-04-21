@@ -21,6 +21,11 @@ jobs:
         GithubUser: ${{ secrets.GITHUBUSER }}
         PackageToken: ${{ secrets.PACKAGETOKEN }}
       run: dotnet tool restore
+    - name: Restore
+      env:
+        GithubUser: ${{ secrets.GITHUBUSER }}
+        PackageToken: ${{ secrets.PACKAGETOKEN }}
+      run: dotnet restore
     - name: Build
       env:
         GithubUser: ${{ secrets.GITHUBUSER }}
