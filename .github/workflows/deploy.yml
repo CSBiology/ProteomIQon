@@ -1,0 +1,41 @@
+name: deploy-gh-pages
+
+on:
+  push:
+    branches: [ master ]
+
+jobs:
+  build-and-deploy:
+    
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+    - name: Setup .NET 5
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: 5.0.102
+    - name: Restore tools
+      env:
+        GithubUser: ${{ secrets.GITHUBUSER }}
+        PackageToken: ${{ secrets.PACKAGETOKEN }}
+      run: dotnet tool restore
+    - name: Restore
+      env:
+        GithubUser: ${{ secrets.GITHUBUSER }}
+        PackageToken: ${{ secrets.PACKAGETOKEN }}
+      run: dotnet restore
+    - name: Build
+      env:
+        GithubUser: ${{ secrets.GITHUBUSER }}
+        PackageToken: ${{ secrets.PACKAGETOKEN }}
+      working-directory: ./
+      run: dotnet fsdocs build --eval --noapidocs
+    - name: deploy
+      uses: JamesIves/github-pages-deploy-action@3.7.1
+      with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BRANCH: gh-pages # The branch the action should deploy to.
+          FOLDER: ./output # The folder the action should deploy.
+          CLEAN: true # Automatically remove deleted files from the deploy branch

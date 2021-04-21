@@ -9,6 +9,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <ServerGarbageCollection>true</ServerGarbageCollection>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net47|AnyCPU'">
     <PlatformTarget>AnyCPU</PlatformTarget>
