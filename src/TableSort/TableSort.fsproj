@@ -2,10 +2,10 @@
   <PropertyGroup>
     <TargetFrameworks>net5.0</TargetFrameworks>
     <PackAsTool>true</PackAsTool>
-    <ToolCommandName>ProteomIQon.TableSort</ToolCommandName>
+    <ToolCommandName>proteomiqon-tablesort</ToolCommandName>
     <RootNamespace>TableSort</RootNamespace>
-    <AssemblyName>TableSort</AssemblyName>
-    <Name>TableSort</Name>
+    <AssemblyName>ProteomIQon.TableSort</AssemblyName>
+    <Name>ProteomIQon.TableSort</Name>
     <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
