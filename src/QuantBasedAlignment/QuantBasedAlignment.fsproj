@@ -2,10 +2,10 @@
   <PropertyGroup>
     <TargetFrameworks>net5.0</TargetFrameworks>
     <PackAsTool>true</PackAsTool>
-    <ToolCommandName>ProteomIQon.QuantBasedAlignment</ToolCommandName>
+    <ToolCommandName>proteomiqon-quantbasedalignment</ToolCommandName>
     <RootNamespace>QuantBasedAlignment</RootNamespace>
-    <AssemblyName>QuantBasedAlignment</AssemblyName>
-    <Name>QuantBasedAlignment</Name>
+    <AssemblyName>ProteomIQon.QuantBasedAlignment</AssemblyName>
+    <Name>ProteomIQon.QuantBasedAlignment</Name>
     <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
