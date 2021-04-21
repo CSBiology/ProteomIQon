@@ -2,14 +2,27 @@
   <PropertyGroup>
     <TargetFrameworks>net5.0</TargetFrameworks>
     <PackAsTool>true</PackAsTool>
-    <ToolCommandName>ProteomIQon.PeptideDB</ToolCommandName>
+    <ToolCommandName>proteomiqon-peptidedb</ToolCommandName>
     <RootNamespace>PeptideDB</RootNamespace>
-    <AssemblyName>PeptideDB</AssemblyName>
-    <Name>PeptideDB</Name>
+    <AssemblyName>ProteomIQon.PeptideDB</AssemblyName>
+    <Name>ProteomIQon.PeptideDB</Name>
     <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+  <PropertyGroup>
+    <Authors>David Zimmer, Jonathan Ott, Heinrich Lukas Weil, Timo Muehlhaus</Authors>
+    <Description>ProteomIQon.PeptideDB - computational proteomics</Description>
+    <Summary>ProteomIQon.PeptideDB - computational proteomics</Summary>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/CSBiology/ProteomIQon/</PackageProjectUrl>
+    <!--<PackageIconUrl>https://github.com/CSBiology/ProteomIQon</PackageIconUrl>-->
+    <PackageTags>fsharp dotnet proteomics</PackageTags>
+    <RepositoryUrl>https://github.com/CSBiology/ProteomIQon</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <FsDocsLicenseLink>https://github.com/CSBiology/ProteomIQon/blob/master/LICENSE</FsDocsLicenseLink>
+    <FsDocsReleaseNotesLink>https://github.com/CSBiology/ProteomIQon/blob/master/RELEASE_NOTES.md</FsDocsReleaseNotesLink>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="PeptideDB.fs" />

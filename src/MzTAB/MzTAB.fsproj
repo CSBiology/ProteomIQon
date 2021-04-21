@@ -2,10 +2,10 @@
   <PropertyGroup>
     <TargetFrameworks>net5.0</TargetFrameworks>
     <PackAsTool>true</PackAsTool>
-    <ToolCommandName>ProteomIQon.MzTAB</ToolCommandName>
+    <ToolCommandName>proteomiqon-mztab</ToolCommandName>
     <RootNamespace>MzTAB</RootNamespace>
-    <AssemblyName>MzTAB</AssemblyName>
-    <Name>MzTAB</Name>
+    <AssemblyName>ProteomIQon.MzTAB</AssemblyName>
+    <Name>ProteomIQon.MzTAB</Name>
     <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>

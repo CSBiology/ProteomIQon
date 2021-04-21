@@ -3,10 +3,10 @@
   <PropertyGroup>
     <TargetFrameworks>net5.0</TargetFrameworks>
     <PackAsTool>true</PackAsTool>
-    <ToolCommandName>ProteomIQon.ProteinInference</ToolCommandName>
+    <ToolCommandName>proteomiqon-proteininference</ToolCommandName>
     <RootNamespace>ProteinInference</RootNamespace>
-    <AssemblyName>ProteinInference</AssemblyName>
-    <Name>ProteinInference</Name>
+    <AssemblyName>ProteomIQon.ProteinInference</AssemblyName>
+    <Name>ProteomIQon.ProteinInference</Name>
     <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
