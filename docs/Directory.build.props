@@ -5,6 +5,7 @@
     <Description>ProteomIQon.PeptideDB - computational proteomics</Description>
     <Summary>ProteomIQon.PeptideDB - computational proteomics</Summary>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/ProteomIQon/</PackageProjectUrl>
     <PackageIconUrl>https://github.com/ProteomIQon</PackageIconUrl>
     <FsDocsLogoSource>https://csbiology.github.io/ProteomIQon/img/logo.png</FsDocsLogoSource>
   </PropertyGroup>
