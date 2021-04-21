@@ -22,6 +22,9 @@ jobs:
         PackageToken: ${{ secrets.PACKAGETOKEN }}
       run: dotnet tool restore
     - name: Build
+      env:
+        GithubUser: ${{ secrets.GITHUBUSER }}
+        PackageToken: ${{ secrets.PACKAGETOKEN }}
       working-directory: ./
       run: dotnet fsdocs build --eval --noapidocs
     - name: deploy
@@ -31,6 +34,3 @@ jobs:
           BRANCH: gh-pages # The branch the action should deploy to.
           FOLDER: ./output # The folder the action should deploy.
           CLEAN: true # Automatically remove deleted files from the deploy branch
-      env:
-          GithubUser: ${{ secrets.GITHUBUSER }}
-          PackageToken: ${{ secrets.PACKAGETOKEN }}
