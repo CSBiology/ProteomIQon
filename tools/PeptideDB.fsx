@@ -93,3 +93,8 @@ let serialized =
     |> JsonConvert.SerializeObject
 
 System.IO.File.WriteAllText("YourPathHere",serialized)
+(**
+If you are running this tool in Binder, you can copy the output of the following codeblock and save it in a JSON file.
+
+*)
+serialized
