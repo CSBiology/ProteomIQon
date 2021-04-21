@@ -56,7 +56,7 @@
   Tools
 </li>             
 <li class="nav-item">
-  <a class="nav-link" href="/ProteomIQon/tools/english/PeptideDB.html">
+  <a class="nav-link" href="/ProteomIQon/tools/PeptideDB.html">
     PeptideDB
   </a>
 </li>
@@ -68,6 +68,87 @@
             <div class="section pt-4">
                 <div class="container" id="fsdocs-content">
                     
+<h1><a name="PeptideDB" class="anchor" href="#PeptideDB">PeptideDB</a></h1>
+<p>This tool takes proteome information in the form of a <a href="https://en.wikipedia.org/wiki/FASTA_format">FASTA</a> file. The proteome information is then processed according
+to the parameters given and stored in a database. The database contains information about the proteins, their identifier and their digested peptides.</p>
+<h2><a name="Parameters" class="anchor" href="#Parameters">Parameters</a></h2>
+<table>
+<thead>
+<tr class="header">
+<th><p>Parameter</p></th>
+<th><p>Default Value</p></th>
+<th><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><p>Name</p></td>
+<td><p>"YourNameHere"</p></td>
+<td><p>Name of the database</p></td>
+</tr>
+<tr class="even">
+<td><p>ParseProteinIDRegexPattern</p></td>
+<td><p>id</p></td>
+<td><p>Regex pattern for parsing of the protein IDs in the database</p></td>
+</tr>
+<tr class="odd">
+<td><p>Protease</p></td>
+<td><p>Protease.Trypsin</p></td>
+<td><p>Protease used for the digestion of the proteins</p></td>
+</tr>
+<tr class="even">
+<td><p>MinMissedCleavages</p></td>
+<td><p>0</p></td>
+<td><p>Minimal amount of missed cleavages a peptide can have</p></td>
+</tr>
+<tr class="odd">
+<td><p>MaxMissedCleavages</p></td>
+<td><p>2</p></td>
+<td><p>Maximal amount of missed cleavages a peptide can have</p></td>
+</tr>
+<tr class="even">
+<td><p>MaxMass</p></td>
+<td><p>15000</p></td>
+<td><p>Maximal mass of a peptide in Da</p></td>
+</tr>
+<tr class="odd">
+<td><p>MinPepLength</p></td>
+<td><p>4</p></td>
+<td><p>Minimal length of a peptide</p></td>
+</tr>
+<tr class="even">
+<td><p>MaxPepLength</p></td>
+<td><p>65</p></td>
+<td><p>Maximal length of a peptide</p></td>
+</tr>
+<tr class="odd">
+<td><p>IsotopicMod</p></td>
+<td><p>[IsotopicMod.N15]</p></td>
+<td><p>List of isotopic modifications in the experiment</p></td>
+</tr>
+<tr class="even">
+<td><p>MassMode</p></td>
+<td><p>MassMode.Monoisotopi</p></td>
+<td><p>Method for mass calcluation (possibilities: Monoisotopic &amp; Average)</p></td>
+</tr>
+<tr class="odd">
+<td><p>FixedMods</p></td>
+<td><p>[]</p></td>
+<td><p>Fixed modifications of the proteins</p></td>
+</tr>
+<tr class="even">
+<td><p>VariableMods</p></td>
+<td><p>[Modification.Oxidation'Met';Modification.Acetylation'ProtNTerm']</p></td>
+<td><p>Variable Modifications of the proteins</p></td>
+</tr>
+<tr class="odd">
+<td><p>VarModThreshold</p></td>
+<td><p>4</p></td>
+<td><p>Threshold for variable modifications</p></td>
+</tr>
+</tbody>
+</table>
+
 
                 </div>
             </div>
