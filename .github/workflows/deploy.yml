@@ -31,3 +31,6 @@ jobs:
           BRANCH: gh-pages # The branch the action should deploy to.
           FOLDER: ./output # The folder the action should deploy.
           CLEAN: true # Automatically remove deleted files from the deploy branch
+      env:
+          GithubUser: ${{ secrets.GITHUBUSER }}
+          PackageToken: ${{ secrets.PACKAGETOKEN }}
