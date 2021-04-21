@@ -17,6 +17,9 @@ jobs:
       with:
         dotnet-version: 5.0.102
     - name: Restore tools
+      env:
+        GithubUser: ${{ secrets.GITHUBUSER }}
+        PackageToken: ${{ secrets.PACKAGETOKEN }}
       run: dotnet tool restore
     - name: Build
       working-directory: ./
