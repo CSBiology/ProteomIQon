@@ -1,6 +1,10 @@
 (**
 // can't yet format YamlFrontmatter (["title: PeptideDB"; "category: Tools"; "categoryindex: 1"; "index: 1"], Some { StartLine = 2 StartColumn = 0 EndLine = 6 EndColumn = 8 }) to pynb markdown
 
+[![Binder](/ProteomIQon/img/badge-binder.svg)](https://mybinder.org/v2/gh/csbiology/BIO-BTE-12-V-4/gh-pages?filepath=tools/PeptideDB.ipynb)&emsp;
+[![Script](/ProteomIQon/img/badge-script.svg)](/ProteomIQon/tools/PeptideDB.fsx)&emsp;
+[![Notebook](/ProteomIQon/img/badge-notebook.svg)](/ProteomIQon/tools/PeptideDB.ipynb)
+
 # PeptideDB
 
 This tool takes proteome information in the form of a [FASTA](https://en.wikipedia.org/wiki/FASTA_format) file. The proteome information is then processed according 
@@ -25,7 +29,7 @@ to the parameters given and stored in a database. The database contains informat
 | VarModThreshold            | 4                                                                 | Threshold for variable modifications                                |
 
 Parameters are handed to the cli tool as a .json file. you can download the default file [here](https://github.com/CSBiology/ProteomIQon/blob/master/src/ProteomIQon/defaultParams/peptideDBParams.json), 
-or use an F# script to write your own parameter file:
+or use an F# script, which can be downloaded or run in Binder at the top of the page, to write your own parameter file:
 
 *)
 #r "nuget: BioFSharp.Mz, 0.1.5-beta"

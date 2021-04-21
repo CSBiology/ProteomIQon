@@ -68,6 +68,9 @@
             <div class="section pt-4">
                 <div class="container" id="fsdocs-content">
                     
+<p><a href="https://mybinder.org/v2/gh/csbiology/BIO-BTE-12-V-4/gh-pages?filepath=tools/PeptideDB.ipynb"><img src="/ProteomIQon/img/badge-binder.svg" alt="Binder" /></a>&emsp;
+<a href="/ProteomIQon/tools/PeptideDB.fsx"><img src="/ProteomIQon/img/badge-script.svg" alt="Script" /></a>&emsp;
+<a href="/ProteomIQon/tools/PeptideDB.ipynb"><img src="/ProteomIQon/img/badge-notebook.svg" alt="Notebook" /></a></p>
 <h1><a name="PeptideDB" class="anchor" href="#PeptideDB">PeptideDB</a></h1>
 <p>This tool takes proteome information in the form of a <a href="https://en.wikipedia.org/wiki/FASTA_format">FASTA</a> file. The proteome information is then processed according
 to the parameters given and stored in a database. The database contains information about the proteins, their identifier and their digested peptides.</p>
@@ -150,7 +153,7 @@ to the parameters given and stored in a database. The database contains informat
 </table>
 
 <p>Parameters are handed to the cli tool as a .json file. you can download the default file <a href="https://github.com/CSBiology/ProteomIQon/blob/master/src/ProteomIQon/defaultParams/peptideDBParams.json">here</a>,
-or use an F# script to write your own parameter file:</p>
+or use an F# script, which can be downloaded or run in Binder at the top of the page, to write your own parameter file:</p>
 <pre class="fssnip highlighted"><code lang="fsharp"><span class="pp">#r</span> <span class="s">&quot;nuget: BioFSharp.Mz, 0.1.5-beta&quot;</span>
 <span class="pp">#r</span> <span class="s">&quot;nuget: Newtonsoft.Json, 13.0.1&quot;</span>
 
