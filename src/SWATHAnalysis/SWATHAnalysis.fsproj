@@ -2,10 +2,10 @@
   <PropertyGroup>
     <TargetFrameworks>net5.0</TargetFrameworks>
     <PackAsTool>true</PackAsTool>
-    <ToolCommandName>ProteomIQon.SWATHAnalysis</ToolCommandName>
+    <ToolCommandName>proteomiqon-swathanalysis</ToolCommandName>
     <RootNamespace>SWATHAnalysis</RootNamespace>
-    <AssemblyName>SWATHAnalysis</AssemblyName>
-    <Name>SWATHAnalysis</Name>
+    <AssemblyName>ProteomIQon.SWATHAnalysis</AssemblyName>
+    <Name>ProteomIQon.SWATHAnalysis</Name>
     <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
