@@ -2,10 +2,10 @@
   <PropertyGroup>
     <TargetFrameworks>net5.0</TargetFrameworks>
     <PackAsTool>true</PackAsTool>
-    <ToolCommandName>ProteomIQon.MzMLConverter</ToolCommandName>
+    <ToolCommandName>proteomiqon-mzmlconverter</ToolCommandName>
     <RootNamespace>MzMLConverter</RootNamespace>
-    <AssemblyName>MzMLConverter</AssemblyName>
-    <Name>MzMLConverter</Name>
+    <AssemblyName>ProteomIQon.MzMLConverter</AssemblyName>
+    <Name>ProteomIQon.MzMLConverter</Name>
     <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
