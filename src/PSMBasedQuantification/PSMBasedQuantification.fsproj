@@ -3,10 +3,10 @@
   <PropertyGroup>
     <TargetFrameworks>net5.0</TargetFrameworks>
     <PackAsTool>true</PackAsTool>
-    <ToolCommandName>ProteomIQon.PSMBasedQuantification</ToolCommandName>
+    <ToolCommandName>proteomiqon-psmbasedquantification</ToolCommandName>
     <RootNamespace>PSMBasedQuantification</RootNamespace>
-    <AssemblyName>PSMBasedQuantification</AssemblyName>
-    <Name>PSMBasedQuantification</Name>
+    <AssemblyName>ProteomIQon.PSMBasedQuantification</AssemblyName>
+    <Name>ProteomIQon.PSMBasedQuantification</Name>
     <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
