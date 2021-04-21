@@ -3,10 +3,10 @@
   <PropertyGroup>
     <TargetFrameworks>net5.0</TargetFrameworks>
     <PackAsTool>true</PackAsTool>
-    <ToolCommandName>ProteomIQon.PeptideSpectrumMatching</ToolCommandName>
+    <ToolCommandName>proteomiqon-peptidespectrummatching</ToolCommandName>
     <RootNamespace>PeptideSpectrumMatching</RootNamespace>
-    <AssemblyName>PeptideSpectrumMatching</AssemblyName>
-    <Name>PeptideSpectrumMatching</Name>
+    <AssemblyName>ProteomIQon.PeptideSpectrumMatching</AssemblyName>
+    <Name>ProteomIQon.PeptideSpectrumMatching</Name>
     <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
