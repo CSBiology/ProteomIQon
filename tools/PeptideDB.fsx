@@ -36,42 +36,13 @@ or use an F# script, which can be downloaded or run in Binder at the top of the 
 *)
 #r "nuget: BioFSharp.Mz, 0.1.5-beta"
 #r "nuget: Newtonsoft.Json, 12.0.3"
+#r "nuget: ProteomIQon, 0.0.1"
 
 open BioFSharp.Mz.SearchDB
 open Newtonsoft.Json
+open ProteomIQon
 
-type Protease =
-    | Trypsin
-
-type IsotopicMod =
-    | N15
-
-type Modification =
-    | Acetylation'ProtNTerm'
-    | Carbamidomethyl'Cys'
-    | Oxidation'Met'
-    | Phosphorylation'Ser'Thr'Tyr'
-    | Pyro_Glu'GluNterm'
-    | Pyro_Glu'GlnNterm'
-
-type PeptideDBParams =
-    {
-    Name                        : string
-    ParseProteinIDRegexPattern  : string
-    Protease                    : Protease
-    MinMissedCleavages          : int
-    MaxMissedCleavages          : int
-    MaxMass                     : float
-    MinPepLength                : int
-    MaxPepLength                : int
-    IsotopicMod                 : IsotopicMod list
-    MassMode                    : MassMode
-    FixedMods                   : Modification list
-    VariableMods                : Modification list
-    VarModThreshold             : int
-    }
-
-let peptideDBParams: PeptideDBParams = 
+let peptideDBParams: Dto.PeptideDBParams = 
     {
     Name                        = "Test"
     ParseProteinIDRegexPattern  = "id"
