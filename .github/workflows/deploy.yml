@@ -27,9 +27,6 @@ jobs:
         PackageToken: ${{ secrets.PACKAGETOKEN }}
       run: dotnet restore
     - name: Build
-      env:
-        GithubUser: ${{ secrets.GITHUBUSER }}
-        PackageToken: ${{ secrets.PACKAGETOKEN }}
       working-directory: ./
       run: dotnet fsdocs build --eval --noapidocs
     - name: deploy
