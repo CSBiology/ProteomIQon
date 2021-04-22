@@ -7,8 +7,10 @@
 
 # PeptideDB
 
-This tool takes proteome information in the form of a [FASTA](https://en.wikipedia.org/wiki/FASTA_format) file. The proteome information is then processed according 
-to the parameters given and stored in a database. The database contains information about the proteins, their identifier and their digested peptides.
+MS-based shotgun proteomics estimates protein abundances using a proxy: peptides. An established method to identify acquired MS/MS spectra is the comparison of each spectrum with peptides in a reference database. 
+The PeptideDB tool helps to create peptide databases by in silico digestion given proteome information in the FASTA format and a set of parameters that allow the user to mimic conditions of their specific experiment. 
+The created database stores peptide protein relationships in a SQLite database which can then be supplied to other ProteomIQon tools.
+The following table gives an overview of the parameter set:
 
 ## Parameters
 
@@ -30,7 +32,7 @@ to the parameters given and stored in a database. The database contains informat
 
 ## Parameter Generation
 
-Parameters are handed to the cli tool as a .json file. you can download the default file [here](https://github.com/CSBiology/ProteomIQon/blob/master/src/ProteomIQon/defaultParams/peptideDBParams.json), 
+Parameters are handed to the cli tool as .json files. You can download an example file [here](https://github.com/CSBiology/ProteomIQon/blob/master/src/ProteomIQon/defaultParams/peptideDBParams.json), 
 or use an F# script, which can be downloaded or run in Binder at the top of the page, to write your own parameter file:
 
 *)
@@ -63,4 +65,15 @@ let serialized =
     peptideDBParams
     |> JsonConvert.SerializeObject
 
-System.IO.File.WriteAllText("YourPathHere",serialized)
+System.IO.File.WriteAllText("path/to/your/params.json",serialized)
+(**
+## Executing the Tool
+To create a peptide data base just call the tool:
+
+	proteomiqon-peptidedb -i "path/to/your/proteom.fasta" -o "path/to/your/outDirectory" -p "path/to/your/params.json"
+
+A detailed description of the CLI arguments the tool expects can be obtained by calling the tool:
+
+	proteomiqon-peptidedb --help
+
+*)

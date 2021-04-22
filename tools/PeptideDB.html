@@ -132,8 +132,10 @@
 <a href="https://csbiology.github.io/ProteomIQon/tools/PeptideDB.fsx"><img src="https://csbiology.github.io/ProteomIQon/img/badge-script.svg" alt="Script" /></a>&emsp;
 <a href="https://csbiology.github.io/ProteomIQon/tools/PeptideDB.ipynb"><img src="https://csbiology.github.io/ProteomIQon/img/badge-notebook.svg" alt="Notebook" /></a></p>
 <h1><a name="PeptideDB" class="anchor" href="#PeptideDB">PeptideDB</a></h1>
-<p>This tool takes proteome information in the form of a <a href="https://en.wikipedia.org/wiki/FASTA_format">FASTA</a> file. The proteome information is then processed according
-to the parameters given and stored in a database. The database contains information about the proteins, their identifier and their digested peptides.</p>
+<p>MS-based shotgun proteomics estimates protein abundances using a proxy: peptides. An established method to identify acquired MS/MS spectra is the comparison of each spectrum with peptides in a reference database.
+The PeptideDB tool helps to create peptide databases by in silico digestion given proteome information in the FASTA format and a set of parameters that allow the user to mimic conditions of their specific experiment.
+The created database stores peptide protein relationships in a SQLite database which can then be supplied to other ProteomIQon tools.
+The following table gives an overview of the parameter set:</p>
 <h2><a name="Parameters" class="anchor" href="#Parameters">Parameters</a></h2>
 <table>
 <thead>
@@ -213,7 +215,7 @@ to the parameters given and stored in a database. The database contains informat
 </table>
 
 <h2><a name="Parameter-Generation" class="anchor" href="#Parameter-Generation">Parameter Generation</a></h2>
-<p>Parameters are handed to the cli tool as a .json file. you can download the default file <a href="https://github.com/CSBiology/ProteomIQon/blob/master/src/ProteomIQon/defaultParams/peptideDBParams.json">here</a>,
+<p>Parameters are handed to the cli tool as .json files. You can download an example file <a href="https://github.com/CSBiology/ProteomIQon/blob/master/src/ProteomIQon/defaultParams/peptideDBParams.json">here</a>,
 or use an F# script, which can be downloaded or run in Binder at the top of the page, to write your own parameter file:</p>
 <pre class="fssnip highlighted"><code lang="fsharp"><span class="pp">#r</span> <span class="s">&quot;nuget: BioFSharp.Mz, 0.1.5-beta&quot;</span>
 <span class="pp">#r</span> <span class="s">&quot;nuget: Newtonsoft.Json, 12.0.3&quot;</span>
@@ -244,7 +246,14 @@ or use an F# script, which can be downloaded or run in Binder at the top of the 
     <span onmouseout="hideTip(event, 'fs7', 24)" onmouseover="showTip(event, 'fs7', 24)" class="id">peptideDBParams</span>
     <span class="o">|&gt;</span> <span onmouseout="hideTip(event, 'fs20', 25)" onmouseover="showTip(event, 'fs20', 25)" class="rt">JsonConvert</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs21', 26)" onmouseover="showTip(event, 'fs21', 26)" class="id">SerializeObject</span>
 
-<span onmouseout="hideTip(event, 'fs22', 27)" onmouseover="showTip(event, 'fs22', 27)" class="id">System</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs23', 28)" onmouseover="showTip(event, 'fs23', 28)" class="id">IO</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs24', 29)" onmouseover="showTip(event, 'fs24', 29)" class="rt">File</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs25', 30)" onmouseover="showTip(event, 'fs25', 30)" class="id">WriteAllText</span><span class="pn">(</span><span class="s">&quot;YourPathHere&quot;</span><span class="pn">,</span><span onmouseout="hideTip(event, 'fs19', 31)" onmouseover="showTip(event, 'fs19', 31)" class="id">serialized</span><span class="pn">)</span>
+<span onmouseout="hideTip(event, 'fs22', 27)" onmouseover="showTip(event, 'fs22', 27)" class="id">System</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs23', 28)" onmouseover="showTip(event, 'fs23', 28)" class="id">IO</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs24', 29)" onmouseover="showTip(event, 'fs24', 29)" class="rt">File</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs25', 30)" onmouseover="showTip(event, 'fs25', 30)" class="id">WriteAllText</span><span class="pn">(</span><span class="s">&quot;path/to/your/params.json&quot;</span><span class="pn">,</span><span onmouseout="hideTip(event, 'fs19', 31)" onmouseover="showTip(event, 'fs19', 31)" class="id">serialized</span><span class="pn">)</span>
+</code></pre>
+<h2><a name="Executing-the-Tool" class="anchor" href="#Executing-the-Tool">Executing the Tool</a></h2>
+<p>To create a peptide data base just call the tool:</p>
+<pre class="fssnip highlighted"><code lang="fsharp"><span class="id">proteomiqon</span><span class="o">-</span><span class="id">peptidedb</span> <span class="o">-</span><span class="id">i</span> <span class="s">&quot;path/to/your/proteom.fasta&quot;</span> <span class="o">-</span><span class="id">o</span> <span class="s">&quot;path/to/your/outDirectory&quot;</span> <span class="o">-</span><span class="id">p</span> <span class="s">&quot;path/to/your/params.json&quot;</span>
+</code></pre>
+<p>A detailed description of the CLI arguments the tool expects can be obtained by calling the tool:</p>
+<pre class="fssnip highlighted"><code lang="fsharp"><span class="id">proteomiqon</span><span class="o">-</span><span class="id">peptidedb</span> <span class="pn">--</span><span class="id">help</span>
 </code></pre>
 
                 </div>
