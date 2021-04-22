@@ -17,4 +17,55 @@ This way, the most likely peptide from which the measured spectrum originated fr
 | cTerminalSeries                | CTerminalSeries.Y                                                                                                                         | Considered ions starting from the C-Terminus                       |
 | Andromeda                      | {PMinPMax = 4,10; MatchingIonTolerancePPM = 100.}                                                                                         | Andromeda scoring parameters                                       |
 
+## Parameter Generation
+
+Parameters are handed to the cli tool as a .json file. you can download the default file [here](https://github.com/CSBiology/ProteomIQon/blob/master/src/ProteomIQon/defaultParams/peptideSpectrumMatchingParams.json), 
+or use an F# script, which can be downloaded or run in Binder at the top of the page, to write your own parameter file:
+
 *)
+#r "nuget: BioFSharp.Mz, 0.1.5-beta"
+#r "nuget: Newtonsoft.Json, 12.0.3"
+#r "nuget: ProteomIQon, 0.0.1"
+
+open BioFSharp.Mz.SearchDB
+open Newtonsoft.Json
+open ProteomIQon
+open ProteomIQon.Domain
+open BioFSharp.Mz
+
+let chargeDetermParams :ChargeState.ChargeDetermParams =
+    {
+        ExpectedMinimalCharge = 2
+        ExpectedMaximumCharge = 5
+        Width                 = 1.1
+        MinIntensity          = 0.15
+        DeltaMinIntensity     = 0.3
+        NrOfRndSpectra        = 10000
+    }
+
+let andromedaParams: AndromedaParams =
+    {
+        PMinPMax                = 4,10
+        MatchingIonTolerancePPM = 100.
+    }
+
+let peptideSpectrumMatchingParams :Dto.PeptideSpectrumMatchingParams =
+    {
+        ChargeStateDeterminationParams = chargeDetermParams 
+        LookUpPPM                      = 30.
+        MS2ScanRange                   = 100.,2000.
+        nTerminalSeries                = NTerminalSeries.B
+        cTerminalSeries                = CTerminalSeries.Y
+        Andromeda                      = andromedaParams
+    }
+
+let serialized =
+    peptideSpectrumMatchingParams
+    |> JsonConvert.SerializeObject
+
+System.IO.File.WriteAllText("YourPathHere",serialized)
+(**
+If you are running this tool in Binder, you can copy the output of the following codeblock and save it in a JSON file.
+
+*)
+serialized

@@ -174,11 +174,85 @@ This way, the most likely peptide from which the measured spectrum originated fr
 </tbody>
 </table>
 
+<h2><a name="Parameter-Generation" class="anchor" href="#Parameter-Generation">Parameter Generation</a></h2>
+<p>Parameters are handed to the cli tool as a .json file. you can download the default file <a href="https://github.com/CSBiology/ProteomIQon/blob/master/src/ProteomIQon/defaultParams/peptideSpectrumMatchingParams.json">here</a>,
+or use an F# script, which can be downloaded or run in Binder at the top of the page, to write your own parameter file:</p>
+<pre class="fssnip highlighted"><code lang="fsharp"><span class="pp">#r</span> <span class="s">&quot;nuget: BioFSharp.Mz, 0.1.5-beta&quot;</span>
+<span class="pp">#r</span> <span class="s">&quot;nuget: Newtonsoft.Json, 12.0.3&quot;</span>
+<span class="pp">#r</span> <span class="s">&quot;nuget: ProteomIQon, 0.0.1&quot;</span>
+
+<span class="k">open</span> <span onmouseout="hideTip(event, 'fs1', 1)" onmouseover="showTip(event, 'fs1', 1)" class="id">BioFSharp</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs2', 2)" onmouseover="showTip(event, 'fs2', 2)" class="id">Mz</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs3', 3)" onmouseover="showTip(event, 'fs3', 3)" class="m">SearchDB</span>
+<span class="k">open</span> <span onmouseout="hideTip(event, 'fs4', 4)" onmouseover="showTip(event, 'fs4', 4)" class="id">Newtonsoft</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs5', 5)" onmouseover="showTip(event, 'fs5', 5)" class="id">Json</span>
+<span class="k">open</span> <span onmouseout="hideTip(event, 'fs6', 6)" onmouseover="showTip(event, 'fs6', 6)" class="id">ProteomIQon</span>
+<span class="k">open</span> <span onmouseout="hideTip(event, 'fs6', 7)" onmouseover="showTip(event, 'fs6', 7)" class="id">ProteomIQon</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs7', 8)" onmouseover="showTip(event, 'fs7', 8)" class="m">Domain</span>
+<span class="k">open</span> <span onmouseout="hideTip(event, 'fs1', 9)" onmouseover="showTip(event, 'fs1', 9)" class="id">BioFSharp</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs2', 10)" onmouseover="showTip(event, 'fs2', 10)" class="id">Mz</span>
+
+<span class="k">let</span> <span onmouseout="hideTip(event, 'fs8', 11)" onmouseover="showTip(event, 'fs8', 11)" class="id">chargeDetermParams</span> <span class="pn">:</span><span onmouseout="hideTip(event, 'fs9', 12)" onmouseover="showTip(event, 'fs9', 12)" class="m">ChargeState</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs10', 13)" onmouseover="showTip(event, 'fs10', 13)" class="id">ChargeDetermParams</span> <span class="o">=</span>
+    <span class="pn">{</span>
+        <span class="prop">ExpectedMinimalCharge</span> <span class="o">=</span> <span class="n">2</span>
+        <span class="prop">ExpectedMaximumCharge</span> <span class="o">=</span> <span class="n">5</span>
+        <span class="prop">Width</span>                 <span class="o">=</span> <span class="n">1.1</span>
+        <span class="prop">MinIntensity</span>          <span class="o">=</span> <span class="n">0.15</span>
+        <span class="prop">DeltaMinIntensity</span>     <span class="o">=</span> <span class="n">0.3</span>
+        <span class="prop">NrOfRndSpectra</span>        <span class="o">=</span> <span class="n">10000</span>
+    <span class="pn">}</span>
+
+<span class="k">let</span> <span onmouseout="hideTip(event, 'fs11', 14)" onmouseover="showTip(event, 'fs11', 14)" class="id">andromedaParams</span><span class="pn">:</span> <span onmouseout="hideTip(event, 'fs12', 15)" onmouseover="showTip(event, 'fs12', 15)" class="rt">AndromedaParams</span> <span class="o">=</span>
+    <span class="pn">{</span>
+        <span class="prop">PMinPMax</span>                <span class="o">=</span> <span class="n">4</span><span class="pn">,</span><span class="n">10</span>
+        <span class="prop">MatchingIonTolerancePPM</span> <span class="o">=</span> <span class="n">100.</span>
+    <span class="pn">}</span>
+
+<span class="k">let</span> <span onmouseout="hideTip(event, 'fs13', 16)" onmouseover="showTip(event, 'fs13', 16)" class="id">peptideSpectrumMatchingParams</span> <span class="pn">:</span><span onmouseout="hideTip(event, 'fs14', 17)" onmouseover="showTip(event, 'fs14', 17)" class="m">Dto</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs15', 18)" onmouseover="showTip(event, 'fs15', 18)" class="id">PeptideSpectrumMatchingParams</span> <span class="o">=</span>
+    <span class="pn">{</span>
+        <span class="prop">ChargeStateDeterminationParams</span> <span class="o">=</span> <span onmouseout="hideTip(event, 'fs8', 19)" onmouseover="showTip(event, 'fs8', 19)" class="id">chargeDetermParams</span> 
+        <span class="prop">LookUpPPM</span>                      <span class="o">=</span> <span class="n">30.</span>
+        <span class="prop">MS2ScanRange</span>                   <span class="o">=</span> <span class="n">100.</span><span class="pn">,</span><span class="n">2000.</span>
+        <span class="prop">nTerminalSeries</span>                <span class="o">=</span> <span onmouseout="hideTip(event, 'fs16', 20)" onmouseover="showTip(event, 'fs16', 20)" class="m">NTerminalSeries</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs17', 21)" onmouseover="showTip(event, 'fs17', 21)" class="id">B</span>
+        <span class="prop">cTerminalSeries</span>                <span class="o">=</span> <span onmouseout="hideTip(event, 'fs18', 22)" onmouseover="showTip(event, 'fs18', 22)" class="m">CTerminalSeries</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs19', 23)" onmouseover="showTip(event, 'fs19', 23)" class="id">Y</span>
+        <span class="prop">Andromeda</span>                      <span class="o">=</span> <span onmouseout="hideTip(event, 'fs11', 24)" onmouseover="showTip(event, 'fs11', 24)" class="id">andromedaParams</span>
+    <span class="pn">}</span>
+
+<span class="k">let</span> <span onmouseout="hideTip(event, 'fs20', 25)" onmouseover="showTip(event, 'fs20', 25)" class="id">serialized</span> <span class="o">=</span>
+    <span onmouseout="hideTip(event, 'fs13', 26)" onmouseover="showTip(event, 'fs13', 26)" class="id">peptideSpectrumMatchingParams</span>
+    <span class="o">|&gt;</span> <span onmouseout="hideTip(event, 'fs21', 27)" onmouseover="showTip(event, 'fs21', 27)" class="rt">JsonConvert</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs22', 28)" onmouseover="showTip(event, 'fs22', 28)" class="id">SerializeObject</span>
+
+<span onmouseout="hideTip(event, 'fs23', 29)" onmouseover="showTip(event, 'fs23', 29)" class="id">System</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs24', 30)" onmouseover="showTip(event, 'fs24', 30)" class="id">IO</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs25', 31)" onmouseover="showTip(event, 'fs25', 31)" class="rt">File</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs26', 32)" onmouseover="showTip(event, 'fs26', 32)" class="id">WriteAllText</span><span class="pn">(</span><span class="s">&quot;YourPathHere&quot;</span><span class="pn">,</span><span onmouseout="hideTip(event, 'fs20', 33)" onmouseover="showTip(event, 'fs20', 33)" class="id">serialized</span><span class="pn">)</span>
+</code></pre>
+<p>If you are running this tool in Binder, you can copy the output of the following codeblock and save it in a JSON file.</p>
+<pre class="fssnip highlighted"><code lang="fsharp"><span onmouseout="hideTip(event, 'fs20', 34)" onmouseover="showTip(event, 'fs20', 34)" class="id">serialized</span>
+</code></pre>
 
                 </div>
             </div>
         </div>
-        
+        <div class="fsdocs-tip" id="fs1">namespace BioFSharp</div>
+<div class="fsdocs-tip" id="fs2">namespace BioFSharp.Mz</div>
+<div class="fsdocs-tip" id="fs3">module SearchDB<br /><br />from BioFSharp.Mz</div>
+<div class="fsdocs-tip" id="fs4">namespace Newtonsoft</div>
+<div class="fsdocs-tip" id="fs5">namespace Newtonsoft.Json</div>
+<div class="fsdocs-tip" id="fs6">namespace ProteomIQon</div>
+<div class="fsdocs-tip" id="fs7">module Domain<br /><br />from ProteomIQon</div>
+<div class="fsdocs-tip" id="fs8">val chargeDetermParams : ChargeState.ChargeDetermParams</div>
+<div class="fsdocs-tip" id="fs9">module ChargeState<br /><br />from BioFSharp.Mz</div>
+<div class="fsdocs-tip" id="fs10">type ChargeDetermParams =<br />&#160;&#160;{ ExpectedMinimalCharge: int<br />&#160;&#160;&#160;&#160;ExpectedMaximumCharge: int<br />&#160;&#160;&#160;&#160;Width: float<br />&#160;&#160;&#160;&#160;MinIntensity: float<br />&#160;&#160;&#160;&#160;DeltaMinIntensity: float<br />&#160;&#160;&#160;&#160;NrOfRndSpectra: int }</div>
+<div class="fsdocs-tip" id="fs11">val andromedaParams : AndromedaParams</div>
+<div class="fsdocs-tip" id="fs12">type AndromedaParams =<br />&#160;&#160;{ PMinPMax: int * int<br />&#160;&#160;&#160;&#160;MatchingIonTolerancePPM: float }</div>
+<div class="fsdocs-tip" id="fs13">val peptideSpectrumMatchingParams : Dto.PeptideSpectrumMatchingParams</div>
+<div class="fsdocs-tip" id="fs14">module Dto<br /><br />from ProteomIQon</div>
+<div class="fsdocs-tip" id="fs15">Multiple items<br />module PeptideSpectrumMatchingParams<br /><br />from ProteomIQon.Dto<br /><br />--------------------<br />type PeptideSpectrumMatchingParams =<br />&#160;&#160;{ ChargeStateDeterminationParams: ChargeDetermParams<br />&#160;&#160;&#160;&#160;LookUpPPM: float<br />&#160;&#160;&#160;&#160;MS2ScanRange: float * float<br />&#160;&#160;&#160;&#160;nTerminalSeries: NTerminalSeries<br />&#160;&#160;&#160;&#160;cTerminalSeries: CTerminalSeries<br />&#160;&#160;&#160;&#160;Andromeda: AndromedaParams }</div>
+<div class="fsdocs-tip" id="fs16">Multiple items<br />module NTerminalSeries<br /><br />from ProteomIQon.Common<br /><br />--------------------<br />type NTerminalSeries = (BioFSharp.IBioItem -&gt; float) -&gt; BioFSharp.AminoAcids.AminoAcid list -&gt; PeakFamily&lt;TaggedMass.TaggedMass&gt; list</div>
+<div class="fsdocs-tip" id="fs17">union case NTerminalSeries.B: NTerminalSeries</div>
+<div class="fsdocs-tip" id="fs18">Multiple items<br />module CTerminalSeries<br /><br />from ProteomIQon.Common<br /><br />--------------------<br />type CTerminalSeries = (BioFSharp.IBioItem -&gt; float) -&gt; BioFSharp.AminoAcids.AminoAcid list -&gt; PeakFamily&lt;TaggedMass.TaggedMass&gt; list</div>
+<div class="fsdocs-tip" id="fs19">union case CTerminalSeries.Y: CTerminalSeries</div>
+<div class="fsdocs-tip" id="fs20">val serialized : string</div>
+<div class="fsdocs-tip" id="fs21">type JsonConvert =<br />&#160;&#160;static member DeserializeAnonymousType&lt;&#39;T&gt; : value: string * anonymousTypeObject: &#39;T -&gt; &#39;T + 1 overload<br />&#160;&#160;static member DeserializeObject : value: string -&gt; obj + 7 overloads<br />&#160;&#160;static member DeserializeXNode : value: string -&gt; XDocument + 3 overloads<br />&#160;&#160;static member DeserializeXmlNode : value: string -&gt; XmlDocument + 3 overloads<br />&#160;&#160;static member EnsureDecimalPlace : value: float * text: string -&gt; string + 1 overload<br />&#160;&#160;static member EnsureFloatFormat : value: float * text: string * floatFormatHandling: FloatFormatHandling * quoteChar: char * nullable: bool -&gt; string<br />&#160;&#160;static member PopulateObject : value: string * target: obj -&gt; unit + 1 overload<br />&#160;&#160;static member SerializeObject : value: obj -&gt; string + 7 overloads<br />&#160;&#160;static member SerializeObjectInternal : value: obj * type: Type * jsonSerializer: JsonSerializer -&gt; string<br />&#160;&#160;static member SerializeXNode : node: XObject -&gt; string + 2 overloads<br />&#160;&#160;...</div>
+<div class="fsdocs-tip" id="fs22">JsonConvert.SerializeObject(value: obj) : string<br />JsonConvert.SerializeObject(value: obj, settings: JsonSerializerSettings) : string<br />JsonConvert.SerializeObject(value: obj, [&lt;System.ParamArray&gt;] converters: JsonConverter []) : string<br />JsonConvert.SerializeObject(value: obj, formatting: Formatting) : string<br />JsonConvert.SerializeObject(value: obj, formatting: Formatting, settings: JsonSerializerSettings) : string<br />JsonConvert.SerializeObject(value: obj, type: System.Type, settings: JsonSerializerSettings) : string<br />JsonConvert.SerializeObject(value: obj, formatting: Formatting, [&lt;System.ParamArray&gt;] converters: JsonConverter []) : string<br />JsonConvert.SerializeObject(value: obj, type: System.Type, formatting: Formatting, settings: JsonSerializerSettings) : string</div>
+<div class="fsdocs-tip" id="fs23">namespace System</div>
+<div class="fsdocs-tip" id="fs24">namespace System.IO</div>
+<div class="fsdocs-tip" id="fs25">type File =<br />&#160;&#160;static member AppendAllLines : path: string * contents: IEnumerable&lt;string&gt; -&gt; unit + 1 overload<br />&#160;&#160;static member AppendAllLinesAsync : path: string * contents: IEnumerable&lt;string&gt; * encoding: Encoding *?cancellationToken: CancellationToken -&gt; Task + 1 overload<br />&#160;&#160;static member AppendAllText : path: string * contents: string -&gt; unit + 1 overload<br />&#160;&#160;static member AppendAllTextAsync : path: string * contents: string * encoding: Encoding *?cancellationToken: CancellationToken -&gt; Task + 1 overload<br />&#160;&#160;static member AppendText : path: string -&gt; StreamWriter<br />&#160;&#160;static member Copy : sourceFileName: string * destFileName: string -&gt; unit + 1 overload<br />&#160;&#160;static member Create : path: string -&gt; FileStream + 2 overloads<br />&#160;&#160;static member CreateText : path: string -&gt; StreamWriter<br />&#160;&#160;static member Decrypt : path: string -&gt; unit<br />&#160;&#160;static member Delete : path: string -&gt; unit<br />&#160;&#160;...</div>
+<div class="fsdocs-tip" id="fs26">System.IO.File.WriteAllText(path: string, contents: string) : unit<br />System.IO.File.WriteAllText(path: string, contents: string, encoding: System.Text.Encoding) : unit</div>
+
     </div>
 
     <!-- BEGIN SEARCH BOX: this adds support for the search box -->
