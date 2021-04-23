@@ -41,7 +41,7 @@ module console1 =
             else
                 failwith "The given path to the instrument output is neither a valid file path nor a valid directory path."
         let files = 
-            parsePaths "psm" i
+            parsePaths (fun path -> Directory.GetFiles(path,("*.psm"))) i
             |> Array.ofSeq
         if files.Length = 1 then
             logger.Info (sprintf "single file")

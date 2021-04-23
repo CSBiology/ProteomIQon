@@ -47,7 +47,7 @@ module console1 =
                 Json.ReadAndDeserialize<Dto.ProteinInferenceParams> p
                 |> Dto.ProteinInferenceParams.toDomain
         let files = 
-            parsePaths "qpsm" i
+            parsePaths (fun path -> Directory.GetFiles(path,("*.qpsm"))) i
             |> Array.ofSeq
         logger.Trace (sprintf "Inputfiles: %A" files)
         ProteinInference.inferProteins gff3 dbConnection proteinInferenceParams o files

@@ -5,6 +5,7 @@ open CLIArgumentParsing
 open Argu
 open PSMBasedQuantification
 open System.Reflection
+open ProteomIQon.Core
 open ProteomIQon.Core.InputPaths
 
 module console1 =
@@ -43,10 +44,10 @@ module console1 =
         SearchDB'.setIndexOnModSequenceAndGlobalMod dbConnection |> ignore
         logger.Trace "Set Index on data base if not present: finished"
         let mzfiles = 
-            parsePaths "mzlite" i
+            parsePaths MzIO.Reader.getMzLiteMzMLPaths i
             |> Array.ofSeq
         let pepfiles = 
-            parsePaths "qpsm" ii
+            parsePaths (fun path -> Directory.GetFiles(path,("*.qpsm"))) ii
             |> Array.ofSeq
         if mzfiles.Length = 1 && pepfiles.Length = 1 then
             logger.Info "single file"
