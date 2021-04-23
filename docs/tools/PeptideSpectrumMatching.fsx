@@ -3,7 +3,7 @@
 title: PeptideSpectrumMatching
 category: Tools
 categoryindex: 1
-index: 3
+index: 2
 ---
 *)
 (**
@@ -22,9 +22,8 @@ established search enginge scores: SEQUEST, Andromeda and XTandem.
 The search space is extended by so called decoys. Decoys are reversed counterparts of peptides within the search space and allow us to assign a false discovery rate to each scored peptide
 using the [PSMStatistics tool]({{root}}tools/PSMStatistics.html).
 
-The following table gives an overview of the parameter set:
-
 ## Parameters
+The following table gives an overview of the parameter set:
 
 | **Parameter**                  | **Default Value**                                                                                                                         | **Description**                                                    |
 |--------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------|
@@ -93,6 +92,7 @@ serialized
 (**
 ## Executing the Tool
 **Disclaimer** this tool needs a peptide database to query against, if you did not create one yet you can do so by using the [PeptideDB]({{root}}tools/peptideDb.html) tool.
+
 To score all MS/MS of an MS run simply call: 
 
 *)
