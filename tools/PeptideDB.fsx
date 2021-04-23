@@ -10,9 +10,9 @@
 MS-based shotgun proteomics estimates protein abundances using a proxy: peptides. An established method to identify acquired MS/MS spectra is the comparison of each spectrum with peptides in a reference database. 
 The PeptideDB tool helps to create peptide databases by in silico digestion given proteome information in the FASTA format and a set of parameters that allow the user to mimic conditions of their specific experiment. 
 The created database stores peptide protein relationships in a SQLite database which can then be supplied to other ProteomIQon tools.
-The following table gives an overview of the parameter set:
 
 ## Parameters
+The following table gives an overview of the parameter set:
 
 | **Parameter**              | **Default Value**                                                 | **Description**                                                     |
 |----------------------------|-------------------------------------------------------------------|---------------------------------------------------------------------|

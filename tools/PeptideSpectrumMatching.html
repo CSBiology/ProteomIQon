@@ -52,17 +52,14 @@
                     </div>
                     <!-- END SEARCH BOX: this adds support for the search box -->
                     <ul class="navbar-nav">
+                        <li class="nav-header">General</li>
+                        <li class="nav-item"><a href="/">Home</a></li>
                         <li class="nav-header">
   Tools
 </li>             
 <li class="nav-item">
   <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/PeptideDB.html">
     PeptideDB
-  </a>
-</li>             
-<li class="nav-item">
-  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/Preprocessing.html">
-    Preprocessing
   </a>
 </li>             
 <li class="nav-item">
@@ -81,45 +78,16 @@
   </a>
 </li>             
 <li class="nav-item">
-  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/QuantBasedAlignment.html">
-    QuantBasedAlignment
-  </a>
-</li>             
-<li class="nav-item">
-  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/AlignmentBasedQuantification.html">
-    AlignmentBasedQuantification
-  </a>
-</li>             
-<li class="nav-item">
   <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/ProteinInference.html">
     ProteinInference
   </a>
-</li>             
-<li class="nav-item">
-  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/MzMLConverter.html">
-    MzMLConverter
-  </a>
-</li>             
-<li class="nav-item">
-  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/MzTAB.html">
-    MzTAB
-  </a>
-</li>             
-<li class="nav-item">
-  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/SpectralLibrary.html">
-    SpectralLibrary
-  </a>
-</li>             
-<li class="nav-item">
-  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/ConsensusSpectralLibrary.html">
-    ConsensusSpectralLibrary
-  </a>
-</li>             
-<li class="nav-item">
-  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/SWATHAnalysis.html">
-    SWATHAnalysis
-  </a>
 </li>
+                        <li class="nav-header">Powered By</li>
+                        <li class="nav-item"><a href="https://github.com/CSBiology/MzIO">MzIO</a></li>
+                        <li class="nav-item"><a href="https://github.com/CSBiology/BioFSharp">BioFSharp</a></li>
+                        <li class="nav-item"><a href="https://github.com/CSBiology/BioFSharp.Mz">BioFSharp.Mz</a></li>
+                        <li class="nav-item"><a href="https://github.com/fslaborg/FSharp.Stats">FSharp.Stats</a></li>
+                        <li class="nav-item"><a href="https://github.com/fslaborg/Deedle">Deedle</a></li>
                     </ul>
                 </div>
             </aside>
@@ -128,10 +96,21 @@
             <div class="section pt-4">
                 <div class="container" id="fsdocs-content">
                     
+<p><a href="https://mybinder.org/v2/gh/csbiology/ProteomIQon/gh-pages?filepath=tools/PeptideSpectrumMatching.ipynb"><img src="https://csbiology.github.io/ProteomIQon/img/badge-binder.svg" alt="Binder" /></a>&emsp;
+<a href="https://csbiology.github.io/ProteomIQon/tools/PeptideSpectrumMatching.fsx"><img src="https://csbiology.github.io/ProteomIQon/img/badge-script.svg" alt="Script" /></a>&emsp;
+<a href="https://csbiology.github.io/ProteomIQon/tools/PeptideSpectrumMatching.ipynb"><img src="https://csbiology.github.io/ProteomIQon/img/badge-notebook.svg" alt="Notebook" /></a></p>
 <h1><a name="Peptide-Spectrum-Matching" class="anchor" href="#Peptide-Spectrum-Matching">Peptide Spectrum Matching</a></h1>
-<p>This tool selects potential peptides for each measured spectrum and computes theoretical spectra for them. Those theoretical spectra are then compared to the measured specctrum and scored according to their similarity.
-This way, the most likely peptide from which the measured spectrum originated from can be identified using the similarity scores.</p>
+<p><strong>Disclaimer</strong> this tool needs a peptide database to query against, if you did not create one yet you can do so by using the <a href="https://csbiology.github.io/ProteomIQon/tools/peptideDb.html">PeptideDB</a> tool.</p>
+<p>An established method to identify acquired MS/MS spectra is the comparison of each spectrum with peptides in a <a href="https://csbiology.github.io/ProteomIQon/tools/peptideDb.html">reference database</a>.</p>
+<p>Given raw a MS run in the mzLite or mzml format, this tool iterates accross all recorded MS/MS scans and determines the charge state of precursor ions which were selected for fragmentation. With this it is possible to
+query the peptide data base for every precursor ion mass +/- a tolerance (which defines the so called 'search space') and retrieve peptides that are theoretical candidates for a match.
+For each of the peptide candidates we create an theoretical spectrum in silico and compare it to the measured MS/MS scan.</p>
+<img src="https://csbiology.github.io/ProteomIQon/img/PSM.png" width="1000" height="750" />
+<p>To measure similarity we use our own implementations of three established search enginge scores: SEQUEST, Andromeda and XTandem.
+The search space is extended by so called decoys. Decoys are reversed counterparts of peptides within the search space and allow us to assign a false discovery rate to each scored peptide
+using the <a href="https://csbiology.github.io/ProteomIQon/tools/PSMStatistics.html">PSMStatistics tool</a>.</p>
 <h2><a name="Parameters" class="anchor" href="#Parameters">Parameters</a></h2>
+<p>The following table gives an overview of the parameter set:</p>
 <table>
 <thead>
 <tr class="header">
@@ -213,14 +192,21 @@ or use an F# script, which can be downloaded or run in Binder at the top of the 
         <span class="prop">Andromeda</span>                      <span class="o">=</span> <span onmouseout="hideTip(event, 'fs11', 24)" onmouseover="showTip(event, 'fs11', 24)" class="id">andromedaParams</span>
     <span class="pn">}</span>
 
+
 <span class="k">let</span> <span onmouseout="hideTip(event, 'fs20', 25)" onmouseover="showTip(event, 'fs20', 25)" class="id">serialized</span> <span class="o">=</span>
     <span onmouseout="hideTip(event, 'fs13', 26)" onmouseover="showTip(event, 'fs13', 26)" class="id">peptideSpectrumMatchingParams</span>
     <span class="o">|&gt;</span> <span onmouseout="hideTip(event, 'fs21', 27)" onmouseover="showTip(event, 'fs21', 27)" class="rt">JsonConvert</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs22', 28)" onmouseover="showTip(event, 'fs22', 28)" class="id">SerializeObject</span>
-
-<span onmouseout="hideTip(event, 'fs23', 29)" onmouseover="showTip(event, 'fs23', 29)" class="id">System</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs24', 30)" onmouseover="showTip(event, 'fs24', 30)" class="id">IO</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs25', 31)" onmouseover="showTip(event, 'fs25', 31)" class="rt">File</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs26', 32)" onmouseover="showTip(event, 'fs26', 32)" class="id">WriteAllText</span><span class="pn">(</span><span class="s">&quot;YourPathHere&quot;</span><span class="pn">,</span><span onmouseout="hideTip(event, 'fs20', 33)" onmouseover="showTip(event, 'fs20', 33)" class="id">serialized</span><span class="pn">)</span>
 </code></pre>
-<p>If you are running this tool in Binder, you can copy the output of the following codeblock and save it in a JSON file.</p>
-<pre class="fssnip highlighted"><code lang="fsharp"><span onmouseout="hideTip(event, 'fs20', 34)" onmouseover="showTip(event, 'fs20', 34)" class="id">serialized</span>
+<h2><a name="Executing-the-Tool" class="anchor" href="#Executing-the-Tool">Executing the Tool</a></h2>
+<p><strong>Disclaimer</strong> this tool needs a peptide database to query against, if you did not create one yet you can do so by using the <a href="https://csbiology.github.io/ProteomIQon/tools/peptideDb.html">PeptideDB</a> tool.</p>
+<p>To score all MS/MS of an MS run simply call:</p>
+<pre class="fssnip highlighted"><code lang="fsharp"><span class="id">proteomiqon</span><span class="o">-</span><span class="id">peptidespectrummatching</span> <span class="o">-</span><span class="id">i</span> <span class="s">&quot;path/to/your/run.mzml&quot;</span> <span class="o">-</span><span class="id">d</span> <span class="s">&quot;path/to/your/database.sqlite&quot;</span> <span class="o">-</span><span class="id">o</span> <span class="s">&quot;path/to/your/outDirectory&quot;</span> <span class="o">-</span><span class="id">p</span> <span class="s">&quot;path/to/your/params.json&quot;</span>
+</code></pre>
+<p>It is also possible to call the tool on a list of MS files. If you have a mulitcore cpu it is possible to score multiple runs in parallel using the -c flag:</p>
+<pre class="fssnip highlighted"><code lang="fsharp"><span class="id">proteomiqon</span><span class="o">-</span><span class="id">peptidespectrummatching</span> <span class="o">-</span><span class="id">i</span> <span class="s">&quot;path/to/your/run1.mzml&quot;</span> <span class="s">&quot;path/to/your/run2.mzml&quot;</span> <span class="s">&quot;path/to/your/run3.mzml&quot;</span> <span class="o">-</span><span class="id">d</span> <span class="s">&quot;path/to/your/database.sqlite&quot;</span> <span class="o">-</span><span class="id">o</span> <span class="s">&quot;path/to/your/outDirectory&quot;</span> <span class="o">-</span><span class="id">p</span> <span class="s">&quot;path/to/your/params.json&quot;</span> <span class="o">-</span><span class="id">c</span> <span class="n">3</span>
+</code></pre>
+<p>A detailed description of the CLI arguments the tool expects can be obtained by calling the tool:</p>
+<pre class="fssnip highlighted"><code lang="fsharp"><span class="id">proteomiqon</span><span class="o">-</span><span class="id">peptidespectrummatching</span> <span class="pn">--</span><span class="id">help</span>
 </code></pre>
 
                 </div>
@@ -248,10 +234,6 @@ or use an F# script, which can be downloaded or run in Binder at the top of the 
 <div class="fsdocs-tip" id="fs20">val serialized : string</div>
 <div class="fsdocs-tip" id="fs21">type JsonConvert =<br />&#160;&#160;static member DeserializeAnonymousType&lt;&#39;T&gt; : value: string * anonymousTypeObject: &#39;T -&gt; &#39;T + 1 overload<br />&#160;&#160;static member DeserializeObject : value: string -&gt; obj + 7 overloads<br />&#160;&#160;static member DeserializeXNode : value: string -&gt; XDocument + 3 overloads<br />&#160;&#160;static member DeserializeXmlNode : value: string -&gt; XmlDocument + 3 overloads<br />&#160;&#160;static member EnsureDecimalPlace : value: float * text: string -&gt; string + 1 overload<br />&#160;&#160;static member EnsureFloatFormat : value: float * text: string * floatFormatHandling: FloatFormatHandling * quoteChar: char * nullable: bool -&gt; string<br />&#160;&#160;static member PopulateObject : value: string * target: obj -&gt; unit + 1 overload<br />&#160;&#160;static member SerializeObject : value: obj -&gt; string + 7 overloads<br />&#160;&#160;static member SerializeObjectInternal : value: obj * type: Type * jsonSerializer: JsonSerializer -&gt; string<br />&#160;&#160;static member SerializeXNode : node: XObject -&gt; string + 2 overloads<br />&#160;&#160;...</div>
 <div class="fsdocs-tip" id="fs22">JsonConvert.SerializeObject(value: obj) : string<br />JsonConvert.SerializeObject(value: obj, settings: JsonSerializerSettings) : string<br />JsonConvert.SerializeObject(value: obj, [&lt;System.ParamArray&gt;] converters: JsonConverter []) : string<br />JsonConvert.SerializeObject(value: obj, formatting: Formatting) : string<br />JsonConvert.SerializeObject(value: obj, formatting: Formatting, settings: JsonSerializerSettings) : string<br />JsonConvert.SerializeObject(value: obj, type: System.Type, settings: JsonSerializerSettings) : string<br />JsonConvert.SerializeObject(value: obj, formatting: Formatting, [&lt;System.ParamArray&gt;] converters: JsonConverter []) : string<br />JsonConvert.SerializeObject(value: obj, type: System.Type, formatting: Formatting, settings: JsonSerializerSettings) : string</div>
-<div class="fsdocs-tip" id="fs23">namespace System</div>
-<div class="fsdocs-tip" id="fs24">namespace System.IO</div>
-<div class="fsdocs-tip" id="fs25">type File =<br />&#160;&#160;static member AppendAllLines : path: string * contents: IEnumerable&lt;string&gt; -&gt; unit + 1 overload<br />&#160;&#160;static member AppendAllLinesAsync : path: string * contents: IEnumerable&lt;string&gt; * encoding: Encoding *?cancellationToken: CancellationToken -&gt; Task + 1 overload<br />&#160;&#160;static member AppendAllText : path: string * contents: string -&gt; unit + 1 overload<br />&#160;&#160;static member AppendAllTextAsync : path: string * contents: string * encoding: Encoding *?cancellationToken: CancellationToken -&gt; Task + 1 overload<br />&#160;&#160;static member AppendText : path: string -&gt; StreamWriter<br />&#160;&#160;static member Copy : sourceFileName: string * destFileName: string -&gt; unit + 1 overload<br />&#160;&#160;static member Create : path: string -&gt; FileStream + 2 overloads<br />&#160;&#160;static member CreateText : path: string -&gt; StreamWriter<br />&#160;&#160;static member Decrypt : path: string -&gt; unit<br />&#160;&#160;static member Delete : path: string -&gt; unit<br />&#160;&#160;...</div>
-<div class="fsdocs-tip" id="fs26">System.IO.File.WriteAllText(path: string, contents: string) : unit<br />System.IO.File.WriteAllText(path: string, contents: string, encoding: System.Text.Encoding) : unit</div>
 
     </div>
 

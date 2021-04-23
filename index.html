@@ -52,17 +52,14 @@
                     </div>
                     <!-- END SEARCH BOX: this adds support for the search box -->
                     <ul class="navbar-nav">
+                        <li class="nav-header">General</li>
+                        <li class="nav-item"><a href="/">Home</a></li>
                         <li class="nav-header">
   Tools
 </li>             
 <li class="nav-item">
   <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/PeptideDB.html">
     PeptideDB
-  </a>
-</li>             
-<li class="nav-item">
-  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/Preprocessing.html">
-    Preprocessing
   </a>
 </li>             
 <li class="nav-item">
@@ -81,45 +78,16 @@
   </a>
 </li>             
 <li class="nav-item">
-  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/QuantBasedAlignment.html">
-    QuantBasedAlignment
-  </a>
-</li>             
-<li class="nav-item">
-  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/AlignmentBasedQuantification.html">
-    AlignmentBasedQuantification
-  </a>
-</li>             
-<li class="nav-item">
   <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/ProteinInference.html">
     ProteinInference
   </a>
-</li>             
-<li class="nav-item">
-  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/MzMLConverter.html">
-    MzMLConverter
-  </a>
-</li>             
-<li class="nav-item">
-  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/MzTAB.html">
-    MzTAB
-  </a>
-</li>             
-<li class="nav-item">
-  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/SpectralLibrary.html">
-    SpectralLibrary
-  </a>
-</li>             
-<li class="nav-item">
-  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/ConsensusSpectralLibrary.html">
-    ConsensusSpectralLibrary
-  </a>
-</li>             
-<li class="nav-item">
-  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/SWATHAnalysis.html">
-    SWATHAnalysis
-  </a>
 </li>
+                        <li class="nav-header">Powered By</li>
+                        <li class="nav-item"><a href="https://github.com/CSBiology/MzIO">MzIO</a></li>
+                        <li class="nav-item"><a href="https://github.com/CSBiology/BioFSharp">BioFSharp</a></li>
+                        <li class="nav-item"><a href="https://github.com/CSBiology/BioFSharp.Mz">BioFSharp.Mz</a></li>
+                        <li class="nav-item"><a href="https://github.com/fslaborg/FSharp.Stats">FSharp.Stats</a></li>
+                        <li class="nav-item"><a href="https://github.com/fslaborg/Deedle">Deedle</a></li>
                     </ul>
                 </div>
             </aside>
@@ -131,15 +99,20 @@
 <img src="https://img.shields.io/github/contributors/CSBiology/ProteomIQon" alt="GitHub contributors" /></p>
 <h2><a name="The-ProteomIQon" class="anchor" href="#The-ProteomIQon">The ProteomIQon</a></h2>
 <p>The ProteomIQon is a collection of open source computational proteomics tools to build pipelines for the evaluation of MS derived proteomics data
-written in F#. All tools are available using <a href="https://www.nuget.org/profiles/CSBiology">nuget</a>. We are currently working on the deployment via BioConda.
-Each tool is described in detail on its corresponding documentation page accessible via the navigation pane.</p>
+written in F#. The current state of the tool chain allows handle tasks like signal detection, peptide identification, quantification and protein inference.</p>
+<img src="https://csbiology.github.io/ProteomIQon/img/PillarsOfCompProt.png" width="1000" height="750" />
+<p>Each ProteomIQon tool is concerned with a specific task. This makes the tool-chain flexibel and easily extendable.
+An example of a prototypical chaining of tools to identify and quantify a mix of 14N and 15N labeled proteins can be found in the <a href="">here</a>.
+We are currently working on the <a href="https://github.com/common-workflow-language">cwl tool and workflow descriptions</a>, so you can expect a to see more workflow graphs in the near future!</p>
+<p>All tools are available using <a href="https://www.nuget.org/profiles/CSBiology">nuget</a> and soon via BioConda.
+Each tool is described in detail on its corresponding documentation page, accessible via the navigation pane, if you think a functionality is missing, feel free to contact us or to join us as a contributor!</p>
 <h2><a name="The-Core-Project" class="anchor" href="#The-Core-Project">The Core Project</a></h2>
 <p>The ProteomIQon core is referenced by all tools. It contains mainly serializable data transfer objects such as tool results and tool parameters, as well as their mapping to domain specific types.
 This is also the place for any kind of code reusable across tools such as thin wrappers around data readers, logging or CLI formatting.</p>
 <h2><a name="Documentation" class="anchor" href="#Documentation">Documentation</a></h2>
-<p>The documentation and tutorials for this library are automatically generated (using the F# Formatting) from <em>.fsx and </em>.md files in the docs folder. If you find a typo, please submit a pull request!</p>
+<p>The documentation and tutorials for this library are automatically generated (using the F# Formatting) from .fsx and .md files in the docs folder. If you find a typo, please submit a pull request!</p>
 <h2><a name="Contributing" class="anchor" href="#Contributing">Contributing</a></h2>
-<p>Please refer to the CSB <a href=".github/CONTRIBUTING.md">Contribution guidelines</a></p>
+<p>Please refer to the CSB <a href="https://github.com/CSBiology/BioFSharp/blob/developer/.github/CONTRIBUTING.md">Contribution guidelines</a></p>
 <h2><a name="Community-Social" class="anchor" href="#Community-Social">Community/Social</a></h2>
 <p>Want to get in touch with us? We recently joined the twitter crowd:</p>
 <p><a href="https://twitter.com/cs_biology"><img src="https://img.shields.io/twitter/follow/cs_biology.svg?style=social" alt="Twitter Follow" /></a></p>

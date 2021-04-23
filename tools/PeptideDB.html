@@ -52,17 +52,14 @@
                     </div>
                     <!-- END SEARCH BOX: this adds support for the search box -->
                     <ul class="navbar-nav">
+                        <li class="nav-header">General</li>
+                        <li class="nav-item"><a href="/">Home</a></li>
                         <li class="nav-header">
   Tools
 </li>             
 <li class="nav-item">
   <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/PeptideDB.html">
     PeptideDB
-  </a>
-</li>             
-<li class="nav-item">
-  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/Preprocessing.html">
-    Preprocessing
   </a>
 </li>             
 <li class="nav-item">
@@ -81,45 +78,16 @@
   </a>
 </li>             
 <li class="nav-item">
-  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/QuantBasedAlignment.html">
-    QuantBasedAlignment
-  </a>
-</li>             
-<li class="nav-item">
-  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/AlignmentBasedQuantification.html">
-    AlignmentBasedQuantification
-  </a>
-</li>             
-<li class="nav-item">
   <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/ProteinInference.html">
     ProteinInference
   </a>
-</li>             
-<li class="nav-item">
-  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/MzMLConverter.html">
-    MzMLConverter
-  </a>
-</li>             
-<li class="nav-item">
-  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/MzTAB.html">
-    MzTAB
-  </a>
-</li>             
-<li class="nav-item">
-  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/SpectralLibrary.html">
-    SpectralLibrary
-  </a>
-</li>             
-<li class="nav-item">
-  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/ConsensusSpectralLibrary.html">
-    ConsensusSpectralLibrary
-  </a>
-</li>             
-<li class="nav-item">
-  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/SWATHAnalysis.html">
-    SWATHAnalysis
-  </a>
 </li>
+                        <li class="nav-header">Powered By</li>
+                        <li class="nav-item"><a href="https://github.com/CSBiology/MzIO">MzIO</a></li>
+                        <li class="nav-item"><a href="https://github.com/CSBiology/BioFSharp">BioFSharp</a></li>
+                        <li class="nav-item"><a href="https://github.com/CSBiology/BioFSharp.Mz">BioFSharp.Mz</a></li>
+                        <li class="nav-item"><a href="https://github.com/fslaborg/FSharp.Stats">FSharp.Stats</a></li>
+                        <li class="nav-item"><a href="https://github.com/fslaborg/Deedle">Deedle</a></li>
                     </ul>
                 </div>
             </aside>
@@ -134,9 +102,9 @@
 <h1><a name="PeptideDB" class="anchor" href="#PeptideDB">PeptideDB</a></h1>
 <p>MS-based shotgun proteomics estimates protein abundances using a proxy: peptides. An established method to identify acquired MS/MS spectra is the comparison of each spectrum with peptides in a reference database.
 The PeptideDB tool helps to create peptide databases by in silico digestion given proteome information in the FASTA format and a set of parameters that allow the user to mimic conditions of their specific experiment.
-The created database stores peptide protein relationships in a SQLite database which can then be supplied to other ProteomIQon tools.
-The following table gives an overview of the parameter set:</p>
+The created database stores peptide protein relationships in a SQLite database which can then be supplied to other ProteomIQon tools.</p>
 <h2><a name="Parameters" class="anchor" href="#Parameters">Parameters</a></h2>
+<p>The following table gives an overview of the parameter set:</p>
 <table>
 <thead>
 <tr class="header">
