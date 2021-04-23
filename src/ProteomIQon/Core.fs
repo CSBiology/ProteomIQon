@@ -67,10 +67,17 @@ module Core =
             let getDefaultRunID (mzReader:IMzIODataReader) = 
                 match mzReader with
                 | :? MzSQL as r                 -> "sample=0"
+                | :? MzML.MzMLReader as r       -> "sample=0"
 
             /// Initializes a transaction scope.
             let beginTransaction (mzReader:IMzIODataReader) =
                 mzReader.BeginTransaction()
+
+            /// Opens a connection.
+            let openConnection (mzReader: IMzIODataReader) =
+                match mzReader with
+                | :? MzIO.MzSQL.MzSQL as r -> r.Connection.Open()
+                | _ -> ()
 
 
         module Peaks = 
