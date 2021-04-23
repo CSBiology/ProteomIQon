@@ -32,20 +32,31 @@ module Core =
             let getBrukerFiles directoryPath = 
                 Directory.GetDirectories(directoryPath,("*.d"))   
 
+            let getMzMLFiles directoryPath = 
+                Directory.GetFiles(directoryPath,("*.mzML"))
+
             let getMSFilePaths directoryPath =
                 [|
                     getMzLiteFiles directoryPath
                     getThermoRawFiles directoryPath
                     getWiffFiles directoryPath
                     getBrukerFiles directoryPath
+                    getMzMLFiles directoryPath
+                |]
+                |> Array.concat
+
+            let getMzLiteMzMLPaths directoryPath =
+                [|
+                    getMzLiteFiles directoryPath
+                    getMzMLFiles directoryPath
                 |]
                 |> Array.concat
 
             let getReader (instrumentOutput:string) = 
                 match System.IO.Path.GetExtension instrumentOutput with 
-                //| ".mzml" -> 
-                    //let mzmlReader = new mzmlReader.WiffFileReader(instrumentOutput) 
-                    //wiffReader :> IMzIODataReader
+                | ".mzML" -> 
+                    let mzmlReader = new MzIO.IO.MzML.MzMLReader(instrumentOutput) 
+                    mzmlReader :> IMzIODataReader
                 | ".mzlite" -> 
                     let mzLiteReader = new MzSQL.MzSQL(instrumentOutput)
                     mzLiteReader :> IMzIODataReader
@@ -56,10 +67,17 @@ module Core =
             let getDefaultRunID (mzReader:IMzIODataReader) = 
                 match mzReader with
                 | :? MzSQL as r                 -> "sample=0"
+                | :? MzML.MzMLReader as r       -> "sample=0"
 
             /// Initializes a transaction scope.
             let beginTransaction (mzReader:IMzIODataReader) =
                 mzReader.BeginTransaction()
+
+            /// Opens a connection.
+            let openConnection (mzReader: IMzIODataReader) =
+                match mzReader with
+                | :? MzIO.MzSQL.MzSQL as r -> r.Connection.Open()
+                | _ -> ()
 
 
         module Peaks = 
@@ -81,15 +99,15 @@ module Core =
         let getRelativePath (reference: string) (path: string) =
             Path.Combine(reference, path)
         
-        let parsePath (extension: string) fileOrDirectoryPath =
+        let parsePath (getFiles: string -> string[]) fileOrDirectoryPath =
             if File.Exists fileOrDirectoryPath then
                 [|fileOrDirectoryPath|]
             elif Directory.Exists fileOrDirectoryPath then
-                let fps = Directory.GetFiles(fileOrDirectoryPath ,(sprintf "*.%s" extension))
+                let fps = getFiles fileOrDirectoryPath
                 fps
             else 
                 [||]
 
-        let parsePaths (extension: string) (fileOrDirectoryPaths:seq<string>) =
+        let parsePaths (getFiles: string -> string[]) (fileOrDirectoryPaths:seq<string>) =
             fileOrDirectoryPaths
-            |> Seq.collect (parsePath extension)
+            |> Seq.collect (parsePath getFiles)
