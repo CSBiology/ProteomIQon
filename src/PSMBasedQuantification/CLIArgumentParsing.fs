@@ -6,8 +6,8 @@ module CLIArgumentParsing =
     open System.IO
     
     type CLIArguments =
-        | [<Mandatory>] [<AltCommandLine("-i")>]  InstrumentOutput of path:string
-        | [<Mandatory>] [<AltCommandLine("-ii")>] ScoredPSMs of path:string
+        | [<Mandatory>] [<AltCommandLine("-i")>]  InstrumentOutput of path:string list
+        | [<Mandatory>] [<AltCommandLine("-ii")>] ScoredPSMs of path:string list
         | [<Mandatory>] [<AltCommandLine("-d")>]  PeptideDataBase of path:string 
         | [<Mandatory>] [<AltCommandLine("-o")>]  OutputDirectory  of path:string 
         | [<Mandatory>] [<AltCommandLine("-p")>]  ParamFile of path:string

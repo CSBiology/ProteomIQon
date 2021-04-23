@@ -10,7 +10,7 @@ module CLIArgumentParsing =
         | Path      of string
 
     type CLIArguments =
-        | [<Mandatory>] [<AltCommandLine("-i")>] PSMs of path:string
+        | [<Mandatory>] [<AltCommandLine("-i")>] PSMs of path:string list
         | [<Mandatory>] [<AltCommandLine("-d")>] PeptideDataBase of path:string 
         | [<Mandatory>] [<AltCommandLine("-o")>] OutputDirectory  of path:string 
         | [<Mandatory>] [<AltCommandLine("-p")>] ParamFile of path:string
