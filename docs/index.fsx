@@ -12,7 +12,7 @@ written in F#. The current state of the tool chain allows handle tasks like sign
 
 Each ProteomIQon tool is concerned with a specific task. This makes the tool-chain flexibel and easily extendable. 
 An example of a prototypical chaining of tools to identify and quantify a mix of 14N and 15N labeled proteins can be found in the [here]().
-We are currently working on the [cwl tool and workflow descriptions](https://github.com/common-workflow-language) , so you can expect a to see more workflow graphs in the near future!
+We are currently working on the [cwl tool and workflow descriptions](https://github.com/common-workflow-language), so you can expect a to see more workflow graphs in the near future!
    
 All tools are available using [nuget](https://www.nuget.org/profiles/CSBiology) and soon via BioConda. 
 Each tool is described in detail on its corresponding documentation page, accessible via the navigation pane, if you think a functionality is missing, feel free to contact us or to join us as a contributor!
