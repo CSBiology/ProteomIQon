@@ -6,6 +6,7 @@ open Argu
 open PeptideSpectrumMatching
 open System.Reflection
 open System
+open ProteomIQon.Core
 open ProteomIQon.Core.InputPaths
 
 module console1 =
@@ -40,7 +41,7 @@ module console1 =
             Json.ReadAndDeserialize<Dto.PeptideSpectrumMatchingParams> p
             |> Dto.PeptideSpectrumMatchingParams.toDomain
         let files = 
-            parsePaths "mzlite" i
+            parsePaths MzIO.Reader.getMzLiteMzMLPaths i
             |> Array.ofSeq
         if files.Length = 1 then
             logger.Info (sprintf "single file")
