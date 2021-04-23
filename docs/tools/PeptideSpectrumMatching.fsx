@@ -7,10 +7,15 @@ index: 3
 ---
 *)
 (**
+[![Binder]({{root}}img/badge-binder.svg)](https://mybinder.org/v2/gh/csbiology/ProteomIQon/gh-pages?filepath={{fsdocs-source-basename}}.ipynb)&emsp;
+[![Script]({{root}}img/badge-script.svg)]({{root}}{{fsdocs-source-basename}}.fsx)&emsp;
+[![Notebook]({{root}}img/badge-notebook.svg)]({{root}}{{fsdocs-source-basename}}.ipynb)
+
 # Peptide Spectrum Matching
 
-An established method to identify acquired MS/MS spectra is the comparison of each spectrum with peptides in a [reference database]({{root}}tools/peptideDb.html). Given raw a MS run in the mzLite or mzml format, 
-this tool iterates accross all recorded MS/MS scans and determines the charge state of precursor ions which were selected for fragmentation. With this it is possible to 
+An established method to identify acquired MS/MS spectra is the comparison of each spectrum with peptides in a [reference database]({{root}}tools/peptideDb.html). 
+
+Given raw a MS run in the mzLite or mzml format, this tool iterates accross all recorded MS/MS scans and determines the charge state of precursor ions which were selected for fragmentation. With this it is possible to 
 query the peptide data base for every precursor ion mass +/- a tolerance (which defines the so called 'search space') and retrieve peptides that are theoretical candidates for a match. 
 For each of the peptide candidates we create an theoretical spectrum in silico and compare it to the measured MS/MS scan. To measure similarity we use our own implementations of three
 established search enginge scores: SEQUEST, Andromeda and XTandem.
