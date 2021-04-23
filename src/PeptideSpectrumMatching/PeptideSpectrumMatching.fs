@@ -353,8 +353,8 @@ module PeptideSpectrumMatching =
 
         // initialize Reader and Transaction
         logger.Trace "Init connection to input data base."
-        let inReader = Core.MzIO.Reader.getReader instrumentOutput :?> MzIO.MzSQL.MzSQL
-        inReader.Connection.Open()
+        let inReader = Core.MzIO.Reader.getReader instrumentOutput
+        Core.MzIO.Reader.openConnection inReader
         let inRunID  = Core.MzIO.Reader.getDefaultRunID inReader
         logger.Trace (sprintf "Run ID: %s" inRunID)
         let inTr = inReader.BeginTransaction()
