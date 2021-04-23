@@ -9,8 +9,15 @@ index: 3
 (**
 # Peptide Spectrum Matching
 
-This tool selects potential peptides for each measured spectrum and computes theoretical spectra for them. Those theoretical spectra are then compared to the measured specctrum and scored according to their similarity. 
-This way, the most likely peptide from which the measured spectrum originated from can be identified using the similarity scores.
+An established method to identify acquired MS/MS spectra is the comparison of each spectrum with peptides in a [reference database]({{root}}tools/peptideDb.html). Given raw a MS run in the mzLite or mzml format, 
+this tool iterates accross all recorded MS/MS scans and determines the charge state of precursor ions which were selected for fragmentation. With this it is possible to 
+query the peptide data base for every precursor ion mass +/- a tolerance (which defines the so called 'search space') and retrieve peptides that are theoretical candidates for a match. 
+For each of the peptide candidates we create an theoretical spectrum in silico and compare it to the measured MS/MS scan. To measure similarity we use our own implementations of three
+established search enginge scores: SEQUEST, Andromeda and XTandem.
+The search space is extended by so called decoys. Decoys are reversed counterparts of peptides within the search space and allow us to assign a false discovery rate to each scored peptide
+using the [PSMStatistics tool]({{root}}tools/PSMStatistics.html).
+
+The following table gives an overview of the parameter set:
 
 ## Parameters
 
@@ -65,14 +72,42 @@ let peptideSpectrumMatchingParams :Dto.PeptideSpectrumMatchingParams =
         Andromeda                      = andromedaParams
     }
 
+
 let serialized =
     peptideSpectrumMatchingParams
     |> JsonConvert.SerializeObject
 
-System.IO.File.WriteAllText("YourPathHere",serialized)
-
+(***condition:ipynb***)
+#if IPYNB
 (**
 If you are running this tool in Binder, you can copy the output of the following codeblock and save it in a JSON file.
 *)
 serialized
+#endif // IPYNB
 
+(**
+## Executing the Tool
+**Disclaimer** this tool needs a peptide database to query against, if you did not create one yet you can do so by using the [PeptideDB]({{root}}tools/peptideDb.html) tool.
+To score all MS/MS of an MS run simply call: 
+
+*)
+
+(**
+	proteomiqon-peptidespectrummatching -i "path/to/your/run.mzml" -d "path/to/your/database.sqlite" -o "path/to/your/outDirectory" -p "path/to/your/params.json"
+*)
+
+(**
+It is also possible to call the tool on a list of MS files. If you have a mulitcore cpu it is possible to score multiple runs in parallel using the -c flag:
+*)
+
+(**
+	proteomiqon-peptidespectrummatching -i "path/to/your/run1.mzml" "path/to/your/run2.mzml" "path/to/your/run3.mzml" -d "path/to/your/database.sqlite" -o "path/to/your/outDirectory" -p "path/to/your/params.json" -c 3
+*)
+
+(**
+A detailed description of the CLI arguments the tool expects can be obtained by calling the tool:
+*)
+
+(**
+	proteomiqon-peptidespectrummatching --help
+*)
