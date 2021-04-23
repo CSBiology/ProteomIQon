@@ -7,6 +7,8 @@ The ProteomIQon
 The ProteomIQon is a collection of open source computational proteomics tools to build pipelines for the evaluation of MS derived proteomics data
 written in F#. Each tool is described in detail on its corresponding [documentation page](http://csbiology.github.io/ProteomIQon).
 
+<img src="https://github.com/CSBiology/ProteomIQon/blob/master/docs/img/PillarsOfCompProt.png" width="750" height="400" />
+
 The Core Project
 ------------------
 
