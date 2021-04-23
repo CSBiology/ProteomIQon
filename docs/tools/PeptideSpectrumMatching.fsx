@@ -12,13 +12,17 @@ index: 2
 [![Notebook]({{root}}img/badge-notebook.svg)]({{root}}{{fsdocs-source-basename}}.ipynb)
 
 # Peptide Spectrum Matching
+**Disclaimer** this tool needs a peptide database to query against, if you did not create one yet you can do so by using the [PeptideDB]({{root}}tools/peptideDb.html) tool.
 
 An established method to identify acquired MS/MS spectra is the comparison of each spectrum with peptides in a [reference database]({{root}}tools/peptideDb.html). 
 
 Given raw a MS run in the mzLite or mzml format, this tool iterates accross all recorded MS/MS scans and determines the charge state of precursor ions which were selected for fragmentation. With this it is possible to 
 query the peptide data base for every precursor ion mass +/- a tolerance (which defines the so called 'search space') and retrieve peptides that are theoretical candidates for a match. 
-For each of the peptide candidates we create an theoretical spectrum in silico and compare it to the measured MS/MS scan. To measure similarity we use our own implementations of three
-established search enginge scores: SEQUEST, Andromeda and XTandem.
+For each of the peptide candidates we create an theoretical spectrum in silico and compare it to the measured MS/MS scan. 
+
+<img src="{{root}}img/PSM.png" width="1000" height="750" />
+
+To measure similarity we use our own implementations of three established search enginge scores: SEQUEST, Andromeda and XTandem.
 The search space is extended by so called decoys. Decoys are reversed counterparts of peptides within the search space and allow us to assign a false discovery rate to each scored peptide
 using the [PSMStatistics tool]({{root}}tools/PSMStatistics.html).
 
