@@ -97,11 +97,11 @@ let serialized =
 which [passed fdr thresholds](https://csbiology.github.io/ProteomIQon/tools/PSMStatistics.html).
 
 
-	proteomiqon-psmbasedquantification -i "path/to/your/run.mzml" -ii "path/to/your/run.spsm" -d "path/to/your/database.sqlite" -o "path/to/your/outDirectory" -p "path/to/your/params.json"
+	proteomiqon-psmbasedquantification -i "path/to/your/run.mzlite" -ii "path/to/your/run.qpsm" -d "path/to/your/database.sqlite" -o "path/to/your/outDirectory" -p "path/to/your/params.json"
 
 It is also possible to call the tool on a lists of MS and scored psm files. If you have a mulitcore cpu it is possible to score multiple runs in parallel using the -c flag:
 
-	proteomiqon-psmbasedquantification -i "path/to/your/run1.mzml" "path/to/your/run2.mzml" "path/to/your/run3.mzml" -ii "path/to/your/run1.spsm" "path/to/your/run2.spsm" "path/to/your/run3.spsm" -d "path/to/your/database.sqlite" -o "path/to/your/outDirectory" -p "path/to/your/params.json" -c 3
+	proteomiqon-psmbasedquantification -i "path/to/your/run1.mzlite" "path/to/your/run2.mzlite" "path/to/your/run3.mzlite" -ii "path/to/your/run1.qpsm" "path/to/your/run2.qpsm" "path/to/your/run3.qpsm" -d "path/to/your/database.sqlite" -o "path/to/your/outDirectory" -p "path/to/your/params.json" -c 3
 
 A detailed description of the CLI arguments the tool expects can be obtained by calling the tool:
 

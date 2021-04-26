@@ -97,11 +97,123 @@
             <div class="section pt-4">
                 <div class="container" id="fsdocs-content">
                     
+<p><a href="https://mybinder.org/v2/gh/csbiology/ProteomIQon/gh-pages?filepath=tools/ProteinInference.ipynb"><img src="https://csbiology.github.io/ProteomIQon/img/badge-binder.svg" alt="Binder" /></a>&emsp;
+<a href="https://csbiology.github.io/ProteomIQon/tools/ProteinInference.fsx"><img src="https://csbiology.github.io/ProteomIQon/img/badge-script.svg" alt="Script" /></a>&emsp;
+<a href="https://csbiology.github.io/ProteomIQon/tools/ProteinInference.ipynb"><img src="https://csbiology.github.io/ProteomIQon/img/badge-notebook.svg" alt="Notebook" /></a></p>
+<h1><a name="Protein-Inference" class="anchor" href="#Protein-Inference">Protein Inference</a></h1>
+<p><strong>Disclaimer</strong> this tool needs a <a href="https://csbiology.github.io/ProteomIQon/tools/peptideDb.html">peptide database</a> and <a href="https://csbiology.github.io/ProteomIQon/tools/PeptideSpectrumMatching.html">peptide spectrum matches</a>
+which <a href="https://csbiology.github.io/ProteomIQon/tools/PSMStatistics.html">passed fdr thresholds</a>.</p>
+<p>MS-based shotgun proteomics estimates protein abundances using a proxy: peptides. The process of 'Protein Inference' is concerned with the mapping of identified peptides
+to the proteins they putatively originated from. This process is not as straightforward as one might think at a first glance on the subject, since the peptide-to-protein mapping
+is not necessarily a one-to-one relationship but in many cases a one-to-many relationship. This is due to the fact that many proteins share peptides with an identical sequence, e.g.
+two proteins originating from two different splice variants of the same gene.</p>
+<p>One way to cope with this problem is to introduce the concept of protein groups, which allow us to report the aggregation of all peptides which map to all isoforms of a gene
+independently from the peptides mapping uniquely to a single isoform. While this approach has its merits it leaves room for fine tuning when implemented. Lets say we have two proteins pA and pB which were both
+discovered by one peptide uniquely mapping to each of them and additionally by a third peptide, which maps to both of them: How do we report our findings?
+We could report both proteins seperately and as a protein group, we could only report the protein group, or we could report both proteins but not the protein group. A problem of comparable complexity occurs when
+we think about peptides when calculating the abundances for the proteingroup pA;pB. Do we use the peptides only once, or do we also use the peptides mapping uniquely to protein pA and pB?
+Fortunately, the tool ProteinInference gives you the possibility to choose any of the described scenarios by tuning the parameters described below.
+The following scheme gives an overview how parameter settings influence inferred protein groups:</p>
+<img src="https://csbiology.github.io/ProteomIQon/img/ProteinInference.png" width="1200" height="1000" />
+<p>Moreover, we report each protein group with a so called 'Peptide evidence class'. This metric gives an indication how pure the peptide composition of a protein group is and
+lets us differentiate between protein groups that consist of isoforms of a splice variant or contain a rather arbitrary mix of proteins. In order to determine these inter-protein relationships the
+user can optionally supply a gff3 file.</p>
+<h2><a name="Parameters" class="anchor" href="#Parameters">Parameters</a></h2>
+<p>The following table gives an overview of the parameter set:</p>
+<table>
+<thead>
+<tr class="header">
+<th><p><strong>Parameter</strong></p></th>
+<th><p><strong>Default Value</strong></p></th>
+<th><p><strong>Description</strong></p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><p>ProteinIdentifierRegex</p></td>
+<td><p>id</p></td>
+<td><p>Regex pattern for parsing of the protein IDs in the database</p></td>
+</tr>
+<tr class="even">
+<td><p>Protein</p></td>
+<td><p>ProteinInference.IntegrationStrictness.Maximal</p></td>
+<td><p>Parameter to tune creation of protein groups (see scheme above)</p></td>
+</tr>
+<tr class="odd">
+<td><p>Peptide</p></td>
+<td><p>ProteinInference.PeptideUsageForQuantification.Minimal</p></td>
+<td><p>Parameters to tune the way peptides are aggregated</p></td>
+</tr>
+<tr class="even">
+<td><p>GroupFiles</p></td>
+<td><p>true</p></td>
+<td><p>Indicates if information is shared accross .qpsm files</p></td>
+</tr>
+<tr class="odd">
+<td><p>GetQValue</p></td>
+<td><p>QValueMethod.Storey</p></td>
+<td><p>Lets the user choose between published FDR calculation methods</p></td>
+</tr>
+</tbody>
+</table>
+
+<h2><a name="Parameter-Generation" class="anchor" href="#Parameter-Generation">Parameter Generation</a></h2>
+<p>Parameters are handed to the cli tool as a .json file. you can download the default file <a href="https://github.com/CSBiology/ProteomIQon/blob/master/src/ProteomIQon/defaultParams/peptideSpectrumMatchingParams.json">here</a>,
+or use an F# script, which can be downloaded or run in Binder at the top of the page, to write your own parameter file:</p>
+<pre class="fssnip highlighted"><code lang="fsharp"><span class="pp">#r</span> <span class="s">&quot;nuget: ProteomIQon, 0.0.1&quot;</span>
+<span class="pp">#r</span> <span class="s">&quot;nuget: BioFSharp.Mz, 0.1.5-beta&quot;</span>
+
+<span class="k">open</span> <span onmouseout="hideTip(event, 'fs1', 1)" onmouseover="showTip(event, 'fs1', 1)" class="id">ProteomIQon</span>
+<span class="k">open</span> <span onmouseout="hideTip(event, 'fs1', 2)" onmouseover="showTip(event, 'fs1', 2)" class="id">ProteomIQon</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs2', 3)" onmouseover="showTip(event, 'fs2', 3)" class="m">Domain</span>
+<span class="k">open</span> <span onmouseout="hideTip(event, 'fs3', 4)" onmouseover="showTip(event, 'fs3', 4)" class="id">BioFSharp</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs4', 5)" onmouseover="showTip(event, 'fs4', 5)" class="id">Mz</span>
+
+<span class="k">let</span> <span onmouseout="hideTip(event, 'fs5', 6)" onmouseover="showTip(event, 'fs5', 6)" class="id">defaultProteinInferenceParams</span><span class="pn">:</span> <span onmouseout="hideTip(event, 'fs6', 7)" onmouseover="showTip(event, 'fs6', 7)" class="m">Dto</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs7', 8)" onmouseover="showTip(event, 'fs7', 8)" class="id">ProteinInferenceParams</span> <span class="o">=</span>
+    <span class="pn">{</span>
+        <span class="prop">ProteinIdentifierRegex</span> <span class="o">=</span> <span class="s">&quot;id&quot;</span>
+        <span class="prop">Protein</span>                <span class="o">=</span> <span onmouseout="hideTip(event, 'fs8', 9)" onmouseover="showTip(event, 'fs8', 9)" class="m">ProteinInference</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs9', 10)" onmouseover="showTip(event, 'fs9', 10)" class="rt">IntegrationStrictness</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs10', 11)" onmouseover="showTip(event, 'fs10', 11)" class="id">Maximal</span>
+        <span class="prop">Peptide</span>                <span class="o">=</span> <span onmouseout="hideTip(event, 'fs8', 12)" onmouseover="showTip(event, 'fs8', 12)" class="m">ProteinInference</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs11', 13)" onmouseover="showTip(event, 'fs11', 13)" class="rt">PeptideUsageForQuantification</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs12', 14)" onmouseover="showTip(event, 'fs12', 14)" class="id">Minimal</span>
+        <span class="prop">GroupFiles</span>             <span class="o">=</span> <span class="k">true</span>
+        <span class="prop">GetQValue</span>              <span class="o">=</span> <span onmouseout="hideTip(event, 'fs13', 15)" onmouseover="showTip(event, 'fs13', 15)" class="rt">QValueMethod</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs14', 16)" onmouseover="showTip(event, 'fs14', 16)" class="id">Storey</span> 
+    <span class="pn">}</span>
+
+<span class="k">let</span> <span onmouseout="hideTip(event, 'fs15', 17)" onmouseover="showTip(event, 'fs15', 17)" class="id">serialized</span> <span class="o">=</span> 
+    <span onmouseout="hideTip(event, 'fs5', 18)" onmouseover="showTip(event, 'fs5', 18)" class="id">defaultProteinInferenceParams</span>
+    <span class="o">|&gt;</span> <span onmouseout="hideTip(event, 'fs16', 19)" onmouseover="showTip(event, 'fs16', 19)" class="m">Json</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs17', 20)" onmouseover="showTip(event, 'fs17', 20)" class="id">serialize</span>
+</code></pre>
+<h2><a name="Executing-the-Tool" class="anchor" href="#Executing-the-Tool">Executing the Tool</a></h2>
+<p><strong>Disclaimer</strong> this tool needs a <a href="https://csbiology.github.io/ProteomIQon/tools/peptideDb.html">peptide database</a> and <a href="https://csbiology.github.io/ProteomIQon/tools/PeptideSpectrumMatching.html">peptide spectrum matches</a>
+which <a href="https://csbiology.github.io/ProteomIQon/tools/PSMStatistics.html">passed fdr thresholds</a>.</p>
+<p>To map all identified peptide sequences of an MS run to a protein group simply call:</p>
+<pre class="fssnip highlighted"><code lang="fsharp"><span class="id">proteomiqon</span><span class="o">-</span><span class="id">proteininference</span> <span class="o">-</span><span class="id">i</span> <span class="s">&quot;path/to/your/run.qpsm&quot;</span> <span class="o">-</span><span class="id">d</span> <span class="s">&quot;path/to/your/database.sqlite&quot;</span> <span class="o">-</span><span class="id">g</span> <span class="s">&quot;path/to/your/proteom.gff3&quot;</span> <span class="o">-</span><span class="id">o</span> <span class="s">&quot;path/to/your/outDirectory&quot;</span> <span class="o">-</span><span class="id">p</span> <span class="s">&quot;path/to/your/params.json&quot;</span>
+</code></pre>
+<p>It is also possible to call the tool on a lists of scored psm files:</p>
+<pre class="fssnip highlighted"><code lang="fsharp"><span class="id">proteomiqon</span><span class="o">-</span><span class="id">proteininference</span> <span class="o">-</span><span class="id">i</span> <span class="s">&quot;path/to/your/run1.qpsm&quot;</span> <span class="s">&quot;path/to/your/run2.qpsm&quot;</span> <span class="s">&quot;path/to/your/run3.qpsm&quot;</span> <span class="o">-</span><span class="id">d</span> <span class="s">&quot;path/to/your/database.sqlite&quot;</span> <span class="o">-</span><span class="id">g</span> <span class="s">&quot;path/to/your/proteom.gff3&quot;</span> <span class="o">-</span><span class="id">o</span> <span class="s">&quot;path/to/your/outDirectory&quot;</span> <span class="o">-</span><span class="id">p</span> <span class="s">&quot;path/to/your/params.json&quot;</span> 
+</code></pre>
+<p>A detailed description of the CLI arguments the tool expects can be obtained by calling the tool:</p>
+<pre class="fssnip highlighted"><code lang="fsharp"><span class="id">proteomiqon</span><span class="o">-</span><span class="id">proteininference</span> <span class="pn">--</span><span class="id">help</span>
+</code></pre>
 
                 </div>
             </div>
         </div>
-        
+        <div class="fsdocs-tip" id="fs1">namespace ProteomIQon</div>
+<div class="fsdocs-tip" id="fs2">module Domain<br /><br />from ProteomIQon</div>
+<div class="fsdocs-tip" id="fs3">namespace BioFSharp</div>
+<div class="fsdocs-tip" id="fs4">namespace BioFSharp.Mz</div>
+<div class="fsdocs-tip" id="fs5">val defaultProteinInferenceParams : Dto.ProteinInferenceParams</div>
+<div class="fsdocs-tip" id="fs6">module Dto<br /><br />from ProteomIQon</div>
+<div class="fsdocs-tip" id="fs7">Multiple items<br />module ProteinInferenceParams<br /><br />from ProteomIQon.Dto<br /><br />--------------------<br />type ProteinInferenceParams =<br />&#160;&#160;{ ProteinIdentifierRegex: string<br />&#160;&#160;&#160;&#160;Protein: IntegrationStrictness<br />&#160;&#160;&#160;&#160;Peptide: PeptideUsageForQuantification<br />&#160;&#160;&#160;&#160;GroupFiles: bool<br />&#160;&#160;&#160;&#160;GetQValue: QValueMethod }</div>
+<div class="fsdocs-tip" id="fs8">module ProteinInference<br /><br />from BioFSharp.Mz</div>
+<div class="fsdocs-tip" id="fs9">type IntegrationStrictness =<br />&#160;&#160;| Minimal<br />&#160;&#160;| Maximal</div>
+<div class="fsdocs-tip" id="fs10">union case ProteinInference.IntegrationStrictness.Maximal: ProteinInference.IntegrationStrictness</div>
+<div class="fsdocs-tip" id="fs11">type PeptideUsageForQuantification =<br />&#160;&#160;| Minimal<br />&#160;&#160;| Maximal<br />&#160;&#160;| MaximalInverse</div>
+<div class="fsdocs-tip" id="fs12">union case ProteinInference.PeptideUsageForQuantification.Minimal: ProteinInference.PeptideUsageForQuantification</div>
+<div class="fsdocs-tip" id="fs13">type QValueMethod =<br />&#160;&#160;| Storey<br />&#160;&#160;| LogisticRegression of FDRMethod<br />&#160;&#160;| NoQValue</div>
+<div class="fsdocs-tip" id="fs14">union case QValueMethod.Storey: QValueMethod</div>
+<div class="fsdocs-tip" id="fs15">val serialized : string</div>
+<div class="fsdocs-tip" id="fs16">module Json<br /><br />from ProteomIQon</div>
+<div class="fsdocs-tip" id="fs17">val serialize : obj:&#39;a -&gt; string</div>
+
     </div>
 
     <!-- BEGIN SEARCH BOX: this adds support for the search box -->
