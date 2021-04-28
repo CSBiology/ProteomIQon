@@ -1,9 +1,9 @@
 (**
 ---
-title: PeptideDB
-category: Tools
+title: Shotgun Proteomics Workflow
+category: General
 categoryindex: 1
-index: 3
+index: 2
 ---
 *)
 (**
