@@ -3,7 +3,7 @@
 title: ProteinInference
 category: Tools
 categoryindex: 1
-index: 5
+index: 7
 ---
 *)
 
@@ -42,7 +42,7 @@ The following table gives an overview of the parameter set:
 |--------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------|
 | ProteinIdentifierRegex         | id                                                                                                                                        | Regex pattern for parsing of the protein IDs in the database       |
 | Protein                        | ProteinInference.IntegrationStrictness.Maximal                                                                                            | Parameter to tune creation of protein groups (see scheme above)    |
-| Peptide                        | ProteinInference.PeptideUsageForQuantification.Minimal                                                                                    | Parameters to tune the way peptides are aggregated                 |
+| Peptide                        | ProteinInference.PeptideUsageForQuantification.Minimal                                                                                    | Parameters to tune the way peptides are aggregated (see scheme above) |
 | GroupFiles                     | true                                                                                                                                      | Indicates if information is shared accross .qpsm files             |
 | GetQValue                      | QValueMethod.Storey                                                                                                                       | Lets the user choose between published FDR calculation methods     |
 

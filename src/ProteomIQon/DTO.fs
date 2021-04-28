@@ -136,6 +136,32 @@ module Dto =
                     MS2PeakPicking              = dtoCentroidizationParams.MS2PeakPicking
                 }
 
+    
+    type MzMLtoMzLiteParams = PreprocessingParams
+
+    module MzMLtoMzLiteParams =
+
+        let toDomain (dtoCentroidizationParams: MzMLtoMzLiteParams ) : Domain.PreprocessingParams =
+                {
+                    Compress                    = dtoCentroidizationParams.Compress
+                    StartRetentionTime          = dtoCentroidizationParams.StartRetentionTime
+                    EndRetentionTime            = dtoCentroidizationParams.EndRetentionTime
+                    MS1PeakPicking              = dtoCentroidizationParams.MS1PeakPicking
+                    MS2PeakPicking              = dtoCentroidizationParams.MS2PeakPicking
+                }
+
+    type MzLiteToMzMLParams = PreprocessingParams
+
+    module MzLiteToMzMLParams =
+
+        let toDomain (dtoCentroidizationParams: MzLiteToMzMLParams ) : Domain.PreprocessingParams =
+                {
+                    Compress                    = dtoCentroidizationParams.Compress
+                    StartRetentionTime          = dtoCentroidizationParams.StartRetentionTime
+                    EndRetentionTime            = dtoCentroidizationParams.EndRetentionTime
+                    MS1PeakPicking              = dtoCentroidizationParams.MS1PeakPicking
+                    MS2PeakPicking              = dtoCentroidizationParams.MS2PeakPicking
+                }
     type PeptideDBParams =
         {
         // name of database i.e. Creinhardtii_236_protein_full_labeled

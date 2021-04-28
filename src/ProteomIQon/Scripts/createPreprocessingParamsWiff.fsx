@@ -60,9 +60,9 @@ let serialized =
     defaultPreprocessingParams
     |> Json.serialize
 
-System.IO.File.WriteAllText(__SOURCE_DIRECTORY__ + @"/../defaultParams\preprocessingParams.json",serialized)
+System.IO.File.WriteAllText(__SOURCE_DIRECTORY__ + @"/../defaultParams\preprocessingParamsWiff.json",serialized)
 
 let deserialized = 
-    System.IO.File.ReadAllText(__SOURCE_DIRECTORY__ + @"/../defaultParams\preprocessingParams.json")
+    System.IO.File.ReadAllText(__SOURCE_DIRECTORY__ + @"/../defaultParams\preprocessingParamsWiff.json")
     |> Json.deserialize<Dto.PreprocessingParams>
     |> PreprocessingParams.toDomain
