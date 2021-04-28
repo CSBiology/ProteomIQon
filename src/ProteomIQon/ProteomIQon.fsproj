@@ -50,7 +50,7 @@
     <None Include="Scripts\createPeptideDBParams.fsx" />
     <None Include="Scripts\Testing.fsx" />
     <None Include="Scripts\createPSMStatisticsParams.fsx" />
-    <None Include="Scripts\createPreprocessingParams.fsx" />
+    <None Include="Scripts\createPreprocessingParamsWiff.fsx" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Argu" Version="6.1.1" />

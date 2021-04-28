@@ -162,6 +162,7 @@ module Dto =
                     MS1PeakPicking              = dtoCentroidizationParams.MS1PeakPicking
                     MS2PeakPicking              = dtoCentroidizationParams.MS2PeakPicking
                 }
+
     type PeptideDBParams =
         {
         // name of database i.e. Creinhardtii_236_protein_full_labeled
