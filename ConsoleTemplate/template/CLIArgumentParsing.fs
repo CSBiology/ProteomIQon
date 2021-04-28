@@ -1,22 +1,27 @@
 namespace ProteomIQon
 
+open System.IO
 open Argu
 
 module CLIArgumentParsing = 
-    open System.IO
-  
+
     type CLIArguments =
-        | [<AltCommandLine("-i")>] InstrumentOutput of path:string
-        | [<AltCommandLine("-o")>] OutputDirectory  of path:string 
-        | [<AltCommandLine("-p")>] ParamFile of path:string
-        | [<AltCommandLine("-l")>] Log_Level of level:int
-        | [<AltCommandLine("-v")>] Verbosity_Level of level:int
+        | [<Mandatory>] [<AltCommandLine("-i")>] InstrumentOutput of path:string list
+        | [<Mandatory>] [<AltCommandLine("-o")>] OutputDirectory  of path:string 
+        | [<Mandatory>] [<AltCommandLine("-p")>] ParamFile of path:string
     with
         interface IArgParserTemplate with
             member s.Usage =
                 match s with
-                | InstrumentOutput _ -> "specify mass spectrometry Output"
-                | OutputDirectory  _ -> "specify output directory"
-                | ParamFile _        -> "specify param file For centroidization"
-                | Log_Level _        -> "set the log level."
-                | Verbosity_Level _  -> "set the verbosity level."
+                | InstrumentOutput _    -> "Specify the mass spectrometry output, either specify a file directory containing the files to be analyzed or specify the file path of a single mzlite file."
+                | OutputDirectory  _    -> "Specify the output directory."
+                | ParamFile _           -> "Specify parameter file for peptide spectrum matching."
+
+
+
+
+
+
+
+
+
