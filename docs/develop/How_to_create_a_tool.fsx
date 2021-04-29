@@ -1,6 +1,6 @@
 (**
 ---
-title: How to create a tool
+title: How to your own tool
 category: Developer Notes
 categoryindex: 2
 index: 1
