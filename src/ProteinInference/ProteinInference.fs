@@ -16,6 +16,7 @@ open Plotly.NET
 open FSharp.Stats
 open BioFSharp.IO.GFF3
 open System.IO
+open ProteomIQon.Dto
 
 module ProteinInference =
 
@@ -312,8 +313,15 @@ module ProteinInference =
                         if filteredPepSet = [||] then
                             None
                         else
-                            Some (ProteomIQon.ProteinInference'.createInferredProteinClassItemOut
-                                ic.GroupOfProteinIDs ic.Class (ProteinInference'.proteinGroupToString filteredPepSet) ic.TargetScore ic.DecoyScore ic.QValue)
+                            {
+                                ProteinGroup     = ic.GroupOfProteinIDs 
+                                PeptideSequence  = (ProteinInference'.proteinGroupToString filteredPepSet)
+                                Class            = ic.Class
+                                TargetScore      = ic.TargetScore 
+                                DecoyScore       = ic.DecoyScore
+                                QValue           = ic.QValue
+                            } 
+                            |> Some    
                         )
 
                 combinedInferenceresult
@@ -403,8 +411,14 @@ module ProteinInference =
                 inferenceResultScoredQVal
                 |> Array.filter (fun inferredPCIQ -> not inferredPCIQ.Decoy)
                 |> Array.map (fun ic ->
-                    ProteomIQon.ProteinInference'.createInferredProteinClassItemOut 
-                        ic.GroupOfProteinIDs ic.Class (ProteinInference'.proteinGroupToString ic.PeptideSequence) ic.TargetScore ic.DecoyScore ic.QValue
+                    {
+                        ProteinGroup     = ic.GroupOfProteinIDs 
+                        PeptideSequence  = (ProteinInference'.proteinGroupToString ic.PeptideSequence)
+                        Class            = ic.Class
+                        TargetScore      = ic.TargetScore 
+                        DecoyScore       = ic.DecoyScore
+                        QValue           = ic.QValue
+                    }                     
                 )
                 |> FSharpAux.IO.SeqIO.Seq.CSV "\t" true true
                 |> Seq.write outFile
