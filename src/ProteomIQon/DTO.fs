@@ -715,6 +715,42 @@ module Dto =
                 BaseLineCorrection           = dtoQuantificationParams.BaseLineCorrection
             }
 
+    ///
+    type PeptideEvidenceClassConverter() = 
+        inherit ConverterAttribute()
+        override this.convertToObj = 
+            Converter.Single(fun (str : string) -> 
+                match str with 
+                | "Unknown" -> PeptideClassification.PeptideEvidenceClass.Unknown 
+                | "C1a"     -> PeptideClassification.PeptideEvidenceClass.C1a 
+                | "C1b"     -> PeptideClassification.PeptideEvidenceClass.C1b 
+                | "C2a"     -> PeptideClassification.PeptideEvidenceClass.C2a 
+                | "C2b"     -> PeptideClassification.PeptideEvidenceClass.C2b 
+                | "C3a"     -> PeptideClassification.PeptideEvidenceClass.C3a 
+                | "C3b"     -> PeptideClassification.PeptideEvidenceClass.C3b 
+                | _ -> 
+                    printfn "%s: PeptideEvidenceClass could not be parsed" str
+                    PeptideClassification.PeptideEvidenceClass.Unknown 
+                |> box  
+                )
+          
+    /// For a group of proteins, contains information about all peptides that are put into the output file.
+    type ProteinInferenceResult =
+        {
+            [<FieldAttribute(0)>]
+            ProteinGroup: string
+            [<FieldAttribute(1)>]
+            PeptideSequence  : string
+            [<FieldAttribute(2)>] [<PeptideEvidenceClassConverter>]
+            Class            : PeptideClassification.PeptideEvidenceClass
+            [<FieldAttribute(3)>]
+            TargetScore      : float
+            [<FieldAttribute(4)>]
+            DecoyScore       : float
+            [<FieldAttribute(5)>]
+            QValue           : float
+        }
+
     type ProteinInferenceParams =
           {
               ProteinIdentifierRegex : string
