@@ -424,7 +424,7 @@ module ProteinInference =
                 |> Seq.write outFile
             ) psmInputs
 
-    let inferProteins gff3Location dbConnection (proteinInferenceParams: ProteinInferenceParams) outDirectory rawFilePaths =
+    let inferProteins gff3Location dbConnection (proteinInferenceParams: Domain.ProteinInferenceParams) outDirectory rawFilePaths =
 
         let logger = Logging.createLogger "ProteinInference_inferProteins"
 
