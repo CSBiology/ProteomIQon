@@ -771,18 +771,98 @@ module Dto =
                 GetQValue              = dtoProteinInferenceParams.GetQValue
             }
 
-    type SpectralLibraryParams =
-        {
-            MatchingTolerancePPM: float
+    type ProteinAssignedQuantifiedIon = { 
+        [<FieldAttribute(0)>]
+        FileName                                    : string
+        [<FieldAttribute(1)>]
+        ProteinGroup                                : string
+        [<FieldAttribute(2)>]
+        StringSequence                              : string
+        [<FieldAttribute(3)>]
+        PepSequenceID                               : int
+        [<FieldAttribute(4)>]
+        ModSequenceID                               : int
+        [<FieldAttribute(5)>]
+        Charge                                      : int
+        [<FieldAttribute(6)>]
+        GlobalMod                                   : bool                    
+        [<FieldAttribute(7)>]
+        PrecursorMZ                                 : float
+        [<FieldAttribute(8)>]
+        MeasuredMass                                : float 
+        [<FieldAttribute(9)>]
+        TheoMass                                    : float
+        [<FieldAttribute(10)>]
+        AbsDeltaMass                                : float
+        [<FieldAttribute(11)>]
+        MeanPercolatorScore                         : float
+        [<FieldAttribute(12)>]
+        QValue                                      : float
+        [<FieldAttribute(13)>]
+        PEPValue                                    : float
+        [<FieldAttribute(14)>]
+        ProteinNames                                : string
+        [<FieldAttribute(15)>]
+        QuantMz_Light                               : float
+        [<FieldAttribute(16)>]
+        Quant_Light                                 : float
+        [<FieldAttribute(17)>]
+        MeasuredApex_Light                          : float 
+        [<FieldAttribute(18)>]
+        Seo_Light                                   : float
+        [<FieldAttribute(19)>][<TraceConverter>]
+        Params_Light                                : float []
+        [<FieldAttribute(20)>]
+        Difference_SearchRT_FittedRT_Light          : float
+        [<FieldAttribute(21)>]
+        KLDiv_Observed_Theoretical_Light            : float
+        [<FieldAttribute(22)>]
+        KLDiv_CorrectedObserved_Theoretical_Light   : float
+        [<FieldAttribute(23)>]
+        QuantMz_Heavy                               : float
+        [<FieldAttribute(24)>]
+        Quant_Heavy                                 : float
+        [<FieldAttribute(25)>]
+        MeasuredApex_Heavy                          : float
+        [<FieldAttribute(26)>]
+        Seo_Heavy                                   : float
+        [<FieldAttribute(27)>][<TraceConverter>]
+        Params_Heavy                                : float []        
+        [<FieldAttribute(28)>]
+        Difference_SearchRT_FittedRT_Heavy          : float
+        [<FieldAttribute(29)>]
+        KLDiv_Observed_Theoretical_Heavy            : float
+        [<FieldAttribute(30)>]
+        KLDiv_CorrectedObserved_Theoretical_Heavy   : float
+        [<FieldAttribute(31)>]
+        Correlation_Light_Heavy                     : float
+        [<FieldAttribute(32)>][<QuantSourceConverter>]
+        QuantificationSource                        : QuantificationSource
+        [<FieldAttribute(33)>][<TraceConverter>]
+        IsotopicPatternMz_Light                     : float []
+        [<FieldAttribute(34)>][<TraceConverter>]
+        IsotopicPatternIntensity_Observed_Light     : float []
+        [<FieldAttribute(35)>][<TraceConverter>]
+        IsotopicPatternIntensity_Corrected_Light    : float []
+        [<FieldAttribute(36)>][<TraceConverter>]
+        RtTrace_Light                               : float []
+        [<FieldAttribute(37)>][<TraceConverter>]
+        IntensityTrace_Observed_Light               : float []
+        [<FieldAttribute(38)>][<TraceConverter>]
+        IntensityTrace_Corrected_Light              : float []
+        [<FieldAttribute(39)>][<TraceConverter>]
+        IsotopicPatternMz_Heavy                     : float []
+        [<FieldAttribute(40)>][<TraceConverter>]
+        IsotopicPatternIntensity_Observed_Heavy     : float []
+        [<FieldAttribute(41)>][<TraceConverter>]
+        IsotopicPatternIntensity_Corrected_Heavy    : float []
+        [<FieldAttribute(42)>][<TraceConverter>]
+        RtTrace_Heavy                               : float []
+        [<FieldAttribute(43)>][<TraceConverter>]
+        IntensityTrace_Observed_Heavy               : float []
+        [<FieldAttribute(44)>][<TraceConverter>]
+        IntensityTrace_Corrected_Heavy              : float []
         }
-
-    module SpectralLibraryParams =
-
-        let toDomain (dtoSpectralLibraryParams: SpectralLibraryParams): Domain.SpectralLibraryParams =
-            {
-                MatchingTolerancePPM = dtoSpectralLibraryParams.MatchingTolerancePPM
-            }
-
 
     type TableSortParams =
         {
@@ -819,11 +899,18 @@ module Dto =
                 AggregatorPepToProt         = dtoTableSortParams.AggregatorPepToProt
                 Tukey                       = dtoTableSortParams.Tukey
             }
-    //type ConsensusSpectralLibraryParams =
-    //    {
-    //        RTTolerance: float
-    //        iRTPeptides: string list
-    //    }
+
+    type SpectralLibraryParams =
+        {
+            MatchingTolerancePPM: float
+        }
+
+    module SpectralLibraryParams =
+
+        let toDomain (dtoSpectralLibraryParams: SpectralLibraryParams): Domain.SpectralLibraryParams =
+            {
+                MatchingTolerancePPM = dtoSpectralLibraryParams.MatchingTolerancePPM
+            }
 
     ///
     type ConsensusSpectralLibraryParams = {
