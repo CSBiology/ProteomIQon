@@ -1,0 +1,38 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>net5.0</TargetFrameworks>
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>proteomiqon-mzmltomzlite</ToolCommandName>
+    <RootNamespace>MzMLToMzLite</RootNamespace>
+    <AssemblyName>ProteomIQon.MzMLToMzLite</AssemblyName>
+    <Name>ProteomIQon.MzMLToMzLite</Name>
+    <OutputType>Exe</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <ServerGarbageCollection>true</ServerGarbageCollection>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net47|AnyCPU'">
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <Prefer32Bit>true</Prefer32Bit>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="MzMLToMzLite.fs" />
+    <Compile Include="CLIArgumentParsing.fs" />
+    <Compile Include="Program.fs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\ProteomIQon\ProteomIQon.fsproj"></ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Argu" Version="6.1.1" />
+    <PackageReference Include="NLog" Version="4.7.8" />
+    <PackageReference Include="MzIO" Version="0.1.0-beta" />
+    <PackageReference Include="MzIO.Processing" Version="0.1.0-beta" />
+    <PackageReference Include="MzIO.SQL" Version="0.1.0-beta" />
+    <PackageReference Include="MzIO.MzML" Version="0.1.0-beta" />
+    <PackageReference Include="BioFSharp.Mz" Version="0.1.5-beta" />
+    <PackageReference Include="FSharp.Stats" Version="0.4.0" />
+    <PackageReference Include="System.Data.SQLite.Core" Version="1.0.113.7" />
+  </ItemGroup>
+</Project>
