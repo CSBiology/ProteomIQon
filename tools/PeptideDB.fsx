@@ -1,5 +1,5 @@
 (**
-// can't yet format YamlFrontmatter (["title: PeptideDB"; "category: Tools"; "categoryindex: 1"; "index: 1"], Some { StartLine = 2 StartColumn = 0 EndLine = 6 EndColumn = 8 }) to pynb markdown
+// can't yet format YamlFrontmatter (["title: PeptideDB"; "category: Tools"; "categoryindex: 1"; "index: 3"], Some { StartLine = 2 StartColumn = 0 EndLine = 6 EndColumn = 8 }) to pynb markdown
 
 [![Binder](https://csbiology.github.io/ProteomIQon/img/badge-binder.svg)](https://mybinder.org/v2/gh/csbiology/ProteomIQon/gh-pages?filepath=tools/PeptideDB.ipynb)&emsp;
 [![Script](https://csbiology.github.io/ProteomIQon/img/badge-script.svg)](https://csbiology.github.io/ProteomIQon/tools/PeptideDB.fsx)&emsp;

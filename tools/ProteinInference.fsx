@@ -1,5 +1,5 @@
 (**
-// can't yet format YamlFrontmatter (["title: ProteinInference"; "category: Tools"; "categoryindex: 1"; "index: 5"], Some { StartLine = 2 StartColumn = 0 EndLine = 6 EndColumn = 8 }) to pynb markdown
+// can't yet format YamlFrontmatter (["title: ProteinInference"; "category: Tools"; "categoryindex: 1"; "index: 7"], Some { StartLine = 2 StartColumn = 0 EndLine = 6 EndColumn = 8 }) to pynb markdown
 
 [![Binder](https://csbiology.github.io/ProteomIQon/img/badge-binder.svg)](https://mybinder.org/v2/gh/csbiology/ProteomIQon/gh-pages?filepath=tools/ProteinInference.ipynb)&emsp;
 [![Script](https://csbiology.github.io/ProteomIQon/img/badge-script.svg)](https://csbiology.github.io/ProteomIQon/tools/ProteinInference.fsx)&emsp;
@@ -36,7 +36,7 @@ The following table gives an overview of the parameter set:
 |--------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------|
 | ProteinIdentifierRegex         | id                                                                                                                                        | Regex pattern for parsing of the protein IDs in the database       |
 | Protein                        | ProteinInference.IntegrationStrictness.Maximal                                                                                            | Parameter to tune creation of protein groups (see scheme above)    |
-| Peptide                        | ProteinInference.PeptideUsageForQuantification.Minimal                                                                                    | Parameters to tune the way peptides are aggregated                 |
+| Peptide                        | ProteinInference.PeptideUsageForQuantification.Minimal                                                                                    | Parameters to tune the way peptides are aggregated (see scheme above) |
 | GroupFiles                     | true                                                                                                                                      | Indicates if information is shared accross .qpsm files             |
 | GetQValue                      | QValueMethod.Storey                                                                                                                       | Lets the user choose between published FDR calculation methods     |
 

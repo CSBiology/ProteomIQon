@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="utf-8">
-    <title>index</title>
+    <title>How to your own tool</title>
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <meta name="author" content="David Zimmer, Jonathan Ott, Heinrich Lukas Weil, Timo Muehlhaus">
     <link rel="shortcut icon" type="image/x-icon" href="https://csbiology.github.io/ProteomIQon//img/favicon.ico">
@@ -104,32 +104,39 @@
         <div class="column is-10 is-paddingless">
             <div class="section pt-4">
                 <div class="container" id="fsdocs-content">
-                    <p><a href="https://fsharp.org/"><img src="https://img.shields.io/badge/Made%20with-FSharp-rgb(184,69,252).svg" alt="Made with F#" /></a>
-<img src="https://img.shields.io/github/contributors/CSBiology/ProteomIQon" alt="GitHub contributors" /></p>
-<h2><a name="The-ProteomIQon" class="anchor" href="#The-ProteomIQon">The ProteomIQon</a></h2>
-<p>The ProteomIQon is a collection of open source computational proteomics tools to build pipelines for the evaluation of MS derived proteomics data
-written in F#. The current state of the tool chain allows handle tasks like signal detection, peptide identification, quantification and protein inference.</p>
-<img src="https://csbiology.github.io/ProteomIQon/img/PillarsOfCompProt.png" width="1000" height="750" />
-<p>Each ProteomIQon tool is concerned with a specific task. This makes the tool-chain flexibel and easily extendable.
-An example of a prototypical chaining of tools to identify and quantify a mix of 14N and 15N labeled proteins can be found in the <a href="">here</a>.
-We are currently working on the <a href="https://github.com/common-workflow-language">cwl tool and workflow descriptions</a>, so you can expect a to see more workflow graphs in the near future!</p>
-<p>All tools are available using <a href="https://www.nuget.org/profiles/CSBiology">nuget</a> and soon via BioConda.
-Each tool is described in detail on its corresponding documentation page, accessible via the navigation pane, if you think a functionality is missing, feel free to contact us or to join us as a contributor!</p>
-<h2><a name="The-Core-Project" class="anchor" href="#The-Core-Project">The Core Project</a></h2>
-<p>The ProteomIQon core is referenced by all tools. It contains mainly serializable data transfer objects such as tool results and tool parameters, as well as their mapping to domain specific types.
-This is also the place for any kind of code reusable across tools such as thin wrappers around data readers, logging or CLI formatting.</p>
-<h2><a name="Documentation" class="anchor" href="#Documentation">Documentation</a></h2>
-<p>The documentation and tutorials for this library are automatically generated (using the F# Formatting) from .fsx and .md files in the docs folder. If you find a typo, please submit a pull request!</p>
-<h2><a name="Contributing" class="anchor" href="#Contributing">Contributing</a></h2>
-<p>Please refer to the CSB <a href="https://github.com/CSBiology/BioFSharp/blob/developer/.github/CONTRIBUTING.md">Contribution guidelines</a></p>
-<h2><a name="Community-Social" class="anchor" href="#Community-Social">Community/Social</a></h2>
-<p>Want to get in touch with us? We recently joined the twitter crowd:</p>
-<p><a href="https://twitter.com/cs_biology"><img src="https://img.shields.io/twitter/follow/cs_biology.svg?style=social" alt="Twitter Follow" /></a></p>
+                    
+<h1><a name="How-to-create-a-tool" class="anchor" href="#How-to-create-a-tool">How to create a tool</a></h1>
+<p>If you want to extend the functionality of the ProteomIQon you can either submit a pull request to update
+an existing tool or - if the functionality is better encapsulated as a stand alone application - create a new tool.
+To make this as as easy as possible we created a tool template which sets up a basic scaffold for your new tool!</p>
+<h2><a name="Installing-the-template" class="anchor" href="#Installing-the-template">Installing the template:</a></h2>
+<p>Assuming that you have cloned the ProteomIQon repository you can install the tool by navigating to the project root and calling:</p>
+<pre class="fssnip highlighted"><code lang="fsharp"><span class="id">dotnet</span> <span class="k">new</span> <span class="o">--</span><span class="id">install</span> <span class="pn">.</span><span class="o">/</span><span class="id">ConsoleTemplate</span><span class="o">/</span><span class="id">template</span>
+</code></pre>
+<p>The installation can then be verified by executing the following snippet:</p>
+<pre class="fssnip highlighted"><code lang="fsharp"><span class="id">dotnet</span> <span class="k">new</span> <span class="o">--</span><span onmouseout="hideTip(event, 'fs1', 1)" onmouseover="showTip(event, 'fs1', 1)" class="id">list</span> 
+</code></pre>
+<p>This should print a list of installed templates. If everything was successful you will find the line among the installed tools:</p>
+<pre class="fssnip highlighted"><code lang="fsharp"><span class="id">Templates</span>                           <span class="id">Short</span> <span class="id">Name</span>               <span class="id">Language</span>          <span class="id">Tags</span>
+<span class="o">------------------------------</span>      <span class="o">-------------------</span>      <span class="o">------------</span>      <span class="o">----------------------------------------</span>
+<span class="o">..</span><span class="pn">.</span>
+<span class="id">prototypical</span> <span class="id">proteomiqon</span> <span class="id">co</span><span class="o">..</span><span class="pn">.</span>      <span class="id">pct</span>                      <span class="id">F#</span>                <span class="id">proteomiqon</span> <span class="id">console</span><span class="o">/</span><span class="id">proteomiqon</span><span class="o">/</span><span class="id">template</span>
+<span class="o">..</span><span class="pn">.</span>
+</code></pre>
+<h2><a name="Adding-a-new-tool-to-the-project" class="anchor" href="#Adding-a-new-tool-to-the-project">Adding a new tool to the project:</a></h2>
+<p>To initialize a new tool using the template, navigate into the 'src' folder, replace 'projectName' with your choice for a tool name and call:</p>
+<pre class="fssnip highlighted"><code lang="fsharp"><span class="id">dotnet</span> <span class="k">new</span> <span class="id">pct</span> <span class="o">-</span><span class="id">n</span> <span class="s">&quot;projectName&quot;</span> <span class="o">--</span><span class="id">force</span>
+</code></pre>
+<p>Afterwards navigate back to the project root and execute the following line to add your tool to the ProteomIQon solution:</p>
+<pre class="fssnip highlighted"><code lang="fsharp"><span class="id">dotnet</span> <span class="id">sln</span> <span class="id">ProteomIQon</span><span class="pn">.</span><span class="id">sln</span> <span class="id">add</span> <span class="s">&quot;./src/projectName/projectName.fsproj&quot;</span>
+</code></pre>
+<p>Afterwards you should be good to go! Have fun extending the ProteomIQon, we look forward to your contribution!</p>
 
                 </div>
             </div>
         </div>
-        
+        <div class="fsdocs-tip" id="fs1">type &#39;T list = List&lt;&#39;T&gt;</div>
+
     </div>
 
     <!-- BEGIN SEARCH BOX: this adds support for the search box -->
