@@ -1,5 +1,6 @@
 namespace ProteomIQon
 
+open System
 open System.IO
 open CLIArgumentParsing
 open Argu
@@ -17,7 +18,7 @@ module console1 =
         let prot'  = results.GetResult ProtFile
         let o'     = results.GetResult OutputDirectory
         let p'     = results.GetResult ParamFile
-        let directory = System.IO.Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)
+        let directory = Environment.CurrentDirectory
         let quant = Path.Combine(directory, quant')
         let prot = Path.Combine(directory, prot')
         let o = Path.Combine(directory, o')

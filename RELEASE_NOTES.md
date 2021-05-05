@@ -1,3 +1,6 @@
+#### 0.0.3 - Tuesday, May 5, 2021
+* change relative file path handling
+
 #### 0.0.2 - Tuesday, May 5, 2021
 * Update PeptideSpectrumMatching Params
 * Add tools
