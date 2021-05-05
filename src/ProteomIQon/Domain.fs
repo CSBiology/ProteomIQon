@@ -85,8 +85,6 @@ module Domain =
             ChargeStateDeterminationParams  : ChargeState.ChargeDetermParams             
             // +/- ppm of ion m/z to obtain target peptides from SearchDB. 
             LookUpPPM                       : float
-            // lowest m/z, highest m/z
-            MS2ScanRange                    : float*float
             nTerminalSeries                 : NTerminalSeries
             cTerminalSeries                 : CTerminalSeries
             AndromedaParams                 : AndromedaParams

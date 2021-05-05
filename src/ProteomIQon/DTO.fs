@@ -207,7 +207,6 @@ module Dto =
         {
             ChargeStateDeterminationParams: ChargeState.ChargeDetermParams
             LookUpPPM                     : float
-            MS2ScanRange                  : float*float
             nTerminalSeries               : NTerminalSeries
             cTerminalSeries               : CTerminalSeries
             Andromeda                     : AndromedaParams
@@ -219,7 +218,6 @@ module Dto =
             {
                 ChargeStateDeterminationParams  = dtoPeptideSpectrumMatchingParams.ChargeStateDeterminationParams
                 LookUpPPM                       = dtoPeptideSpectrumMatchingParams.LookUpPPM
-                MS2ScanRange                    = dtoPeptideSpectrumMatchingParams.MS2ScanRange
                 nTerminalSeries                 = NTerminalSeries.toDomain dtoPeptideSpectrumMatchingParams.nTerminalSeries
                 cTerminalSeries                 = CTerminalSeries.toDomain dtoPeptideSpectrumMatchingParams.cTerminalSeries
                 AndromedaParams                 = dtoPeptideSpectrumMatchingParams.Andromeda
