@@ -1,12 +1,12 @@
 namespace ProteomIQon
 
+open System
 open System.IO
 open CLIArgumentParsing
 open Argu
 open PSMStatistics
 open System.Reflection
 open ProteomIQon.Core.InputPaths
-open System
 
 module console1 =
     open BioFSharp.Mz
@@ -15,7 +15,7 @@ module console1 =
     let main argv = 
         let errorHandler = ProcessExiter(colorizer = function ErrorCode.HelpText -> None | _ -> Some ConsoleColor.Red)
         let parser = ArgumentParser.Create<CLIArguments>(programName =  (System.Reflection.Assembly.GetExecutingAssembly().GetName().Name),errorHandler=errorHandler)       
-        let directory = System.IO.Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)
+        let directory = Environment.CurrentDirectory
         let getPathRelativeToDir = getRelativePath directory
         let results = parser.Parse(argv)
         //let results = parser.ParseCommandLine(inputs = argv, raiseOnUsage = false)

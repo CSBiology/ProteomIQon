@@ -1,11 +1,11 @@
 namespace ProteomIQon
 
+open System
 open System.IO
 open CLIArgumentParsing
 open Argu
 open PeptideSpectrumMatching
 open System.Reflection
-open System
 open ProteomIQon.Core
 open ProteomIQon.Core.InputPaths
 
@@ -16,7 +16,7 @@ module console1 =
     let main argv = 
         let errorHandler = ProcessExiter(colorizer = function ErrorCode.HelpText -> None | _ -> Some System.ConsoleColor.Red)
         let parser = ArgumentParser.Create<CLIArguments>(programName =  (System.Reflection.Assembly.GetExecutingAssembly().GetName().Name),errorHandler=errorHandler)     
-        let directory = System.IO.Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)
+        let directory = Environment.CurrentDirectory
         let getPathRelativeToDir = getRelativePath directory
         let results = parser.Parse argv
         let i = results.GetResult InstrumentOutput |> List.map getPathRelativeToDir

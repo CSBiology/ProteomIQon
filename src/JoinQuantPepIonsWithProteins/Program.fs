@@ -14,12 +14,12 @@ module console1 =
     let main argv = 
         let errorHandler = ProcessExiter(colorizer = function ErrorCode.HelpText -> None | _ -> Some System.ConsoleColor.Red)
         let parser = ArgumentParser.Create<CLIArguments>(programName =  (System.Reflection.Assembly.GetExecutingAssembly().GetName().Name),errorHandler=errorHandler)     
-        let directory = System.IO.Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)
+        let directory = Environment.CurrentDirectory
         let getPathRelativeToDir = getRelativePath directory
         let results = parser.Parse argv
         let i = results.GetResult QuantifiedPeptides |> List.map getPathRelativeToDir
-        let ii = results.GetResult InferredProteins |> List.map getPathRelativeToDir
-        let o = results.GetResult OutputDirectory  |> getPathRelativeToDir
+        let ii = results.GetResult InferredProteins  |> List.map getPathRelativeToDir
+        let o = results.GetResult OutputDirectory    |> getPathRelativeToDir
         let mf = results.Contains MatchFiles
         let c = 
             match results.TryGetResult Parallelism_Level with 

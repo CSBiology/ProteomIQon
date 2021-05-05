@@ -30,7 +30,6 @@
     <Compile Include="ProteinInference.fs" />
     <Compile Include="CLIArgumentParsing.fs" />
     <Compile Include="Program.fs" />
-    <None Include="Test.fsx" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\ProteomIQon\ProteomIQon.fsproj" />
