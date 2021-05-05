@@ -3,7 +3,7 @@
   <PropertyGroup>
     <TargetFrameworks>net5.0</TargetFrameworks>
     <PackAsTool>true</PackAsTool>
-    <ToolCommandName>proteomiqon-JoinQuantPepIonsWithProteins</ToolCommandName>
+    <ToolCommandName>proteomiqon-joinquantpepionswithproteins</ToolCommandName>
     <RootNamespace>JoinQuantPepIonsWithProteins</RootNamespace>
     <AssemblyName>ProteomIQon.JoinQuantPepIonsWithProteins</AssemblyName>
     <Name>ProteomIQon.JoinQuantPepIonsWithProteins</Name>
@@ -12,6 +12,19 @@
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <ServerGarbageCollection>true</ServerGarbageCollection>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+  <PropertyGroup>
+    <Authors>David Zimmer, Jonathan Ott, Heinrich Lukas Weil, Timo Muehlhaus</Authors>
+    <Description>ProteomIQon.JoinQuantPepIonsWithProteins - computational proteomics</Description>
+    <Summary>ProteomIQon.JoinQuantPepIonsWithProteins - computational proteomics</Summary>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://csbiology.github.io/ProteomIQon/</PackageProjectUrl>
+    <!--<PackageIconUrl>https://github.com/CSBiology/ProteomIQon</PackageIconUrl>-->
+    <PackageTags>fsharp dotnet proteomics</PackageTags>
+    <RepositoryUrl>https://github.com/CSBiology/ProteomIQon</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <FsDocsLicenseLink>https://github.com/CSBiology/ProteomIQon/blob/master/LICENSE</FsDocsLicenseLink>
+    <FsDocsReleaseNotesLink>https://github.com/CSBiology/ProteomIQon/blob/master/RELEASE_NOTES.md</FsDocsReleaseNotesLink>
   </PropertyGroup>
   <ItemGroup>
     <None Include="App.config" />
