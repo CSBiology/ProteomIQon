@@ -3,10 +3,10 @@
   <PropertyGroup>
     <TargetFrameworks>net5.0</TargetFrameworks>
     <PackAsTool>true</PackAsTool>
-    <ToolCommandName>proteomiqon-proteomiqonconsole</ToolCommandName>
-    <RootNamespace>ProteomIQonConsole</RootNamespace>
-    <AssemblyName>ProteomIQon.ProteomIQonConsole</AssemblyName>
-    <Name>ProteomIQon.ProteomIQonConsole</Name>
+    <ToolCommandName>proteomiqon-labeledproteinquantification</ToolCommandName>
+    <RootNamespace>LabeledProteinQuantification</RootNamespace>
+    <AssemblyName>ProteomIQon.LabeledProteinQuantification</AssemblyName>
+    <Name>ProteomIQon.LabeledProteinQuantification</Name>
     <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
@@ -15,8 +15,8 @@
   </PropertyGroup>
   <PropertyGroup>
     <Authors>David Zimmer, Jonathan Ott, Heinrich Lukas Weil, Timo Muehlhaus</Authors>
-    <Description>ProteomIQon.ProteomIQonConsole - computational proteomics</Description>
-    <Summary>ProteomIQon.ProteomIQonConsole - computational proteomics</Summary>
+    <Description>ProteomIQon.LabeledProteinQuantification - computational proteomics</Description>
+    <Summary>ProteomIQon.LabeledProteinQuantification - computational proteomics</Summary>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageProjectUrl>https://csbiology.github.io/ProteomIQon/</PackageProjectUrl>
     <!--<PackageIconUrl>https://github.com/CSBiology/ProteomIQon</PackageIconUrl>-->
@@ -28,7 +28,7 @@
   </PropertyGroup>
   <ItemGroup>
     <None Include="App.config" />
-    <Compile Include="Library.fs" />
+    <Compile Include="LabeledProteinQuantification.fs" />
     <Compile Include="CLIArgumentParsing.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
