@@ -37,10 +37,10 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Argu" Version="6.1.1" />
-    <PackageReference Include="MzIO" Version="0.1.0-beta" />
-    <PackageReference Include="MzIO.Processing" Version="0.1.0-beta" />
-    <PackageReference Include="MzIO.SQL" Version="0.1.0-beta" />
-    <PackageReference Include="MzIO.MzML" Version="0.1.0-beta" />
+    <PackageReference Include="MzIO" Version="0.1.1" />
+    <PackageReference Include="MzIO.Processing" Version="0.1.1" />
+    <PackageReference Include="MzIO.SQL" Version="0.1.1" />
+    <PackageReference Include="MzIO.MzML" Version="0.1.1" />
     <PackageReference Include="BioFSharp" Version="2.0.0-beta4" />
     <PackageReference Include="BioFSharp.Mz" Version="0.1.5-beta" />
     <PackageReference Include="FSharp.Stats" Version="0.4.0" />
