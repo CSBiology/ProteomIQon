@@ -39,13 +39,13 @@
   <ItemGroup>
     <PackageReference Include="Argu" Version="6.1.1" />
     <PackageReference Include="NLog" Version="4.7.8" />
-    <PackageReference Include="MzIO" Version="0.1.0-beta" />
-    <PackageReference Include="MzIO.Processing" Version="0.1.0-beta" />
-    <PackageReference Include="MzIO.SQL" Version="0.1.0-beta" />
-    <PackageReference Include="MzIO.MzML" Version="0.1.0-beta" />
-    <PackageReference Include="MzIO.Wiff" Version="0.1.0-beta2" />
-    <PackageReference Include="MzIO.Bruker" Version="0.1.0-beta" />
-    <PackageReference Include="MzIO.Thermo" Version="0.1.0-beta" />
+    <PackageReference Include="MzIO" Version="0.1.1" />
+    <PackageReference Include="MzIO.Processing" Version="0.1.1" />
+    <PackageReference Include="MzIO.SQL" Version="0.1.1" />
+    <PackageReference Include="MzIO.MzML" Version="0.1.1" />
+    <PackageReference Include="MzIO.Wiff" Version="0.1.1" />
+    <PackageReference Include="MzIO.Bruker" Version="0.1.1" />
+    <PackageReference Include="MzIO.Thermo" Version="0.1.1" />
     <PackageReference Include="BioFSharp.Mz" Version="0.1.5-beta" />
     <PackageReference Include="FSharp.Stats" Version="0.4.0" />
     <PackageReference Include="System.Data.SQLite.Core" Version="1.0.113.7" />
