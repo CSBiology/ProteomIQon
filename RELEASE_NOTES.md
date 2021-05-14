@@ -1,3 +1,6 @@
+#### 0.0.4 - Friday, May 14, 2021
+* update MzLite version to 0.1.1
+
 #### 0.0.3 - Tuesday, May 5, 2021
 * change relative file path handling
 
