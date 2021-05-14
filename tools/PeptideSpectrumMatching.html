@@ -58,6 +58,11 @@
   Tools
 </li>             
 <li class="nav-item">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/MzMLToMzLite.html">
+    MzMLToMzLite
+  </a>
+</li>             
+<li class="nav-item">
   <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/PeptideDB.html">
     PeptideDB
   </a>
@@ -87,7 +92,7 @@
 </li>             
 <li class="nav-item">
   <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/develop/How_to_create_a_tool.html">
-    How to your own tool
+    How to create your own tool
   </a>
 </li>
                         <li class="nav-header">Powered By</li>
@@ -167,7 +172,7 @@ using the <a href="https://csbiology.github.io/ProteomIQon/tools/PSMStatistics.h
 or use an F# script, which can be downloaded or run in Binder at the top of the page, to write your own parameter file:</p>
 <pre class="fssnip highlighted"><code lang="fsharp"><span class="pp">#r</span> <span class="s">&quot;nuget: BioFSharp.Mz, 0.1.5-beta&quot;</span>
 <span class="pp">#r</span> <span class="s">&quot;nuget: Newtonsoft.Json, 12.0.3&quot;</span>
-<span class="pp">#r</span> <span class="s">&quot;nuget: ProteomIQon, 0.0.1&quot;</span>
+<span class="pp">#r</span> <span class="s">&quot;nuget: ProteomIQon, 0.0.4&quot;</span>
 
 <span class="k">open</span> <span onmouseout="hideTip(event, 'fs1', 1)" onmouseover="showTip(event, 'fs1', 1)" class="id">BioFSharp</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs2', 2)" onmouseover="showTip(event, 'fs2', 2)" class="id">Mz</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs3', 3)" onmouseover="showTip(event, 'fs3', 3)" class="m">SearchDB</span>
 <span class="k">open</span> <span onmouseout="hideTip(event, 'fs4', 4)" onmouseover="showTip(event, 'fs4', 4)" class="id">Newtonsoft</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs5', 5)" onmouseover="showTip(event, 'fs5', 5)" class="id">Json</span>
@@ -195,7 +200,6 @@ or use an F# script, which can be downloaded or run in Binder at the top of the 
     <span class="pn">{</span>
         <span class="prop">ChargeStateDeterminationParams</span> <span class="o">=</span> <span onmouseout="hideTip(event, 'fs8', 19)" onmouseover="showTip(event, 'fs8', 19)" class="id">chargeDetermParams</span> 
         <span class="prop">LookUpPPM</span>                      <span class="o">=</span> <span class="n">30.</span>
-        <span class="prop">MS2ScanRange</span>                   <span class="o">=</span> <span class="n">100.</span><span class="pn">,</span><span class="n">2000.</span>
         <span class="prop">nTerminalSeries</span>                <span class="o">=</span> <span onmouseout="hideTip(event, 'fs16', 20)" onmouseover="showTip(event, 'fs16', 20)" class="m">NTerminalSeries</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs17', 21)" onmouseover="showTip(event, 'fs17', 21)" class="id">B</span>
         <span class="prop">cTerminalSeries</span>                <span class="o">=</span> <span onmouseout="hideTip(event, 'fs18', 22)" onmouseover="showTip(event, 'fs18', 22)" class="m">CTerminalSeries</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs19', 23)" onmouseover="showTip(event, 'fs19', 23)" class="id">Y</span>
         <span class="prop">Andromeda</span>                      <span class="o">=</span> <span onmouseout="hideTip(event, 'fs11', 24)" onmouseover="showTip(event, 'fs11', 24)" class="id">andromedaParams</span>
@@ -235,7 +239,7 @@ or use an F# script, which can be downloaded or run in Binder at the top of the 
 <div class="fsdocs-tip" id="fs12">type AndromedaParams =<br />&#160;&#160;{ PMinPMax: int * int<br />&#160;&#160;&#160;&#160;MatchingIonTolerancePPM: float }</div>
 <div class="fsdocs-tip" id="fs13">val peptideSpectrumMatchingParams : Dto.PeptideSpectrumMatchingParams</div>
 <div class="fsdocs-tip" id="fs14">module Dto<br /><br />from ProteomIQon</div>
-<div class="fsdocs-tip" id="fs15">Multiple items<br />module PeptideSpectrumMatchingParams<br /><br />from ProteomIQon.Dto<br /><br />--------------------<br />type PeptideSpectrumMatchingParams =<br />&#160;&#160;{ ChargeStateDeterminationParams: ChargeDetermParams<br />&#160;&#160;&#160;&#160;LookUpPPM: float<br />&#160;&#160;&#160;&#160;MS2ScanRange: float * float<br />&#160;&#160;&#160;&#160;nTerminalSeries: NTerminalSeries<br />&#160;&#160;&#160;&#160;cTerminalSeries: CTerminalSeries<br />&#160;&#160;&#160;&#160;Andromeda: AndromedaParams }</div>
+<div class="fsdocs-tip" id="fs15">Multiple items<br />module PeptideSpectrumMatchingParams<br /><br />from ProteomIQon.Dto<br /><br />--------------------<br />type PeptideSpectrumMatchingParams =<br />&#160;&#160;{ ChargeStateDeterminationParams: ChargeDetermParams<br />&#160;&#160;&#160;&#160;LookUpPPM: float<br />&#160;&#160;&#160;&#160;nTerminalSeries: NTerminalSeries<br />&#160;&#160;&#160;&#160;cTerminalSeries: CTerminalSeries<br />&#160;&#160;&#160;&#160;Andromeda: AndromedaParams }</div>
 <div class="fsdocs-tip" id="fs16">Multiple items<br />module NTerminalSeries<br /><br />from ProteomIQon.Common<br /><br />--------------------<br />type NTerminalSeries = (BioFSharp.IBioItem -&gt; float) -&gt; BioFSharp.AminoAcids.AminoAcid list -&gt; PeakFamily&lt;TaggedMass.TaggedMass&gt; list</div>
 <div class="fsdocs-tip" id="fs17">union case NTerminalSeries.B: NTerminalSeries</div>
 <div class="fsdocs-tip" id="fs18">Multiple items<br />module CTerminalSeries<br /><br />from ProteomIQon.Common<br /><br />--------------------<br />type CTerminalSeries = (BioFSharp.IBioItem -&gt; float) -&gt; BioFSharp.AminoAcids.AminoAcid list -&gt; PeakFamily&lt;TaggedMass.TaggedMass&gt; list</div>

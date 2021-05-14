@@ -1,5 +1,5 @@
 (**
-// can't yet format YamlFrontmatter (["title: How to your own tool"; "category: Developer Notes"; "categoryindex: 2"; "index: 1"], Some { StartLine = 2 StartColumn = 0 EndLine = 6 EndColumn = 8 }) to pynb markdown
+// can't yet format YamlFrontmatter (["title: How to create your own tool"; "category: Developer Notes"; "categoryindex: 2"; "index: 1"], Some { StartLine = 2 StartColumn = 0 EndLine = 6 EndColumn = 8 }) to pynb markdown
 
 # How to create a tool
 

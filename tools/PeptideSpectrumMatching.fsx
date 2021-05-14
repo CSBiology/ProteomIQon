@@ -41,7 +41,7 @@ or use an F# script, which can be downloaded or run in Binder at the top of the 
 *)
 #r "nuget: BioFSharp.Mz, 0.1.5-beta"
 #r "nuget: Newtonsoft.Json, 12.0.3"
-#r "nuget: ProteomIQon, 0.0.1"
+#r "nuget: ProteomIQon, 0.0.4"
 
 open BioFSharp.Mz.SearchDB
 open Newtonsoft.Json
@@ -69,7 +69,6 @@ let peptideSpectrumMatchingParams :Dto.PeptideSpectrumMatchingParams =
     {
         ChargeStateDeterminationParams = chargeDetermParams 
         LookUpPPM                      = 30.
-        MS2ScanRange                   = 100.,2000.
         nTerminalSeries                = NTerminalSeries.B
         cTerminalSeries                = CTerminalSeries.Y
         Andromeda                      = andromedaParams
