@@ -6,7 +6,7 @@ module CLIArgumentParsing =
     open System.IO
   
     type CLIArguments =
-        | [<AltCommandLine("-i")>] InstrumentOutput of path:string list
+        | [<AltCommandLine("-i")>] InstrumentOutput of path:string
         | [<AltCommandLine("-o")>] OutputDirectory  of path:string 
         | [<AltCommandLine("-p")>] ParamFile of path:string
         | [<Unique>] [<AltCommandLine("-c")>] Parallelism_Level of level:int
