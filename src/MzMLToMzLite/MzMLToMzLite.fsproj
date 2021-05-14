@@ -3,9 +3,9 @@
     <TargetFrameworks>net5.0</TargetFrameworks>
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>proteomiqon-mzmltomzlite</ToolCommandName>
-    <RootNamespace>MzMlToMzLite</RootNamespace>
-    <AssemblyName>ProteomIQon.MzMlToMzLite</AssemblyName>
-    <Name>ProteomIQon.MzMlToMzLite</Name>
+    <RootNamespace>MzMLToMzLite</RootNamespace>
+    <AssemblyName>ProteomIQon.MzMLToMzLite</AssemblyName>
+    <Name>ProteomIQon.MzMLToMzLite</Name>
     <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
