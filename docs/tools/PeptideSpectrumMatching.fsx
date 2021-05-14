@@ -74,7 +74,6 @@ let peptideSpectrumMatchingParams :Dto.PeptideSpectrumMatchingParams =
     {
         ChargeStateDeterminationParams = chargeDetermParams 
         LookUpPPM                      = 30.
-        MS2ScanRange                   = 100.,2000.
         nTerminalSeries                = NTerminalSeries.B
         cTerminalSeries                = CTerminalSeries.Y
         Andromeda                      = andromedaParams
