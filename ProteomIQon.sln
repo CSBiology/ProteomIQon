@@ -78,6 +78,16 @@ Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "JoinQuantPepIonsWithProtein
 EndProject
 Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "LabeledProteinQuantification", "src\LabeledProteinQuantification\LabeledProteinQuantification.fsproj", "{EB95FF6C-6FF0-49EE-BDFC-C480016DA787}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{57FEA09C-F27E-4BDF-9761-6BDB8DFA6100}"
+	ProjectSection(SolutionItems) = preProject
+		docs\tools\MzMLToMzLite.fsx = docs\tools\MzMLToMzLite.fsx
+		docs\tools\PeptideDB.fsx = docs\tools\PeptideDB.fsx
+		docs\tools\PeptideSpectrumMatching.fsx = docs\tools\PeptideSpectrumMatching.fsx
+		docs\tools\ProteinInference.fsx = docs\tools\ProteinInference.fsx
+		docs\tools\PSMBasedQuantification.fsx = docs\tools\PSMBasedQuantification.fsx
+		docs\tools\PSMStatistics.fsx = docs\tools\PSMStatistics.fsx
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
