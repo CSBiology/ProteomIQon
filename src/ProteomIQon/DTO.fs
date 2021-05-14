@@ -137,32 +137,6 @@ module Dto =
                 }
 
     
-    type MzMLtoMzLiteParams = PreprocessingParams
-
-    module MzMLtoMzLiteParams =
-
-        let toDomain (dtoCentroidizationParams: MzMLtoMzLiteParams ) : Domain.PreprocessingParams =
-                {
-                    Compress                    = dtoCentroidizationParams.Compress
-                    StartRetentionTime          = dtoCentroidizationParams.StartRetentionTime
-                    EndRetentionTime            = dtoCentroidizationParams.EndRetentionTime
-                    MS1PeakPicking              = dtoCentroidizationParams.MS1PeakPicking
-                    MS2PeakPicking              = dtoCentroidizationParams.MS2PeakPicking
-                }
-
-    type MzLiteToMzMLParams = PreprocessingParams
-
-    module MzLiteToMzMLParams =
-
-        let toDomain (dtoCentroidizationParams: MzLiteToMzMLParams ) : Domain.PreprocessingParams =
-                {
-                    Compress                    = dtoCentroidizationParams.Compress
-                    StartRetentionTime          = dtoCentroidizationParams.StartRetentionTime
-                    EndRetentionTime            = dtoCentroidizationParams.EndRetentionTime
-                    MS1PeakPicking              = dtoCentroidizationParams.MS1PeakPicking
-                    MS2PeakPicking              = dtoCentroidizationParams.MS2PeakPicking
-                }
-
     type PeptideDBParams =
         {
         // name of database i.e. Creinhardtii_236_protein_full_labeled
@@ -1057,16 +1031,16 @@ module Dto =
         Fragments                                   : FragmentIon list
         }
 
-    type MzMLConverterParams =
+    type MzMLtoMzLiteParams =
         {
             Compress                    : BinaryDataCompressionType
             StartRetentionTime          : float option
             EndRetentionTime            : float option
         }
 
-    module MzMLConverterParams =
+    module MzMLtoMzLiteParams =
 
-        let toDomain (dtoMzMLConverterParams: MzMLConverterParams ) : Domain.MzMLConverterParams =
+        let toDomain (dtoMzMLConverterParams: MzMLtoMzLiteParams ) : Domain.MzMLtoMzLiteParams =
                 {
                     Compress                    = dtoMzMLConverterParams.Compress
                     StartRetentionTime          = dtoMzMLConverterParams.StartRetentionTime

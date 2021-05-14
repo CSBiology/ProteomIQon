@@ -3,23 +3,19 @@
     <TargetFrameworks>net5.0</TargetFrameworks>
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>proteomiqon-mzmltomzlite</ToolCommandName>
-    <RootNamespace>MzMLToMzLite</RootNamespace>
-    <AssemblyName>ProteomIQon.MzMLToMzLite</AssemblyName>
-    <Name>ProteomIQon.MzMLToMzLite</Name>
+    <RootNamespace>MzMlToMzLite</RootNamespace>
+    <AssemblyName>ProteomIQon.MzMlToMzLite</AssemblyName>
+    <Name>ProteomIQon.MzMlToMzLite</Name>
     <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <ServerGarbageCollection>true</ServerGarbageCollection>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net47|AnyCPU'">
-    <PlatformTarget>AnyCPU</PlatformTarget>
-    <Prefer32Bit>true</Prefer32Bit>
-  </PropertyGroup>
   <PropertyGroup>
     <Authors>David Zimmer, Jonathan Ott, Heinrich Lukas Weil, Timo Muehlhaus</Authors>
-    <Description>ProteomIQon.MzMLToMzLite - computational proteomics</Description>
-    <Summary>ProteomIQon.MzMLToMzLite - computational proteomics</Summary>
+    <Description>ProteomIQon.MzMLConverter - computational proteomics</Description>
+    <Summary>ProteomIQon.MzMLConverter - computational proteomics</Summary>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageProjectUrl>https://csbiology.github.io/ProteomIQon/</PackageProjectUrl>
     <!--<PackageIconUrl>https://github.com/CSBiology/ProteomIQon</PackageIconUrl>-->
