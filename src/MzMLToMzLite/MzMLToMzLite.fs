@@ -131,7 +131,7 @@ module MzMLToMzLite =
         | _ ->
             failwith "Only mass spectra of level 1 and 2 are supported."
 
-    let processFile (processParams:PreprocessingParams) (outputDir:string) (instrumentOutput:string) =
+    let processFile (processParams:MzMLtoMzLiteParams) (outputDir:string) (instrumentOutput:string) =
 
         let logger = Logging.createLogger (Path.GetFileNameWithoutExtension instrumentOutput)
 
