@@ -392,9 +392,4 @@ module Domain =
             FieldNames           : TableSortFieldNames
         }
 
-    type MzMLtoMzLiteParams =
-        {
-            Compress                    : BinaryDataCompressionType
-            StartRetentionTime          : float option
-            EndRetentionTime            : float option
-        }
+    type MzMLtoMzLiteParams = PreprocessingParams
