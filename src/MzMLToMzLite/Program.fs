@@ -6,40 +6,42 @@ open CLIArgumentParsing
 open Argu
 open System.Reflection
 open ProteomIQon.Core.InputPaths
+open ProteomIQon.Core
 
 module console1 =
 
     [<EntryPoint>]
-    let main argv = 
+    let main argv =
         let errorHandler = ProcessExiter(colorizer = function ErrorCode.HelpText -> None | _ -> Some System.ConsoleColor.Red)
         let parser = ArgumentParser.Create<CLIArguments>(programName =  (System.Reflection.Assembly.GetExecutingAssembly().GetName().Name),errorHandler=errorHandler)     
         let directory = Environment.CurrentDirectory
         let getPathRelativeToDir = getRelativePath directory
         let results = parser.Parse argv
-        let i = results.GetResult InstrumentOutput |> getPathRelativeToDir
+        let i = results.GetResult InstrumentOutput |> List.map getPathRelativeToDir
         let o = results.GetResult OutputDirectory  |> getPathRelativeToDir
         let p = results.GetResult ParamFile        |> getPathRelativeToDir
         Directory.CreateDirectory(o) |> ignore
         Logging.generateConfig o
-        let logger = Logging.createLogger "mzMLConverter"
-        logger.Info (sprintf "InputFilePath -i = %s" i)
+        let logger = Logging.createLogger "MzMLToMzLite"
+        logger.Info (sprintf "InputFilePath -i = %A" i)
         logger.Info (sprintf "OutputFilePath -o = %s" o)
         logger.Info (sprintf "ParamFilePath -p = %s" p)
         logger.Trace (sprintf "CLIArguments: %A" results)
-        let converterParams =
-                Json.ReadAndDeserialize<Dto.MzMLtoMzLiteParams> p
-                |> Dto.MzMLtoMzLiteParams.toDomain
+        let processParams =
+            Json.ReadAndDeserialize<Dto.PreprocessingParams> p
+            |> Dto.PreprocessingParams.toDomain
 
-        if File.Exists i || (Directory.Exists i && i.EndsWith(".d"))  then
+        let files = 
+            parsePaths (fun path -> Directory.GetFiles(path,("*.mzML"))) i
+            |> Array.ofSeq
+
+        if files.Length = 1  then
             logger.Info "single file"
-            MzMLToMzLite.convertFile converterParams o i
-            logger.Trace (sprintf "Converting %s" i)
-        elif Directory.Exists i then
+            logger.Trace (sprintf "Preprocessing %s" files.[0])
+            MzMLToMzLite.processFile processParams o files.[0]
+        else
             logger.Info "multiple files"
-            let files =
-                Core.MzIO.Reader.getMSFilePaths i
-                |> Array.sort
-            logger.Trace (sprintf "Converting multiple files: %A" files)
+            logger.Trace (sprintf "Preprocessing multiple files: %A" files)
             let c =
                 match results.TryGetResult Parallelism_Level with
                 | Some c    -> c
@@ -49,13 +51,11 @@ module console1 =
             let partitionedFiles =
                 files
                 |> Array.splitInto c
-            [for i in partitionedFiles do yield async { return i |> Array.map (MzMLToMzLite.convertFile converterParams o)}]
+            [for i in partitionedFiles do yield async { return i |> Array.map (MzMLToMzLite.processFile processParams o)}]
             |> Async.Parallel
             |> Async.RunSynchronously
             |> ignore
             with
             | ex -> printfn "%A" ex
-        else
-            failwith "The given path to the instrument output is neither a valid file path nor a valid directory path."
         logger.Info "Done"
         0
