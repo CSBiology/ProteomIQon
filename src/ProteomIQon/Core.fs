@@ -32,8 +32,12 @@ module Core =
             let getBrukerFiles directoryPath = 
                 Directory.GetDirectories(directoryPath,("*.d"))   
 
-            let getMzMLFiles directoryPath = 
-                Directory.GetFiles(directoryPath,("*.mzML"))
+            let getMzMLFiles directoryPath =
+                [|
+                    Directory.GetFiles(directoryPath,("*.mzML"))
+                    Directory.GetFiles(directoryPath,("*.mzml"))
+                |]
+                |> Array.concat
 
             let getMSFilePaths directoryPath =
                 [|
