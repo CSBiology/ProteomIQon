@@ -998,8 +998,8 @@ module ProteinInference' =
             PepSequenceID   : int
             [<FieldAttribute("StringSequence")>]
             Seq             :string
-            [<FieldAttribute("PercolatorScore")>]
-            PercolatorScore : float
+            [<FieldAttribute("ModelScore")>]
+            ModelScore : float
         }
 
     /// Input for QValue calulation
@@ -1124,8 +1124,8 @@ module ProteinInference' =
             // Depending on the type of lookup this map is used for, the modifications have to be removed.
             sequence,
             psmList
-            |> List.maxBy (fun psm -> psm.PercolatorScore)
-            |> fun psm -> psm.PercolatorScore
+            |> List.maxBy (fun psm -> psm.ModelScore)
+            |> fun psm -> psm.ModelScore
         )
         |> Map.ofList
 
