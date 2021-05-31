@@ -417,7 +417,7 @@ module PSMStatistics =
                             bestPSMPerScan 
                             |> Array.filter (fun x -> 
                                 let passQVal = (prevModel.Model x).Score |> float |> prevModel.CalcQValue  < 0.001
-                                let passPEPVal = (prevModel.Model x).Score |> float |> prevModel.CalcQValue  < 0.05
+                                let passPEPVal = (prevModel.Model x).Score |> float |> prevModel.CalcPepValue  < 0.05
                                 passQVal && passPEPVal
                                 )
                             |> Array.filter (fun x -> x.Label = true)
