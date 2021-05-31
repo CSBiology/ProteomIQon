@@ -219,7 +219,6 @@ module PSMStatistics =
         
         match processParams.Threshold with 
         | Estimate estParams -> 
-
             logger.Trace "Prepare training pipeline"
             let ctx = new ML.MLContext(1024)
             let trainModel positives' negatives' =
@@ -416,7 +415,11 @@ module PSMStatistics =
                         logger.Trace "Selecting positives for training"
                         let positives' = 
                             bestPSMPerScan 
-                            |> Array.filter (fun x -> (prevModel.Model x).Score |> float |> prevModel.CalcQValue  < 0.001)
+                            |> Array.filter (fun x -> 
+                                let passQVal = (prevModel.Model x).Score |> float |> prevModel.CalcQValue  < 0.001
+                                let passPEPVal = (prevModel.Model x).Score |> float |> prevModel.CalcQValue  < 0.05
+                                passQVal && passPEPVal
+                                )
                             |> Array.filter (fun x -> x.Label = true)
                             |> Array.map (fun x -> x.ScanNr,x)
                             |> Map.ofArray
