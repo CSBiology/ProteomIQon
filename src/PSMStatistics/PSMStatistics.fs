@@ -346,12 +346,14 @@ module PSMStatistics =
                             )
                         )
                 let getQ = BioFSharp.Mz.FDRControl.calculateQValueStorey bestPSMPerScan (fun x -> x.Label |> not) (fun x -> float (trainedModel x).Score ) (fun x -> float (trainedModel x).Score)             
-                let getPep = 
+                let getPep, getPepInterpolation = 
                     let bw = 
                         bestPSMPerScan
                         |> Array.map (fun x -> (trainedModel x).Score |> float)
                         |> FSharp.Stats.Distributions.Bandwidth.nrd0
-                    ProteomIQon.FDRControl'.initCalculateMonotonePEPValues bw (fun x -> x.Label |> not) (fun x -> float (trainedModel x).Score ) (fun x -> float (trainedModel x).Score) bestPSMPerScan
+                        |> fun x -> x / 4.
+                    ProteomIQon.FDRControl'.initCalculateMonotonePEPValuesLogRegLogit bw (fun x -> x.Label |> not) (fun x -> float (trainedModel x).Score ) (fun x -> float (trainedModel x).Score) bestPSMPerScan,
+                    ProteomIQon.FDRControl'.initCalculateMonotonePEPValuesLinInterpolation bw (fun x -> x.Label |> not) (fun x -> float (trainedModel x).Score ) (fun x -> float (trainedModel x).Score) bestPSMPerScan
                 let scoreVsQ = 
                     bestPSMPerScan
                     |> Array.map (fun x -> (trainedModel x).Score, getQ (float (trainedModel x).Score))
