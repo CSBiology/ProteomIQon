@@ -12,7 +12,7 @@ open ProteomIQon.Dto
 
 let defaultPSMStatistics : Dto.PSMStatisticsParams = 
     {
-        Threshold = Threshold.Estimate {QValueThreshold = 0.01; PepValueThreshold = 0.05;MaxIterations=15;MinimumIncreaseBetweenIterations=0.005}
+        Threshold = Threshold.Estimate {QValueThreshold = 0.01; PepValueThreshold = 0.05;MaxIterations=15;MinimumIncreaseBetweenIterations=0.005; PepValueFittingMethod = LogisticRegressionLogit}
         ParseProteinIDRegexPattern  = (@"id")
         KeepTemporaryFiles          = true
     }

@@ -91,12 +91,18 @@ module Domain =
             ///
         }
 
+    type PepValueFittingMethod = 
+        | LinearSpline
+        | LogisticRegressionLogit
+
+
     type EstimationParams = {
         QValueThreshold                 : float
         PepValueThreshold               : float 
         MaxIterations                   : int
         MinimumIncreaseBetweenIterations: float
-        }
+        PepValueFittingMethod           : PepValueFittingMethod
+    }
 
     type ScoreCutoff = {
         SequestLike : float

@@ -1,1 +1,1 @@
-{"Threshold":{"Case":"Estimate","Fields":[{"QValueThreshold":0.01,"PepValueThreshold":0.05,"MaxIterations":15,"MinimumIncreaseBetweenIterations":0.005}]},"ParseProteinIDRegexPattern":"id","KeepTemporaryFiles":true}
+{"Threshold":{"Case":"Estimate","Fields":[{"QValueThreshold":0.01,"PepValueThreshold":0.05,"MaxIterations":15,"MinimumIncreaseBetweenIterations":0.005,"PepValueFittingMethod":{"Case":"LogisticRegressionLogit"}}]},"ParseProteinIDRegexPattern":"id","KeepTemporaryFiles":true}
