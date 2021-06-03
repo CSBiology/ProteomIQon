@@ -781,6 +781,22 @@ module Fitting' =
                     Table.lineSolverOptions [|maxY; steepness; midX|]
                 )
 
+            /// Returns an estimate for an initial parameter for the linear least square estimator for a given dataset (xData, yData).
+            /// The steepness is given as an array and not estimated. An initial estimate is returned for every given steepness in the input array and every point on the x-axis (0.1 stepsize).
+            /// The initial estimation is intended for a logistic function with variable position on the y-axis.
+            let initialParamsOverRangeMidAndSteepness (xData: float[]) (yData: float[]) (steepnessRange: float []) =
+                // works the same as initialParam for mid point estimation
+                let yRange = abs ((yData |> Array.max) - (yData |> Array.min))
+                let midpointRange =
+                    [|xData |> Array.min .. 0.1 .. xData |> Array.max|]
+                steepnessRange
+                |> Array.collect (fun steepness -> 
+                    midpointRange
+                    |> Array.map (fun midpoint ->
+                        Table.lineSolverOptions [|yRange; steepness; midpoint; yData |> Array.min|]
+                    )
+                )
+
             /// Returns a parameter vector tupled with its residual sum of squares (RSS) as a possible solution for linear least square based nonlinear fitting of a given dataset (xData, yData) with a given
             /// model function.
             let estimatedParamsWithRSS (model: Model) (solverOptions: SolverOptions) lambdaInitial lambdaFactor (lowerBound: vector) (upperBound: vector) (xData: float[]) (yData: float []) =
@@ -1685,9 +1701,20 @@ module FDRControl' =
             |> Array.unzip
         monotone
 
+    /// Logit transforms pep values (log10)
+    let logitTransformPepValues score pepVal  =
+        Array.zip score pepVal
+        // 0 and 1 are + and - infinity
+        |> Array.filter (fun (y,x) -> x <> 0. && x <> 1.)
+        |> Array.map (fun (score,pep) ->
+            score,
+            log10 (pep/(1.-pep))
+        )
+        |> Array.unzip
+
     /// Calculates monotonized PEP values for a target/decoy dataset based on the decoy/target ratio. Entries are binned with a given bandwidth based on the score. 
-    /// Returns a function which maps from score to PEP value based on a Linear Spline.
-    let initCalculateMonotonePEPValues bandwidth (isDecoy: 'a -> bool) (decoyScoreF: 'a -> float) (targetScoreF: 'a -> float) (data: 'a[]) =
+    /// Returns a function which maps from score to PEP value based on a Linear Spline fitted on the monotonized pep values.
+    let initCalculateMonotonePEPValuesLinInterpolation bandwidth (isDecoy: 'a -> bool) (decoyScoreF: 'a -> float) (targetScoreF: 'a -> float) (data: 'a[]) =
         let targetDecoyHis = createTargetDecoyHis bandwidth (isDecoy: 'a -> bool) (decoyScoreF: 'a -> float) (targetScoreF: 'a -> float) (data: 'a[])
         let pep = calculatePEPValues (fun (_,count,_,_) -> float count) (fun (_,_,decoyCount,_) -> float decoyCount) (fun (_,_,_,medianScore) -> medianScore) targetDecoyHis
         let score, monotonePEPVal = monotonizePepValues (fun (score,_) -> score) (fun (_,pep) -> pep) pep
@@ -1696,6 +1723,37 @@ module FDRControl' =
         // takes a score from the dataset and assigns it a q value
         let interpolation = LinearSpline.interpolate linearSplineCoeff
         interpolation
+
+    /// Calculates monotonized PEP values for a target/decoy dataset based on the decoy/target ratio. Entries are binned with a given bandwidth based on the score. 
+    /// Returns a function which maps from score to PEP value based on a fit of a sigmoid function using logistic regression. The logistic regression is performed on the logit transformed 
+    /// pep values.
+    let initCalculateMonotonePEPValuesLogRegLogit bandwidth (isDecoy: 'a -> bool) (decoyScoreF: 'a -> float) (targetScoreF: 'a -> float) (data: 'a[]) =
+        let targetDecoyHis = createTargetDecoyHis bandwidth (isDecoy: 'a -> bool) (decoyScoreF: 'a -> float) (targetScoreF: 'a -> float) (data: 'a[])
+        let score,pep = 
+            calculatePEPValues (fun (_,count,_,_) -> float count) (fun (_,_,decoyCount,_) -> float decoyCount) (fun (_,_,_,medianScore) -> medianScore) targetDecoyHis
+            |> Array.ofList
+            |> Array.unzip
+        //let score, monotonePEPVal = monotonizePepValues (fun (score,_) -> score) (fun (_,pep) -> pep) pep
+        let monotoneScore, logitMonotonePEPVal = logitTransformPepValues score pep
+        let initialGuess = initialParamsOverRangeMidAndSteepness monotoneScore logitMonotonePEPVal [|1. .. 1. ..  50.|]
+        let estimate =
+            initialGuess
+            |> Array.map (fun initial ->
+                let lowerBound =
+                    initial.InitialParamGuess
+                    |> Array.map (fun param -> param - (abs param) * 0.1)
+                    |> vector
+                let upperBound =
+                    initial.InitialParamGuess
+                    |> Array.map (fun param -> param + (abs param) * 0.1)
+                    |> vector
+                estimatedParamsWithRSS FSharp.Stats.Fitting.NonLinearRegression.Table.LogisticFunctionVarYDescending initial 0.001 10.0 lowerBound upperBound monotoneScore logitMonotonePEPVal
+            )
+            |> Array.filter (fun (param,rss) -> not (param |> Vector.exists System.Double.IsNaN))
+            |> Array.minBy snd
+            |> fst
+        let logisticFunction = FSharp.Stats.Fitting.NonLinearRegression.Table.LogisticFunctionVarYDescending.GetFunctionValue estimate
+        logisticFunction >> (fun x -> 10.**(x)/(1.+10.**(x)))
 
 module Fragmentation' =
 
