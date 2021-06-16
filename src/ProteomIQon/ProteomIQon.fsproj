@@ -35,7 +35,8 @@
     <Compile Include="DTO.fs" />
     <Compile Include="Json.fs" />
     <Compile Include="Core.fs" />
-    <None Include="Scripts\createMzMLToMzLiteParams.fsx" />
+    <None Include="Scripts\createMzMLtoMzLiteParams.fsx" />
+    <None Include="Scripts\createMzliteToMzMLParams.fsx" />
     <None Include="Scripts\createMzTabParams.fsx" />
     <None Include="Scripts\createTableSortParams.fsx" />
     <None Include="Scripts\createSWATHAnalysisParams.fsx" />
