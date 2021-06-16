@@ -1031,16 +1031,16 @@ module Dto =
         Fragments                                   : FragmentIon list
         }
 
-    type MzMLConverterParams =
+    type MzliteToMzMLParams =
         {
             Compress                    : BinaryDataCompressionType
             StartRetentionTime          : float option
             EndRetentionTime            : float option
         }
 
-    module MzMLConverterParams =
+    module MzliteToMzMLParams =
 
-        let toDomain (dtoMzMLConverterParams: MzMLConverterParams ) : Domain.MzMLConverterParams =
+        let toDomain (dtoMzMLConverterParams: MzliteToMzMLParams ) : Domain.MzliteToMzMLParams =
                 {
                     Compress                    = dtoMzMLConverterParams.Compress
                     StartRetentionTime          = dtoMzMLConverterParams.StartRetentionTime

@@ -16,7 +16,7 @@ module MzliteToMzML =
             reader.ReadSpectrumPeaks(massSpec.ID).Peaks
             |> Core.MzIO.Peaks.unzipIMzliteArray
 
-    let convertFile (converterParams: MzMLConverterParams)(outputDir:string) (instrumentOutput:string) =
+    let convertFile (converterParams: MzliteToMzMLParams)(outputDir:string) (instrumentOutput:string) =
 
         let logger = Logging.createLogger (Path.GetFileNameWithoutExtension instrumentOutput)
 

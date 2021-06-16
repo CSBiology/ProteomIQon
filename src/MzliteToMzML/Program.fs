@@ -28,8 +28,8 @@ module console1 =
         logger.Info (sprintf "ParamFilePath -p = %s" p)
         logger.Trace (sprintf "CLIArguments: %A" results)
         let converterParams =
-                Json.ReadAndDeserialize<Dto.MzMLConverterParams> p
-                |> Dto.MzMLConverterParams.toDomain
+                Json.ReadAndDeserialize<Dto.MzliteToMzMLParams> p
+                |> Dto.MzliteToMzMLParams.toDomain
         if File.Exists i || (Directory.Exists i && i.EndsWith(".d"))  then
             logger.Info "single file"
             MzliteToMzML.convertFile converterParams o i
