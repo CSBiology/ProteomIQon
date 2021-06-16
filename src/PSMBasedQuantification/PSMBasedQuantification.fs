@@ -78,14 +78,56 @@ module PSMBasedQuantification =
     let getSpec (reader:MzIO.IO.IMzIODataReader) (ms1: MzIO.Model.MassSpectrum)  =
         Peaks.unzipIMzliteArray (reader.ReadSpectrumPeaks(ms1.ID).Peaks)
         |> fun (mzData,intensityData) -> PeakArray.zip mzData intensityData
-       
+    
+    ///
+    let lightQualityFilter lowerBorder upperBorder (quantResults:QuantificationResult[]) =
+        let medianApexIntensities = 
+            quantResults
+            |> Array.map (fun x -> x.MeasuredApex_Light)
+            |> Array.filter (fun x -> nan.Equals x |> not)
+            |> Array.median
+        let medianQuantIntensities = 
+            quantResults
+            |> Array.map (fun x -> x.Quant_Light)
+            |> Array.filter (fun x -> nan.Equals x |> not)
+            |> Array.median
+        quantResults
+        |> Array.filter (fun x -> 
+            let qualR = 
+                let apexNorm = x.MeasuredApex_Light / medianApexIntensities
+                let quantNorm =  x.Quant_Light / medianQuantIntensities
+                quantNorm / apexNorm
+                |> log2
+            qualR > lowerBorder && qualR < upperBorder
+            ) 
+
+    ///
+    let heavyQualityFilter lowerBorder upperBorder (quantResults:QuantificationResult[]) =
+        let medianApexIntensities = 
+            quantResults
+            |> Array.map (fun x -> x.MeasuredApex_Heavy)
+            |> Array.filter (fun x -> nan.Equals x |> not)
+            |> Array.median
+        let medianQuantIntensities = 
+            quantResults
+            |> Array.map (fun x -> x.Quant_Heavy)
+            |> Array.filter (fun x -> nan.Equals x |> not)
+            |> Array.median
+        quantResults
+        |> Array.filter (fun x -> 
+            let qualR = 
+                let apexNorm = x.MeasuredApex_Heavy / medianApexIntensities
+                let quantNorm =  x.Quant_Heavy / medianQuantIntensities
+                quantNorm / apexNorm
+                |> log2
+            qualR > lowerBorder && qualR < upperBorder
+            )
+    
     /// Calculates the Kullback-Leibler divergence Dkl(p||q) from q (theory, model, description, or approximation of p) 
     /// to p (the "true" distribution of data, observations, or a precisely calculated theoretical distribution).
     let klDiv (p:float []) (q:float []) = 
         Array.fold2 (fun acc p q -> (System.Math.Log(p/q)*p) + acc ) 0. p q
      
-
-
     ///
     let substractBaseLine (logger: NLog.Logger) (baseLineParams:Domain.BaseLineCorrection) (yData:float []) =
         if yData.Length > 500 then
@@ -727,36 +769,48 @@ module PSMBasedQuantification =
         logger.Trace "init quantification functions:finished"
         
         logger.Trace "executing quantification"
-        peptides        
-        |> Array.groupBy (fun x -> 
-            {
-                Sequence             = x.StringSequence     
-                GlobalMod            = x.GlobalMod    
-                Charge               = x.Charge       
-                ModSequenceID        = x.ModSequenceID
-                PepSequenceID        = x.PepSequenceID
-            }
-            )
-        |> Array.map (fun (pepIon,psms) -> 
-                match processParams.XicExtraction.TopKPSMs with 
-                | Some x when psms.Length > x -> 
-                    pepIon,
-                    psms
-                    |> Array.sortByDescending (fun x -> x.SequestScore)
-                    |> Array.take x
-                | _ -> 
-                    pepIon,
-                    psms                  
-            )
-        |> Array.mapi (fun i (pepIon,psms) -> 
-            if i % 100 = 0 then logger.Trace (sprintf "%i peptides quantified" i)
+        let quantResults = 
+            peptides        
+            |> Array.groupBy (fun x -> 
+                {
+                    Sequence             = x.StringSequence     
+                    GlobalMod            = x.GlobalMod    
+                    Charge               = x.Charge       
+                    ModSequenceID        = x.ModSequenceID
+                    PepSequenceID        = x.PepSequenceID
+                }
+                )
+            |> Array.map (fun (pepIon,psms) -> 
+                    match processParams.XicExtraction.TopKPSMs with 
+                    | Some x when psms.Length > x -> 
+                        pepIon,
+                        psms
+                        |> Array.sortByDescending (fun x -> x.SequestScore)
+                        |> Array.take x
+                    | _ -> 
+                        pepIon,
+                        psms                  
+                )
+            |> Array.mapi (fun i (pepIon,psms) -> 
+                if i % 100 = 0 then logger.Trace (sprintf "%i peptides quantified" i)
+                
+                if processParams.PerformLabeledQuantification then 
+                    labledQuantification pepIon psms
+                else
+                    lableFreeQuantification pepIon psms
+                )
+            |> Array.choose id
+                    
+        let filteredResults = 
             if processParams.PerformLabeledQuantification then 
-                labledQuantification pepIon psms
+                quantResults
+                |> heavyQualityFilter -2. 2.
+                |> lightQualityFilter -2. 2.
+                
             else
-                lableFreeQuantification pepIon psms
-            )
-        |> Array.filter Option.isSome
-        |> Array.map (fun x -> x.Value)
+                quantResults
+                |> lightQualityFilter -2. 2.
+        filteredResults 
         |> SeqIO'.csv "\t" true false
         |> FSharpAux.IO.SeqIO.Seq.writeOrAppend (outFilePath)
         inTr.Commit()
