@@ -28,7 +28,7 @@
   </PropertyGroup>
   <ItemGroup>
     <None Include="App.config" />
-    <Compile Include="Library.fs" />
+    <Compile Include="MzliteToMzML.fs" />
     <Compile Include="CLIArgumentParsing.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
@@ -44,8 +44,5 @@
     <PackageReference Include="MzIO.MzML" Version="0.1.0-beta" />
     <PackageReference Include="BioFSharp" Version="2.0.0-beta4" />
     <PackageReference Include="BioFSharp.Mz" Version="0.1.5-beta" />
-    <PackageReference Include="FSharpAux" Version="1.0.0" />
-    <PackageReference Include="FSharpAux.IO" Version="1.0.0" />
-    <PackageReference Include="Plotly.NET" Version="2.0.0-alpha5" />
   </ItemGroup>
 </Project>
