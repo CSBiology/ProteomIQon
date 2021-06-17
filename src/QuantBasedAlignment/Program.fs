@@ -18,12 +18,13 @@ module console1 =
         let directory = Environment.CurrentDirectory
         let getPathRelativeToDir = getRelativePath directory
         let results = parser.Parse argv
-        let i = results.GetResult QuantifiedPeptides |> getPathRelativeToDir
+        let i = results.GetResult QuantifiedPeptides |> List.map getPathRelativeToDir
         let o = results.GetResult OutputDirectory    |> getPathRelativeToDir
         let p = results.GetResult ParamFile          |> getPathRelativeToDir
+        let dc = results.Contains DiagnosticCharts
         Logging.generateConfig o
         let logger = Logging.createLogger "QuantBasedAlignment"
-        logger.Info (sprintf "InputFilePath -i = %s" i)
+        logger.Info (sprintf "InputFilePath -i = %A" i)
         logger.Info (sprintf "OutputFilePath -o = %s" o)
         logger.Info (sprintf "ParamFilePath -p = %s" p)
         logger.Trace (sprintf "CLIArguments: %A" results)
@@ -31,22 +32,21 @@ module console1 =
         //let p =
         //    Json.ReadAndDeserialize<Dto.QuantificationParams> p
         //    |> Dto.QuantificationParams.toDomain
-        if File.Exists i then
+        let files = 
+            parsePaths (fun path -> Directory.GetFiles(path,("*.quant"))) i
+            |> Array.ofSeq
+        if files.Length = 1 then
             logger.Info "single file detected"
-            failwithf "%s is a file path, please specify a directory containing .quant files" i
-        elif Directory.Exists i then
+            failwithf "%A contains only one file path, please specify a directory containing .quant files or a list of .quant files." i
+        else
             logger.Info "directory found"
-            let quantfiles =
-                Directory.GetFiles(i,("*.quant"))
-            logger.Trace (sprintf ".quant files : %A" quantfiles)
+            logger.Trace (sprintf ".quant files : %A" files)
             let c =
                 match results.TryGetResult Parallelism_Level with
                 | Some c    -> c
                 | None      -> 1
             logger.Trace (sprintf "Program is running on %i cores" c)
-            alignFiles logger {Placeholder=true} o i
+            alignFiles dc logger {Placeholder=true} o files
             |> ignore
-        else
-            failwith "The given path to the instrument output is neither a valid file path nor a valid directory path."
         logger.Info "Done"
         0

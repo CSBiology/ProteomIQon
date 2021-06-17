@@ -24,6 +24,7 @@ module console1 =
         let p = results.GetResult ParamFile        |> getPathRelativeToDir
         let d = results.GetResult PeptideDataBase  |> getPathRelativeToDir
         let mf = results.Contains MatchFiles
+        let dc = results.Contains DiagnosticCharts
         Logging.generateConfig o
         let logger = Logging.createLogger "SwathAnalysis"
         logger.Info (sprintf "InputFilePath -i = %s" i)
@@ -46,7 +47,7 @@ module console1 =
         logger.Trace "Set Index on data base if not present: finished"
         if File.Exists i then
             logger.Info "single file"
-            quantify p o (*dbConnection*) i ii
+            quantify dc p o (*dbConnection*) i ii
         elif Directory.Exists i && Directory.Exists ii then
             logger.Info "multiple files"
             let mzfiles =
@@ -75,7 +76,7 @@ module console1 =
                 | None      -> 1
             logger.Trace (sprintf "Program is running on %i cores" c)
             mzFilesAndPepFiles
-            |> FSharpAux.PSeq.map (fun (i,ii) -> quantify p o (*dbConnection*) i ii)
+            |> FSharpAux.PSeq.map (fun (i,ii) -> quantify dc p o (*dbConnection*) i ii)
             |> FSharpAux.PSeq.withDegreeOfParallelism c
             |> Array.ofSeq
             |> ignore

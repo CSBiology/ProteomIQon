@@ -25,6 +25,7 @@ module console1 =
         let o = results.GetResult OutputDirectory  |> getPathRelativeToDir
         let d = results.GetResult PeptideDataBase  |> getPathRelativeToDir
         let mf = results.Contains MatchFiles
+        let dc = results.Contains DiagnosticCharts
         Logging.generateConfig o
         let logger = Logging.createLogger "PSMBasedQuantification"
         logger.Info (sprintf "InputFilePath -i = %A" i)
@@ -55,7 +56,7 @@ module console1 =
             logger.Info "single file"
             logger.Trace (sprintf "mz files : %A" mzfiles)
             logger.Trace (sprintf "PEP files : %A" pepfiles)
-            quantifyPeptides p o dbConnection mzfiles.[0] pepfiles.[0]
+            quantifyPeptides dc p o dbConnection mzfiles.[0] pepfiles.[0]
         else
             logger.Info "multiple files"
             logger.Trace (sprintf "mz files : %A" mzfiles)
@@ -81,7 +82,7 @@ module console1 =
             logger.Trace (sprintf "Program is running on %i cores" c)
             mzFilesAndPepFiles
             |> FSharpAux.PSeq.withDegreeOfParallelism c
-            |> FSharpAux.PSeq.iter (fun (i,ii) -> quantifyPeptides p o dbConnection i ii)
+            |> FSharpAux.PSeq.iter (fun (i,ii) -> quantifyPeptides dc p o dbConnection i ii)
         dbConnection.Dispose()
 
         logger.Info "Done"

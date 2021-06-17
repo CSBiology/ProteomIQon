@@ -443,7 +443,7 @@ module PSMBasedQuantification =
         }
        
     ///
-    let quantifyPeptides (processParams:Domain.QuantificationParams) (outputDir:string) (cn:SQLiteConnection) (instrumentOutput:string) (scoredPSMs:string)  =
+    let quantifyPeptides diagCharts (processParams:Domain.QuantificationParams) (outputDir:string) (cn:SQLiteConnection) (instrumentOutput:string) (scoredPSMs:string)  =
 
         let logger = Logging.createLogger (Path.GetFileNameWithoutExtension scoredPSMs)
         logger.Trace (sprintf "Input file: %s" instrumentOutput)
@@ -559,7 +559,7 @@ module PSMBasedQuantification =
             let averagePSM = average getXIC psmsWithMatchedSums
             let avgMass = Mass.ofMZ (averagePSM.MeanPrecMz) (pepIon.Charge |> float)
             let peaks = identifyPeaks averagePSM.X_Xic averagePSM.Y_Xic
-            if Array.isEmpty peaks then 
+            if Array.isEmpty peaks && diagCharts then 
                 Chart.Point(averagePSM.X_Xic, averagePSM.Y_Xic)
                 |> Chart.withTitle(sprintf "Sequence= %s,globalMod = %i_noPeaks" pepIon.Sequence pepIon.GlobalMod)
                 |> Chart.withSize(1500.,800.)
@@ -577,7 +577,8 @@ module PSMBasedQuantification =
                 let searchRTMinusFittedRT_Heavy = searchRTMinusFittedRtInferred inferredScanTime inferred_Heavy
                 let clusterComparison_Heavy = comparePredictedAndMeasuredIsotopicCluster inferred_Heavy.X_Xic inferred_Heavy.Y_Xic inferred_Heavy.Y_Xic_uncorrected pepIon.Charge labeledPeptide.BioSequence quantP.EstimatedParams.[1] mz_Heavy
                 let corrLightHeavy  = calcCorrelation averagePSM.X_Xic quantP inferred_Heavy  
-                let chart = saveChart pepIon.Sequence pepIon.GlobalMod pepIon.Charge averagePSM.X_Xic averagePSM.Y_Xic ms2s averagePSM.WeightedAvgScanTime
+                if diagCharts then 
+                    saveChart pepIon.Sequence pepIon.GlobalMod pepIon.Charge averagePSM.X_Xic averagePSM.Y_Xic ms2s averagePSM.WeightedAvgScanTime
                                     peakToQuantify.XData peakToQuantify.YData quantP.YPredicted inferred_Heavy.X_Xic inferred_Heavy.Y_Xic inferred_Heavy.xPeak inferred_Heavy.yFitted peaks clusterComparison_Target.PeakComparisons plotDirectory
                 {
                 StringSequence                              = pepIon.Sequence
@@ -631,8 +632,9 @@ module PSMBasedQuantification =
                 let searchRTMinusFittedRT_Light = searchRTMinusFittedRtInferred inferredScanTime inferred_Light
                 let clusterComparison_Light = comparePredictedAndMeasuredIsotopicCluster inferred_Light.X_Xic inferred_Light.Y_Xic inferred_Light.Y_Xic_uncorrected pepIon.Charge unlabledPeptide.BioSequence quantP.EstimatedParams.[1] mz_Light
                 let corrLightHeavy        = calcCorrelation averagePSM.X_Xic quantP inferred_Light
-                let chart = saveChart pepIon.Sequence pepIon.GlobalMod pepIon.Charge averagePSM.X_Xic averagePSM.Y_Xic ms2s averagePSM.WeightedAvgScanTime
-                                    peakToQuantify.XData peakToQuantify.YData quantP.YPredicted inferred_Light.X_Xic inferred_Light.Y_Xic inferred_Light.xPeak inferred_Light.yFitted (*envelopeSumX envelopeSumY*) peaks clusterComparison_Target.PeakComparisons plotDirectory
+                if diagCharts then 
+                    saveChart pepIon.Sequence pepIon.GlobalMod pepIon.Charge averagePSM.X_Xic averagePSM.Y_Xic ms2s averagePSM.WeightedAvgScanTime
+                                peakToQuantify.XData peakToQuantify.YData quantP.YPredicted inferred_Light.X_Xic inferred_Light.Y_Xic inferred_Light.xPeak inferred_Light.yFitted (*envelopeSumX envelopeSumY*) peaks clusterComparison_Target.PeakComparisons plotDirectory
                 {
                 StringSequence                              = pepIon.Sequence
                 GlobalMod                                   = pepIon.GlobalMod
@@ -703,7 +705,7 @@ module PSMBasedQuantification =
                 | ex ->
                     logger.Trace (sprintf "Quantfailed: %A" ex)
                     [||]
-            if Array.isEmpty peaks then 
+            if Array.isEmpty peaks && diagCharts then 
                 Chart.Point(averagePSM.X_Xic, averagePSM.Y_Xic)
                 |> Chart.withTitle(sprintf "Sequence= %s,globalMod = %i_noPeaks" pepIon.Sequence pepIon.GlobalMod)
                 |> Chart.withSize(1500.,800.)
@@ -714,8 +716,9 @@ module PSMBasedQuantification =
             let quantP = BioFSharp.Mz.Quantification.HULQ.quantifyPeak peakToQuantify
             let searchRTMinusFittedRT = searchRTMinusFittedRtTarget averagePSM.WeightedAvgScanTime quantP 
             let clusterComparison_Target = comparePredictedAndMeasuredIsotopicCluster averagePSM.X_Xic averagePSM.Y_Xic averagePSM.Y_Xic_uncorrected pepIon.Charge unlabledPeptide.BioSequence quantP.EstimatedParams.[1] averagePSM.MeanPrecMz
-            let chart = saveChart pepIon.Sequence pepIon.GlobalMod pepIon.Charge averagePSM.X_Xic averagePSM.Y_Xic ms2s averagePSM.WeightedAvgScanTime
-                                peakToQuantify.XData peakToQuantify.YData quantP.YPredicted  [||] [||] [||] [||] peaks clusterComparison_Target.PeakComparisons plotDirectory
+            if diagCharts then 
+                saveChart pepIon.Sequence pepIon.GlobalMod pepIon.Charge averagePSM.X_Xic averagePSM.Y_Xic ms2s averagePSM.WeightedAvgScanTime
+                                    peakToQuantify.XData peakToQuantify.YData quantP.YPredicted  [||] [||] [||] [||] peaks clusterComparison_Target.PeakComparisons plotDirectory
             {
             StringSequence                              = pepIon.Sequence
             GlobalMod                                   = pepIon.GlobalMod

@@ -269,7 +269,7 @@ module SwathAnalysis =
         //    let area = trapezEstAreaOf p.XData p.YData
         //    createQuantifiedPeak Option.None [||] [||] nan area p.Apex.YVal  
 
-    let quantifyFragments (logger:NLog.Logger) getPlotFilePathFilePath (processParams:Domain.SWATHAnalysisParams) pepIon (fragVecs:(float*SparsePeakArray)[] option) (quantifiedCorrelationProfile:(Mz.Quantification.HULQ.QuantifiedPeak*Signal.PeakDetection.IdentifiedPeak*((float*float) []))) = 
+    let quantifyFragments diagCharts (logger:NLog.Logger) getPlotFilePathFilePath (processParams:Domain.SWATHAnalysisParams) pepIon (fragVecs:(float*SparsePeakArray)[] option) (quantifiedCorrelationProfile:(Mz.Quantification.HULQ.QuantifiedPeak*Signal.PeakDetection.IdentifiedPeak*((float*float) []))) = 
         let (quantifiedProfile,profile,correlationTrace) = quantifiedCorrelationProfile 
         let targetApex     = tryGetApexIntensity quantifiedProfile
         let targetScanTime = tryGetScanTime quantifiedProfile 
@@ -330,21 +330,22 @@ module SwathAnalysis =
                     |> List.unzip3
                     with 
                     | _ -> [],[],[]
-                [
+                if diagCharts then 
                     [
-                    Chart.Point(correlationTrace)
-                    Chart.Point([targetScanTime],[apex])
+                        [
+                        Chart.Point(correlationTrace)
+                        Chart.Point([targetScanTime],[apex])
+                        ]
+                        |> Chart.Combine
+                        Chart.Point(fragCorrQuant |> List.map (fun x -> targetScanTime,x.Quant_Max))
+                        |> Chart.withTraceName "Max"
+                        Chart.Point(fragCorrQuant |> List.map (fun x -> targetScanTime,x.Quant_Sum))
+                        |> Chart.withTraceName "Sum"
+                        List.map2 (fun (x:float[]) (y:float[]) -> Chart.Line(x,y)) xFrags yFrags
+                        |> Chart.Combine 
                     ]
                     |> Chart.Combine
-                    Chart.Point(fragCorrQuant |> List.map (fun x -> targetScanTime,x.Quant_Max))
-                    |> Chart.withTraceName "Max"
-                    Chart.Point(fragCorrQuant |> List.map (fun x -> targetScanTime,x.Quant_Sum))
-                    |> Chart.withTraceName "Sum"
-                    List.map2 (fun (x:float[]) (y:float[]) -> Chart.Line(x,y)) xFrags yFrags
-                    |> Chart.Combine 
-                ]
-                |> Chart.Combine
-                |> Chart.SaveHtmlAs (getPlotFilePathFilePath ((pepIon.StringSequence |> String.filter (fun x -> x <> '*')) + "_GMod_" + pepIon.GlobalMod.ToString() + "Ch" + pepIon.Charge.ToString()) ("_") ) 
+                    |> Chart.SaveHtmlAs (getPlotFilePathFilePath ((pepIon.StringSequence |> String.filter (fun x -> x <> '*')) + "_GMod_" + pepIon.GlobalMod.ToString() + "Ch" + pepIon.Charge.ToString()) ("_") ) 
                 
                 match fragCorrQuant with 
                 | [] -> 
@@ -356,7 +357,7 @@ module SwathAnalysis =
                 |_ -> Result.Error ("No Fragments.")
         | _ -> Result.Error "Fit did not return all Parameters"
 
-    let quantifyPepIon logger getPlotFilePathFilePath getRTProfiles (processParams:Domain.SWATHAnalysisParams) pepIon = 
+    let quantifyPepIon diagCharts logger getPlotFilePathFilePath getRTProfiles (processParams:Domain.SWATHAnalysisParams) pepIon = 
         let targetFragmentMzs = 
             pepIon.Fragments
             |> List.map (fun f -> f.MeanFragMz,f.MeanRelativeIntensity_Frags)
@@ -393,10 +394,10 @@ module SwathAnalysis =
 
         //let quantifiedCorrelationProfile = identifyPeak pepIon processParams targetFragmentVector fragVecs
         identifyPeak pepIon processParams targetFragmentVector fragVecs
-        |> Result.bind (quantifyFragments logger getPlotFilePathFilePath processParams pepIon fragVecs)           
+        |> Result.bind (quantifyFragments diagCharts logger getPlotFilePathFilePath processParams pepIon fragVecs)           
      
     ///
-    let labledQuantification (logger:NLog.Logger) (*(peptideLookUp:string -> int -> LookUpResult<AminoAcids.AminoAcid>)*) getPlotFilePathFilePath getRTProfiles (processParams:Domain.SWATHAnalysisParams) (pepIons:PeptideIon[]) = 
+    let labledQuantification diagCharts (logger:NLog.Logger) (*(peptideLookUp:string -> int -> LookUpResult<AminoAcids.AminoAcid>)*) getPlotFilePathFilePath getRTProfiles (processParams:Domain.SWATHAnalysisParams) (pepIons:PeptideIon[]) = 
         let results = 
             pepIons
             |> Array.mapi (fun i pepIon -> 
@@ -404,7 +405,7 @@ module SwathAnalysis =
                     //let unlabledPeptide = peptideLookUp pepIon.StringSequence 0
                     //let labeledPeptide  = peptideLookUp pepIon.StringSequence 1
                     //let targetPeptide = if pepIon.GlobalMod = 0 then unlabledPeptide else labeledPeptide 
-                    let quantifiedTargetIon = quantifyPepIon logger getPlotFilePathFilePath getRTProfiles processParams pepIon
+                    let quantifiedTargetIon = quantifyPepIon diagCharts logger getPlotFilePathFilePath getRTProfiles processParams pepIon
                     quantifiedTargetIon
                 )
         results
@@ -427,7 +428,7 @@ module SwathAnalysis =
 
 
     ///
-    let quantify (processParams:Domain.SWATHAnalysisParams) (outputDir:string) (targetSwathFile:string) (libraryFile:string) = 
+    let quantify diagCharts (processParams:Domain.SWATHAnalysisParams) (outputDir:string) (targetSwathFile:string) (libraryFile:string) = 
         let logger = Logging.createLogger (Path.GetFileNameWithoutExtension libraryFile)
         logger.Trace (sprintf "Input directory containing library: %s" libraryFile)
         logger.Trace (sprintf "Input Swath file to quantify to: %s" targetSwathFile)
@@ -456,7 +457,7 @@ module SwathAnalysis =
         logger.Trace "Quantify peptide ions in Swath file"
         let swathFileName = Path.GetFileNameWithoutExtension targetSwathFile
         let getPlotFilePathFilePath = getPlotFilePathFilePath outputDir swathFileName                    
-        let quantifiedIons = labledQuantification logger getPlotFilePathFilePath getRTProfiles processParams libraryFile.Data
+        let quantifiedIons = labledQuantification diagCharts logger getPlotFilePathFilePath getRTProfiles processParams libraryFile.Data
         logger.Trace "Quantify peptide ions in Swath file: finished"
         
         logger.Trace "Writing Output"

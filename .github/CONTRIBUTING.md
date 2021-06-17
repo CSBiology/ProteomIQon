@@ -67,7 +67,9 @@ Here is a brief overview of our main projects (also available [here](https://git
 |---|---|---|
 |[BioFSharp](https://github.com/CSBiology/BioFSharp)|Provides data structures for common biological entities like amino acids and nucleotides, as well as various algorithms suited for computational biology. Additionally, it contains a steadily growing amount of parsers for biological file formats|<https://csbiology.github.io/BioFSharp/>|
 |[FSharp.Stats](https://github.com/CSBiology/FSharp.Stats) | Statistics, Linear Algebra, Machine learning, Optimization and Fitting. Everything needed for (statistical) data analysis belongs here.| <https://csbiology.github.io/FSharp.Stats/>|
-|[FSharp.Plotly](https://github.com/muehlhaus/FSharp.Plotly)| Implements charting suitable for use from F# scripting using plotly.js for all kinds of data visualization| <https://muehlhaus.github.io/FSharp.Plotly/>|
+|[FSharp.Plotly](https://github.com/muehlhaus/FSharp.Plotly)| Implements 
+
+ing suitable for use from F# scripting using plotly.js for all kinds of data visualization| <https://muehlhaus.github.io/FSharp.Plotly/>|
 |[FSharpGephiStreamer](https://github.com/CSBiology/FSharpGephiStreamer)| F# functions for streaming graph data to the graph visualization software gephi. Helpful for all kinds of network analysis. | <https://csbiology.github.io/FSharpGephiStreamer> |
 |[FSharp.FGL](https://github.com/CSBiology/FSharp.FGL)| Functional graph library based on the [Hekate graph library](https://github.com/xyncro/hekate) | <https://csbiology.github.io/FSharp.FGL> |
 |[FSharpAux](https://github.com/CSBiology/FSharpAux)| Auxiliary functions and extensions for F#. Used in all of our projects to extend F# core functionalities for our needs. | <https://csbiology.github.io/FSharpAux> |
