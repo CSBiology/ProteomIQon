@@ -12,6 +12,7 @@ module CLIArgumentParsing =
         | [<Mandatory>] [<AltCommandLine("-d")>]   PeptideDataBase     of path:string
         | [<Mandatory>] [<AltCommandLine("-ii")>]  PSMStatisticsResult of path:string
         | [<Mandatory>] [<AltCommandLine("-iii")>] QuantResult         of path:string
+        | [<Unique>]    [<AltCommandLine("-mf")>]  MatchFiles 
         | [<Unique>]    [<AltCommandLine("-c")>]   Parallelism_Level   of level:int
 
     with
@@ -24,4 +25,5 @@ module CLIArgumentParsing =
                 | PeptideDataBase _     -> "Specify the file path of the peptide data base."
                 | PSMStatisticsResult _ -> "Specify the qpsm file/folder"
                 | QuantResult _         -> "Specify the quant file/folder"
+                | MatchFiles            -> "If this flag is set the files specified using the InstrumentOutput, PSMStatisticsResult and QuantResult are matched according to their file name, otherwise they are matched by their position in the input lists."
                 | Parallelism_Level _   -> "Set the number of cores the programm can use. Parallelization occurs on file level. This flag is only of effect if a input directory (-i) is specified."

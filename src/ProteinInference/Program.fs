@@ -36,8 +36,6 @@ module console1 =
         logger.Info (sprintf "InputParameterPath -p = %s" p)
         logger.Trace (sprintf "CLIArguments: %A" results)
         Directory.CreateDirectory(o) |> ignore
-        //let subFolder = (i.Split ([|"\\"|], System.StringSplitOptions.None))
-        //Directory.CreateDirectory(o + "\\" + subFolder.[subFolder.Length - 1]) |> ignore
         let dbConnection = 
             if File.Exists d then
                 logger.Trace (sprintf "Database found at given location (%s)" d)

@@ -23,6 +23,7 @@ module console1 =
         let o = results.GetResult OutputDirectory  |> getPathRelativeToDir
         let p = results.GetResult ParamFile        |> getPathRelativeToDir
         let d = results.GetResult PeptideDataBase  |> getPathRelativeToDir
+        let mf = results.Contains MatchFiles
         Logging.generateConfig o
         let logger = Logging.createLogger "SwathAnalysis"
         logger.Info (sprintf "InputFilePath -i = %s" i)
@@ -55,15 +56,17 @@ module console1 =
             logger.Trace (sprintf "swath files : %A" mzfiles)
             logger.Trace (sprintf "libraryfiles files : %A" pepfiles)
             let mzFilesAndPepFiles =
-                mzfiles
-                |> Array.choose (fun mzFilePath ->
-                                match pepfiles  |> Array.tryFind (fun pepFilePath -> (Path.GetFileNameWithoutExtension pepFilePath) = (Path.GetFileNameWithoutExtension mzFilePath)) with
-                                | Some pepFile -> Some(mzFilePath,pepFile)
-                                | None ->
-                                    logger.Trace (sprintf "no qpsmFileFor %s" mzFilePath)
-                                    None
+                if mf then  
+                    mzfiles
+                    |> Array.choose (fun mzFilePath ->
+                                    match pepfiles  |> Array.tryFind (fun pepFilePath -> (Path.GetFileNameWithoutExtension pepFilePath) = (Path.GetFileNameWithoutExtension mzFilePath)) with
+                                    | Some pepFile -> Some(mzFilePath,pepFile)
+                                    | None ->
+                                        logger.Trace (sprintf "no qpsmFileFor %s" mzFilePath)
+                                        None
 
-                              )
+                                  )
+                else Array.zip mzfiles pepfiles
             if mzfiles.Length <> mzFilesAndPepFiles.Length then
                 logger.Info (sprintf "There are %i mzFiles but %i files containing scored PSMs" mzfiles.Length pepfiles.Length)
             let c =

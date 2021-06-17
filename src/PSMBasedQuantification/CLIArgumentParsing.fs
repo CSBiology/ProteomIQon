@@ -11,6 +11,7 @@ module CLIArgumentParsing =
         | [<Mandatory>] [<AltCommandLine("-d")>]  PeptideDataBase of path:string 
         | [<Mandatory>] [<AltCommandLine("-o")>]  OutputDirectory  of path:string 
         | [<Mandatory>] [<AltCommandLine("-p")>]  ParamFile of path:string
+        | [<Unique>]    [<AltCommandLine("-mf")>] MatchFiles 
         | [<Unique>]    [<AltCommandLine("-c")>]  Parallelism_Level of level:int
         | [<Unique>]    [<AltCommandLine("-l")>]  Log_Level of level:int
         | [<Unique>]    [<AltCommandLine("-v")>]  Verbosity_Level of level:int
@@ -23,6 +24,7 @@ module CLIArgumentParsing =
                 | PeptideDataBase  _    -> "Specify the file path of the peptide data base."
                 | OutputDirectory  _    -> "Specify the output directory."
                 | ParamFile _           -> "Specify parameter file for peptide spectrum matching."
+                | MatchFiles            -> "If this flag is set the files specified by InstrumentOutput and ScoredPSMs are matched according to their file name, otherwise they are matched by their position in the input lists."
                 | Parallelism_Level _   -> "Set the number of cores the programm can use. Parallelization occurs on file level. This flag is only of effect if a input directory (-i) is specified."
                 | Log_Level _           -> "Set the log level."
                 | Verbosity_Level _     -> "Set the verbosity level."
