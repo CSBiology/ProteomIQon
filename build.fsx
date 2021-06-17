@@ -97,6 +97,8 @@ module ProjectInfo =
 
     let mutable isPrerelease = false
 
+    let mutable projPattern = !! "src/**/*.*proj"
+
     let testProject = "tests/ProteomIQon.Tests/ProteomIQon.Tests.fsproj"
 
 /// Barebones, minimal build tasks
@@ -125,31 +127,30 @@ module BasicTasks =
         |> Seq.iter (DotNet.build id)
     }
 
-    let buildProj = BuildTask.create "BuildProj" [clean] {
-        let proj =
-            let rec loop (acc: IGlobbingPattern) =
-                if acc |> Seq.isEmpty then
-                    printfn "Project doesn't exist. Try again."
-                    let projName = promptProj projMsg
-                    loop (!! (sprintf "src/**/%s.*proj" projName))
-                else
-                    acc
-            loop (!! (sprintf "src/**/%s.*proj" (promptProj projMsg)))
-        proj
-        |> Seq.iter (DotNet.build id)
-    }
+    let buildProj =
+        BuildTask.create "BuildProj" [clean] {
+            let proj =
+                let rec loop (acc: IGlobbingPattern) =
+                    if acc |> Seq.isEmpty then
+                        printfn "Project doesn't exist. Try again."
+                        let projName = promptProj projMsg
+                        loop (!! (sprintf "src/**/%s.*proj" projName))
+                    else
+                        acc
+                loop (!! (sprintf "src/**/%s.*proj" (promptProj projMsg)))
+            projPattern <- proj
+            projPattern
+            |> Seq.iter (DotNet.build id)
+        }
+
 
     let copyBinariesProj = BuildTask.create "CopyBinariesProj" [clean; buildProj] {
         let targets = 
-            !! "src/**/*.??proj"
+            projPattern
             -- "src/**/*.shproj"
             |>  Seq.map (fun f -> ((Path.getDirectory f) </> "bin" </> configuration, "bin" </> (Path.GetFileNameWithoutExtension f)))
         targets
-        |>  Seq.iter (fun (fromDir, toDir) -> 
-            try 
-                Shell.copyDir toDir fromDir (fun _ -> true)
-            with
-            | _ -> Shell.deleteDir toDir
+        |>  Seq.iter (fun (fromDir, toDir) -> Shell.copyDir toDir fromDir (fun _ -> true)
         )
     }
 
@@ -170,6 +171,16 @@ module TestTasks =
     open BasicTasks
 
     let runTests = BuildTask.create "RunTests" [clean; build; copyBinaries] {
+        let standardParams = Fake.DotNet.MSBuild.CliArguments.Create ()
+        Fake.DotNet.DotNet.test(fun testParams ->
+            {
+                testParams with
+                    Logger = Some "console;verbosity=detailed"
+            }
+        ) testProject
+    }
+
+    let runTestsProj = BuildTask.create "RunTestsProj" [clean; buildProj; copyBinariesProj] {
         let standardParams = Fake.DotNet.MSBuild.CliArguments.Create ()
         Fake.DotNet.DotNet.test(fun testParams ->
             {
@@ -208,10 +219,55 @@ module PackageTasks =
         else failwith "aborted"
     }
 
+    let packProj = BuildTask.create "PackProj" [clean; buildProj; runTestsProj; copyBinariesProj] {
+        if promptYesNo (sprintf "creating stable package with version %s OK?" stableVersionTag ) 
+            then
+                projPattern
+                |> Seq.iter (Fake.DotNet.DotNet.pack (fun p ->
+                    let msBuildParams =
+                        {p.MSBuildParams with 
+                            Properties = ([
+                                "Version",stableVersionTag
+                                "PackageReleaseNotes",  (release.Notes |> String.concat "\r\n")
+                            ] @ p.MSBuildParams.Properties)
+                        }
+                    {
+                        p with 
+                            MSBuildParams = msBuildParams
+                            OutputPath = Some pkgDir
+                    }
+                ))
+        else failwith "aborted"
+        }
+
     let packPrerelease = BuildTask.create "PackPrerelease" [setPrereleaseTag; clean; build; runTests; copyBinaries] {
         if promptYesNo (sprintf "package tag will be %s OK?" prereleaseTag )
             then 
                 !! "src/**/*.*proj"
+                //-- "src/**/Plotly.NET.Interactive.fsproj"
+                |> Seq.iter (Fake.DotNet.DotNet.pack (fun p ->
+                            let msBuildParams =
+                                {p.MSBuildParams with 
+                                    Properties = ([
+                                        "Version", prereleaseTag
+                                        "PackageReleaseNotes",  (release.Notes |> String.toLines )
+                                    ] @ p.MSBuildParams.Properties)
+                                }
+                            {
+                                p with 
+                                    VersionSuffix = Some prereleaseSuffix
+                                    OutputPath = Some pkgDir
+                                    MSBuildParams = msBuildParams
+                            }
+                ))
+        else
+            failwith "aborted"
+    }
+
+    let packPrereleaseProj = BuildTask.create "PackPrereleaseProj" [setPrereleaseTag; clean; buildProj; runTestsProj; copyBinariesProj] {
+        if promptYesNo (sprintf "package tag will be %s OK?" prereleaseTag )
+            then 
+                projPattern
                 //-- "src/**/Plotly.NET.Interactive.fsproj"
                 |> Seq.iter (Fake.DotNet.DotNet.pack (fun p ->
                             let msBuildParams =
