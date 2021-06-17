@@ -25,6 +25,7 @@ module console1 =
         let o = results.GetResult OutputDirectory     |> getPathRelativeToDir
         let p = results.GetResult ParamFile           |> getPathRelativeToDir
         let d = results.GetResult PeptideDataBase     |> getPathRelativeToDir
+        let mf = results.Contains MatchFiles
         Logging.generateConfig o
         let logger = Logging.createLogger "AlignmentBasedQuantification"
         logger.Info (sprintf "InputFilePath -i = %s" i)
@@ -61,25 +62,28 @@ module console1 =
             logger.Trace (sprintf "mz files : %A" mzfiles)
             logger.Trace (sprintf "align files : %A" alignmentFiles)
             let mzFilesAndPepFiles =
-                mzfiles
-                |> Array.choose (fun mzFilePath ->
-                    match alignmentFiles |> Array.tryFind (fun alignfilePath -> (Path.GetFileNameWithoutExtension alignfilePath) = (Path.GetFileNameWithoutExtension mzFilePath)) with
-                    | Some alignfilePath -> 
-                        match metricFiles |> Array.tryFind (fun metricFilePath -> (Path.GetFileNameWithoutExtension metricFilePath) = (Path.GetFileNameWithoutExtension alignfilePath)) with
-                        | Some(metricFilePath) -> 
-                            match quantFiles |> Array.tryFind (fun quantFilePath -> (Path.GetFileNameWithoutExtension quantFilePath) = (Path.GetFileNameWithoutExtension metricFilePath)) with
-                            | Some(quantFilePath) ->
-                                Some(mzFilePath,alignfilePath,metricFilePath,quantFilePath)
-                            | None -> 
-                                logger.Trace (sprintf "no quant file for %s" mzFilePath)
+                if mf then 
+                    mzfiles
+                    |> Array.choose (fun mzFilePath ->
+                        match alignmentFiles |> Array.tryFind (fun alignfilePath -> (Path.GetFileNameWithoutExtension alignfilePath) = (Path.GetFileNameWithoutExtension mzFilePath)) with
+                        | Some alignfilePath -> 
+                            match metricFiles |> Array.tryFind (fun metricFilePath -> (Path.GetFileNameWithoutExtension metricFilePath) = (Path.GetFileNameWithoutExtension alignfilePath)) with
+                            | Some(metricFilePath) -> 
+                                match quantFiles |> Array.tryFind (fun quantFilePath -> (Path.GetFileNameWithoutExtension quantFilePath) = (Path.GetFileNameWithoutExtension metricFilePath)) with
+                                | Some(quantFilePath) ->
+                                    Some(mzFilePath,alignfilePath,metricFilePath,quantFilePath)
+                                | None -> 
+                                    logger.Trace (sprintf "no quant file for %s" mzFilePath)
+                                    None
+                            | None ->
+                                logger.Trace (sprintf "no alignment metric file for %s" mzFilePath)
                                 None
                         | None ->
-                            logger.Trace (sprintf "no alignment metric file for %s" mzFilePath)
+                            logger.Trace (sprintf "no alignment file for %s" mzFilePath)
                             None
-                    | None ->
-                        logger.Trace (sprintf "no alignment file for %s" mzFilePath)
-                        None
-                    )
+                        )
+                else 
+                    [|for i = 0 to mzfiles.Length-1 do yield mzfiles.[i], alignmentFiles.[i], metricFiles.[i], quantFiles.[i] |]
             if mzfiles.Length <> mzFilesAndPepFiles.Length then
                 logger.Info (sprintf "There are %i mzFiles but only %i can be mapped to there corresponding .align, .alignmetric and .quant files" mzfiles.Length mzFilesAndPepFiles.Length)
             let c =

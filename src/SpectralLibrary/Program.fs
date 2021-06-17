@@ -24,6 +24,7 @@ module console1 =
         let iii = results.GetResult QuantResult        |> getPathRelativeToDir
         let o = results.GetResult OutputDirectory      |> getPathRelativeToDir
         let p = results.GetResult ParamFile            |> getPathRelativeToDir
+        let mf = results.Contains MatchFiles
         Logging.generateConfig o
         let logger = Logging.createLogger "SpectralLibrary"
         logger.Info (sprintf "InputFilePath -i = %s" i)
@@ -56,27 +57,30 @@ module console1 =
             let quantFiles =
                 Directory.GetFiles(iii,("*.quant"))
             let matchedFiles =
-                let instrumentPsm =
-                    instrumentFiles
-                    |> Array.collect (fun instrumentFile ->
-                        resultFiles
-                        |> Array.choose (fun resultFile ->
-                            if Path.GetFileNameWithoutExtension instrumentFile = Path.GetFileNameWithoutExtension resultFile then
-                                Some (instrumentFile, resultFile)
+                if mf then 
+                    let instrumentPsm =
+                        instrumentFiles
+                        |> Array.collect (fun instrumentFile ->
+                            resultFiles
+                            |> Array.choose (fun resultFile ->
+                                if Path.GetFileNameWithoutExtension instrumentFile = Path.GetFileNameWithoutExtension resultFile then
+                                    Some (instrumentFile, resultFile)
+                                else
+                                    None
+                            )
+                        )
+                    instrumentPsm
+                    |> Array.collect (fun (instrument,psm) ->
+                        quantFiles
+                        |> Array.choose (fun quantFiles ->
+                            if Path.GetFileNameWithoutExtension instrument = Path.GetFileNameWithoutExtension quantFiles then
+                                Some (instrument, psm, quantFiles)
                             else
                                 None
                         )
                     )
-                instrumentPsm
-                |> Array.collect (fun (instrument,psm) ->
-                    quantFiles
-                    |> Array.choose (fun quantFiles ->
-                        if Path.GetFileNameWithoutExtension instrument = Path.GetFileNameWithoutExtension quantFiles then
-                            Some (instrument, psm, quantFiles)
-                        else
-                            None
-                    )
-                )
+                else 
+                    Array.zip3 instrumentFiles resultFiles quantFiles
             logger.Trace (sprintf "Scoring multiple files: %A" matchedFiles)
             let c =
                 match results.TryGetResult Parallelism_Level with
