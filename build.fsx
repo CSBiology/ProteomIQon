@@ -126,8 +126,16 @@ module BasicTasks =
     }
 
     let buildProj = BuildTask.create "BuildProj" [clean] {
-        let proj = promptProj projMsg
-        !! (sprintf "src/**/%s.*proj" proj)
+        let proj =
+            let rec loop (acc: IGlobbingPattern) =
+                if acc |> Seq.isEmpty then
+                    printfn "Project doesn't exist. Try again."
+                    let projName = promptProj projMsg
+                    loop (!! (sprintf "src/**/%s.*proj" projName))
+                else
+                    acc
+            loop (!! (sprintf "src/**/%s.*proj" (promptProj projMsg)))
+        proj
         |> Seq.iter (DotNet.build id)
     }
 
