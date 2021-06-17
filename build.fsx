@@ -45,10 +45,17 @@ module MessagePrompts =
         | Some "N" | Some "n" -> false
         | _ -> System.Console.WriteLine("Sorry, invalid answer"); promptYesNo msg
 
+    let promptProj (msg: string) =
+        match prompt (sprintf "%s: " msg) with
+        | Some x -> x
+        | _ -> failwith ("Sorry, invalid answer")
+
     let releaseMsg = """This will stage all uncommitted changes, push them to the origin and bump the release version to the latest number in the RELEASE_NOTES.md file. 
         Do you want to continue?"""
 
     let releaseDocsMsg = """This will push the docs to gh-pages. Remember building the docs prior to this. Do you want to continue?"""
+
+    let projMsg = """Name of the project you want to build"""
 
 /// Executes a dotnet command in the given working directory
 let runDotNet cmd workingDir =
@@ -116,6 +123,34 @@ module BasicTasks =
     let build = BuildTask.create "Build" [clean] {
         !! "src/**/*.*proj"
         |> Seq.iter (DotNet.build id)
+    }
+
+    let buildProj = BuildTask.create "BuildProj" [clean] {
+        let proj =
+            let rec loop (acc: IGlobbingPattern) =
+                if acc |> Seq.isEmpty then
+                    printfn "Project doesn't exist. Try again."
+                    let projName = promptProj projMsg
+                    loop (!! (sprintf "src/**/%s.*proj" projName))
+                else
+                    acc
+            loop (!! (sprintf "src/**/%s.*proj" (promptProj projMsg)))
+        proj
+        |> Seq.iter (DotNet.build id)
+    }
+
+    let copyBinariesProj = BuildTask.create "CopyBinariesProj" [clean; buildProj] {
+        let targets = 
+            !! "src/**/*.??proj"
+            -- "src/**/*.shproj"
+            |>  Seq.map (fun f -> ((Path.getDirectory f) </> "bin" </> configuration, "bin" </> (Path.GetFileNameWithoutExtension f)))
+        targets
+        |>  Seq.iter (fun (fromDir, toDir) -> 
+            try 
+                Shell.copyDir toDir fromDir (fun _ -> true)
+            with
+            | _ -> Shell.deleteDir toDir
+        )
     }
 
     let copyBinaries = BuildTask.create "CopyBinaries" [clean; build] {
