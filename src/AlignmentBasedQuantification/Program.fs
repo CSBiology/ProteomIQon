@@ -26,6 +26,7 @@ module console1 =
         let p = results.GetResult ParamFile           |> getPathRelativeToDir
         let d = results.GetResult PeptideDataBase     |> getPathRelativeToDir
         let mf = results.Contains MatchFiles
+        let dc = results.Contains DiagnosticCharts
         Logging.generateConfig o
         let logger = Logging.createLogger "AlignmentBasedQuantification"
         logger.Info (sprintf "InputFilePath -i = %s" i)
@@ -48,7 +49,7 @@ module console1 =
         logger.Trace "Set Index on data base if not present: finished"
         if File.Exists i then
             logger.Info "single file"
-            quantifyPeptides p o d i iii iv ii 
+            quantifyPeptides dc p o d i iii iv ii 
         elif Directory.Exists i && Directory.Exists ii then
             logger.Info "multiple files"
             let mzfiles =
@@ -92,7 +93,7 @@ module console1 =
                 | None      -> 1
             logger.Trace (sprintf "Program is running on %i cores" c)
             mzFilesAndPepFiles
-            |> FSharpAux.PSeq.map (fun (mzFilePath,alignfilePath,metricFilePath,quantFilePath) -> quantifyPeptides p o d mzFilePath quantFilePath metricFilePath alignfilePath)
+            |> FSharpAux.PSeq.map (fun (mzFilePath,alignfilePath,metricFilePath,quantFilePath) -> quantifyPeptides dc p o d mzFilePath quantFilePath metricFilePath alignfilePath)
             |> FSharpAux.PSeq.withDegreeOfParallelism c
             |> Array.ofSeq
             |> ignore

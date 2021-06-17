@@ -21,6 +21,7 @@ module console1 =
         let ii = results.GetResult SpectralLibrary  |> getPathRelativeToDir
         let o = results.GetResult OutputDirectory   |> getPathRelativeToDir
         let p = results.GetResult ParamFile         |> getPathRelativeToDir
+        let dc = results.Contains DiagnosticCharts
         Logging.generateConfig o
         let logger = Logging.createLogger "SpectralLibrary"
         logger.Info (sprintf "InputFilePath -i = %s" i)
@@ -35,14 +36,14 @@ module console1 =
         if File.Exists i then
             logger.Info (sprintf "single file")
             logger.Trace (sprintf "Generating consensus library for %s.\nIt is recommended to use at least two libraries for a consensus library" i)
-            createSpectralLibrary logger p o ii i 
+            createSpectralLibrary dc logger p o ii i 
         elif Directory.Exists i then
             logger.Info (sprintf "multiple files")
             let swathFiles =
                 Directory.GetFiles(i,("*.mzlite"))
             logger.Trace (sprintf "Generating consensus library for: %A" swathFiles)
             swathFiles
-            |> Array.iter (fun i -> createSpectralLibrary logger p o ii i) 
+            |> Array.iter (fun i -> createSpectralLibrary dc logger p o ii i) 
         else
             failwith "The given paths to the instrument output and PSMStatistics result are neither valid file paths nor valid directory paths."
         logger.Info "Done"

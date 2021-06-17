@@ -557,9 +557,9 @@ module QuantBasedAlignment =
         {target with MissingPeptides = peptideIonsStillMissing |> Array.ofList; GainedPeptides = Array.append target.GainedPeptides alignmentResults}
         
     ///
-    let alignFiles (logger:NLog.Logger) (processParams:AlignmentParams) (outputDir:string) (quantFiles:string) = 
+    let alignFiles diagCharts (logger:NLog.Logger) (processParams:AlignmentParams) (outputDir:string) (quantFiles:string []) = 
 
-        logger.Trace (sprintf "Input directory: %s" quantFiles)
+        logger.Trace (sprintf "Input directory: %A" quantFiles)
         logger.Trace (sprintf "Output directory: %s" outputDir)
         logger.Trace (sprintf "Parameters: %A" processParams)
         
@@ -574,7 +574,6 @@ module QuantBasedAlignment =
         logger.Trace "Init align function: finished"
          
         logger.Trace "Reading and preparing .quant file for alignment"
-        let quantFiles = System.IO.Directory.GetFiles (quantFiles, "*.quant")
         let alignmentFiles = createAlignmentFiles quantFiles
         logger.Trace "Reading and preparing .quant file for alignment: finished"
                
@@ -582,18 +581,19 @@ module QuantBasedAlignment =
         let alignmentFilesOrdered = findAlignmentOrder alignmentFiles
         logger.Trace "Determining Alignment order: finished"
         
-        logger.Trace "Plotting file distances"
-        let chart = 
-            alignmentFilesOrdered
-            |> Array.map (fun (target,sources) ->
-                    Chart.Point(sources |> Array.mapi (fun i x -> (snd x).FileName, fst x))
-                    |> Chart.withTraceName target.FileName
-                    |> Chart.withX_AxisStyle("FileNames")
-                    |> Chart.withY_AxisStyle("Median absolute difference of peptide ion scan times")
-                    |> Chart.withSize(1000.,1000.)
-                    |> Chart.SaveHtmlAs(getPlotFilePathFilePath "differences" target.FileName)
-                )
-        logger.Trace "Plotting file distances: finished"
+        if diagCharts then 
+            logger.Trace "Plotting file distances"
+            let chart = 
+                alignmentFilesOrdered
+                |> Array.map (fun (target,sources) ->
+                        Chart.Point(sources |> Array.mapi (fun i x -> (snd x).FileName, fst x))
+                        |> Chart.withTraceName target.FileName
+                        |> Chart.withX_AxisStyle("FileNames")
+                        |> Chart.withY_AxisStyle("Median absolute difference of peptide ion scan times")
+                        |> Chart.withSize(1000.,1000.)
+                        |> Chart.SaveHtmlAs(getPlotFilePathFilePath "differences" target.FileName)
+                    )
+            logger.Trace "Plotting file distances: finished"
              
         logger.Trace "Performing Alignment"
         let alignments = 
@@ -608,10 +608,11 @@ module QuantBasedAlignment =
                         logger.Trace (sprintf "Missing peptides before: %i, now:%i" tar.MissingPeptides.Length tar'.MissingPeptides.Length)
                         chart'::charts,tar'
                         ) ([],target)
-                chart
-                |> Chart.Combine
-                |> Chart.withTitle(target.FileName)
-                |> Chart.SaveHtmlAs(getPlotFilePathFilePath "Metrics" target.FileName)                    
+                if diagCharts then 
+                    chart
+                    |> Chart.Combine
+                    |> Chart.withTitle(target.FileName)
+                    |> Chart.SaveHtmlAs(getPlotFilePathFilePath "Metrics" target.FileName)                    
                 result 
                 )
         logger.Trace "Performing Alignment: finished"

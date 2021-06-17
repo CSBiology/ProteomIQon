@@ -568,7 +568,7 @@ module ConsensusSpectralLibrary =
     //    metrics,model
 
     ///
-    let createSpectralLibrary (logger:NLog.Logger) (processParams:Domain.ConsensusSpectralLibraryParams) (outputDir:string) (libraryFiles:string) (targetSwathFile:string) = 
+    let createSpectralLibrary diagCharts (logger:NLog.Logger) (processParams:Domain.ConsensusSpectralLibraryParams) (outputDir:string) (libraryFiles:string) (targetSwathFile:string) = 
         logger.Trace (sprintf "Input directory containing library files: %s" libraryFiles)
         logger.Trace (sprintf "Input Swath file to align to: %s" targetSwathFile)
         logger.Trace (sprintf "Output directory: %s" outputDir)
@@ -612,8 +612,9 @@ module ConsensusSpectralLibrary =
         let swathFileFeatures = 
             libraryFiles 
             |> Array.map (fun libraryToAlign -> identifyFeatures getPlotFilePathFilePath getRTProfiles processParams libraryToAlign)
-        plotIdentifiedFeatures getPlotFilePathFilePath libraryFiles swathFileFeatures
-        plotDifferencesBeforeAlignment getPlotFilePathFilePath libraryFiles swathFileFeatures
+        if diagCharts then 
+            plotIdentifiedFeatures getPlotFilePathFilePath libraryFiles swathFileFeatures
+            plotDifferencesBeforeAlignment getPlotFilePathFilePath libraryFiles swathFileFeatures
         logger.Trace "Identify features in Swath file: finished"
         
         logger.Trace "Pruning peptide features across libaries"
@@ -629,8 +630,9 @@ module ConsensusSpectralLibrary =
                     createAlignedLib libtoAlign regMetrics alignmentResult 
                 )
             |> Array.sortByDescending (fun (alib) -> alib.RegressionMetric.RSquared)
-        plotAlignments getPlotFilePathFilePath alignedLibs
-        plotDifferencesAfterAlignment getPlotFilePathFilePath alignedLibs
+        if diagCharts then 
+            plotAlignments getPlotFilePathFilePath alignedLibs
+            plotDifferencesAfterAlignment getPlotFilePathFilePath alignedLibs
         logger.Trace "Performing alignments:finished"
         logger.Trace "Transfering PeptideIons to Consensus library"
         let missingPeptideIons = 

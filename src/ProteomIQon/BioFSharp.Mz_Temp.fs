@@ -1531,9 +1531,6 @@ module FDRControl' =
             binningFunction bandwidth fdrEstimate (fun (x: ProteinInference'.QValueInput) -> x.Score) (fun (x: ProteinInference'.QValueInput) -> x.IsDecoy) createTargetDecoyInput
             |> fun (scores,pep,qVal) -> scores.ToArray(), pep.ToArray(), qVal.ToArray()
 
-        //Chart.Point (scores,qVal)
-        //|> Chart.Show
-
         // gives a range of 1 to 30 for the steepness. This can be adjusted depending on the data, but normally it should lie in this range
         let initialGuess =
             initialParamsOverRange scores qVal [|1. .. 30.|]

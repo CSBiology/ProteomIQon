@@ -419,7 +419,7 @@ module AlignmentBasedQuantification =
     
     
     ///
-    let quantifyPeptides (processParams:Domain.AlignmentBasedQuantificationParams) (outputDir:string) (d:string) (instrumentOutput:string) (psmbasedQuant:string) (alignmentMetrics:string) (alignmentResults:string)  =
+    let quantifyPeptides diagCharts (processParams:Domain.AlignmentBasedQuantificationParams) (outputDir:string) (d:string) (instrumentOutput:string) (psmbasedQuant:string) (alignmentMetrics:string) (alignmentResults:string)  =
 
         let logger = Logging.createLogger (Path.GetFileNameWithoutExtension alignmentResults)
         logger.Trace (sprintf "Input file: %s" instrumentOutput)
@@ -586,7 +586,7 @@ module AlignmentBasedQuantification =
             let targetPeptide = if alignmentResult.GlobalMod = 0 then unlabledPeptide else labeledPeptide            
             let targetMz = Mass.toMZ (targetPeptide.Mass) (alignmentResult.Charge|> float)
             let targetQuant = quantifyInferredPeak true alignmentResult.RtTrace_SourceFile alignmentResult.IntensityTrace_SourceFile alignmentResult.ScanTime_SourceFile getXIC identifyPeaks targetMz alignmentResult.PredictedScanTime alignmentResult.PredictedScanTime
-            if Array.isEmpty targetQuant.EstimatedParams then 
+            if Array.isEmpty targetQuant.EstimatedParams && diagCharts then 
                 Chart.Point(targetQuant.X_Xic, targetQuant.Y_Xic)
                 |> Chart.withTitle(sprintf "Sequence= %s,globalMod = %i_noPeaks" alignmentResult.StringSequence alignmentResult.GlobalMod)
                 |> Chart.withSize(1500.,800.)
@@ -602,11 +602,12 @@ module AlignmentBasedQuantification =
                 let searchRTMinusFittedRT_Heavy = searchRTMinusFittedRt inferredScanTime inferred_Heavy
                 let clusterComparison_Heavy = comparePredictedAndMeasuredIsotopicCluster inferred_Heavy.X_Xic inferred_Heavy.Y_Xic inferred_Heavy.Y_Xic_uncorrected alignmentResult.Charge labeledPeptide.BioSequence targetQuant.EstimatedParams.[1] mz_Heavy
                 let corrLightHeavy  = calcCorrelation targetQuant.X_Xic targetQuant inferred_Heavy  
-                let chart = saveChart alignmentResult.StringSequence alignmentResult.GlobalMod alignmentResult.Charge targetQuant.X_Xic targetQuant.Y_Xic alignmentResult.PredictedScanTime
-                                    targetQuant.xPeak targetQuant.yFitted targetQuant.yFitted 
-                                    targetQuant.InferredScanTimeRefined targetQuant.AlignedSource
-                                    inferred_Heavy.X_Xic inferred_Heavy.Y_Xic inferred_Heavy.xPeak inferred_Heavy.yFitted 
-                                    clusterComparison_Target.PeakComparisons plotDirectory
+                if diagCharts then 
+                    saveChart alignmentResult.StringSequence alignmentResult.GlobalMod alignmentResult.Charge targetQuant.X_Xic targetQuant.Y_Xic alignmentResult.PredictedScanTime
+                                targetQuant.xPeak targetQuant.yFitted targetQuant.yFitted 
+                                targetQuant.InferredScanTimeRefined targetQuant.AlignedSource
+                                inferred_Heavy.X_Xic inferred_Heavy.Y_Xic inferred_Heavy.xPeak inferred_Heavy.yFitted 
+                                clusterComparison_Target.PeakComparisons plotDirectory
                 {
                 StringSequence                              = alignmentResult.StringSequence
                 GlobalMod                                   = alignmentResult.GlobalMod
@@ -659,11 +660,12 @@ module AlignmentBasedQuantification =
                 let searchRTMinusFittedRT_Light = searchRTMinusFittedRt inferredScanTime inferred_Light
                 let clusterComparison_Light = comparePredictedAndMeasuredIsotopicCluster inferred_Light.X_Xic inferred_Light.Y_Xic inferred_Light.Y_Xic_uncorrected alignmentResult.Charge unlabledPeptide.BioSequence targetQuant.EstimatedParams.[1] mz_Light 
                 let corrLightHeavy  = calcCorrelation targetQuant.X_Xic targetQuant inferred_Light  
-                let chart = saveChart alignmentResult.StringSequence alignmentResult.GlobalMod alignmentResult.Charge targetQuant.X_Xic targetQuant.Y_Xic alignmentResult.PredictedScanTime
-                                    targetQuant.xPeak targetQuant.yFitted targetQuant.yFitted 
-                                    targetQuant.InferredScanTimeRefined targetQuant.AlignedSource
-                                    inferred_Light.X_Xic inferred_Light.Y_Xic inferred_Light.xPeak inferred_Light.yFitted 
-                                    clusterComparison_Target.PeakComparisons plotDirectory
+                if diagCharts then 
+                    saveChart alignmentResult.StringSequence alignmentResult.GlobalMod alignmentResult.Charge targetQuant.X_Xic targetQuant.Y_Xic alignmentResult.PredictedScanTime
+                                targetQuant.xPeak targetQuant.yFitted targetQuant.yFitted 
+                                targetQuant.InferredScanTimeRefined targetQuant.AlignedSource
+                                inferred_Light.X_Xic inferred_Light.Y_Xic inferred_Light.xPeak inferred_Light.yFitted 
+                                clusterComparison_Target.PeakComparisons plotDirectory
                 {
                 StringSequence                              = alignmentResult.StringSequence
                 GlobalMod                                   = alignmentResult.GlobalMod
@@ -727,7 +729,7 @@ module AlignmentBasedQuantification =
                 let targetPeptide = if alignmentResult.GlobalMod = 0 then unlabledPeptide else labeledPeptide            
                 let targetMz = Mass.toMZ (targetPeptide.Mass) (alignmentResult.Charge|> float)
                 let targetQuant = quantifyInferredPeak true alignmentResult.RtTrace_SourceFile alignmentResult.IntensityTrace_SourceFile alignmentResult.ScanTime_SourceFile getXIC identifyPeaks targetMz alignmentResult.PredictedScanTime alignmentResult.PredictedScanTime
-                if Array.isEmpty targetQuant.EstimatedParams then 
+                if Array.isEmpty targetQuant.EstimatedParams && diagCharts then 
                     Chart.Point(targetQuant.X_Xic, targetQuant.Y_Xic)
                     |> Chart.withTitle(sprintf "Sequence= %s,globalMod = %i_noPeaks" alignmentResult.StringSequence alignmentResult.GlobalMod)
                     |> Chart.withSize(1500.,800.)
@@ -736,11 +738,12 @@ module AlignmentBasedQuantification =
                 else
                 let searchRTMinusFittedRT = searchRTMinusFittedRt alignmentResult.PredictedScanTime targetQuant 
                 let clusterComparison_Target = comparePredictedAndMeasuredIsotopicCluster targetQuant.X_Xic targetQuant.Y_Xic targetQuant.Y_Xic_uncorrected alignmentResult.Charge targetPeptide.BioSequence targetQuant.EstimatedParams.[1] targetMz
-                let chart = saveChart alignmentResult.StringSequence alignmentResult.GlobalMod alignmentResult.Charge targetQuant.X_Xic targetQuant.Y_Xic alignmentResult.PredictedScanTime
-                                    targetQuant.xPeak targetQuant.yFitted targetQuant.yFitted 
-                                    targetQuant.InferredScanTimeRefined targetQuant.AlignedSource
-                                    [||] [||] [||] [||] 
-                                    clusterComparison_Target.PeakComparisons plotDirectory
+                if diagCharts then 
+                    saveChart alignmentResult.StringSequence alignmentResult.GlobalMod alignmentResult.Charge targetQuant.X_Xic targetQuant.Y_Xic alignmentResult.PredictedScanTime
+                                targetQuant.xPeak targetQuant.yFitted targetQuant.yFitted 
+                                targetQuant.InferredScanTimeRefined targetQuant.AlignedSource
+                                [||] [||] [||] [||] 
+                                clusterComparison_Target.PeakComparisons plotDirectory
                 {
                 StringSequence                              = alignmentResult.StringSequence
                 GlobalMod                                   = alignmentResult.GlobalMod

@@ -23,6 +23,7 @@ module console1 =
         let o = results.GetResult OutputDirectory |> getPathRelativeToDir
         let p = results.GetResult ParamFile       |> getPathRelativeToDir
         let d = results.GetResult PeptideDataBase |> getPathRelativeToDir
+        let dc = results.Contains DiagnosticCharts
         Logging.generateConfig o
         let logger = Logging.createLogger "PSMStatistics"
         logger.Info (sprintf "InputFilePath -i = %A" i)
@@ -46,7 +47,7 @@ module console1 =
         if files.Length = 1 then
             logger.Info (sprintf "single file")
             logger.Trace (sprintf "Processing %s" files.[0])
-            psmStats p o dbConnection files.[0]
+            psmStats dc p o dbConnection files.[0]
         else
             logger.Info (sprintf "multiple files")
             logger.Trace (sprintf "Processing multiple files: %A" files)
@@ -56,7 +57,7 @@ module console1 =
                 | None      -> 1
             logger.Trace (sprintf "Program is running on %i cores" c)
             files 
-            |> FSharpAux.PSeq.map (psmStats p o dbConnection) 
+            |> FSharpAux.PSeq.map (psmStats dc p o dbConnection) 
             |> FSharpAux.PSeq.withDegreeOfParallelism c
             |> Array.ofSeq
             |> ignore

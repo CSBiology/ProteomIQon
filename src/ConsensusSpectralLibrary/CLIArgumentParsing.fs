@@ -10,6 +10,7 @@ module CLIArgumentParsing =
         | [<AltCommandLine("-ii")>] SpectralLibrary of path:string
         | [<AltCommandLine("-o")>] OutputDirectory  of path:string 
         | [<AltCommandLine("-p")>] ParamFile of path:string
+        | [<Unique>]    [<AltCommandLine("-dc")>] DiagnosticCharts 
 
     with
         interface IArgParserTemplate with
@@ -19,3 +20,4 @@ module CLIArgumentParsing =
                 | SpectralLibrary _  -> "specify spectral libraries"
                 | OutputDirectory  _ -> "specify output directory"
                 | ParamFile _        -> "specify param file for consensus library generation"
+                | DiagnosticCharts _    -> "Set to save diagnostic charts to the output directory."
