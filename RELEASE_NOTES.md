@@ -1,3 +1,7 @@
+#### 0.0.5 - Friday, June 18, 2021
+* add flag to trigger name based file matching
+* add flag to trigger the creation of diagnostic charts
+
 #### 0.0.4 - Friday, May 14, 2021
 * update MzLite version to 0.1.1
 
