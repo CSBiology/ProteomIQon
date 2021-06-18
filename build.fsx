@@ -85,11 +85,11 @@ module ProjectInfo =
 
     let pkgDir = "pkg"
 
-    let release = ReleaseNotes.load "RELEASE_NOTES.md"
+    //let release = ReleaseNotes.load "RELEASE_NOTES.md"
 
-    let stableVersion = SemVer.parse release.NugetVersion
+    //let stableVersion = SemVer.parse release.NugetVersion
 
-    let stableVersionTag = (sprintf "%i.%i.%i" stableVersion.Major stableVersion.Minor stableVersion.Patch )
+    //let stableVersionTag = (sprintf "%i.%i.%i" stableVersion.Major stableVersion.Minor stableVersion.Patch )
 
     let mutable prereleaseSuffix = ""
 
@@ -110,7 +110,6 @@ module BasicTasks =
         printfn "Please enter pre-release package suffix"
         let suffix = System.Console.ReadLine()
         prereleaseSuffix <- suffix
-        prereleaseTag <- (sprintf "%s-%s" release.NugetVersion suffix)
         isPrerelease <- true
     }
 
@@ -199,67 +198,87 @@ module PackageTasks =
     open TestTasks
 
     let pack = BuildTask.create "Pack" [clean; build; runTests; copyBinaries] {
-        if promptYesNo (sprintf "creating stable package with version %s OK?" stableVersionTag ) 
+        if promptYesNo (sprintf "creating stable package OK?") 
             then
                 !! "src/**/*.*proj"
-                |> Seq.iter (Fake.DotNet.DotNet.pack (fun p ->
-                    let msBuildParams =
-                        {p.MSBuildParams with 
-                            Properties = ([
-                                "Version",stableVersionTag
-                                "PackageReleaseNotes",  (release.Notes |> String.concat "\r\n")
-                            ] @ p.MSBuildParams.Properties)
+                |> Seq.iter (fun projPath -> 
+                    let releaseNotePath = Path.Combine (Path.getDirectory projPath, "RELEASE_NOTES.md")
+                    let release = ReleaseNotes.load releaseNotePath
+                    let stableVersion = SemVer.parse release.NugetVersion
+                    let stableVersionTag = (sprintf "%i.%i.%i" stableVersion.Major stableVersion.Minor stableVersion.Patch )
+                    (Fake.DotNet.DotNet.pack (fun p ->
+                        let msBuildParams =
+                            {p.MSBuildParams with 
+                                Properties = ([
+                                    "Version",stableVersionTag
+                                    "PackageReleaseNotes",  (release.Notes |> String.concat "\r\n")
+                                ] @ p.MSBuildParams.Properties)
+                            }
+                        {
+                            p with 
+                                MSBuildParams = msBuildParams
+                                OutputPath = Some pkgDir
                         }
-                    {
-                        p with 
-                            MSBuildParams = msBuildParams
-                            OutputPath = Some pkgDir
-                    }
-                ))
+                    )projPath
+                    )
+                )
         else failwith "aborted"
     }
 
     let packProj = BuildTask.create "PackProj" [clean; buildProj; runTestsProj; copyBinariesProj] {
-        if promptYesNo (sprintf "creating stable package with version %s OK?" stableVersionTag ) 
+        if promptYesNo (sprintf "creating stable package OK?")
             then
                 projPattern
-                |> Seq.iter (Fake.DotNet.DotNet.pack (fun p ->
-                    let msBuildParams =
-                        {p.MSBuildParams with 
-                            Properties = ([
-                                "Version",stableVersionTag
-                                "PackageReleaseNotes",  (release.Notes |> String.concat "\r\n")
-                            ] @ p.MSBuildParams.Properties)
+                |> Seq.iter (fun projPath -> 
+                    let releaseNotePath = Path.Combine (Path.getDirectory projPath, "RELEASE_NOTES.md")
+                    let release = ReleaseNotes.load releaseNotePath
+                    let stableVersion = SemVer.parse release.NugetVersion
+                    let stableVersionTag = (sprintf "%i.%i.%i" stableVersion.Major stableVersion.Minor stableVersion.Patch )
+                    (Fake.DotNet.DotNet.pack (fun p ->
+                        let msBuildParams =
+                            {p.MSBuildParams with 
+                                Properties = ([
+                                    "Version",stableVersionTag
+                                    "PackageReleaseNotes",  (release.Notes |> String.concat "\r\n")
+                                ] @ p.MSBuildParams.Properties)
+                            }
+                        {
+                            p with 
+                                MSBuildParams = msBuildParams
+                                OutputPath = Some pkgDir
                         }
-                    {
-                        p with 
-                            MSBuildParams = msBuildParams
-                            OutputPath = Some pkgDir
-                    }
-                ))
+                    )projPath
+                    )
+                )
         else failwith "aborted"
         }
 
     let packPrerelease = BuildTask.create "PackPrerelease" [setPrereleaseTag; clean; build; runTests; copyBinaries] {
-        if promptYesNo (sprintf "package tag will be %s OK?" prereleaseTag )
+        if promptYesNo (sprintf "package suffix will be %s OK?" prereleaseSuffix )
             then 
                 !! "src/**/*.*proj"
                 //-- "src/**/Plotly.NET.Interactive.fsproj"
-                |> Seq.iter (Fake.DotNet.DotNet.pack (fun p ->
-                            let msBuildParams =
-                                {p.MSBuildParams with 
-                                    Properties = ([
-                                        "Version", prereleaseTag
-                                        "PackageReleaseNotes",  (release.Notes |> String.toLines )
-                                    ] @ p.MSBuildParams.Properties)
-                                }
-                            {
-                                p with 
-                                    VersionSuffix = Some prereleaseSuffix
-                                    OutputPath = Some pkgDir
-                                    MSBuildParams = msBuildParams
+                |> Seq.iter (fun projPath -> 
+                    let releaseNotePath = Path.Combine (Path.getDirectory projPath, "RELEASE_NOTES.md")
+                    let release = ReleaseNotes.load releaseNotePath
+                    prereleaseTag <- (sprintf "%s-%s" release.NugetVersion prereleaseSuffix)
+                    (Fake.DotNet.DotNet.pack (fun p ->
+                        let msBuildParams =
+                            {p.MSBuildParams with 
+                                Properties = ([
+                                    "Version", prereleaseTag
+                                    "PackageReleaseNotes",  (release.Notes |> String.toLines )
+                                ] @ p.MSBuildParams.Properties)
                             }
-                ))
+                        {
+                            p with 
+                                VersionSuffix = Some prereleaseSuffix
+                                OutputPath = Some pkgDir
+                                MSBuildParams = msBuildParams
+                        }
+                ) projPath
+                )
+                )
         else
             failwith "aborted"
     }
@@ -268,22 +287,27 @@ module PackageTasks =
         if promptYesNo (sprintf "package tag will be %s OK?" prereleaseTag )
             then 
                 projPattern
-                //-- "src/**/Plotly.NET.Interactive.fsproj"
-                |> Seq.iter (Fake.DotNet.DotNet.pack (fun p ->
-                            let msBuildParams =
-                                {p.MSBuildParams with 
-                                    Properties = ([
-                                        "Version", prereleaseTag
-                                        "PackageReleaseNotes",  (release.Notes |> String.toLines )
-                                    ] @ p.MSBuildParams.Properties)
-                                }
-                            {
-                                p with 
-                                    VersionSuffix = Some prereleaseSuffix
-                                    OutputPath = Some pkgDir
-                                    MSBuildParams = msBuildParams
+                |> Seq.iter (fun projPath -> 
+                    let releaseNotePath = Path.Combine (Path.getDirectory projPath, "RELEASE_NOTES.md")
+                    let release = ReleaseNotes.load releaseNotePath
+                    prereleaseTag <- (sprintf "%s-%s" release.NugetVersion prereleaseSuffix)
+                    (Fake.DotNet.DotNet.pack (fun p ->
+                        let msBuildParams =
+                            {p.MSBuildParams with 
+                                Properties = ([
+                                    "Version", prereleaseTag
+                                    "PackageReleaseNotes",  (release.Notes |> String.toLines )
+                                ] @ p.MSBuildParams.Properties)
                             }
-                ))
+                        {
+                            p with 
+                                VersionSuffix = Some prereleaseSuffix
+                                OutputPath = Some pkgDir
+                                MSBuildParams = msBuildParams
+                        }
+                ) projPath
+                )
+                )
         else
             failwith "aborted"
     }
