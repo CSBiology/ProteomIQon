@@ -32,6 +32,10 @@ module PeptideDB =
             }
         logger.Trace (sprintf "Initializing PeptideDB at: %s" outputDir)
         logger.Trace (sprintf "searchDBParams: %A" searchDBParams)
-        let db = SearchDB.connectOrCreateDB searchDBParams
+        let dbConnection = SearchDB.connectOrCreateDB searchDBParams
         logger.Trace "Successfully created PeptideDB"
+        logger.Trace "Set Index on data base if not present."
+        SearchDB'.setIndexOnModSequenceAndGlobalMod dbConnection |> ignore
+        logger.Trace "Set Index on data base if not present: finished"
+        dbConnection.Dispose()
         logger.Trace "Done"
