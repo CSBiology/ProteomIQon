@@ -1,3 +1,6 @@
+#### 0.0.6 - Saturday June 19, 2021
+* Now additional indices are set on data base.
+
 #### 0.0.5 - Friday, June 18, 2021
 * add flag to trigger name based file matching
 * add flag to trigger the creation of diagnostic charts
