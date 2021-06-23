@@ -52,7 +52,7 @@ Parameters are handed to the cli tool as a .json file. you can download the defa
 or use an F# script, which can be downloaded or run in Binder at the top of the page, to write your own parameter file:
 *)
 
-#r "nuget: ProteomIQon, 0.0.1"
+#r "nuget: ProteomIQon, 0.0.5"
 #r "nuget: BioFSharp.Mz, 0.1.5-beta"
 
 open ProteomIQon
