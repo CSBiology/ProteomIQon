@@ -103,6 +103,10 @@ It is also possible to call the tool on a lists of MS and scored psm files. If y
 
 	proteomiqon-psmbasedquantification -i "path/to/your/run1.mzlite" "path/to/your/run2.mzlite" "path/to/your/run3.mzlite" -ii "path/to/your/run1.qpsm" "path/to/your/run2.qpsm" "path/to/your/run3.qpsm" -d "path/to/your/database.sqlite" -o "path/to/your/outDirectory" -p "path/to/your/params.json" -c 3
 
+By default mzlite and qpsm files get matched by their position in the list. To perform a name based file match set the -mf flag:
+
+	proteomiqon-psmbasedquantification -i "path/to/your/run1.mzlite" "path/to/your/run3.mzlite" "path/to/your/run2.mzlite" -ii "path/to/your/run1.qpsm" "path/to/your/run2.qpsm" "path/to/your/run3.qpsm" -d "path/to/your/database.sqlite" -o "path/to/your/outDirectory" -p "path/to/your/params.json" -c 3 -mf 
+
 A detailed description of the CLI arguments the tool expects can be obtained by calling the tool:
 
 	proteomiqon-psmbasedquantification --help

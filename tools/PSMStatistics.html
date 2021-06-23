@@ -94,6 +94,11 @@
   <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/develop/How_to_create_a_tool.html">
     How to create your own tool
   </a>
+</li>             
+<li class="nav-item">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/develop/How_to_document_your_work.html">
+    How to document your work
+  </a>
 </li>
                         <li class="nav-header">Powered By</li>
                         <li class="nav-item"><a href="https://github.com/CSBiology/MzIO">MzIO</a></li>
@@ -181,6 +186,9 @@ or use an F# script, which can be downloaded or run in Binder at the top of the 
 </code></pre>
 <p>It is also possible to call the tool on a list of .psm files. If you have a mulitcore cpu it is possible to rescore multiple runs in parallel using the -c flag:</p>
 <pre class="fssnip highlighted"><code lang="fsharp"><span class="id">proteomiqon</span><span class="o">-</span><span class="id">psmstatistics</span> <span class="o">-</span><span class="id">i</span> <span class="s">&quot;path/to/your/run1.psm&quot;</span> <span class="s">&quot;path/to/your/run2.psm&quot;</span> <span class="s">&quot;path/to/your/run3.psm&quot;</span> <span class="o">-</span><span class="id">d</span> <span class="s">&quot;path/to/your/database.sqlite&quot;</span> <span class="o">-</span><span class="id">o</span> <span class="s">&quot;path/to/your/outDirectory&quot;</span> <span class="o">-</span><span class="id">p</span> <span class="s">&quot;path/to/your/params.json&quot;</span> <span class="o">-</span><span class="id">c</span> <span class="n">3</span>
+</code></pre>
+<p>To create diagnostic plots which show the performance of the psm scorer after a iteration, you can specify the -dc flag:</p>
+<pre class="fssnip highlighted"><code lang="fsharp"><span class="id">proteomiqon</span><span class="o">-</span><span class="id">psmstatistics</span> <span class="o">-</span><span class="id">i</span> <span class="s">&quot;path/to/your/run1.psm&quot;</span> <span class="s">&quot;path/to/your/run2.psm&quot;</span> <span class="s">&quot;path/to/your/run3.psm&quot;</span> <span class="o">-</span><span class="id">d</span> <span class="s">&quot;path/to/your/database.sqlite&quot;</span> <span class="o">-</span><span class="id">o</span> <span class="s">&quot;path/to/your/outDirectory&quot;</span> <span class="o">-</span><span class="id">p</span> <span class="s">&quot;path/to/your/params.json&quot;</span> <span class="o">-</span><span class="id">c</span> <span class="n">3</span> <span class="o">-</span><span class="id">dc</span>
 </code></pre>
 <p>A detailed description of the CLI arguments the tool expects can be obtained by calling the tool:</p>
 <pre class="fssnip highlighted"><code lang="fsharp"><span class="id">proteomiqon</span><span class="o">-</span><span class="id">psmstatistics</span> <span class="pn">--</span><span class="id">help</span>

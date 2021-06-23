@@ -94,6 +94,11 @@
   <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/develop/How_to_create_a_tool.html">
     How to create your own tool
   </a>
+</li>             
+<li class="nav-item">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/develop/How_to_document_your_work.html">
+    How to document your work
+  </a>
 </li>
                         <li class="nav-header">Powered By</li>
                         <li class="nav-item"><a href="https://github.com/CSBiology/MzIO">MzIO</a></li>
@@ -168,7 +173,7 @@ to use <a href="https://github.com/CSBiology/MzIO/blob/developer/src/MzIO.SQL/Mz
 <h2><a name="Parameter-Generation" class="anchor" href="#Parameter-Generation">Parameter Generation</a></h2>
 <p>Parameters are handed to the cli tool as a .json file. you can download the default file <a href="https://github.com/CSBiology/ProteomIQon/blob/master/src/ProteomIQon/defaultParams/mzMLToMzLiteParams.json">here</a>,
 or use an F# script, which can be downloaded or run in Binder at the top of the page, to write your own parameter file:</p>
-<pre class="fssnip highlighted"><code lang="fsharp"><span class="pp">#r</span> <span class="s">&quot;nuget: ProteomIQon, 0.0.4&quot;</span>
+<pre class="fssnip highlighted"><code lang="fsharp"><span class="pp">#r</span> <span class="s">&quot;nuget: ProteomIQon, 0.0.5&quot;</span>
 
 <span class="k">open</span> <span onmouseout="hideTip(event, 'fs1', 1)" onmouseover="showTip(event, 'fs1', 1)" class="id">ProteomIQon</span>
 <span class="k">open</span> <span onmouseout="hideTip(event, 'fs1', 2)" onmouseover="showTip(event, 'fs1', 2)" class="id">ProteomIQon</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs2', 3)" onmouseover="showTip(event, 'fs2', 3)" class="m">Domain</span>
@@ -178,19 +183,21 @@ or use an F# script, which can be downloaded or run in Binder at the top of the 
         <span class="prop">Compress</span>                    <span class="o">=</span> <span onmouseout="hideTip(event, 'fs6', 7)" onmouseover="showTip(event, 'fs6', 7)" class="id">MzIO</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs7', 8)" onmouseover="showTip(event, 'fs7', 8)" class="id">Binary</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs8', 9)" onmouseover="showTip(event, 'fs8', 9)" class="en">BinaryDataCompressionType</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs9', 10)" onmouseover="showTip(event, 'fs9', 10)" class="id">NoCompression</span>
         <span class="prop">StartRetentionTime</span>          <span class="o">=</span> <span onmouseout="hideTip(event, 'fs10', 11)" onmouseover="showTip(event, 'fs10', 11)" class="uc">None</span>
         <span class="prop">EndRetentionTime</span>            <span class="o">=</span> <span onmouseout="hideTip(event, 'fs10', 12)" onmouseover="showTip(event, 'fs10', 12)" class="uc">None</span>
+        <span class="prop">MS1PeakPicking</span> <span class="o">=</span> <span onmouseout="hideTip(event, 'fs11', 13)" onmouseover="showTip(event, 'fs11', 13)" class="rt">PeakPicking</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs12', 14)" onmouseover="showTip(event, 'fs12', 14)" class="id">ProfilePeaks</span>
+        <span class="prop">MS2PeakPicking</span> <span class="o">=</span> <span onmouseout="hideTip(event, 'fs11', 15)" onmouseover="showTip(event, 'fs11', 15)" class="rt">PeakPicking</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs12', 16)" onmouseover="showTip(event, 'fs12', 16)" class="id">ProfilePeaks</span> 
     <span class="pn">}</span>
 
 
-<span class="k">let</span> <span onmouseout="hideTip(event, 'fs11', 13)" onmouseover="showTip(event, 'fs11', 13)" class="id">serialized</span> <span class="o">=</span> 
-    <span onmouseout="hideTip(event, 'fs3', 14)" onmouseover="showTip(event, 'fs3', 14)" class="id">defaultMzMLToMzLiteParams</span>
-    <span class="o">|&gt;</span> <span onmouseout="hideTip(event, 'fs12', 15)" onmouseover="showTip(event, 'fs12', 15)" class="m">Json</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs13', 16)" onmouseover="showTip(event, 'fs13', 16)" class="id">serialize</span>
+<span class="k">let</span> <span onmouseout="hideTip(event, 'fs13', 17)" onmouseover="showTip(event, 'fs13', 17)" class="id">serialized</span> <span class="o">=</span> 
+    <span onmouseout="hideTip(event, 'fs3', 18)" onmouseover="showTip(event, 'fs3', 18)" class="id">defaultMzMLToMzLiteParams</span>
+    <span class="o">|&gt;</span> <span onmouseout="hideTip(event, 'fs14', 19)" onmouseover="showTip(event, 'fs14', 19)" class="m">Json</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs15', 20)" onmouseover="showTip(event, 'fs15', 20)" class="id">serialize</span>
 </code></pre>
 <h2><a name="Executing-the-Tool" class="anchor" href="#Executing-the-Tool">Executing the Tool</a></h2>
-<p><strong>Disclaimer</strong> this tool converts <a href="https://www.psidev.info/mzML">mzML</a> to <a href="https://github.com/CSBiology/MzIO/blob/developer/src/MzIO.SQL/MzIOSQL.fs">mzlite</a>
+<p><strong>Disclaimer</strong> this tool converts <a href="https://www.psidev.info/mzML">mzML</a> to <a href="https://github.com/CSBiology/MzIO/blob/developer/src/MzIO.SQL/MzIOSQL.fs">mzLite</a>
 if you want to convert the other way around please visit the <a href="https://csbiology.github.io/ProteomIQon/tools/MzLiteToMzML.html">MzLiteToMzML</a> documentation.
 We recommend the use of <a href="https://www.nature.com/articles/nbt.2377">msconvert</a> to convert your raw data into .mzML.
-A user friendly way to execute msconvert is available through <a href="https://galaxyproject.eu/posts/2019/03/24/msconvert/">Galaxy Europe</a>.
-To rescore all MS/MS to identify 'true' psms call:</p>
+A user friendly way to execute msconvert is available through <a href="https://galaxyproject.eu/posts/2019/03/24/msconvert/">Galaxy Europe</a>.</p>
+<p>To convert a mzML file to mzLite call:</p>
 <pre class="fssnip highlighted"><code lang="fsharp"><span class="id">proteomiqon</span><span class="o">-</span><span class="id">mzmltomzlite</span> <span class="o">-</span><span class="id">i</span> <span class="s">&quot;path/to/your/run.mzML&quot;</span> <span class="o">-</span><span class="id">o</span> <span class="s">&quot;path/to/your/outDirectory&quot;</span> <span class="o">-</span><span class="id">p</span> <span class="s">&quot;path/to/your/params.json&quot;</span>
 </code></pre>
 <p>It is also possible to call the tool on a list of .mzML files. If you have a mulitcore cpu it is possible to convert multiple runs in parallel using the -c flag:</p>
@@ -207,15 +214,17 @@ To rescore all MS/MS to identify 'true' psms call:</p>
 <div class="fsdocs-tip" id="fs2">module Domain<br /><br />from ProteomIQon</div>
 <div class="fsdocs-tip" id="fs3">val defaultMzMLToMzLiteParams : Dto.MzMLtoMzLiteParams</div>
 <div class="fsdocs-tip" id="fs4">module Dto<br /><br />from ProteomIQon</div>
-<div class="fsdocs-tip" id="fs5">Multiple items<br />module MzMLtoMzLiteParams<br /><br />from ProteomIQon.Dto<br /><br />--------------------<br />type MzMLtoMzLiteParams =<br />&#160;&#160;{ Compress: BinaryDataCompressionType<br />&#160;&#160;&#160;&#160;StartRetentionTime: float option<br />&#160;&#160;&#160;&#160;EndRetentionTime: float option }</div>
+<div class="fsdocs-tip" id="fs5">Multiple items<br />module MzMLtoMzLiteParams<br /><br />from ProteomIQon.Dto<br /><br />--------------------<br />type MzMLtoMzLiteParams = Dto.PreprocessingParams</div>
 <div class="fsdocs-tip" id="fs6">namespace MzIO</div>
 <div class="fsdocs-tip" id="fs7">namespace MzIO.Binary</div>
 <div class="fsdocs-tip" id="fs8">type BinaryDataCompressionType =<br />&#160;&#160;| NoCompression = 0<br />&#160;&#160;| ZLib = 1<br />&#160;&#160;| NumPress = 2<br />&#160;&#160;| NumPressZLib = 3<br />&#160;&#160;| NumPressPic = 4<br />&#160;&#160;| NumPressLin = 5</div>
 <div class="fsdocs-tip" id="fs9">MzIO.Binary.BinaryDataCompressionType.NoCompression: MzIO.Binary.BinaryDataCompressionType = 0</div>
 <div class="fsdocs-tip" id="fs10">union case Option.None: Option&lt;&#39;T&gt;</div>
-<div class="fsdocs-tip" id="fs11">val serialized : string</div>
-<div class="fsdocs-tip" id="fs12">module Json<br /><br />from ProteomIQon</div>
-<div class="fsdocs-tip" id="fs13">val serialize : obj:&#39;a -&gt; string</div>
+<div class="fsdocs-tip" id="fs11">type PeakPicking =<br />&#160;&#160;| ProfilePeaks<br />&#160;&#160;| Centroid of CentroidizationMode</div>
+<div class="fsdocs-tip" id="fs12">union case PeakPicking.ProfilePeaks: PeakPicking</div>
+<div class="fsdocs-tip" id="fs13">val serialized : string</div>
+<div class="fsdocs-tip" id="fs14">module Json<br /><br />from ProteomIQon</div>
+<div class="fsdocs-tip" id="fs15">val serialize : obj:&#39;a -&gt; string</div>
 
     </div>
 

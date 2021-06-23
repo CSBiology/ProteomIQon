@@ -67,6 +67,10 @@ It is also possible to call the tool on a list of .psm files. If you have a muli
 
 	proteomiqon-psmstatistics -i "path/to/your/run1.psm" "path/to/your/run2.psm" "path/to/your/run3.psm" -d "path/to/your/database.sqlite" -o "path/to/your/outDirectory" -p "path/to/your/params.json" -c 3
 
+To create diagnostic plots which show the performance of the psm scorer after a iteration, you can specify the -dc flag:
+
+	proteomiqon-psmstatistics -i "path/to/your/run1.psm" "path/to/your/run2.psm" "path/to/your/run3.psm" -d "path/to/your/database.sqlite" -o "path/to/your/outDirectory" -p "path/to/your/params.json" -c 3 -dc
+
 A detailed description of the CLI arguments the tool expects can be obtained by calling the tool:
 
 	proteomiqon-psmstatistics --help
