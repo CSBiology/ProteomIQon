@@ -45,7 +45,7 @@ Parameters are handed to the cli tool as a .json file. you can download the defa
 or use an F# script, which can be downloaded or run in Binder at the top of the page, to write your own parameter file:
 *)
 
-#r "nuget: ProteomIQon, 0.0.4"
+#r "nuget: ProteomIQon, 0.0.5"
 
 open ProteomIQon
 open ProteomIQon.Domain
@@ -55,6 +55,8 @@ let defaultMzMLToMzLiteParams :Dto.MzMLtoMzLiteParams =
         Compress                    = MzIO.Binary.BinaryDataCompressionType.NoCompression
         StartRetentionTime          = None
         EndRetentionTime            = None
+        MS1PeakPicking = PeakPicking.ProfilePeaks
+        MS2PeakPicking = PeakPicking.ProfilePeaks 
     }
 
 
@@ -72,11 +74,12 @@ serialized
 
 (**
 ## Executing the Tool
-**Disclaimer** this tool converts [mzML](https://www.psidev.info/mzML) to [mzlite](https://github.com/CSBiology/MzIO/blob/developer/src/MzIO.SQL/MzIOSQL.fs) 
+**Disclaimer** this tool converts [mzML](https://www.psidev.info/mzML) to [mzLite](https://github.com/CSBiology/MzIO/blob/developer/src/MzIO.SQL/MzIOSQL.fs) 
 if you want to convert the other way around please visit the [MzLiteToMzML]({{root}}tools/MzLiteToMzML.html) documentation. 
 We recommend the use of [msconvert](https://www.nature.com/articles/nbt.2377) to convert your raw data into .mzML. 
 A user friendly way to execute msconvert is available through [Galaxy Europe](https://galaxyproject.eu/posts/2019/03/24/msconvert/).
-To rescore all MS/MS to identify 'true' psms call: 
+
+To convert a mzML file to mzLite call: 
 
 *)
 
