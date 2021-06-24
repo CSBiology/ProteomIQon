@@ -27,7 +27,7 @@ module console1 =
             | None      -> 1
         Directory.CreateDirectory(o) |> ignore
         Logging.generateConfig o
-        let logger = Logging.createLogger "PeptideSpectrumMatching"
+        let logger = Logging.createLogger "JoinQuantPepIonsWithProteins"
         logger.Info (sprintf "InputFilePath -i = %A" i)
         logger.Info (sprintf "OutputFilePath -o = %s" o)
         logger.Trace (sprintf "CLIArguments: %A" results)
