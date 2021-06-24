@@ -1,3 +1,7 @@
+#### 0.0.6 - Wednesday June 23, 2021
+* first Nuget release
+* add tool documentation
+
 #### 0.0.5 - Friday, June 18, 2021
 * add flag to trigger name based file matching
 * add flag to trigger the creation of diagnostic charts
