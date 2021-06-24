@@ -125,7 +125,7 @@ It is also possible to call the tool on a lists of MS and scored psm files. If y
 *)
 
 (**
-By default mzlite and qpsm files get matched by their position in the list. To perform a name based file match set the -mf flag:
+By default, mzlite and qpsm files get matched by their position in the list. To perform a name based file match set the -mf flag:
 *)
 
 (**
