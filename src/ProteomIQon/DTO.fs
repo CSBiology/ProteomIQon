@@ -113,12 +113,25 @@ module Common =
         | pattern ->
             (fun (inp : string)  -> System.Text.RegularExpressions.Regex.Match(inp,pattern).Value)
 
+    type Compression =
+        | NoCompression = 0
+        | ZLib = 1
+        | NumPress = 2
+        | NumPressZLib = 3
+
+    module Compression =
+        let toDomain (compression: Compression) =
+            match compression with
+            | Compression.NoCompression -> BinaryDataCompressionType.NoCompression
+            | Compression.ZLib          -> BinaryDataCompressionType.ZLib
+            | Compression.NumPress      -> BinaryDataCompressionType.NumPress
+            | Compression.NumPressZLib  -> BinaryDataCompressionType.NumPressZLib
 ///
 module Dto =
 
     type PreprocessingParams =
         {
-            Compress                    : BinaryDataCompressionType
+            Compress                    : Compression
             StartRetentionTime          : float option
             EndRetentionTime            : float option
             MS1PeakPicking              : PeakPicking
@@ -129,7 +142,7 @@ module Dto =
 
         let toDomain (dtoCentroidizationParams: PreprocessingParams ) : Domain.PreprocessingParams =
                 {
-                    Compress                    = dtoCentroidizationParams.Compress
+                    Compress                    = Compression.toDomain dtoCentroidizationParams.Compress
                     StartRetentionTime          = dtoCentroidizationParams.StartRetentionTime
                     EndRetentionTime            = dtoCentroidizationParams.EndRetentionTime
                     MS1PeakPicking              = dtoCentroidizationParams.MS1PeakPicking
@@ -1033,7 +1046,7 @@ module Dto =
 
     type MzliteToMzMLParams =
         {
-            Compress                    : BinaryDataCompressionType
+            Compress                    : Compression
             StartRetentionTime          : float option
             EndRetentionTime            : float option
         }
@@ -1042,7 +1055,7 @@ module Dto =
 
         let toDomain (dtoMzMLConverterParams: MzliteToMzMLParams ) : Domain.MzliteToMzMLParams =
                 {
-                    Compress                    = dtoMzMLConverterParams.Compress
+                    Compress                    = Compression.toDomain dtoMzMLConverterParams.Compress
                     StartRetentionTime          = dtoMzMLConverterParams.StartRetentionTime
                     EndRetentionTime            = dtoMzMLConverterParams.EndRetentionTime
                 }
@@ -1053,7 +1066,7 @@ module Dto =
 
         let toDomain (dtoCentroidizationParams: MzMLtoMzLiteParams ) : Domain.MzMLtoMzLiteParams =
                 {
-                    Compress                    = dtoCentroidizationParams.Compress
+                    Compress                    = Compression.toDomain dtoCentroidizationParams.Compress
                     StartRetentionTime          = dtoCentroidizationParams.StartRetentionTime
                     EndRetentionTime            = dtoCentroidizationParams.EndRetentionTime
                     MS1PeakPicking              = dtoCentroidizationParams.MS1PeakPicking
