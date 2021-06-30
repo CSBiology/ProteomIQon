@@ -1,6 +1,5 @@
 // Learn more about F# at http://fsharp.org. See the 'F# Tutorial' project
 // for more guidance on F# programming.
-#r @"../../../bin/preprocessing\net47\MzIO.dll"
 #r @"../../../bin/preprocessing\net47\BioFSharp.Mz.dll"
 #r @"../../../bin/preprocessing\net47\FSharpAux.IO.dll"
 #r "netstandard"
@@ -12,7 +11,7 @@ open ProteomIQon.Domain
 let defaultMzMLtoMzLiteParams :Dto.MzMLtoMzLiteParams = 
 
     {
-        Compress                    = MzIO.Binary.BinaryDataCompressionType.NoCompression
+        Compress                    = Compression.NoCompression
         StartRetentionTime          = None
         EndRetentionTime            = None 
         MS1PeakPicking              = PeakPicking.ProfilePeaks

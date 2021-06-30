@@ -1,7 +1,6 @@
 ﻿
 // Learn more about F# at http://fsharp.org. See the 'F# Tutorial' project
 // for more guidance on F# programming.
-#r @"../../../bin\MzMLToMzLite\net5.0\MzIO.dll"
 #r @"../../../bin\MzMLToMzLite\net5.0\Newtonsoft.Json.dll"
 #r "netstandard"
 #r @"../../../bin\ProteomIQon\netstandard2.0\ProteomIQon.dll"
@@ -13,7 +12,7 @@ open MzIO
 let defaultMzliteToMzMLParams :Dto.MzliteToMzMLParams = 
 
     {
-        Compress                    = MzIO.Binary.BinaryDataCompressionType.NoCompression
+        Compress                    = Compression.NoCompression
         StartRetentionTime          = None
         EndRetentionTime            = None
     }
