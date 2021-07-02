@@ -21,13 +21,61 @@ module Common =
 
     type Protease =
         | Trypsin
+        | Trypsin_P
+        | LysC
+        | LysC_P
+        | Chymotrypsin
+        | PepsinA
+
 
     module Protease =
+        
+        open BioFSharp.AminoAcids
 
         let toDomain protease =
             match protease with
-            | Trypsin -> Digestion.Table.getProteaseBy "Trypsin"
-
+            | Trypsin   -> Digestion.Table.getProteaseBy "Trypsin"
+            | Trypsin_P -> 
+                BioFSharp.Digestion.createProtease "Trypsin/P" 
+                    (let _p1 = [AminoAcid.Lys;AminoAcid.Arg] |> Set.ofList 
+                    fun p4 p3 p2 p1 p1' p2' -> 
+                    match p1,p1' with
+                    | Some a1,Some a1' -> _p1.Contains(a1)
+                    | _   -> false                     
+                    )    
+            | LysC      -> 
+                BioFSharp.Digestion.createProtease "LysC" 
+                    (let _p1 = [AminoAcid.Lys] |> Set.ofList 
+                    fun p4 p3 p2 p1 p1' p2' -> 
+                    match p1,p1' with
+                    | Some a1,Some a1' -> _p1.Contains(a1) && not (a1' = AminoAcid.Pro)
+                    | _   -> false                     
+                    )
+            | LysC_P      -> 
+                BioFSharp.Digestion.createProtease "LysC/P" 
+                    (let _p1 = [AminoAcid.Lys] |> Set.ofList 
+                    fun p4 p3 p2 p1 p1' p2' -> 
+                    match p1,p1' with
+                    | Some a1,Some a1' -> _p1.Contains(a1)
+                    | _   -> false                     
+                    )
+            | Chymotrypsin      -> 
+                BioFSharp.Digestion.createProtease "Chymotrypsin" 
+                    (let _p1 = [AminoAcid.Phe;AminoAcid.Tyr;AminoAcid.Trp;AminoAcid.Leu] |> Set.ofList 
+                    fun p4 p3 p2 p1 p1' p2' -> 
+                    match p1,p1' with
+                    | Some a1,Some a1' -> _p1.Contains(a1) && not (a1' = AminoAcid.Pro)
+                    | _   -> false                     
+                    )
+            | PepsinA      -> 
+                BioFSharp.Digestion.createProtease "PepsinA" 
+                    (let _p1 = [AminoAcid.Phe;AminoAcid.Leu] |> Set.ofList 
+                    fun p4 p3 p2 p1 p1' p2' -> 
+                    match p1,p1' with
+                    | Some a1,Some a1' -> _p1.Contains(a1)
+                    | _   -> false                     
+                    )
+    
     type Modification =
         | Acetylation'ProtNTerm'
         | Carbamidomethyl'Cys'
@@ -60,11 +108,27 @@ module Common =
 
     type IsotopicMod =
         | N15
+        | C13
+        | O17
+        | O18
+        | D
 
     module IsotopicMod =
+       
+        open BioFSharp.Elements
+
+        let C13 = Di (createDi "C13" (Isotopes.Table.C13,Isotopes.Table.C12.NatAbundance) (Isotopes.Table.C12,Isotopes.Table.C12.NatAbundance) )
+        let O17 = Tri (createTri "O17" (Isotopes.Table.O17,Isotopes.Table.O16.NatAbundance) (Isotopes.Table.O16,Isotopes.Table.O17.NatAbundance) (Isotopes.Table.O18,Isotopes.Table.O18.NatAbundance) )
+        let O18 = Tri (createTri "O18" (Isotopes.Table.O18,Isotopes.Table.O18.NatAbundance) (Isotopes.Table.O16,Isotopes.Table.O18.NatAbundance) (Isotopes.Table.O17,Isotopes.Table.O17.NatAbundance) )
+        let D = Di (createDi "D" (Isotopes.Table.H2,Isotopes.Table.H1.NatAbundance) (Isotopes.Table.H1,Isotopes.Table.H2.NatAbundance) )
+        
         let toDomain isoMod =
             match isoMod with
             | N15 -> (SearchDB.createSearchInfoIsotopic "N15" Elements.Table.N Elements.Table.Heavy.N15)
+            | C13 -> (SearchDB.createSearchInfoIsotopic "C13" Elements.Table.C C13)
+            | O17 -> (SearchDB.createSearchInfoIsotopic "O17" Elements.Table.O O17)
+            | O18 -> (SearchDB.createSearchInfoIsotopic "O18" Elements.Table.O O18)
+            | D   -> (SearchDB.createSearchInfoIsotopic "D" Elements.Table.H D)
 
     type NTerminalSeries =
         | A
@@ -415,7 +479,6 @@ module Dto =
         KLDiv_Observed_Theoretical_Light            : float
         [<FieldAttribute(20)>]
         KLDiv_CorrectedObserved_Theoretical_Light   : float
-
         [<FieldAttribute(21)>]
         QuantMz_Heavy                               : float
         [<FieldAttribute(22)>]
@@ -432,13 +495,10 @@ module Dto =
         KLDiv_Observed_Theoretical_Heavy            : float
         [<FieldAttribute(28)>]
         KLDiv_CorrectedObserved_Theoretical_Heavy   : float
-
-
         [<FieldAttribute(29)>]
         Correlation_Light_Heavy                     : float
         [<FieldAttribute(30)>][<QuantSourceConverter>]
         QuantificationSource                        : QuantificationSource
-
         [<FieldAttribute(31)>][<TraceConverter>]
         IsotopicPatternMz_Light                     : float []
         [<FieldAttribute(32)>][<TraceConverter>]
@@ -872,6 +932,28 @@ module Dto =
                 Tukey                       = dtoTableSortParams.Tukey
             }
 
+
+    type LabeledQuantificationParams =
+        {
+            FilterHeavyLightCorrelation: float option
+        }
+
+    //module LabeledQuantificationParams =
+    
+    //    let inline toDomain (dtoTableSortParams: TableSortParams): Domain.TableSortParams =
+    //        {
+    //            EssentialFields             = dtoTableSortParams.EssentialFields
+    //            QuantFieldsToFilterOn       = dtoTableSortParams.QuantFieldsToFilterOn
+    //            ProtFieldsToFilterOn        = dtoTableSortParams.ProtFieldsToFilterOn
+    //            QuantColumnsOfInterest      = dtoTableSortParams.QuantColumnsOfInterest
+    //            ProtColumnsOfInterest       = dtoTableSortParams.ProtColumnsOfInterest
+    //            DistinctPeptideCount        = dtoTableSortParams.DistinctPeptideCount
+    //            StatisticalMeasurements     = dtoTableSortParams.StatisticalMeasurements
+    //            AggregatorFunction          = dtoTableSortParams.AggregatorFunction
+    //            AggregatorFunctionIntensity = dtoTableSortParams.AggregatorFunctionIntensity
+    //            AggregatorPepToProt         = dtoTableSortParams.AggregatorPepToProt
+    //            Tukey                       = dtoTableSortParams.Tukey
+    //        }
     type SpectralLibraryParams =
         {
             MatchingTolerancePPM: float
