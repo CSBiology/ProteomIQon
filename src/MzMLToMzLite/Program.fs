@@ -32,7 +32,7 @@ module console1 =
             |> Dto.PreprocessingParams.toDomain
 
         let files = 
-            parsePaths (fun path -> Directory.GetFiles(path,("*.mzML"))) i
+            parsePaths (fun path -> MzIO.Reader.getMzMLFiles path) i
             |> Array.ofSeq
 
         if files.Length = 1  then

@@ -1,3 +1,6 @@
+#### 0.0.6 - Wednesday, June 23, 2021
+* add different file endings in directory search for case sensitive os
+
 #### 0.0.5 - Friday, June 18, 2021
 * add flag to trigger name based file matching
 * add flag to trigger the creation of diagnostic charts

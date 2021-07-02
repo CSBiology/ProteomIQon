@@ -33,7 +33,12 @@ module Core =
                 Directory.GetDirectories(directoryPath,("*.d"))   
 
             let getMzMLFiles directoryPath = 
-                Directory.GetFiles(directoryPath,("*.mzML"))
+                [|
+                    Directory.GetFiles(directoryPath,("*.mzML"))
+                    Directory.GetFiles(directoryPath,("*.mzml"))
+                |]
+                |> Array.concat
+                |> Array.distinct
 
             let getMSFilePaths directoryPath =
                 [|
