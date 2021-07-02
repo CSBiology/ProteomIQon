@@ -38,13 +38,18 @@ module PeptideSpectrumMatching =
             |> Array.ofSeq
         let ms2AssignedToMS1 =
             ms2SortedByScanTime
-            |> Array.map (fun ms2 ->
-                            ms1SortedByScanTime
-                            |> Array.findBack (fun ms1 ->
-                                                    let ms1ScanTime = MassSpectrum.getScanTime ms1
-                                                    let ms2ScanTime = MassSpectrum.getScanTime ms2
-                                                    ms1ScanTime <= ms2ScanTime),ms2
-                          )
+            |> Array.choose (fun ms2 ->
+                let ms1' =
+                    ms1SortedByScanTime
+                    |> Array.tryFindBack (fun ms1 ->
+                        let ms1ScanTime = MassSpectrum.getScanTime ms1
+                        let ms2ScanTime = MassSpectrum.getScanTime ms2
+                        ms1ScanTime <= ms2ScanTime)
+                match ms1' with 
+                | Some ms1 -> 
+                    Some (ms1, ms2)
+                | None -> None 
+                )
             |> Array.groupBy fst
             |> Array.map (fun (ms1,ms1And2) -> ms1,ms1And2 |> Array.map snd)
         /// Returns a List of the type ChargeDetInterimResult. Each Item contains a ms1*ms2 tuple and a List of putative Chargestates
