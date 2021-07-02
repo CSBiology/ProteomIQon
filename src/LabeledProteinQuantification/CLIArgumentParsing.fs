@@ -13,9 +13,9 @@ module CLIArgumentParsing =
         interface IArgParserTemplate with
             member s.Usage =
                 match s with
-                | ProteinAssignedQuantPepIons _    -> "Specify the mass spectrometry output, either specify a file directory containing the files to be analyzed or specify the file path of a single mzlite file."
-                | OutputDirectory  _    -> "Specify the output directory."
-                | ParamFile _           -> "Specify parameter file for peptide spectrum matching."
+                | ProteinAssignedQuantPepIons _ -> "Specify the a single, list or directory containing .quantAndProt files."
+                | OutputDirectory  _            -> "Specify the output directory."
+                | ParamFile _                   -> "Specify parameter file."
 
 
 

@@ -23,18 +23,17 @@ module console1 =
         let p = results.GetResult ParamFile        |> getPathRelativeToDir
         Directory.CreateDirectory(o) |> ignore
         Logging.generateConfig o
-        let logger = Logging.createLogger "PeptideSpectrumMatching"
+        let logger = Logging.createLogger "LabeledProteinQuantification."
         logger.Info (sprintf "InputFilePath -i = %A" i)
         logger.Info (sprintf "OutputFilePath -o = %s" o)
         logger.Info (sprintf "ParamFilePath -p = %s" p)
         logger.Trace (sprintf "CLIArguments: %A" results)
         let p = 
-            Json.ReadAndDeserialize<Dto.PeptideSpectrumMatchingParams> p
-            |> Dto.PeptideSpectrumMatchingParams.toDomain
+            Json.ReadAndDeserialize<Dto.LabeledQuantificationParams> p
+            //|> Dto.PeptideSpectrumMatchingParams.toDomain
         let files = 
-            parsePaths (fun path -> Directory.GetFiles(path,("*.txt"))) i
+            parsePaths (fun path -> Directory.GetFiles(path,("*.quantAndProt"))) i
             |> Array.ofSeq
-        Library.print (results.GetAllResults())
-        Library.print files     
+        // Call f
         logger.Info "Done"
         0
