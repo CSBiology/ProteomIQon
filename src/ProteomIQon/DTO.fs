@@ -117,18 +117,19 @@ module Common =
        
         open BioFSharp.Elements
 
-        let C13 = Di (createDi "C13" (Isotopes.Table.C13,Isotopes.Table.C12.NatAbundance) (Isotopes.Table.C12,Isotopes.Table.C12.NatAbundance) )
-        let O17 = Tri (createTri "O17" (Isotopes.Table.O17,Isotopes.Table.O16.NatAbundance) (Isotopes.Table.O16,Isotopes.Table.O17.NatAbundance) (Isotopes.Table.O18,Isotopes.Table.O18.NatAbundance) )
-        let O18 = Tri (createTri "O18" (Isotopes.Table.O18,Isotopes.Table.O18.NatAbundance) (Isotopes.Table.O16,Isotopes.Table.O18.NatAbundance) (Isotopes.Table.O17,Isotopes.Table.O17.NatAbundance) )
-        let D = Di (createDi "D" (Isotopes.Table.H2,Isotopes.Table.H1.NatAbundance) (Isotopes.Table.H1,Isotopes.Table.H2.NatAbundance) )
+        module Elements' = 
+            let C13 = Di (createDi "C13" (Isotopes.Table.C13,Isotopes.Table.C12.NatAbundance) (Isotopes.Table.C12,Isotopes.Table.C13.NatAbundance) )
+            let O17 = Tri (createTri "O17" (Isotopes.Table.O17,Isotopes.Table.O16.NatAbundance) (Isotopes.Table.O16,Isotopes.Table.O17.NatAbundance) (Isotopes.Table.O18,Isotopes.Table.O18.NatAbundance) )
+            let O18 = Tri (createTri "O18" (Isotopes.Table.O18,Isotopes.Table.O16.NatAbundance) (Isotopes.Table.O16,Isotopes.Table.O18.NatAbundance) (Isotopes.Table.O17,Isotopes.Table.O17.NatAbundance) )
+            let D = Di (createDi "D" (Isotopes.Table.H2,Isotopes.Table.H1.NatAbundance) (Isotopes.Table.H1,Isotopes.Table.H2.NatAbundance) )
         
         let toDomain isoMod =
             match isoMod with
             | N15 -> (SearchDB.createSearchInfoIsotopic "N15" Elements.Table.N Elements.Table.Heavy.N15)
-            | C13 -> (SearchDB.createSearchInfoIsotopic "C13" Elements.Table.C C13)
-            | O17 -> (SearchDB.createSearchInfoIsotopic "O17" Elements.Table.O O17)
-            | O18 -> (SearchDB.createSearchInfoIsotopic "O18" Elements.Table.O O18)
-            | D   -> (SearchDB.createSearchInfoIsotopic "D" Elements.Table.H D)
+            | C13 -> (SearchDB.createSearchInfoIsotopic "C13" Elements.Table.C Elements'.C13)
+            | O17 -> (SearchDB.createSearchInfoIsotopic "O17" Elements.Table.O Elements'.O17)
+            | O18 -> (SearchDB.createSearchInfoIsotopic "O18" Elements.Table.O Elements'.O18)
+            | D   -> (SearchDB.createSearchInfoIsotopic "D" Elements.Table.H Elements'.D)
 
     type NTerminalSeries =
         | A
