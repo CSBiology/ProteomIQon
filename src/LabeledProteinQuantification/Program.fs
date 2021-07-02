@@ -6,7 +6,6 @@ open System.Reflection
 open Argu
 open ProteomIQon.Core
 open ProteomIQon.Core.InputPaths
-open Library
 open CLIArgumentParsing
 
 module console1 =
@@ -34,6 +33,6 @@ module console1 =
         let files = 
             parsePaths (fun path -> Directory.GetFiles(path,("*.quantAndProt"))) i
             |> Array.ofSeq
-        // Call f
+
         logger.Info "Done"
         0
