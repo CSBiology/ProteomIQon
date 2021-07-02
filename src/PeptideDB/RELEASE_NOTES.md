@@ -1,3 +1,7 @@
+#### 0.0.7 - Friday July 2, 2021
+* Add support for additional isotopic modifications.
+* Add support for additional proteases
+
 #### 0.0.6 - Saturday June 19, 2021
 * Now additional indices are set on data base.
 
