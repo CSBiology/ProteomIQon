@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="utf-8">
-    <title>index</title>
+    <title>How to build binaries or packages</title>
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <meta name="author" content="David Zimmer, Jonathan Ott, Heinrich Lukas Weil, Timo Muehlhaus">
     <link rel="shortcut icon" type="image/x-icon" href="https://csbiology.github.io/ProteomIQon//img/favicon.ico">
@@ -119,27 +119,23 @@
         <div class="column is-10 is-paddingless">
             <div class="section pt-4">
                 <div class="container" id="fsdocs-content">
-                    <p><a href="https://fsharp.org/"><img src="https://img.shields.io/badge/Made%20with-FSharp-rgb(184,69,252).svg" alt="Made with F#" /></a>
-<img src="https://img.shields.io/github/contributors/CSBiology/ProteomIQon" alt="GitHub contributors" /></p>
-<h2><a name="The-ProteomIQon" class="anchor" href="#The-ProteomIQon">The ProteomIQon</a></h2>
-<p>The ProteomIQon is a collection of open source computational proteomics tools to build pipelines for the evaluation of MS derived proteomics data
-written in F#. The current state of the tool chain allows handle tasks like signal detection, peptide identification, quantification and protein inference.</p>
-<img src="https://csbiology.github.io/ProteomIQon/img/PillarsOfCompProt.png" width="1000" height="750" />
-<p>Each ProteomIQon tool is concerned with a specific task. This makes the tool-chain flexibel and easily extendable.
-An example of a prototypical chaining of tools to identify and quantify a mix of 14N and 15N labeled proteins can be found in the <a href="">here</a>.
-We are currently working on the <a href="https://github.com/common-workflow-language">cwl tool and workflow descriptions</a>, so you can expect a to see more workflow graphs in the near future!</p>
-<p>All tools are available using <a href="https://www.nuget.org/profiles/CSBiology">nuget</a> and soon via BioConda.
-Each tool is described in detail on its corresponding documentation page, accessible via the navigation pane, if you think a functionality is missing, feel free to contact us or to join us as a contributor!</p>
-<h2><a name="The-Core-Project" class="anchor" href="#The-Core-Project">The Core Project</a></h2>
-<p>The ProteomIQon core is referenced by all tools. It contains mainly serializable data transfer objects such as tool results and tool parameters, as well as their mapping to domain specific types.
-This is also the place for any kind of code reusable across tools such as thin wrappers around data readers, logging or CLI formatting.</p>
-<h2><a name="Documentation" class="anchor" href="#Documentation">Documentation</a></h2>
-<p>The documentation and tutorials for this library are automatically generated (using the F# Formatting) from .fsx and .md files in the docs folder. If you find a typo, please submit a pull request!</p>
-<h2><a name="Contributing" class="anchor" href="#Contributing">Contributing</a></h2>
-<p>Please refer to the CSB <a href="https://github.com/CSBiology/BioFSharp/blob/developer/.github/CONTRIBUTING.md">Contribution guidelines</a></p>
-<h2><a name="Community-Social" class="anchor" href="#Community-Social">Community/Social</a></h2>
-<p>Want to get in touch with us? We recently joined the twitter crowd:</p>
-<p><a href="https://twitter.com/cs_biology"><img src="https://img.shields.io/twitter/follow/cs_biology.svg?style=social" alt="Twitter Follow" /></a></p>
+                    
+<h1><a name="How-to-build-the-binaries" class="anchor" href="#How-to-build-the-binaries">How to build the binaries</a></h1>
+<p>If you want to build the binaries for all tools at one, you can simply navigate to the project root in the console and call:</p>
+<pre class="fssnip highlighted"><code lang="fsharp"><span class="pn">.</span>
+</code></pre>
+<p>If you want to build only a singe project, then you can use the "BuildProj" target like this:</p>
+<pre class="fssnip highlighted"><code lang="fsharp"><span class="pn">.</span>
+</code></pre>
+<p>After the "Clean" target you will then be prompted to enter the name of the project you wish to build.</p>
+<h1><a name="How-to-pack-a-nuget-package" class="anchor" href="#How-to-pack-a-nuget-package">How to pack a nuget package</a></h1>
+<p>If you want to pack a nuget package or build a dotnet tool, you can do this for all tools at once by invoking the "Pack" or "PackPrerelease" target.</p>
+<pre class="fssnip highlighted"><code lang="fsharp"><span class="pn">.</span>
+</code></pre>
+<p>Packing only a single project works similar to the same case for the binaries. The targets for this are calles "PackProj" and "PackPrereleaseProj":</p>
+<pre class="fssnip highlighted"><code lang="fsharp"><span class="pn">.</span>
+</code></pre>
+<p>After the "Clean" target you will then be prompted to enter the name of the project you wish to build.</p>
 
                 </div>
             </div>
