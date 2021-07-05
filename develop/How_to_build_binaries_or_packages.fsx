@@ -5,11 +5,11 @@
 
 If you want to build the binaries for all tools at one, you can simply navigate to the project root in the console and call:
 
-	.\build.cmd
+	build.cmd
 
 If you want to build only a singe project, then you can use the "BuildProj" target like this:
 
-	.\build.cmd -t BuildProj
+	build.cmd -t BuildProj
 
 After the "Clean" target you will then be prompted to enter the name of the project you wish to build.
 
@@ -17,11 +17,11 @@ After the "Clean" target you will then be prompted to enter the name of the proj
 
 If you want to pack a nuget package or build a dotnet tool, you can do this for all tools at once by invoking the "Pack" or "PackPrerelease" target.
 
-	.\build.cmd -t Pack
+	build.cmd -t Pack
 
 Packing only a single project works similar to the same case for the binaries. The targets for this are calles "PackProj" and "PackPrereleaseProj":
 
-	.\build.cmd -t PackProj
+	build.cmd -t PackProj
 
 After the "Clean" target you will then be prompted to enter the name of the project you wish to build.
 

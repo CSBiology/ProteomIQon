@@ -122,18 +122,18 @@
                     
 <h1><a name="How-to-build-the-binaries" class="anchor" href="#How-to-build-the-binaries">How to build the binaries</a></h1>
 <p>If you want to build the binaries for all tools at one, you can simply navigate to the project root in the console and call:</p>
-<pre class="fssnip highlighted"><code lang="fsharp"><span class="pn">.</span>
+<pre class="fssnip highlighted"><code lang="fsharp"><span class="id">build</span><span class="pn">.</span><span class="id">cmd</span>
 </code></pre>
 <p>If you want to build only a singe project, then you can use the "BuildProj" target like this:</p>
-<pre class="fssnip highlighted"><code lang="fsharp"><span class="pn">.</span>
+<pre class="fssnip highlighted"><code lang="fsharp"><span class="id">build</span><span class="pn">.</span><span class="id">cmd</span> <span class="o">-</span><span class="id">t</span> <span class="id">BuildProj</span>
 </code></pre>
 <p>After the "Clean" target you will then be prompted to enter the name of the project you wish to build.</p>
 <h1><a name="How-to-pack-a-nuget-package" class="anchor" href="#How-to-pack-a-nuget-package">How to pack a nuget package</a></h1>
 <p>If you want to pack a nuget package or build a dotnet tool, you can do this for all tools at once by invoking the "Pack" or "PackPrerelease" target.</p>
-<pre class="fssnip highlighted"><code lang="fsharp"><span class="pn">.</span>
+<pre class="fssnip highlighted"><code lang="fsharp"><span class="id">build</span><span class="pn">.</span><span class="id">cmd</span> <span class="o">-</span><span class="id">t</span> <span class="id">Pack</span>
 </code></pre>
 <p>Packing only a single project works similar to the same case for the binaries. The targets for this are calles "PackProj" and "PackPrereleaseProj":</p>
-<pre class="fssnip highlighted"><code lang="fsharp"><span class="pn">.</span>
+<pre class="fssnip highlighted"><code lang="fsharp"><span class="id">build</span><span class="pn">.</span><span class="id">cmd</span> <span class="o">-</span><span class="id">t</span> <span class="id">PackProj</span>
 </code></pre>
 <p>After the "Clean" target you will then be prompted to enter the name of the project you wish to build.</p>
 
