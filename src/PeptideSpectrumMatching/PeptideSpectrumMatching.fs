@@ -13,10 +13,6 @@ open MzIO.Processing
 open FSharpAux.IO
 module PeptideSpectrumMatching =
 
-    //let tryGet tolerance (xTar:float) (data:#seq<(float*float)>) = 
-    //    let xTmp,yTmp = data |> Seq.minBy (fun (x,y) -> abs(x-xTar))
-    //    if abs(xTmp-xTar) < tolerance then Some(xTmp,yTmp) else None
-
     open System.IO
     open System.Data
     open BioFSharp.Mz.TheoreticalSpectra
@@ -29,24 +25,24 @@ module PeptideSpectrumMatching =
         let ms1SortedByScanTime =
             massSpectra
             |> Seq.filter (fun ms -> MassSpectrum.getMsLevel ms = 1)
-            |> Seq.sortBy  MassSpectrum.getScanTime
+            |> Seq.map (fun ms -> MassSpectrum.getScanTime ms, ms)
+            |> Seq.sortBy fst
             |> Array.ofSeq
         let ms2SortedByScanTime =
             massSpectra
             |> Seq.filter (fun ms -> MassSpectrum.getMsLevel ms = 2)
-            |> Seq.sortBy  MassSpectrum.getScanTime
+            |> Seq.map (fun ms -> MassSpectrum.getScanTime ms, ms)
+            |> Seq.sortBy fst
             |> Array.ofSeq
         let ms2AssignedToMS1 =
             ms2SortedByScanTime
-            |> Array.choose (fun ms2 ->
+            |> Array.choose (fun (ms2ScanTime,ms2) ->
                 let ms1' =
                     ms1SortedByScanTime
-                    |> Array.tryFindBack (fun ms1 ->
-                        let ms1ScanTime = MassSpectrum.getScanTime ms1
-                        let ms2ScanTime = MassSpectrum.getScanTime ms2
+                    |> Array.tryFindBack (fun (ms1ScanTime,_) ->
                         ms1ScanTime <= ms2ScanTime)
                 match ms1' with 
-                | Some ms1 -> 
+                | Some (_,ms1) -> 
                     Some (ms1, ms2)
                 | None -> None 
                 )
@@ -101,7 +97,7 @@ module PeptideSpectrumMatching =
                                                     | Some x ->
                                                         putativeCharge
                                                     | None   ->
-                                                        let pValue = ChargeState.empiricalPValueOfSim init (putativeCharge.SubSetLength,float putativeCharge.PrecCharge ) putativeCharge.MZChargeDev
+                                                        let pValue = ChargeState.empiricalPValueOfSim init (putativeCharge.SubSetLength,float putativeCharge.PrecCharge) putativeCharge.MZChargeDev
                                                         {putativeCharge with PositionMetricPValue = Some pValue}
                                                  )
                                     |> List.filter (fun testIt -> testIt.PositionMetricPValue.Value <= 0.05)
@@ -119,7 +115,6 @@ module PeptideSpectrumMatching =
                                         )
                                 items
                             )
-
         positionMetricScoredCharges,peakPosStdDev
 
     let psm (processParams:PeptideSpectrumMatchingParams) peakPosStdDev lookUpF calcIonSeries (reader: IMzIODataReader) (outFilePath: string) (ms2sAndAssignedCharges: AssignedCharge list list) =
@@ -369,6 +364,8 @@ module PeptideSpectrumMatching =
         let ms2sAndAssignedCharges,peakPosStdDev = getPrecursorCharge chargeParams rnd inRunID inReader
         logger.Trace "Finished charge state determination."
         
+        logger.Trace (sprintf "peak position standard deviation: %f")
+
         logger.Trace "Starting peptide spectrum matching."
         psm processParams peakPosStdDev dbLookUp  calcIonSeries inReader outFilePath ms2sAndAssignedCharges
         logger.Trace "Finished peptide spectrum matching."
