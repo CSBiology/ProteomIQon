@@ -1,3 +1,7 @@
+#### 0.0.6 - Friday, July 9, 2021
+* improve performance of charge state determination
+
+
 #### 0.0.5 - Friday, June 18, 2021
 * add flag to trigger name based file matching
 * add flag to trigger the creation of diagnostic charts
