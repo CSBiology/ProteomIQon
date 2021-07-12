@@ -320,7 +320,7 @@ module PSMStatistics =
                 |> Chart.withY_AxisStyle("FDR",Side=StyleParam.Side.Right,Id=2,Overlaying=StyleParam.AxisAnchorId.Y 1,Showgrid=false,MinMax=(0.,0.5))
                 |> Chart.withTitle (sprintf "#%i with q < 0.01" (scoreVsQ |> Array.filter (fun x -> snd x <= 0.01) |> Array.length))
                 |> Chart.SaveHtmlAs (Path.Combine [|plotDirectory;"InitialSeparation"|])
-            logger.Trace "Selecting nositives for training"
+            logger.Trace "Selecting positives for training"
             let positives' = 
                 bestPSMPerScan 
                 |> Array.filter (fun x -> q (float x.SequestScore) < 0.001)
