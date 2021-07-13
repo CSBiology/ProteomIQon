@@ -325,8 +325,6 @@ module Dto =
         XtandemNormDeltaNext         : float
         [<FieldAttribute(22)>]
         StringSequence               : string
-        [<FieldAttribute(23)>]
-        ProteinNames                 : string
         }
 
 

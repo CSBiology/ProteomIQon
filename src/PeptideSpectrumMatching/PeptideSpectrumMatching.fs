@@ -119,7 +119,14 @@ module PeptideSpectrumMatching =
 
     let psm (processParams:PeptideSpectrumMatchingParams) peakPosStdDev lookUpF calcIonSeries (reader: IMzIODataReader) (outFilePath: string) (ms2sAndAssignedCharges: AssignedCharge list list) =
         let logger = Logging.createLogger (Path.GetFileNameWithoutExtension outFilePath)
-        let resultWriter = new System.IO.StreamWriter(outFilePath, true)
+        let resultWriter = 
+            let tmp = new System.IO.StreamWriter(outFilePath, true)
+            let fields = Reflection.FSharpType.GetRecordFields(typeof<Dto.PeptideSpectrumMatchingResult>)
+            fields
+            |> Seq.map(fun field -> field.Name)
+            |> String.concat "\t"
+            |> tmp.WriteLine
+            tmp
         let (ms2IDAssignedCharge) =
                 ms2sAndAssignedCharges
                 |> List.mapi (fun i (assignedCharges) ->
@@ -254,7 +261,6 @@ module PeptideSpectrumMatching =
                                                                     XtandemNormDeltaBestToRest   = xTandemRes.NormDeltaBestToRest  
                                                                     XtandemNormDeltaNext         = xTandemRes.NormDeltaNext  
                                                                     StringSequence               = androRes.StringSequence
-                                                                    ProteinNames                 = "PlaceHolder"
                                                                 }
                                                             Some (label,res)
                                                         | None -> None 
@@ -288,7 +294,6 @@ module PeptideSpectrumMatching =
                                                                     XtandemNormDeltaBestToRest   = xTandemRes.NormDeltaBestToRest  
                                                                     XtandemNormDeltaNext         = xTandemRes.NormDeltaNext 
                                                                     StringSequence               = androRes.StringSequence
-                                                                    ProteinNames                 = "PlaceHolder"
                                                                 }
                                                             Some (label,res)
                                                         | None -> None 
