@@ -219,6 +219,7 @@ module PSMStatistics =
         
         match processParams.Threshold with 
         | Estimate estParams -> 
+            try
             logger.Trace "Prepare training pipeline"
             let ctx = new ML.MLContext(1024)
             let trainModel positives' negatives' =
@@ -269,9 +270,7 @@ module PSMStatistics =
                     psm 
                     |> predF.Predict
                 predict 
-
             logger.Trace "Prepare training pipeline:finished"
-
             logger.Trace "Converting psms to PSMToLearn format."
             let psmsToLearn =
                 psms
@@ -516,9 +515,17 @@ module PSMStatistics =
             result
             |> FSharpAux.IO.SeqIO.Seq.CSV "\t" true true
             |> FSharpAux.IO.FileIO.writeToFile false outFilePath
-
             logger.Trace "Done."
-
+            with 
+            | ex ->
+                logger.Trace (sprintf "%A" ex)
+                logger.Trace "Machine learning based psm filtering did not succeed, please try a different PEP-value fitting method. This method was developed for large data sets so it might fail for data sets too small of a size."
+                let fields = Reflection.FSharpType.GetRecordFields(typeof<Dto.PSMStatisticsResult>)
+                fields
+                |> Seq.map(fun field -> field.Name)
+                |> String.concat "\t"
+                |> FSharpAux.IO.FileIO.writeStringToFile false outFilePath
+                logger.Trace "Done."
         | Threshold.Fixed cutoff -> 
             let pepSequenceIDToMissCleavagesAndProt =
                 psms
