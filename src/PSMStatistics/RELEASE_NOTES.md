@@ -1,3 +1,6 @@
+#### 0.0.6 - Tuesday, July 13, 2021
+* refined fitting based PEP value calculation
+
 #### 0.0.5 - Friday, June 18, 2021
 * add flag to trigger name based file matching
 * add flag to trigger the creation of diagnostic charts
