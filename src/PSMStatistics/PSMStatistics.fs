@@ -207,7 +207,7 @@ module PSMStatistics =
         
         logger.Trace "Read scored PSMs."
         let psms =
-            FSharpAux.IO.SchemaReader.Csv.CsvReader<Dto.PeptideSpectrumMatchingResult>().ReadFile(psms,'\t',false,0)
+            FSharpAux.IO.SchemaReader.Csv.CsvReader<Dto.PeptideSpectrumMatchingResult>().ReadFile(psms,'\t',false,1)
             |> Array.ofSeq
         logger.Trace "Read scored PSMs: finished"
 
