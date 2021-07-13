@@ -782,18 +782,18 @@ module Fitting' =
                 )
 
             /// Returns an estimate for an initial parameter for the linear least square estimator for a given dataset (xData, yData).
-            /// The steepness is given as an array and not estimated. An initial estimate is returned for every given steepness in the input array and every point on the x-axis (0.1 stepsize).
+            /// The steepness and midpoint ranges are given as an array and not estimated. An initial estimate is returned for every given steepness and midpoint in the input array.
             /// The initial estimation is intended for a logistic function with variable position on the y-axis.
-            let initialParamsOverRangeMidAndSteepness (xData: float[]) (yData: float[]) (steepnessRange: float []) =
+            let initialParamsOverRangeMidAndSteepness (yData: float[]) (steepnessRange: float []) (midpointRange: float []) (minY: float option) =
                 // works the same as initialParam for mid point estimation
                 let yRange = abs ((yData |> Array.max) - (yData |> Array.min))
-                let midpointRange =
-                    [|xData |> Array.min .. 0.1 .. xData |> Array.max|]
                 steepnessRange
                 |> Array.collect (fun steepness -> 
                     midpointRange
                     |> Array.map (fun midpoint ->
-                        Table.lineSolverOptions [|yRange; steepness; midpoint; yData |> Array.min|]
+                        match minY with
+                        | Some minimum -> Table.lineSolverOptions [|yRange; steepness; midpoint; minimum|]
+                        | None -> Table.lineSolverOptions [|yRange; steepness; midpoint|]
                     )
                 )
 
@@ -1730,9 +1730,9 @@ module FDRControl' =
             calculatePEPValues (fun (_,count,_,_) -> float count) (fun (_,_,decoyCount,_) -> float decoyCount) (fun (_,_,_,medianScore) -> medianScore) targetDecoyHis
             |> Array.ofList
             |> Array.unzip
-        //let score, monotonePEPVal = monotonizePepValues (fun (score,_) -> score) (fun (_,pep) -> pep) pep
-        let monotoneScore, logitMonotonePEPVal = logitTransformPepValues score pep
-        let initialGuess = initialParamsOverRangeMidAndSteepness monotoneScore logitMonotonePEPVal [|1. .. 1. ..  50.|]
+        //let monotoneScore, monotonePEPVal = monotonizePepValues (fun (score,_) -> score) (fun (_,pep) -> pep) (Array.zip score pep |> List.ofArray)
+        let logitScore, logitPEPVal = logitTransformPepValues score pep
+        let initialGuess = initialParamsOverRangeMidAndSteepness logitPEPVal [|1. .. 1. ..  50.|] [|logitScore |> Array.min .. 0.1 .. logitScore |> Array.max|] (logitPEPVal |> Array.min |> Some)
         let estimate =
             initialGuess
             |> Array.map (fun initial ->
@@ -1744,13 +1744,43 @@ module FDRControl' =
                     initial.InitialParamGuess
                     |> Array.map (fun param -> param + (abs param) * 0.1)
                     |> vector
-                estimatedParamsWithRSS FSharp.Stats.Fitting.NonLinearRegression.Table.LogisticFunctionVarYDescending initial 0.001 10.0 lowerBound upperBound monotoneScore logitMonotonePEPVal
+                estimatedParamsWithRSS FSharp.Stats.Fitting.NonLinearRegression.Table.LogisticFunctionVarYDescending initial 0.001 10.0 lowerBound upperBound logitScore logitPEPVal
             )
             |> Array.filter (fun (param,rss) -> not (param |> Vector.exists System.Double.IsNaN))
             |> Array.minBy snd
             |> fst
-        let logisticFunction = FSharp.Stats.Fitting.NonLinearRegression.Table.LogisticFunctionVarYDescending.GetFunctionValue estimate
-        logisticFunction >> (fun x -> 10.**(x)/(1.+10.**(x)))
+        let logisticFunctionLogit = FSharp.Stats.Fitting.NonLinearRegression.Table.LogisticFunctionVarYDescending.GetFunctionValue estimate
+        let fitFromLogit = logisticFunctionLogit >> (fun x -> 10.**(x)/(1.+10.**(x)))
+        let score',pep' =
+            [|logitScore |> Array.min .. 0.1 .. logitScore |> Array.max|],
+            [|logitScore |> Array.min .. 0.1 .. logitScore |> Array.max|]
+            |> Array.map fitFromLogit
+        let initialGuess' =
+            let steepnessRange =
+                let oldSteepness = estimate.[1]
+                [|oldSteepness-2. |> floor .. 1. .. oldSteepness+2. |> ceil|]
+            let midpointRange =
+                let oldMidpoint = estimate.[2]
+                [|oldMidpoint-2. |> floor .. 0.1 .. oldMidpoint+2. |> ceil|]
+            initialParamsOverRangeMidAndSteepness pep' steepnessRange midpointRange None
+        let estimate' =
+            initialGuess'
+            |> Array.map (fun initial ->
+                let lowerBound =
+                    initial.InitialParamGuess
+                    |> Array.map (fun param -> param - (abs param) * 0.1)
+                    |> vector
+                let upperBound =
+                    initial.InitialParamGuess
+                    |> Array.map (fun param -> param + (abs param) * 0.1)
+                    |> vector
+                estimatedParamsWithRSS FSharp.Stats.Fitting.NonLinearRegression.Table.LogisticFunctionDescending initial 0.001 10.0 lowerBound upperBound score' pep'
+            )
+            |> Array.filter (fun (param,rss) -> not (param |> Vector.exists System.Double.IsNaN))
+            |> Array.minBy snd
+            |> fst
+        let logisticFunction = FSharp.Stats.Fitting.NonLinearRegression.Table.LogisticFunctionDescending.GetFunctionValue estimate'
+        logisticFunction
 
 module Fragmentation' =
 
