@@ -291,7 +291,14 @@ module ProteinInference =
                 let decoyBiggerF = (fun (item: ProteinInference'.InferredProteinClassItemScored) -> item.DecoyBigger)
                 let targetScoreF = (fun (item: ProteinInference'.InferredProteinClassItemScored) -> item.TargetScore)
                 let decoyScoreF  = (fun (item: ProteinInference'.InferredProteinClassItemScored) -> item.DecoyScore)
-                let qValueFunction = initQValue qValMethod bandwidth combWithReverse proteinsDB decoyBiggerF decoyScoreF targetScoreF
+                let qValueFunction = 
+                    try
+                        initQValue qValMethod bandwidth combWithReverse proteinsDB decoyBiggerF decoyScoreF targetScoreF
+                    with
+                    | ex -> 
+                        logger.Trace (sprintf "%A" ex)
+                        logger.Trace """Q-Value calculation using the selected method was not possible. Defaulting to "NoQValue". """
+                        fun x -> nan
                 let qValuesAssigned =
                     combWithReverse
                     |> Array.map (FDRControl'.assignQValueToIPCIS qValueFunction)
@@ -400,7 +407,14 @@ module ProteinInference =
                     let decoyBiggerF = (fun (item: ProteinInference'.InferredProteinClassItemScored) -> item.DecoyBigger)
                     let targetScoreF = (fun (item: ProteinInference'.InferredProteinClassItemScored) -> item.TargetScore)
                     let decoyScoreF  = (fun (item: ProteinInference'.InferredProteinClassItemScored) -> item.DecoyScore)
-                    let qValueFunction = initQValue qValMethod bandwidth combWithReverse proteinsDB decoyBiggerF decoyScoreF targetScoreF
+                    let qValueFunction = 
+                        try
+                        initQValue qValMethod bandwidth combWithReverse proteinsDB decoyBiggerF decoyScoreF targetScoreF
+                        with
+                        | ex -> 
+                            logger.Trace (sprintf "%A" ex)
+                            logger.Trace """Q-Value calculation using the selected method was not possible. Defaulting to "NoQValue". """
+                            fun x -> nan
                     let qValuesAssigned =
                         combWithReverse
                         |> Array.map (FDRControl'.assignQValueToIPCIS qValueFunction)
