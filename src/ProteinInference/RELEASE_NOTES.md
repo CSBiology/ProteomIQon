@@ -1,3 +1,6 @@
+#### 0.0.6 - Wednesday, July 14, 2021
+* Curve Fitting based Q-Value calculations now fall back to "NoQValue"
+
 #### 0.0.5 - Friday, June 18, 2021
 * add flag to trigger name based file matching
 * add flag to trigger the creation of diagnostic charts
