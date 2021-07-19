@@ -1088,7 +1088,7 @@ module ProteinInference' =
 
     /// By reading GFF creates the protein models (relationships of proteins to each other) which basically means grouping the rnas over the gene loci
     /// TODO: Don't group over order but rather group over id
-    let assignTranscriptsToGenes regexPattern (gffLines: seq<GFF3.GFFLine<seq<char>>>)  =
+    let assignTranscriptsToGenes tryParseProteinID (gffLines: seq<GFF3.GFFLine<seq<char>>>)  =
         gffLines
         // transcripts are grouped by the gene they originate from
         |> Seq.groupWhen isGene
@@ -1101,13 +1101,14 @@ module ProteinInference' =
                 |> Seq.mapi (fun i element ->
                     // every transcript of gene gets its own number i and other info is collected from element and used for info of protein
                     let modelInfo = createProteinModelInfoFromEntry i locus element
-                    let r = System.Text.RegularExpressions.Regex.Match(modelInfo.Id,regexPattern)
+                    let r =  tryParseProteinID modelInfo.Id
                     // the gff3 id has to be matched with the sequence in the fasta file. therefore the regexpattern is used
-                    if r.Success then
-                        r.Value,
+                    match r with 
+                    | Some v -> 
+                        v,
                         modelInfo
-                    else
-                        failwithf "could not match gff3 entry id %s with regexpattern %s. Either gff3 file is corrupt or regexpattern is not correct" modelInfo.Id regexPattern
+                    | None -> 
+                        failwithf "could not match gff3 entry id %s with regex pattern. Either gff3 file is corrupt or regexpattern is not correct" modelInfo.Id 
                 )
 
             | _ -> Seq.empty

@@ -178,6 +178,17 @@ module Common =
         | pattern ->
             (fun (inp : string)  -> System.Text.RegularExpressions.Regex.Match(inp,pattern).Value)
 
+    let tryParseProteinIdUsing regex =
+        match regex with
+        | "ID" | "id" | "Id" | "" ->
+            id >> Some
+        | pattern ->
+            fun (inp : string)  -> 
+                let tmp = System.Text.RegularExpressions.Regex.Match(inp,pattern)
+                if tmp.Success then 
+                    Some tmp.Value
+                else None
+
     type Compression =
         | NoCompression = 0
         | ZLib = 1
@@ -808,7 +819,7 @@ module Dto =
 
         let toDomain (dtoProteinInferenceParams: ProteinInferenceParams): Domain.ProteinInferenceParams =
             {
-                ProteinIdentifierRegex = dtoProteinInferenceParams.ProteinIdentifierRegex
+                TryGetProteinIdentifier = tryParseProteinIdUsing dtoProteinInferenceParams.ProteinIdentifierRegex
                 Protein                = dtoProteinInferenceParams.Protein
                 Peptide                = dtoProteinInferenceParams.Peptide
                 GroupFiles             = dtoProteinInferenceParams.GroupFiles
