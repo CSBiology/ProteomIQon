@@ -179,7 +179,7 @@ module Domain =
 
     type ProteinInferenceParams = 
         {
-            ProteinIdentifierRegex : string
+            TryGetProteinIdentifier : string -> string option
             Protein                : ProteinInference.IntegrationStrictness
             Peptide                : ProteinInference.PeptideUsageForQuantification
             GroupFiles             : bool

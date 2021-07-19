@@ -1,3 +1,6 @@
+#### 0.0.7 - Wednesday, July 14, 2021
+* Reworked Regex parsing to a common pattern. 
+
 #### 0.0.6 - Wednesday, July 14, 2021
 * Curve Fitting based Q-Value calculations now fall back to "NoQValue"
 

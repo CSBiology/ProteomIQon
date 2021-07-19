@@ -51,11 +51,9 @@ module ProteinInference =
     /// its evidence class.
     ///
     /// No experimental data
-    let createClassItemCollection gff3Path (memoryDB: SQLiteConnection) regexPattern rawFilePaths=
+    let createClassItemCollection gff3Path (memoryDB: SQLiteConnection) tryParseProteinID rawFilePaths=
 
         let logger = Logging.createLogger "ProteinInference_createClassItemCollection"
-
-        logger.Trace (sprintf "Regex pattern: %s" regexPattern)
 
         // retrieves peptide sequences and IDs from input files
         let psmInputs =
@@ -93,7 +91,7 @@ module ProteinInference =
             | Some gff3Path -> 
                 try
                     GFF3.fromFileWithoutFasta gff3Path
-                    |> ProteomIQon.ProteinInference'.assignTranscriptsToGenes regexPattern
+                    |> ProteomIQon.ProteinInference'.assignTranscriptsToGenes tryParseProteinID
                 with
                 | err ->
                     printfn "ERROR: Could not read gff3 file %s" gff3Path
@@ -107,7 +105,7 @@ module ProteinInference =
                     ]
                 )
                 |> Seq.concat
-                |> ProteomIQon.ProteinInference'.assignTranscriptsToGenes regexPattern
+                |> ProteomIQon.ProteinInference'.assignTranscriptsToGenes tryParseProteinID
 
         //reads from file to an array of FastaItems.
         logger.Trace "Assigning FastA sequences to protein model info"
@@ -116,19 +114,21 @@ module ProteinInference =
             try
                 accessionSequencePairs
                 |> Seq.mapi (fun i (header,sequence) ->
-                    let regMatch = System.Text.RegularExpressions.Regex.Match(header,regexPattern)
-                    if regMatch.Success then
-                        match Map.tryFind regMatch.Value proteinModelInfos with
+                    let regMatch = tryParseProteinID header
+                    match regMatch with 
+                    | Some v ->
+                        match Map.tryFind v proteinModelInfos with
                         | Some modelInfo ->
                             Some (createProteinModel modelInfo sequence)
                         | None ->
                             failwithf "Could not find protein with id %s in gff3 File" regMatch.Value
-                    else
-                        logger.Trace (sprintf "Could not extract id of header \"%s\" with regexPattern %s" header regexPattern)
+                    | None -> 
+                        logger.Trace (sprintf "Could not extract id of header \"%s\" with used regex pattern" header)
                         createProteinModelInfo header "Placeholder" StrandDirection.Forward (sprintf "Placeholder%i" i) 0 Seq.empty Seq.empty
                         |> fun x -> createProteinModel x sequence
                         |> Some
                     )
+                    
             with
             | err ->
                 printfn "Could not assign FastA sequences to RNAs"
@@ -452,7 +452,7 @@ module ProteinInference =
         logger.Trace "Copy peptide DB into Memory: finished."
 
         logger.Trace "Start building ClassItemCollection"
-        let classItemCollection, psmInputs = createClassItemCollection gff3Location memoryDB proteinInferenceParams.ProteinIdentifierRegex rawFilePaths
+        let classItemCollection, psmInputs = createClassItemCollection gff3Location memoryDB proteinInferenceParams.TryGetProteinIdentifier rawFilePaths
         logger.Trace "Classify and Infer Proteins"
         readAndInferFile classItemCollection proteinInferenceParams.Protein proteinInferenceParams.Peptide
                          proteinInferenceParams.GroupFiles outDirectory rawFilePaths psmInputs dbConnection proteinInferenceParams.GetQValue
