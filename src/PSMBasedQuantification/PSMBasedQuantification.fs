@@ -63,6 +63,50 @@ module PSMBasedQuantification =
         }
 
     ///
+    let initSpline binningWindowWidth (scanTimeVsDiff: (float*float) []) = 
+        let getBinIdx width scantime = int ((scantime / width))    
+        let knotX,train,test = 
+            let knotX,train,test = 
+                scanTimeVsDiff
+                |> Array.groupBy (fun (s,d) -> getBinIdx binningWindowWidth (s))
+                |> Array.map (fun (binIdx,ions) -> 
+                    let dataS = ions |> Array.shuffleFisherYates
+                    let knotX = 
+                        dataS 
+                        |> Array.map fst
+                        |> Array.max
+                    let train,test =
+                        let nTest = 
+                            (float dataS.Length) * 0.9
+                            |> int
+                        dataS.[.. nTest], dataS.[nTest+1 ..] 
+                    float knotX, train, test
+                    )
+                |> Array.unzip3
+            knotX |> Array.sort, train |> Array.concat |> Array.sortBy fst, test |> Array.concat |> Array.sortBy fst
+        let trainer lambda = 
+            let train' = train 
+            let test' = test 
+            let fit = FSharp.Stats.Fitting.Spline.smoothingSpline train' (knotX) lambda 
+            let rSquared = 
+                let x,y,yHat = 
+                    test'
+                    |> Array.map (fun (x,y) -> 
+                        x, y, fit x
+                        )
+                    |> Array.unzip3
+                let rs = FSharp.Stats.Fitting.GoodnessOfFit.calculateDeterminationFromValue yHat y
+                rs
+            rSquared, fit     
+        let rSquared,model = 
+            [|0.01.. 0.05 .. 0.5|]
+            |> Array.map trainer
+            |> Array.maxBy fst          
+        rSquared, model
+
+
+
+    ///
     let getBaseLineCorrectionOffsetAt tarRT x_Xic y_Xic y_Xic_uncorrected =
         let (rt,y,yUncorr) = 
             Array.zip3 x_Xic y_Xic y_Xic_uncorrected 
@@ -397,16 +441,23 @@ module PSMBasedQuantification =
         |> Array.ofList
 
     ///
-    let initComparePredictedAndMeasuredIsotopicCluster inReader ms1s ms1AccuracyEstimate x_Xic y_Xic y_Xic_uncorrected ch peptideSequence tarRt tarMz =    
+    let initComparePredictedAndMeasuredIsotopicCluster inReader ms1s ms1AccuracyEstimate (x_Xic:float[]) (y_Xic:float[]) y_Xic_uncorrected ch peptideSequence tarRt tarMz =    
         /// IsotopicCluster
         let targetIsotopicPattern_predicted = 
             generateIsotopicDistributionOfFormulaBySum ch peptideSequence
-    
         let baseLineCorrectionF = getBaseLineCorrectionOffsetAt tarRt x_Xic y_Xic y_Xic_uncorrected
         let closestMS1 = getClosestMs1 ms1s tarRt
         let peaks' = 
             getSpec inReader closestMS1
             |> Array.filter (fun x -> x.Mz < tarMz + 1. && x.Mz > tarMz - 0.6)
+        //[
+        //Chart.Point(targetIsotopicPattern_predicted)
+        //|> Chart.withTraceName "pred"
+        //Chart.Point(peaks'|> Array.map (fun x -> x.Mz,x.Intensity))
+        //|> Chart.withTraceName "asis"
+        //]
+        //|> Chart.Combine
+        //|> Chart.Show
 
         let recordedVsPredictedPattern = 
             targetIsotopicPattern_predicted
@@ -519,31 +570,112 @@ module PSMBasedQuantification =
         
         logger.Trace "Read scored PSMs"
         ///
-        let peptides =
+        let qpsms =
             Csv.CsvReader<PSMStatisticsResult>(SchemaMode=Csv.Fill).ReadFile(scoredPSMs,'\t',false,1)
             |> Array.ofSeq
         logger.Trace "Read scored PSMs:finished"
+
  
-        logger.Trace "Estimate ms1 mz accuracy"
+        logger.Trace "Estimate precursor mz standard deviation and mz correction."
         ///
-        let ms1AccuracyEstimate = 
-            peptides
-            |> Seq.stDevBy (fun x -> abs(x.PrecursorMZ - Mass.toMZ x.TheoMass (float x.Charge)) )
-        logger.Trace (sprintf "Estimate ms1 mz accuracy:finished, Accuracy: %f" ms1AccuracyEstimate) 
-            
+        let ms1AccuracyEstimate,scanTimeToMzCorrection = 
+            let scanTimeVsDelta = 
+                qpsms
+                |> Array.map (fun x -> 
+                    let precMz = x.PrecursorMZ
+                    let theMz  = Mass.toMZ x.TheoMass (float x.Charge)
+                    let diff = precMz - theMz 
+                    x.ScanTime,diff
+                    )
+            let borders =
+                scanTimeVsDelta
+                |> Seq.map snd
+                |> Array.ofSeq
+                |> FSharp.Stats.Testing.Outliers.tukey 3.
+            let filteredValues =
+                scanTimeVsDelta
+                |> Array.ofSeq
+                |> Array.filter (fun (s,d) -> d <= borders.Upper && d >= borders.Lower)
+            let scanTimeToMzCorrection =
+                let runTime = scanTimeVsDelta |> Array.maxBy fst |> fst
+                if runTime > 20. && qpsms.Length > 500 then
+                    let binWidth = 
+                        System.Math.Min(runTime / 2., 20.)
+                    let stabw = filteredValues |> Seq.stDevBy snd
+                    let r,f = initSpline binWidth filteredValues
+                    f
+                else 
+                    let m = 
+                        filteredValues 
+                        |> Seq.map snd 
+                        |> Seq.median 
+                    fun scanTime -> m
+            let stDev = 
+                filteredValues 
+                |> Seq.map snd 
+                |> Seq.stDev
+            if diagCharts then 
+                [
+                Chart.Point(scanTimeVsDelta)
+                |> Chart.withTraceName "Raw"
+                Chart.Line(scanTimeVsDelta |> Array.sortBy fst |> Array.map (fun (st,d) -> st, scanTimeToMzCorrection st))
+                ]
+                |> Chart.Combine
+                |> Chart.SaveHtmlAs(Path.Combine[|plotDirectory; "mzErrorAndCorrection"|])
+            stDev, scanTimeToMzCorrection 
+        logger.Trace (sprintf "Estimate precursor mz standard deviation and mz correction.:finished, standard deviation: %f" ms1AccuracyEstimate) 
+
+        let qpsmsMzRefined = 
+            let refined = 
+                qpsms
+                |> Array.map (fun x -> 
+                    let precMz = x.PrecursorMZ
+                    let theoMz  = Mass.toMZ x.TheoMass (float x.Charge)
+                    let diffPToTheo = precMz - theoMz 
+                    let absDiffToPredDiff = 
+                        (abs (scanTimeToMzCorrection x.ScanTime)) - (abs diffPToTheo)
+                        |> abs
+                    if absDiffToPredDiff > 4.*ms1AccuracyEstimate then 
+                        let precMz' = theoMz + scanTimeToMzCorrection x.ScanTime
+                        {x with PrecursorMZ = precMz'}
+                    else    
+                        x
+                    )
+            if diagCharts then 
+                [
+                qpsms
+                |> Array.map (fun x -> 
+                    let precMz = x.PrecursorMZ
+                    let theoMz  = Mass.toMZ x.TheoMass (float x.Charge)
+                    let diff = precMz - theoMz 
+                    x.ScanTime,diff
+                    )
+                |> Chart.Point
+                |> Chart.withTraceName "Raw"
+                refined
+                |> Array.map (fun x -> 
+                    let precMz = x.PrecursorMZ
+                    let theoMz  = Mass.toMZ x.TheoMass (float x.Charge)
+                    let diff = precMz - theoMz 
+                    x.ScanTime,diff
+                    )
+                |> Chart.Point
+                |> Chart.withTraceName "Corrected"
+                ]
+                |> Chart.Combine
+                |> Chart.SaveHtmlAs(Path.Combine[|plotDirectory; "precMzCorrected"|])
+            refined
+                
+           
         logger.Trace "init lookup functions"        
         ///
-        let comparePredictedAndMeasuredIsotopicCluster = 
-            initComparePredictedAndMeasuredIsotopicCluster inReader ms1SortedByScanTime ms1AccuracyEstimate     
+        let comparePredictedAndMeasuredIsotopicCluster = initComparePredictedAndMeasuredIsotopicCluster inReader ms1SortedByScanTime ms1AccuracyEstimate     
         
         ///
-        let getXIC = 
-            initGetProcessedXIC logger processParams.BaseLineCorrection inReader retTimeIdxed processParams.XicExtraction.ScanTimeWindow processParams.XicExtraction.MzWindow_Da     
+        let getXIC = initGetProcessedXIC logger processParams.BaseLineCorrection inReader retTimeIdxed processParams.XicExtraction.ScanTimeWindow processParams.XicExtraction.MzWindow_Da     
         
         ///
-        let identifyPeaks = 
-            initIdentifyPeaks processParams.XicExtraction.XicProcessing
-        
+        let identifyPeaks = initIdentifyPeaks processParams.XicExtraction.XicProcessing
         logger.Trace "init lookup functions:finished"
         
         logger.Trace "init quantification functions"
@@ -773,7 +905,7 @@ module PSMBasedQuantification =
         
         logger.Trace "executing quantification"
         let quantResults = 
-            peptides        
+            qpsmsMzRefined        
             |> Array.groupBy (fun x -> 
                 {
                     Sequence             = x.StringSequence     
