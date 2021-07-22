@@ -803,7 +803,7 @@ module Fitting' =
                 let estParams = LevenbergMarquardtConstrained.estimatedParamsVerbose model solverOptions lambdaInitial lambdaFactor lowerBound upperBound xData yData
                 estParams
                 |> fun estParams ->
-                    let paramGuess = Vector.ofArray solverOptions.InitialParamGuess
+                    let paramGuess = estParams.[estParams.Count-1]
                     let rss = getRSS model xData yData paramGuess
                     estParams.[estParams.Count-1], rss
 
