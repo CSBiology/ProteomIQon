@@ -92,8 +92,7 @@ module Domain =
         }
 
     type PepValueFittingMethod = 
-        | LinearSpline
-        | LogisticRegressionLogit
+        | LinearLogit
 
 
     type EstimationParams = {
