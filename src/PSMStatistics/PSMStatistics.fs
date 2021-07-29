@@ -190,9 +190,6 @@ module PSMStatistics =
         let outFilePath = 
             let fileName = (Path.GetFileNameWithoutExtension psms) + ".qpsm"
             Path.Combine [|outputDir;fileName|]
-        let outFilePath2 = 
-            let fileName = (Path.GetFileNameWithoutExtension psms) + ".json"
-            Path.Combine [|outputDir;fileName|]
         let plotDirectory =
             let fileName = sprintf "%s_plots" (Path.GetFileNameWithoutExtension psms)
             let path = Path.Combine [|outputDir;fileName|]
@@ -348,11 +345,6 @@ module PSMStatistics =
                             (trainedModel x).Score
                             )
                         )
-                let toSerialize = 
-                    bestPSMPerScan 
-                    |> Array.map (fun x -> {|Score = (trainedModel x).Score; Target = x.Label|} )
-                    |> Newtonsoft.Json.JsonConvert.SerializeObject
-                    |> fun str -> System.IO.File.WriteAllText (outFilePath2, str)
                 let getQ = BioFSharp.Mz.FDRControl.calculateQValueStorey bestPSMPerScan (fun x -> x.Label |> not) (fun x -> float (trainedModel x).Score ) (fun x -> float (trainedModel x).Score)             
                 let getPep = 
                     let bw = 
