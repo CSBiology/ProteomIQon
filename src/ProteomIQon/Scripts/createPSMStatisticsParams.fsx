@@ -4,6 +4,7 @@
 #r @"../../../bin\ProteomIQon\netstandard2.0\ProteomIQon.dll"
 #r @"../../../bin\psmstatistics\net5.0\FSharpAux.IO.dll"
 #r @"../../../bin\psmstatistics\net5.0\FSharpAux.dll"
+#r @"../../..\bin\PSMStatistics\net5.0\Newtonsoft.Json.dll"
 
 open ProteomIQon
 open ProteomIQon.Domain
@@ -12,7 +13,7 @@ open ProteomIQon.Dto
 
 let defaultPSMStatistics : Dto.PSMStatisticsParams = 
     {
-        Threshold = Threshold.Estimate {QValueThreshold = 0.01; PepValueThreshold = 0.05;MaxIterations=15;MinimumIncreaseBetweenIterations=0.005; PepValueFittingMethod = LogisticRegressionLogit}
+        Threshold = Threshold.Estimate {QValueThreshold = 0.01; PepValueThreshold = 0.05;MaxIterations=15;MinimumIncreaseBetweenIterations=0.005; PepValueFittingMethod = LinearLogit}
         ParseProteinIDRegexPattern  = (@"id")
         KeepTemporaryFiles          = true
     }

@@ -353,8 +353,7 @@ module PSMStatistics =
                         |> FSharp.Stats.Distributions.Bandwidth.nrd0
                         |> fun x -> x / 4.
                     match estParams.PepValueFittingMethod with
-                    | LogisticRegressionLogit -> ProteomIQon.FDRControl'.initCalculateMonotonePEPValuesLogRegLogit bw (fun x -> x.Label |> not) (fun x -> float (trainedModel x).Score ) (fun x -> float (trainedModel x).Score) bestPSMPerScan
-                    | LinearSpline -> ProteomIQon.FDRControl'.initCalculateMonotonePEPValuesLinInterpolation bw (fun x -> x.Label |> not) (fun x -> float (trainedModel x).Score ) (fun x -> float (trainedModel x).Score) bestPSMPerScan
+                    | LinearLogit -> ProteomIQon.FDRControl'.initCalculateLin logger bw (fun x -> x.Label |> not) (fun x -> float (trainedModel x).Score ) (fun x -> float (trainedModel x).Score) bestPSMPerScan
                 let scoreVsQ = 
                     bestPSMPerScan
                     |> Array.map (fun x -> (trainedModel x).Score, getQ (float (trainedModel x).Score))
@@ -369,7 +368,10 @@ module PSMStatistics =
                     bestPSMPerScan 
                     |> Array.filter (fun x -> x.Label |> not) 
                     |> Array.map (fun x -> (trainedModel x).Score )
-                let nPosTar = (scoreVsQ |> Array.filter (fun x -> snd x <= 0.001) |> Array.length)
+                let nPosTar = 
+                    let posQ = scoreVsQ |> Array.filter (fun x -> snd x <= estParams.QValueThreshold) |> Array.length
+                    let posPep = scoreVSPep |> Array.filter (fun x -> snd x <= estParams.PepValueThreshold) |> Array.length
+                    System.Math.Min(posQ,posPep)
                 if diagCharts then 
                     [
                         [
@@ -420,8 +422,8 @@ module PSMStatistics =
                         let positives' = 
                             bestPSMPerScan 
                             |> Array.filter (fun x -> 
-                                let passQVal = (prevModel.Model x).Score |> float |> prevModel.CalcQValue  < 0.001
-                                let passPEPVal = (prevModel.Model x).Score |> float |> prevModel.CalcPepValue  < 0.05
+                                let passQVal = (prevModel.Model x).Score |> float |> prevModel.CalcQValue  < (estParams.QValueThreshold / 10.)
+                                let passPEPVal = (prevModel.Model x).Score |> float |> prevModel.CalcPepValue  < (estParams.PepValueThreshold)
                                 passQVal && passPEPVal
                                 )
                             |> Array.filter (fun x -> x.Label = true)
@@ -434,15 +436,18 @@ module PSMStatistics =
                             |> Array.filter (fun x -> x.Label = false)
                             |> Set.ofArray
                         logger.Trace (sprintf "Training iteration #%i with %i positives and %i negatives" i positives'.Count negatives'.Count )
-                        let predict = trainModel (positives'|> Map.toArray |> Array.map snd |> Set.ofArray)  negatives' 
-                        let newModel = applyModel i predict psmsToLearn                    
-                        let ratio = (prevModel.NPositivesAtFDR |> float) /  (newModel.NPositivesAtFDR |> float) 
-                        if ratio > 1. then 
-                            prevModel 
-                        elif 1. - ratio < estParams.MinimumIncreaseBetweenIterations then    
-                            newModel
-                        else
-                            loop newModel (i+1)                
+                        try
+                            let predict = trainModel (positives'|> Map.toArray |> Array.map snd |> Set.ofArray)  negatives' 
+                            let newModel = applyModel i predict psmsToLearn                    
+                            let ratio = (prevModel.NPositivesAtFDR |> float) /  (newModel.NPositivesAtFDR |> float) 
+                            if ratio > 1. then 
+                                prevModel 
+                            elif 1. - ratio < estParams.MinimumIncreaseBetweenIterations then    
+                                newModel
+                            else
+                                loop newModel (i+1)
+                        with
+                        | _ -> logger.Trace "Fall back to previous model"; prevModel
                 loop initModel 0
 
             let bestPSMPerScan = 

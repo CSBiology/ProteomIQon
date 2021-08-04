@@ -803,7 +803,7 @@ module Fitting' =
                 let estParams = LevenbergMarquardtConstrained.estimatedParamsVerbose model solverOptions lambdaInitial lambdaFactor lowerBound upperBound xData yData
                 estParams
                 |> fun estParams ->
-                    let paramGuess = Vector.ofArray solverOptions.InitialParamGuess
+                    let paramGuess = estParams.[estParams.Count-1]
                     let rss = getRSS model xData yData paramGuess
                     estParams.[estParams.Count-1], rss
 
@@ -1677,28 +1677,6 @@ module FDRControl' =
         |> Array.sortBy fst
         |> Array.toList
 
-    /// Monotonizes the calculated PEP values
-    let monotonizePepValues (scoreF: 'a -> float) (pepF: 'a -> float) (pepData: 'a list) =
-        let sortedPEPData =
-            pepData
-            |> List.sortBy (fun x -> scoreF x)
-            |> List.map (fun x -> scoreF x, pepF x)
-            |> List.rev
-        let monotone =
-            let head::tail = sortedPEPData
-            tail
-            |> List.fold (fun (acc: (float*float) list) (score, newPEPValue) ->
-                let _,pepValue = acc.Head
-                if newPEPValue < pepValue then
-                    (score, pepValue)::acc
-                else
-                    (score, newPEPValue)::acc
-            )[head]
-            |> Array.ofList
-            |> Array.sortBy fst
-            |> Array.unzip
-        monotone
-
     /// Logit transforms pep values (log10)
     let logitTransformPepValues score pepVal  =
         Array.zip score pepVal
@@ -1710,78 +1688,61 @@ module FDRControl' =
         )
         |> Array.unzip
 
-    /// Calculates monotonized PEP values for a target/decoy dataset based on the decoy/target ratio. Entries are binned with a given bandwidth based on the score. 
-    /// Returns a function which maps from score to PEP value based on a Linear Spline fitted on the monotonized pep values.
-    let initCalculateMonotonePEPValuesLinInterpolation bandwidth (isDecoy: 'a -> bool) (decoyScoreF: 'a -> float) (targetScoreF: 'a -> float) (data: 'a[]) =
-        let targetDecoyHis = createTargetDecoyHis bandwidth (isDecoy: 'a -> bool) (decoyScoreF: 'a -> float) (targetScoreF: 'a -> float) (data: 'a[])
-        let pep = calculatePEPValues (fun (_,count,_,_) -> float count) (fun (_,_,decoyCount,_) -> float decoyCount) (fun (_,_,_,medianScore) -> medianScore) targetDecoyHis
-        let score, monotonePEPVal = monotonizePepValues (fun (score,_) -> score) (fun (_,pep) -> pep) pep
-        // Linear Interpolation
-        let linearSplineCoeff = LinearSpline.initInterpolateSorted score monotonePEPVal
-        // takes a score from the dataset and assigns it a q value
-        let interpolation = LinearSpline.interpolate linearSplineCoeff
-        interpolation
-
-    /// Calculates monotonized PEP values for a target/decoy dataset based on the decoy/target ratio. Entries are binned with a given bandwidth based on the score. 
-    /// Returns a function which maps from score to PEP value based on a fit of a sigmoid function using logistic regression. The logistic regression is performed on the logit transformed 
-    /// pep values.
-    let initCalculateMonotonePEPValuesLogRegLogit bandwidth (isDecoy: 'a -> bool) (decoyScoreF: 'a -> float) (targetScoreF: 'a -> float) (data: 'a[]) =
-        let targetDecoyHis = createTargetDecoyHis bandwidth (isDecoy: 'a -> bool) (decoyScoreF: 'a -> float) (targetScoreF: 'a -> float) (data: 'a[])
-        let score,pep = 
-            calculatePEPValues (fun (_,count,_,_) -> float count) (fun (_,_,decoyCount,_) -> float decoyCount) (fun (_,_,_,medianScore) -> medianScore) targetDecoyHis
-            |> Array.ofList
-            |> Array.unzip
-        //let monotoneScore, monotonePEPVal = monotonizePepValues (fun (score,_) -> score) (fun (_,pep) -> pep) (Array.zip score pep |> List.ofArray)
-        let logitScore, logitPEPVal = logitTransformPepValues score pep
-        let initialGuess = initialParamsOverRangeMidAndSteepness logitPEPVal [|1. .. 1. ..  50.|] [|logitScore |> Array.min .. 0.1 .. logitScore |> Array.max|] (logitPEPVal |> Array.min |> Some)
-        let estimate =
-            initialGuess
-            |> Array.map (fun initial ->
-                let lowerBound =
-                    initial.InitialParamGuess
-                    |> Array.map (fun param -> param - (abs param) * 0.1)
-                    |> vector
-                let upperBound =
-                    initial.InitialParamGuess
-                    |> Array.map (fun param -> param + (abs param) * 0.1)
-                    |> vector
-                estimatedParamsWithRSS FSharp.Stats.Fitting.NonLinearRegression.Table.LogisticFunctionVarYDescending initial 0.001 10.0 lowerBound upperBound logitScore logitPEPVal
+    /// Calculates monotonized PEP values for a target/decoy dataset based on the decoy/target ratio. Entries are binned with a given bandwidth as intital estiamtor based on the scores. 
+    /// Returns a function which maps from score to PEP value based on a fit of a linear function using linear regression. The linear regression is performed on the logit transformed 
+    /// pep values. The fit focuses on the pep values centered aound the middle of the score distribution
+    let initCalculateLin (logger: NLog.Logger) bandwidth (isDecoy: 'a -> bool) (decoyScoreF: 'a -> float) (targetScoreF: 'a -> float) (data: 'a[]) =
+        let lowerScore, upperScore =
+            let decoy = 
+                data
+                |> Array.filter isDecoy
+                |> Array.map decoyScoreF
+                |> Array.filter (fun x -> x < 0.)
+                |> Array.median
+            let target =
+                data
+                |> Array.filter (isDecoy >> not)
+                |> Array.map targetScoreF
+                |> Array.filter (fun x -> x > 0.)
+                |> Array.median
+            decoy, target
+        logger.Trace (sprintf "Lower Score: %f; Upper Score: %f" lowerScore upperScore)
+        let filteredData =
+            data
+            |> Array.filter (fun entry ->
+                if isDecoy entry then
+                    let score = decoyScoreF entry
+                    score >= lowerScore && score <= upperScore
+                else
+                    let score = targetScoreF entry
+                    score >= lowerScore && score <= upperScore
             )
-            |> Array.filter (fun (param,rss) -> not (param |> Vector.exists System.Double.IsNaN))
-            |> Array.minBy snd
-            |> fst
-        let logisticFunctionLogit = FSharp.Stats.Fitting.NonLinearRegression.Table.LogisticFunctionVarYDescending.GetFunctionValue estimate
-        let fitFromLogit = logisticFunctionLogit >> (fun x -> 10.**(x)/(1.+10.**(x)))
-        let score',pep' =
-            [|logitScore |> Array.min .. 0.1 .. logitScore |> Array.max|],
-            [|logitScore |> Array.min .. 0.1 .. logitScore |> Array.max|]
-            |> Array.map fitFromLogit
-        let initialGuess' =
-            let steepnessRange =
-                let oldSteepness = estimate.[1]
-                [|oldSteepness-2. |> floor .. 1. .. oldSteepness+2. |> ceil|]
-            let midpointRange =
-                let oldMidpoint = estimate.[2]
-                [|oldMidpoint-2. |> floor .. 0.1 .. oldMidpoint+2. |> ceil|]
-            initialParamsOverRangeMidAndSteepness pep' steepnessRange midpointRange None
-        let estimate' =
-            initialGuess'
-            |> Array.map (fun initial ->
-                let lowerBound =
-                    initial.InitialParamGuess
-                    |> Array.map (fun param -> param - (abs param) * 0.1)
-                    |> vector
-                let upperBound =
-                    initial.InitialParamGuess
-                    |> Array.map (fun param -> param + (abs param) * 0.1)
-                    |> vector
-                estimatedParamsWithRSS FSharp.Stats.Fitting.NonLinearRegression.Table.LogisticFunctionDescending initial 0.001 10.0 lowerBound upperBound score' pep'
+        logger.Trace(sprintf "Initial Bandwidth: %f" bandwidth)
+        let fittingFunction, score, pep =
+            let xPointRange =
+                let min = Math.Min((Array.minBy targetScoreF filteredData) |> targetScoreF, (Array.minBy decoyScoreF filteredData) |> decoyScoreF)
+                let max = Math.Max((Array.maxBy targetScoreF filteredData) |> targetScoreF, (Array.maxBy decoyScoreF filteredData) |> decoyScoreF)
+                max-min
+            let upperBW = Math.Min(10., xPointRange/10.)
+            [|bandwidth .. 0.1 .. upperBW|]
+            |> Array.choose (fun bw ->
+                let targetDecoyHis = createTargetDecoyHis bw (isDecoy: 'a -> bool) (decoyScoreF: 'a -> float) (targetScoreF: 'a -> float) (filteredData: 'a[])
+                let score',pep' = 
+                    calculatePEPValues (fun (_,count,_,_) -> float count) (fun (_,_,decoyCount,_) -> float decoyCount) (fun (_,_,_,medianScore) -> medianScore) targetDecoyHis
+                    |> Array.ofList
+                    |> Array.unzip
+                let logitScore, logitPEPVal = logitTransformPepValues score' pep'
+                let coeff = Fitting.LinearRegression.OrdinaryLeastSquares.Linear.Univariable.coefficient (vector logitScore) (vector logitPEPVal)
+                let fittingFunction' = (Fitting.LinearRegression.OrdinaryLeastSquares.Linear.Univariable.fit coeff) >> (fun x -> 10.**(x)/(1.+10.**(x)))
+                let sos = FSharp.Stats.Fitting.GoodnessOfFit.calculateSumOfSquares fittingFunction' score' pep'
+                if coeff.[1] < 0. then
+                    Some (sos.Error/sos.Count, fittingFunction', score', pep', bw)
+                else
+                    None
             )
-            |> Array.filter (fun (param,rss) -> not (param |> Vector.exists System.Double.IsNaN))
-            |> Array.minBy snd
-            |> fst
-        let logisticFunction = FSharp.Stats.Fitting.NonLinearRegression.Table.LogisticFunctionDescending.GetFunctionValue estimate'
-        logisticFunction
+            |> Array.minBy (fun (error,_,_,_,_) -> error)
+            |> fun (error, fit,s,p,bw) ->logger.Trace(sprintf "Chosen Bandwidth: %f" bw); fit,s,p
+        fittingFunction
 
 module Fragmentation' =
 
