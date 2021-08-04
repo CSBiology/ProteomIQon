@@ -32,7 +32,7 @@ let defaultPreprocessingParams :Dto.QuantificationParams =
         {
             TopKPSMs                     = None
             ScanTimeWindow               = 2.
-            MzWindow_Da                  = 0.07 
+            MzWindow_Da                  = Domain.Window.Estimate
             XicProcessing                = Wavelet waveletParams
         }
 

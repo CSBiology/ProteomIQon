@@ -218,7 +218,7 @@ module PSMStatistics =
         logger.Trace "Finished preparing processing functions."
         
         match processParams.Threshold with 
-        | Estimate estParams -> 
+        | Threshold.Estimate estParams -> 
             try
             logger.Trace "Prepare training pipeline"
             let ctx = new ML.MLContext(1024)

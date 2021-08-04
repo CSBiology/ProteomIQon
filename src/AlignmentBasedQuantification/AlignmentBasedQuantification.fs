@@ -530,7 +530,7 @@ module AlignmentBasedQuantification =
         
         ///
         let getXIC = 
-            initGetProcessedXIC logger processParams.BaseLineCorrection inReader retTimeIdxed processParams.XicExtraction.ScanTimeWindow processParams.XicExtraction.MzWindow_Da     
+            initGetProcessedXIC logger processParams.BaseLineCorrection inReader retTimeIdxed processParams.XicExtraction.ScanTimeWindow 0.05 //processParams.XicExtraction.MzWindow_Da     
         
         ///
         let identifyPeaks = 
