@@ -238,8 +238,9 @@ module PSMBasedQuantification =
         let sum,n = Seq.fold2 (fun (sum,n) w i -> w*i+sum,n + w ) (0.,0.) weights items
         sum / n
     ///
-    let average getXic (psms:(PSMStatisticsResult*float) []) =
-            let meanPrecMz   = psms |> Seq.meanBy (fun (psm,m) -> psm.PrecursorMZ)
+    let average getXic scanTimeToMzCorrection theoMz (psms:(PSMStatisticsResult*float) []) =
+            //let meanPrecMz   = psms |> Seq.meanBy (fun (psm,m) -> psm.PrecursorMZ)
+            
             let meanScanTime = psms |> Seq.meanBy (fun (psm,m) -> psm.ScanTime)
             let meanScore = psms |> Seq.averageBy (fun (psm,m) -> psm.ModelScore)
             let psms' = 
@@ -249,8 +250,9 @@ module PSMBasedQuantification =
                 let scanTimes = psms' |> Array.map (fun (psm,m) -> psm.ScanTime)
                 let weights = psms' |> Array.map snd
                 weightedMean weights scanTimes
-            let (retData,itzDataCorrected,ItzDataUncorrected) = getXic weightedAvgScanTime meanPrecMz
-            createAveragePSM meanPrecMz meanScanTime weightedAvgScanTime meanScore retData itzDataCorrected ItzDataUncorrected
+            let correctedMz = scanTimeToMzCorrection weightedAvgScanTime + theoMz
+            let (retData,itzDataCorrected,ItzDataUncorrected) = getXic weightedAvgScanTime correctedMz
+            createAveragePSM correctedMz meanScanTime weightedAvgScanTime meanScore retData itzDataCorrected ItzDataUncorrected
 
 
     type InferredPeak = {
@@ -671,8 +673,16 @@ module PSMBasedQuantification =
         ///
         let comparePredictedAndMeasuredIsotopicCluster = initComparePredictedAndMeasuredIsotopicCluster inReader ms1SortedByScanTime ms1AccuracyEstimate     
         
+        let mzWindow = 
+            match processParams.XicExtraction.MzWindow_Da with 
+            | Domain.Window.Fixed v -> v 
+            | Domain.Window.Estimate -> 
+                let mzW = ms1AccuracyEstimate*4.
+                logger.Trace (sprintf "optimal mz Window for XIC look up found by estimation :%f Da" mzW)  
+                mzW
+
         ///
-        let getXIC = initGetProcessedXIC logger processParams.BaseLineCorrection inReader retTimeIdxed processParams.XicExtraction.ScanTimeWindow processParams.XicExtraction.MzWindow_Da     
+        let getXIC = initGetProcessedXIC logger processParams.BaseLineCorrection inReader retTimeIdxed processParams.XicExtraction.ScanTimeWindow mzWindow    
         
         ///
         let identifyPeaks = initIdentifyPeaks processParams.XicExtraction.XicProcessing
@@ -688,7 +698,8 @@ module PSMBasedQuantification =
             let targetPeptide = if pepIon.GlobalMod = 0 then unlabledPeptide else labeledPeptide            
             let psmsWithMatchedSums = countMatchedMasses targetPeptide psms 
             let ms2s = psmsWithMatchedSums |> Array.map (fun (psm,m) -> psm.ScanTime,m)
-            let averagePSM = average getXIC psmsWithMatchedSums
+            let theoMz = Mass.toMZ targetPeptide.Mass (float pepIon.Charge)
+            let averagePSM = average getXIC scanTimeToMzCorrection theoMz psmsWithMatchedSums
             let avgMass = Mass.ofMZ (averagePSM.MeanPrecMz) (pepIon.Charge |> float)
             let peaks = identifyPeaks averagePSM.X_Xic averagePSM.Y_Xic
             if Array.isEmpty peaks && diagCharts then 
@@ -704,7 +715,10 @@ module PSMBasedQuantification =
             let inferredScanTime = chooseScanTime processParams.XicExtraction.ScanTimeWindow searchRTMinusFittedRT averagePSM.WeightedAvgScanTime quantP 
             let clusterComparison_Target = comparePredictedAndMeasuredIsotopicCluster averagePSM.X_Xic averagePSM.Y_Xic averagePSM.Y_Xic_uncorrected pepIon.Charge targetPeptide.BioSequence quantP.EstimatedParams.[1] averagePSM.MeanPrecMz            
             if pepIon.GlobalMod = 0 then
-                let mz_Heavy = Mass.toMZ (labeledPeptide.Mass) (pepIon.Charge|> float)
+                let mz_Heavy = 
+                    let mz = Mass.toMZ (labeledPeptide.Mass) (pepIon.Charge|> float)
+                    let correctedMz = scanTimeToMzCorrection inferredScanTime + mz
+                    correctedMz                
                 let inferred_Heavy = quantifyInferredPeak getXIC identifyPeaks mz_Heavy averagePSM.WeightedAvgScanTime inferredScanTime
                 let searchRTMinusFittedRT_Heavy = searchRTMinusFittedRtInferred inferredScanTime inferred_Heavy
                 let clusterComparison_Heavy = comparePredictedAndMeasuredIsotopicCluster inferred_Heavy.X_Xic inferred_Heavy.Y_Xic inferred_Heavy.Y_Xic_uncorrected pepIon.Charge labeledPeptide.BioSequence quantP.EstimatedParams.[1] mz_Heavy
@@ -759,7 +773,10 @@ module PSMBasedQuantification =
                 }
                 |> Option.Some
             else
-                let mz_Light          = Mass.toMZ (unlabledPeptide.Mass) (pepIon.Charge|> float)
+                let mz_Light = 
+                    let mz = Mass.toMZ (unlabledPeptide.Mass) (pepIon.Charge|> float)
+                    let correctedMz = scanTimeToMzCorrection inferredScanTime + mz
+                    correctedMz   
                 let inferred_Light       = quantifyInferredPeak getXIC identifyPeaks mz_Light averagePSM.WeightedAvgScanTime inferredScanTime
                 let searchRTMinusFittedRT_Light = searchRTMinusFittedRtInferred inferredScanTime inferred_Light
                 let clusterComparison_Light = comparePredictedAndMeasuredIsotopicCluster inferred_Light.X_Xic inferred_Light.Y_Xic inferred_Light.Y_Xic_uncorrected pepIon.Charge unlabledPeptide.BioSequence quantP.EstimatedParams.[1] mz_Light
@@ -827,7 +844,8 @@ module PSMBasedQuantification =
             let unlabledPeptide = peptideLookUp pepIon.Sequence 0
             let psmsWithMatchedSums = countMatchedMasses unlabledPeptide psms 
             let ms2s = psmsWithMatchedSums |> Array.map (fun (psm,m) -> psm.ScanTime,m)
-            let averagePSM = average getXIC psmsWithMatchedSums
+            let theoMz = Mass.toMZ unlabledPeptide.Mass (float pepIon.Charge)
+            let averagePSM = average getXIC scanTimeToMzCorrection theoMz psmsWithMatchedSums
             let avgMass = Mass.ofMZ (averagePSM.MeanPrecMz) (pepIon.Charge |> float)
             
             let peaks = 

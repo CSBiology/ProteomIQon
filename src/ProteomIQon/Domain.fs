@@ -137,10 +137,14 @@ module Domain =
         | SecondDerivative of SecondDerivativeParams
         | Wavelet of WaveletParameters
         
+    type Window = 
+        | Fixed of float
+        | Estimate 
+
     type XicExtraction = 
         {
             ScanTimeWindow               : float 
-            MzWindow_Da                  : float 
+            MzWindow_Da                  : Window 
             XicProcessing                : XicProcessing
             TopKPSMs                     : int option
         }
