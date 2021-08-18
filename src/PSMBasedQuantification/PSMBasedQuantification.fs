@@ -16,6 +16,30 @@ open BioFSharp.Mz.SearchDB
 open SearchDB'
 
 module PSMBasedQuantification =
+    module Query = 
+        open System
+        open System.Collections.Generic
+        open System.Linq
+        open MzIO.Commons.Arrays
+        open MzIO.Processing.MzIOLinq
+        open MzIO.Binary
+         
+        /// Extract a rt profile for specified target mass and rt range.
+        /// Mz range peak aggregation is closest lock mz.
+        /// Profile array with index corresponding to continous mass spectra over rt range and mz range given.
+        let initRTProfile (readspecPeaks:string -> Peak1DArray)  (rtIndex: IMzIOArray<RtIndexEntry>) (rtRange: RangeQuery) (mzRange: RangeQuery) =
+            let entries = RtIndexEntry.Search(rtIndex, rtRange).ToArray()
+            //printfn "RtProfile %i" entries.Length
+            let profile = Array.zeroCreate<Peak2D> entries.Length
+            for rtIdx = 0 to entries.Length-1 do
+                let entry = entries.[rtIdx]
+                let peaks = (readspecPeaks entry.SpectrumID).Peaks
+                let p = (RtIndexEntry.MzSearch (peaks, mzRange)).DefaultIfEmpty(new Peak1D(0., mzRange.LockValue))
+                        |> fun x -> RtIndexEntry.ClosestMz (x, mzRange.LockValue)
+                        |> fun x -> RtIndexEntry.AsPeak2D (x, entry.Rt)
+                profile.[rtIdx] <- p
+            profile
+
 
     type PeptideIon = 
         {
@@ -114,9 +138,10 @@ module PSMBasedQuantification =
         yUncorr - y
        
     ///
-    let getClosestMs1 (ms1s: MzIO.Model.MassSpectrum []) scanTime = 
+    let getClosestMs1 (ms1s: (float*MzIO.Model.MassSpectrum) []) scanTime = 
          ms1s
-         |> Array.minBy (fun ms -> abs (MassSpectrum.getScanTime ms - scanTime))
+         |> Array.minBy (fun ms -> abs (fst ms - scanTime))
+         |> snd
 
     ///
     let getSpec (reader:MzIO.IO.IMzIODataReader) (ms1: MzIO.Model.MassSpectrum)  =
@@ -184,13 +209,13 @@ module PSMBasedQuantification =
                        ) yData baseLine
 
     ///
-    let initGetProcessedXIC logger (baseLineCorrection:Domain.BaseLineCorrection option) reader idx scanTimeWindow mzWindow_Da meanScanTime meanPrecMz =
+    let initGetProcessedXIC logger (baseLineCorrection:Domain.BaseLineCorrection option) getPeaks idx scanTimeWindow mzWindow_Da meanScanTime meanPrecMz =
         let rtQuery = Query.createRangeQuery meanScanTime scanTimeWindow
         let mzQuery = Query.createRangeQuery meanPrecMz mzWindow_Da
         let retData',itzData' =
             let tmp =
-                Query.getXIC reader idx rtQuery mzQuery
-                |> Array.map (fun p -> p.Rt , p.Intensity)
+                getPeaks idx rtQuery mzQuery
+                |> Array.map (fun (p:MzIO.Binary.Peak2D) -> p.Rt , p.Intensity)
             tmp
             |> Array.mapi (fun i (rt,intensity) ->
                             if i = 0 || i = tmp.Length-1 || intensity > 0. then
@@ -237,6 +262,7 @@ module PSMBasedQuantification =
     let weightedMean (weights:seq<'T>) (items:seq<'T>) =
         let sum,n = Seq.fold2 (fun (sum,n) w i -> w*i+sum,n + w ) (0.,0.) weights items
         sum / n
+        
     ///
     let average getXic scanTimeToMzCorrection theoMz (psms:(PSMStatisticsResult*float) []) =
             //let meanPrecMz   = psms |> Seq.meanBy (fun (psm,m) -> psm.PrecursorMZ)
@@ -537,12 +563,10 @@ module PSMBasedQuantification =
             let frag = 
                 let ionSeries = (calcIonSeries peptide.BioSequence).TargetMasses
                 [1. .. 2.]
-                |> List.map (fun ch -> 
+                |> List.collect (fun ch -> 
                     ionSeries 
-                    |> List.map (fun x -> x.MainPeak.Mass)
-                    |> List.map (fun x -> Mass.toMZ x ch)
-                )
-                |> List.concat                    
+                    |> List.map (fun x -> Mass.toMZ x.MainPeak.Mass ch)
+                )                  
             psms
             |> Array.map (fun psm -> 
                 let spec = inReader.ReadSpectrumPeaks psm.PSMId
@@ -566,7 +590,8 @@ module PSMBasedQuantification =
         let ms1SortedByScanTime =
             massSpectra
             |> Seq.filter (fun ms -> MassSpectrum.getMsLevel ms = 1)
-            |> Seq.sortBy MassSpectrum.getScanTime
+            |> Seq.map (fun ms -> MassSpectrum.getScanTime ms, ms)
+            |> Seq.sortBy fst
             |> Array.ofSeq
         logger.Trace "Read and sort ms1s:finished"
         
@@ -681,8 +706,10 @@ module PSMBasedQuantification =
                 logger.Trace (sprintf "optimal mz Window for XIC look up found by estimation :%f Da" mzW)  
                 mzW
 
+        let readSpecPeaksWithMem = FSharpAux.Memoization.memoize inReader.ReadSpectrumPeaks
         ///
-        let getXIC = initGetProcessedXIC logger processParams.BaseLineCorrection inReader retTimeIdxed processParams.XicExtraction.ScanTimeWindow mzWindow    
+        let getPeaks = Query.initRTProfile readSpecPeaksWithMem
+        let getXIC = initGetProcessedXIC logger processParams.BaseLineCorrection getPeaks retTimeIdxed processParams.XicExtraction.ScanTimeWindow mzWindow    
         
         ///
         let identifyPeaks = initIdentifyPeaks processParams.XicExtraction.XicProcessing
@@ -846,8 +873,7 @@ module PSMBasedQuantification =
             let ms2s = psmsWithMatchedSums |> Array.map (fun (psm,m) -> psm.ScanTime,m)
             let theoMz = Mass.toMZ unlabledPeptide.Mass (float pepIon.Charge)
             let averagePSM = average getXIC scanTimeToMzCorrection theoMz psmsWithMatchedSums
-            let avgMass = Mass.ofMZ (averagePSM.MeanPrecMz) (pepIon.Charge |> float)
-            
+            let avgMass = Mass.ofMZ (averagePSM.MeanPrecMz) (pepIon.Charge |> float)      
             let peaks = 
                 try
                     identifyPeaks averagePSM.X_Xic averagePSM.Y_Xic 
@@ -865,6 +891,13 @@ module PSMBasedQuantification =
             let peakToQuantify = BioFSharp.Mz.Quantification.HULQ.getPeakBy peaks averagePSM.WeightedAvgScanTime
             let quantP = BioFSharp.Mz.Quantification.HULQ.quantifyPeak peakToQuantify
             let searchRTMinusFittedRT = searchRTMinusFittedRtTarget averagePSM.WeightedAvgScanTime quantP 
+            if quantP.EstimatedParams |> Array.exists (fun x -> nan.Equals x) || Array.isEmpty quantP.EstimatedParams then 
+                Chart.Point(averagePSM.X_Xic, averagePSM.Y_Xic)
+                |> Chart.withTitle(sprintf "Sequence= %s,globalMod = %i_noPeaks" pepIon.Sequence pepIon.GlobalMod)
+                |> Chart.withSize(1500.,800.)
+                |> Chart.SaveHtmlAs(Path.Combine[|plotDirectory; ((pepIon.Sequence |> String.filter (fun x -> x <> '*')) + "_GMod_" + pepIon.GlobalMod.ToString() + "Ch" + pepIon.Charge.ToString() + "_notQuantified")|])
+                None
+            else
             let clusterComparison_Target = comparePredictedAndMeasuredIsotopicCluster averagePSM.X_Xic averagePSM.Y_Xic averagePSM.Y_Xic_uncorrected pepIon.Charge unlabledPeptide.BioSequence quantP.EstimatedParams.[1] averagePSM.MeanPrecMz
             if diagCharts then 
                 saveChart pepIon.Sequence pepIon.GlobalMod pepIon.Charge averagePSM.X_Xic averagePSM.Y_Xic ms2s averagePSM.WeightedAvgScanTime
