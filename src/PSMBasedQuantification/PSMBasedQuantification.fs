@@ -34,7 +34,7 @@ module PSMBasedQuantification =
             for rtIdx = 0 to entries.Length-1 do
                 let entry = entries.[rtIdx]
                 let peaks = (readspecPeaks entry.SpectrumID).Peaks
-                let p = (RtIndexEntry.MzSearch (peaks, mzRange)).DefaultIfEmpty(new Peak1D(0., mzRange.LockValue))
+                let p = (RtIndexEntry.MzSearch (peaks, mzRange)).DefaultIfEmpty(Peak1D(0., mzRange.LockValue))
                         |> fun x -> RtIndexEntry.ClosestMz (x, mzRange.LockValue)
                         |> fun x -> RtIndexEntry.AsPeak2D (x, entry.Rt)
                 profile.[rtIdx] <- p
@@ -50,7 +50,7 @@ module PSMBasedQuantification =
             PepSequenceID        : int
         }
             
-    type averagePSM = {
+    type AveragePSM = {
         MeanPrecMz   : float
         MeanScanTime : float
         WeightedAvgScanTime:float
@@ -128,8 +128,6 @@ module PSMBasedQuantification =
             |> Array.maxBy fst          
         rSquared, model
 
-
-
     ///
     let getBaseLineCorrectionOffsetAt tarRT x_Xic y_Xic y_Xic_uncorrected =
         let (rt,y,yUncorr) = 
@@ -167,7 +165,7 @@ module PSMBasedQuantification =
                 let quantNorm =  x.Quant_Light / medianQuantIntensities
                 quantNorm / apexNorm
                 |> log2
-            qualR > lowerBorder && qualR < upperBorder
+            (qualR > lowerBorder && qualR < upperBorder) || (nan.Equals(qualR) )
             ) 
 
     ///
@@ -189,7 +187,7 @@ module PSMBasedQuantification =
                 let quantNorm =  x.Quant_Heavy / medianQuantIntensities
                 quantNorm / apexNorm
                 |> log2
-            qualR > lowerBorder && qualR < upperBorder
+            (qualR > lowerBorder && qualR < upperBorder) || (nan.Equals(qualR) )
             )
     
     /// Calculates the Kullback-Leibler divergence Dkl(p||q) from q (theory, model, description, or approximation of p) 
@@ -281,11 +279,30 @@ module PSMBasedQuantification =
             createAveragePSM correctedMz meanScanTime weightedAvgScanTime meanScore retData itzDataCorrected ItzDataUncorrected
 
 
-    type InferredPeak = {
+
+    type InferredXic = {
+        X_Xic                       :float[]
+        Y_Xic                       :float[]
+        Y_Xic_uncorrected           :float[]
+        }
+    
+    let getInferredXic getXic targetScanTime targetMz =
+        let (retData,itzData,uncorrectedItzData)   =
+                getXic targetScanTime targetMz 
+        {
+        X_Xic               = retData
+        Y_Xic               = itzData
+        Y_Xic_uncorrected   = uncorrectedItzData
+        }
+
+    type InferredQuantification = {
         Model                       :HULQ.PeakModel option
         Area                        :float
         StandardErrorOfPrediction   :float
         MeasuredApexIntensity       :float
+        Correlation_Light_Heavy     :float
+        SearchRTMinusFittedRT       :float
+        ClusterComparison           :ClusterComparison               
         EstimatedParams             :float[]
         X_Xic                       :float[]
         Y_Xic                       :float[]
@@ -293,55 +310,6 @@ module PSMBasedQuantification =
         xPeak                       :float[]
         yFitted                     :float[]
         }
-
-    ///
-    let quantifyInferredPeak getXic identifyPeaks targetMz targetScanTime inferredScanTime =
-        try
-            let (retData,itzData,uncorrectedItzData)   =
-                getXic targetScanTime targetMz
-            let peaks = identifyPeaks retData itzData
-            if Array.isEmpty peaks then
-                {
-                    Model                       = None 
-                    Area                        = nan
-                    StandardErrorOfPrediction   = nan
-                    MeasuredApexIntensity       = nan
-                    EstimatedParams             = [||]
-                    X_Xic                       = [||]
-                    Y_Xic                       = [||]
-                    Y_Xic_uncorrected           = [||]
-                    xPeak                       = [||]
-                    yFitted                     = [||]
-                }
-            else
-                let peakToQuantify = BioFSharp.Mz.Quantification.HULQ.getPeakBy peaks inferredScanTime
-                let quantP         = BioFSharp.Mz.Quantification.HULQ.quantifyPeak peakToQuantify
-                {
-                    Model                     = quantP.Model 
-                    Area                      = quantP.Area
-                    StandardErrorOfPrediction = quantP.StandardErrorOfPrediction
-                    MeasuredApexIntensity     = quantP.MeasuredApexIntensity
-                    EstimatedParams           = quantP.EstimatedParams
-                    X_Xic                     = retData
-                    Y_Xic                     = itzData
-                    Y_Xic_uncorrected         = uncorrectedItzData
-                    xPeak                     = peakToQuantify.XData
-                    yFitted                   = quantP.YPredicted
-                }
-        with
-        | _ -> 
-            {
-                Model                       = None
-                Area                        = nan
-                StandardErrorOfPrediction   = nan
-                MeasuredApexIntensity       = nan
-                EstimatedParams             = [||]
-                X_Xic                       = [||]
-                Y_Xic                       = [||]
-                Y_Xic_uncorrected           = [||]
-                xPeak                       = [||]
-                yFitted                     = [||]
-            }
 
     /// Calculates the difference between the scan time used to retreave the peak and the fitted peak midpoint.
     let searchRTMinusFittedRtTarget searchRT (fit:HULQ.QuantifiedPeak) = 
@@ -397,8 +365,13 @@ module PSMBasedQuantification =
         |> Chart.withTitle(sprintf "Sequence= %s,globalMod = %i" sequence globalMod)
         |> Chart.withSize(2500.,800.)
         |> Chart.SaveHtmlAs(Path.Combine[|plotDirectory; ((sequence |> String.filter (fun x -> x <> '*')) + "_GMod_" + globalMod.ToString() + "Ch" + ch.ToString())|])
+
+    let saveErrorChart (xXic:float[]) (yXic:float[]) pepIon desc plotDirectory =      
+        Chart.Point(xXic, yXic)
+        |> Chart.withTitle(sprintf "Sequence= %s,globalMod = %i_%s" pepIon.Sequence pepIon.GlobalMod desc)
+        |> Chart.withSize(1500.,800.)
+        |> Chart.SaveHtmlAs(Path.Combine[|plotDirectory; ((pepIon.Sequence |> String.filter (fun x -> x <> '*')) + "_GMod_" + pepIon.GlobalMod.ToString() + "Ch" + pepIon.Charge.ToString() + "_notQuantified")|])
             
-           
     // Method is based on: https://doi.org/10.1021/ac0600196
     /// Estimates the autocorrelation at lag 1 of a blank signal (containing only noise). Subsequently, the signal of interest is smoothed
     /// several times by a savitzky golay filter using constant polynomial order and variing windowWidth. For each iteration, the deviation
@@ -426,21 +399,32 @@ module PSMBasedQuantification =
         | Domain.WindowSize.Fixed w  -> fun yData -> w
         | Domain.WindowSize.EstimateUsingAutoCorrelation noiseAutoCorr -> fun yData -> optimizeWindowWidth polynomOrder windowWidthToTest noiseAutoCorr yData
 
+    ///
     let initIdentifyPeaks (peakDetectionParams:Domain.XicProcessing) =
         match peakDetectionParams with 
         | Domain.XicProcessing.SecondDerivative parameters ->
             let getWindowWidth = initGetWindowWidth parameters.WindowSize parameters.PolynomOrder [|5 .. 2 .. 60|] 
             (fun xData yData -> 
+                try
                 let  windowSize = getWindowWidth yData
                 FSharp.Stats.Signal.PeakDetection.SecondDerivative.getPeaks parameters.MinSNR parameters.PolynomOrder windowSize xData yData
+                with 
+                | ex ->
+                    // logger.Trace (sprintf "Quant failed: Peak detection failed with: %A" ex)
+                    [||]
                 )
         | Domain.XicProcessing.Wavelet parameters ->
             (fun xData yData -> 
+                try
                 FSharpStats'.Wavelet.identify parameters xData yData
+                with 
+                | ex ->
+                    // logger.Trace (sprintf "Quant failed: Peak detection failed with: %A" ex)
+                    [||]
                 )
         
     ///
-    let calcCorrelation (xValues:float []) (quantifiedPeak:HULQ.QuantifiedPeak) (inferredPeak:InferredPeak) = 
+    let calcCorrelation (xValues:float []) (quantifiedPeak:HULQ.QuantifiedPeak) (inferredPeak:HULQ.QuantifiedPeak) = 
         let getValue (model:HULQ.PeakModel) estParams =
             match model with
             | HULQ.PeakModel.Gaussian m -> 
@@ -478,14 +462,14 @@ module PSMBasedQuantification =
         let peaks' = 
             getSpec inReader closestMS1
             |> Array.filter (fun x -> x.Mz < tarMz + 1. && x.Mz > tarMz - 0.6)
-        //[
-        //Chart.Point(targetIsotopicPattern_predicted)
-        //|> Chart.withTraceName "pred"
-        //Chart.Point(peaks'|> Array.map (fun x -> x.Mz,x.Intensity))
-        //|> Chart.withTraceName "asis"
-        //]
-        //|> Chart.Combine
-        //|> Chart.Show
+        [
+        Chart.Point(targetIsotopicPattern_predicted)
+        |> Chart.withTraceName "pred"
+        Chart.Point(peaks'|> Array.map (fun x -> x.Mz,x.Intensity))
+        |> Chart.withTraceName "asis"
+        ]
+        |> Chart.Combine
+        |> Chart.Show
 
         let recordedVsPredictedPattern = 
             targetIsotopicPattern_predicted
@@ -496,10 +480,8 @@ module PSMBasedQuantification =
                 )
             |> Array.groupBy fst
             |> Array.map (fun ((peak),list) -> 
-                peak.Mz,peak.Intensity,list |> Array.sumBy snd  (*,list |>*)
-                )
-            |> Array.map (fun (mz,measuredIntensity,predictedRelFrequency) -> 
-                    {Mz=mz;MeasuredIntensity= measuredIntensity;MeasuredIntensityCorrected= measuredIntensity - baseLineCorrectionF;PredictedRelFrequency= predictedRelFrequency}
+                let (mz,measuredIntensity,predictedRelFrequency) = peak.Mz,peak.Intensity,list |> Array.sumBy snd 
+                {Mz=mz;MeasuredIntensity=measuredIntensity;MeasuredIntensityCorrected=measuredIntensity - baseLineCorrectionF;PredictedRelFrequency= predictedRelFrequency}
                 )
             |> Array.filter (fun (isoP:PeakComparison) -> isoP.MeasuredIntensityCorrected > 0.)
         let recordedVsPredictedPatternNorm = 
@@ -601,8 +583,7 @@ module PSMBasedQuantification =
             Csv.CsvReader<PSMStatisticsResult>(SchemaMode=Csv.Fill).ReadFile(scoredPSMs,'\t',false,1)
             |> Array.ofSeq
         logger.Trace "Read scored PSMs:finished"
-
- 
+        
         logger.Trace "Estimate precursor mz standard deviation and mz correction."
         ///
         let ms1AccuracyEstimate,scanTimeToMzCorrection = 
@@ -729,137 +710,304 @@ module PSMBasedQuantification =
             let averagePSM = average getXIC scanTimeToMzCorrection theoMz psmsWithMatchedSums
             let avgMass = Mass.ofMZ (averagePSM.MeanPrecMz) (pepIon.Charge |> float)
             let peaks = identifyPeaks averagePSM.X_Xic averagePSM.Y_Xic
-            if Array.isEmpty peaks && diagCharts then 
-                Chart.Point(averagePSM.X_Xic, averagePSM.Y_Xic)
-                |> Chart.withTitle(sprintf "Sequence= %s,globalMod = %i_noPeaks" pepIon.Sequence pepIon.GlobalMod)
-                |> Chart.withSize(1500.,800.)
-                |> Chart.SaveHtmlAs(Path.Combine[|plotDirectory; ((pepIon.Sequence |> String.filter (fun x -> x <> '*')) + "_GMod_" + pepIon.GlobalMod.ToString() + "Ch" + pepIon.Charge.ToString() + "_notQuantified")|])
+            if Array.isEmpty peaks then 
+                if diagCharts then saveErrorChart averagePSM.X_Xic averagePSM.Y_Xic pepIon "noPeaks" plotDirectory
+                logger.Trace (sprintf "Quant failed: No Peak detected, Sequence:%s, GlobalMod:%s, Charge:%s" (pepIon.Sequence |> String.filter (fun x -> x <> '*')) (pepIon.GlobalMod.ToString()) (pepIon.Charge.ToString()))
                 None
             else
             let peakToQuantify = BioFSharp.Mz.Quantification.HULQ.getPeakBy peaks averagePSM.WeightedAvgScanTime
             let quantP = BioFSharp.Mz.Quantification.HULQ.quantifyPeak peakToQuantify                        
             let searchRTMinusFittedRT = searchRTMinusFittedRtTarget averagePSM.WeightedAvgScanTime quantP
+            if quantP.EstimatedParams |> Array.exists nan.Equals || Array.isEmpty quantP.EstimatedParams then 
+                if diagCharts then saveErrorChart averagePSM.X_Xic averagePSM.Y_Xic pepIon "fittingFailed" plotDirectory    
+                logger.Trace (sprintf "Quant failed: Peak fitting failed, Sequence:%s, GlobalMod:%s, Charge:%s" (pepIon.Sequence |> String.filter (fun x -> x <> '*')) (pepIon.GlobalMod.ToString()) (pepIon.Charge.ToString()))
+                None
+            else
             let inferredScanTime = chooseScanTime processParams.XicExtraction.ScanTimeWindow searchRTMinusFittedRT averagePSM.WeightedAvgScanTime quantP 
-            let clusterComparison_Target = comparePredictedAndMeasuredIsotopicCluster averagePSM.X_Xic averagePSM.Y_Xic averagePSM.Y_Xic_uncorrected pepIon.Charge targetPeptide.BioSequence quantP.EstimatedParams.[1] averagePSM.MeanPrecMz            
+            let clusterComparisonTarget = comparePredictedAndMeasuredIsotopicCluster averagePSM.X_Xic averagePSM.Y_Xic averagePSM.Y_Xic_uncorrected pepIon.Charge targetPeptide.BioSequence quantP.EstimatedParams.[1] averagePSM.MeanPrecMz            
             if pepIon.GlobalMod = 0 then
-                let mz_Heavy = 
+                let mzHeavy = 
                     let mz = Mass.toMZ (labeledPeptide.Mass) (pepIon.Charge|> float)
                     let correctedMz = scanTimeToMzCorrection inferredScanTime + mz
-                    correctedMz                
-                let inferred_Heavy = quantifyInferredPeak getXIC identifyPeaks mz_Heavy averagePSM.WeightedAvgScanTime inferredScanTime
-                let searchRTMinusFittedRT_Heavy = searchRTMinusFittedRtInferred inferredScanTime inferred_Heavy
-                let clusterComparison_Heavy = comparePredictedAndMeasuredIsotopicCluster inferred_Heavy.X_Xic inferred_Heavy.Y_Xic inferred_Heavy.Y_Xic_uncorrected pepIon.Charge labeledPeptide.BioSequence quantP.EstimatedParams.[1] mz_Heavy
-                let corrLightHeavy  = calcCorrelation averagePSM.X_Xic quantP inferred_Heavy  
-                if diagCharts then 
-                    saveChart pepIon.Sequence pepIon.GlobalMod pepIon.Charge averagePSM.X_Xic averagePSM.Y_Xic ms2s averagePSM.WeightedAvgScanTime
-                                    peakToQuantify.XData peakToQuantify.YData quantP.YPredicted inferred_Heavy.X_Xic inferred_Heavy.Y_Xic inferred_Heavy.xPeak inferred_Heavy.yFitted peaks clusterComparison_Target.PeakComparisons plotDirectory
-                {
-                StringSequence                              = pepIon.Sequence
-                GlobalMod                                   = pepIon.GlobalMod
-                Charge                                      = pepIon.Charge
-                PepSequenceID                               = pepIon.PepSequenceID
-                ModSequenceID                               = pepIon.ModSequenceID
-                PrecursorMZ                                 = averagePSM.MeanPrecMz
-                MeasuredMass                                = avgMass
-                TheoMass                                    = unlabledPeptide.Mass
-                AbsDeltaMass                                = abs(avgMass-unlabledPeptide.Mass)
-                MeanPercolatorScore                         = averagePSM.MeanScore
-                QValue                                      = bestQValue
-                PEPValue                                    = bestPepValue
-                ProteinNames                                = prots
-                QuantMz_Light                               = averagePSM.MeanPrecMz
-                Quant_Light                                 = quantP.Area
-                MeasuredApex_Light                          = quantP.MeasuredApexIntensity
-                Seo_Light                                   = quantP.StandardErrorOfPrediction
-                Params_Light                                = quantP.EstimatedParams            
-                Difference_SearchRT_FittedRT_Light          = searchRTMinusFittedRT
-                KLDiv_Observed_Theoretical_Light            = clusterComparison_Target.KLDiv_UnCorrected
-                KLDiv_CorrectedObserved_Theoretical_Light   = clusterComparison_Target.KLDiv_Corrected
-                QuantMz_Heavy                               = mz_Heavy
-                Quant_Heavy                                 = inferred_Heavy.Area
-                MeasuredApex_Heavy                          = inferred_Heavy.MeasuredApexIntensity
-                Seo_Heavy                                   = inferred_Heavy.StandardErrorOfPrediction
-                Params_Heavy                                = inferred_Heavy.EstimatedParams 
-                Difference_SearchRT_FittedRT_Heavy          = searchRTMinusFittedRT_Heavy
-                KLDiv_Observed_Theoretical_Heavy            = clusterComparison_Heavy.KLDiv_UnCorrected
-                KLDiv_CorrectedObserved_Theoretical_Heavy   = clusterComparison_Heavy.KLDiv_Corrected
-                Correlation_Light_Heavy                     = corrLightHeavy
-                QuantificationSource                        = QuantificationSource.PSM
-                IsotopicPatternMz_Light                     = clusterComparison_Target.PeakComparisons |> Array.map (fun x -> x.Mz)
-                IsotopicPatternIntensity_Observed_Light     = clusterComparison_Target.PeakComparisons |> Array.map (fun x -> x.MeasuredIntensity)
-                IsotopicPatternIntensity_Corrected_Light    = clusterComparison_Target.PeakComparisons |> Array.map (fun x -> x.MeasuredIntensityCorrected)
-                RtTrace_Light                               = averagePSM.X_Xic 
-                IntensityTrace_Observed_Light               = averagePSM.Y_Xic_uncorrected
-                IntensityTrace_Corrected_Light              = averagePSM.Y_Xic
-                IsotopicPatternMz_Heavy                     = clusterComparison_Heavy.PeakComparisons |> Array.map (fun x -> x.Mz)
-                IsotopicPatternIntensity_Observed_Heavy     = clusterComparison_Heavy.PeakComparisons |> Array.map (fun x -> x.MeasuredIntensity)
-                IsotopicPatternIntensity_Corrected_Heavy    = clusterComparison_Heavy.PeakComparisons |> Array.map (fun x -> x.MeasuredIntensityCorrected)
-                RtTrace_Heavy                               = inferred_Heavy.X_Xic 
-                IntensityTrace_Observed_Heavy               = inferred_Heavy.Y_Xic_uncorrected
-                IntensityTrace_Corrected_Heavy              = inferred_Heavy.Y_Xic
-                }
-                |> Option.Some
+                    correctedMz 
+                let inferredQuant = 
+                    let inferredXicHeavy = getInferredXic getXIC averagePSM.WeightedAvgScanTime mzHeavy    
+                    let inferredPeaksHeavy = identifyPeaks inferredXicHeavy.X_Xic inferredXicHeavy.Y_Xic
+                    if Array.isEmpty inferredPeaksHeavy then 
+                        if diagCharts then saveErrorChart inferredXicHeavy.X_Xic inferredXicHeavy.Y_Xic pepIon "noInferredPeaks" plotDirectory
+                        logger.Trace (sprintf "Quant failed: No Peak detected, Sequence:%s, GlobalMod:%s, Charge:%s" (pepIon.Sequence |> String.filter (fun x -> x <> '*')) (pepIon.GlobalMod.ToString()) (pepIon.Charge.ToString()))
+                        None
+                    else
+                    let peakToQuantifyHeavy = BioFSharp.Mz.Quantification.HULQ.getPeakBy inferredPeaksHeavy inferredScanTime
+                    let quantPHeavy         = BioFSharp.Mz.Quantification.HULQ.quantifyPeak peakToQuantifyHeavy          
+                    if quantPHeavy.EstimatedParams |> Array.exists nan.Equals || Array.isEmpty quantPHeavy.EstimatedParams then 
+                        if diagCharts then saveErrorChart inferredXicHeavy.X_Xic inferredXicHeavy.Y_Xic pepIon "fittingInferredFailed" plotDirectory    
+                        logger.Trace (sprintf "Quant failed: Peak fitting failed, Sequence:%s, GlobalMod:%s, Charge:%s" (pepIon.Sequence |> String.filter (fun x -> x <> '*')) (pepIon.GlobalMod.ToString()) (pepIon.Charge.ToString()))
+                        None
+                    else
+                    // let inferred_Heavy = quantifyInferredPeak getXIC identifyPeaks mz_Heavy averagePSM.WeightedAvgScanTime inferredScanTime
+                    let searchRTMinusFittedRTHeavy = searchRTMinusFittedRtTarget inferredScanTime quantPHeavy
+                    let clusterComparisonHeavy = comparePredictedAndMeasuredIsotopicCluster inferredXicHeavy.X_Xic inferredXicHeavy.Y_Xic inferredXicHeavy.Y_Xic_uncorrected pepIon.Charge labeledPeptide.BioSequence quantP.EstimatedParams.[1] mzHeavy
+                    let corrLightHeavy  = calcCorrelation averagePSM.X_Xic quantP quantPHeavy
+                    {
+                    Model                       = quantPHeavy.Model
+                    Area                        = quantPHeavy.Area
+                    StandardErrorOfPrediction   = quantPHeavy.StandardErrorOfPrediction
+                    MeasuredApexIntensity       = quantPHeavy.MeasuredApexIntensity
+                    Correlation_Light_Heavy     = corrLightHeavy
+                    SearchRTMinusFittedRT       = searchRTMinusFittedRTHeavy 
+                    ClusterComparison           = clusterComparisonHeavy     
+                    EstimatedParams             = quantPHeavy.EstimatedParams
+                    X_Xic                       = inferredXicHeavy.X_Xic
+                    Y_Xic                       = inferredXicHeavy.Y_Xic 
+                    Y_Xic_uncorrected           = inferredXicHeavy.Y_Xic_uncorrected 
+                    xPeak                       = peakToQuantifyHeavy.XData 
+                    yFitted                     = quantPHeavy.YPredicted
+                    }
+                    |> Some                      
+                match inferredQuant with 
+                | Some successfulQuant -> 
+                    if diagCharts then 
+                        saveChart pepIon.Sequence pepIon.GlobalMod pepIon.Charge averagePSM.X_Xic averagePSM.Y_Xic ms2s averagePSM.WeightedAvgScanTime
+                                        peakToQuantify.XData peakToQuantify.YData quantP.YPredicted successfulQuant.X_Xic successfulQuant.Y_Xic successfulQuant.xPeak successfulQuant.yFitted peaks clusterComparisonTarget.PeakComparisons plotDirectory
+                    {
+                    StringSequence                              = pepIon.Sequence
+                    GlobalMod                                   = pepIon.GlobalMod
+                    Charge                                      = pepIon.Charge
+                    PepSequenceID                               = pepIon.PepSequenceID
+                    ModSequenceID                               = pepIon.ModSequenceID
+                    PrecursorMZ                                 = averagePSM.MeanPrecMz
+                    MeasuredMass                                = avgMass
+                    TheoMass                                    = unlabledPeptide.Mass
+                    AbsDeltaMass                                = abs(avgMass-unlabledPeptide.Mass)
+                    MeanPercolatorScore                         = averagePSM.MeanScore
+                    QValue                                      = bestQValue
+                    PEPValue                                    = bestPepValue
+                    ProteinNames                                = prots
+                    QuantMz_Light                               = averagePSM.MeanPrecMz
+                    Quant_Light                                 = quantP.Area
+                    MeasuredApex_Light                          = quantP.MeasuredApexIntensity
+                    Seo_Light                                   = quantP.StandardErrorOfPrediction
+                    Params_Light                                = quantP.EstimatedParams            
+                    Difference_SearchRT_FittedRT_Light          = searchRTMinusFittedRT
+                    KLDiv_Observed_Theoretical_Light            = clusterComparisonTarget.KLDiv_UnCorrected
+                    KLDiv_CorrectedObserved_Theoretical_Light   = clusterComparisonTarget.KLDiv_Corrected
+                    QuantMz_Heavy                               = mzHeavy
+                    Quant_Heavy                                 = successfulQuant.Area
+                    MeasuredApex_Heavy                          = successfulQuant.MeasuredApexIntensity
+                    Seo_Heavy                                   = successfulQuant.StandardErrorOfPrediction
+                    Params_Heavy                                = successfulQuant.EstimatedParams 
+                    Difference_SearchRT_FittedRT_Heavy          = successfulQuant.SearchRTMinusFittedRT
+                    KLDiv_Observed_Theoretical_Heavy            = successfulQuant.ClusterComparison.KLDiv_UnCorrected
+                    KLDiv_CorrectedObserved_Theoretical_Heavy   = successfulQuant.ClusterComparison.KLDiv_Corrected
+                    Correlation_Light_Heavy                     = successfulQuant.Correlation_Light_Heavy
+                    QuantificationSource                        = QuantificationSource.PSM
+                    IsotopicPatternMz_Light                     = clusterComparisonTarget.PeakComparisons |> Array.map (fun x -> x.Mz)
+                    IsotopicPatternIntensity_Observed_Light     = clusterComparisonTarget.PeakComparisons |> Array.map (fun x -> x.MeasuredIntensity)
+                    IsotopicPatternIntensity_Corrected_Light    = clusterComparisonTarget.PeakComparisons |> Array.map (fun x -> x.MeasuredIntensityCorrected)
+                    RtTrace_Light                               = averagePSM.X_Xic 
+                    IntensityTrace_Observed_Light               = averagePSM.Y_Xic_uncorrected
+                    IntensityTrace_Corrected_Light              = averagePSM.Y_Xic
+                    IsotopicPatternMz_Heavy                     = successfulQuant.ClusterComparison.PeakComparisons |> Array.map (fun x -> x.Mz)
+                    IsotopicPatternIntensity_Observed_Heavy     = successfulQuant.ClusterComparison.PeakComparisons |> Array.map (fun x -> x.MeasuredIntensity)
+                    IsotopicPatternIntensity_Corrected_Heavy    = successfulQuant.ClusterComparison.PeakComparisons |> Array.map (fun x -> x.MeasuredIntensityCorrected)
+                    RtTrace_Heavy                               = successfulQuant.X_Xic 
+                    IntensityTrace_Observed_Heavy               = successfulQuant.Y_Xic_uncorrected
+                    IntensityTrace_Corrected_Heavy              = successfulQuant.Y_Xic
+                    }
+                    |> Option.Some
+                | None -> 
+                    if diagCharts then 
+                        saveChart pepIon.Sequence pepIon.GlobalMod pepIon.Charge averagePSM.X_Xic averagePSM.Y_Xic ms2s averagePSM.WeightedAvgScanTime
+                                        peakToQuantify.XData peakToQuantify.YData quantP.YPredicted [||] [||] [||] [||] peaks clusterComparisonTarget.PeakComparisons plotDirectory
+                    {
+                    StringSequence                              = pepIon.Sequence
+                    GlobalMod                                   = pepIon.GlobalMod
+                    Charge                                      = pepIon.Charge
+                    PepSequenceID                               = pepIon.PepSequenceID
+                    ModSequenceID                               = pepIon.ModSequenceID
+                    PrecursorMZ                                 = averagePSM.MeanPrecMz
+                    MeasuredMass                                = avgMass
+                    TheoMass                                    = unlabledPeptide.Mass
+                    AbsDeltaMass                                = abs(avgMass-unlabledPeptide.Mass)
+                    MeanPercolatorScore                         = averagePSM.MeanScore
+                    QValue                                      = bestQValue
+                    PEPValue                                    = bestPepValue
+                    ProteinNames                                = prots
+                    QuantMz_Light                               = averagePSM.MeanPrecMz
+                    Quant_Light                                 = quantP.Area
+                    MeasuredApex_Light                          = quantP.MeasuredApexIntensity
+                    Seo_Light                                   = quantP.StandardErrorOfPrediction
+                    Params_Light                                = quantP.EstimatedParams            
+                    Difference_SearchRT_FittedRT_Light          = searchRTMinusFittedRT
+                    KLDiv_Observed_Theoretical_Light            = clusterComparisonTarget.KLDiv_UnCorrected
+                    KLDiv_CorrectedObserved_Theoretical_Light   = clusterComparisonTarget.KLDiv_Corrected
+                    QuantMz_Heavy                               = mzHeavy
+                    Quant_Heavy                                 = nan
+                    MeasuredApex_Heavy                          = nan
+                    Seo_Heavy                                   = nan
+                    Params_Heavy                                = [||]
+                    Difference_SearchRT_FittedRT_Heavy          = nan
+                    KLDiv_Observed_Theoretical_Heavy            = nan
+                    KLDiv_CorrectedObserved_Theoretical_Heavy   = nan
+                    Correlation_Light_Heavy                     = nan
+                    QuantificationSource                        = QuantificationSource.PSM
+                    IsotopicPatternMz_Light                     = clusterComparisonTarget.PeakComparisons |> Array.map (fun x -> x.Mz)
+                    IsotopicPatternIntensity_Observed_Light     = clusterComparisonTarget.PeakComparisons |> Array.map (fun x -> x.MeasuredIntensity)
+                    IsotopicPatternIntensity_Corrected_Light    = clusterComparisonTarget.PeakComparisons |> Array.map (fun x -> x.MeasuredIntensityCorrected)
+                    RtTrace_Light                               = averagePSM.X_Xic 
+                    IntensityTrace_Observed_Light               = averagePSM.Y_Xic_uncorrected
+                    IntensityTrace_Corrected_Light              = averagePSM.Y_Xic
+                    IsotopicPatternMz_Heavy                     = [||]
+                    IsotopicPatternIntensity_Observed_Heavy     = [||]
+                    IsotopicPatternIntensity_Corrected_Heavy    = [||]
+                    RtTrace_Heavy                               = [||]
+                    IntensityTrace_Observed_Heavy               = [||]
+                    IntensityTrace_Corrected_Heavy              = [||]
+                    }
+                    |> Option.Some
             else
-                let mz_Light = 
+                let mzLight = 
                     let mz = Mass.toMZ (unlabledPeptide.Mass) (pepIon.Charge|> float)
                     let correctedMz = scanTimeToMzCorrection inferredScanTime + mz
                     correctedMz   
-                let inferred_Light       = quantifyInferredPeak getXIC identifyPeaks mz_Light averagePSM.WeightedAvgScanTime inferredScanTime
-                let searchRTMinusFittedRT_Light = searchRTMinusFittedRtInferred inferredScanTime inferred_Light
-                let clusterComparison_Light = comparePredictedAndMeasuredIsotopicCluster inferred_Light.X_Xic inferred_Light.Y_Xic inferred_Light.Y_Xic_uncorrected pepIon.Charge unlabledPeptide.BioSequence quantP.EstimatedParams.[1] mz_Light
-                let corrLightHeavy        = calcCorrelation averagePSM.X_Xic quantP inferred_Light
-                if diagCharts then 
+                let inferredQuant = 
+                    let inferredXicLight = getInferredXic getXIC averagePSM.WeightedAvgScanTime mzLight    
+                    let inferredPeaksLight = identifyPeaks inferredXicLight.X_Xic inferredXicLight.Y_Xic
+                    if Array.isEmpty inferredPeaksLight then 
+                        if diagCharts then saveErrorChart inferredXicLight.X_Xic inferredXicLight.Y_Xic pepIon "noInferredPeaks" plotDirectory
+                        logger.Trace (sprintf "Quant failed: No Peak detected, Sequence:%s, GlobalMod:%s, Charge:%s" (pepIon.Sequence |> String.filter (fun x -> x <> '*')) (pepIon.GlobalMod.ToString()) (pepIon.Charge.ToString()))
+                        None
+                    else
+                    let peakToQuantifyLight = BioFSharp.Mz.Quantification.HULQ.getPeakBy inferredPeaksLight inferredScanTime
+                    let quantPLight         = BioFSharp.Mz.Quantification.HULQ.quantifyPeak peakToQuantifyLight          
+                    if quantPLight.EstimatedParams |> Array.exists nan.Equals || Array.isEmpty quantPLight.EstimatedParams then 
+                        if diagCharts then saveErrorChart inferredXicLight.X_Xic inferredXicLight.Y_Xic pepIon "fittingInferredFailed" plotDirectory    
+                        logger.Trace (sprintf "Quant failed: Peak fitting failed, Sequence:%s, GlobalMod:%s, Charge:%s" (pepIon.Sequence |> String.filter (fun x -> x <> '*')) (pepIon.GlobalMod.ToString()) (pepIon.Charge.ToString()))
+                        None
+                    else
+                    // let inferred_Heavy = quantifyInferredPeak getXIC identifyPeaks mz_Heavy averagePSM.WeightedAvgScanTime inferredScanTime
+                    let searchRTMinusFittedRTLight = searchRTMinusFittedRtTarget inferredScanTime quantPLight
+                    let clusterComparisonLight = comparePredictedAndMeasuredIsotopicCluster inferredXicLight.X_Xic inferredXicLight.Y_Xic inferredXicLight.Y_Xic_uncorrected pepIon.Charge unlabledPeptide.BioSequence quantP.EstimatedParams.[1] mzLight
+                    let corrLightHeavy  = calcCorrelation averagePSM.X_Xic quantP quantPLight
+                    {
+                    Model                       = quantPLight.Model
+                    Area                        = quantPLight.Area
+                    StandardErrorOfPrediction   = quantPLight.StandardErrorOfPrediction
+                    MeasuredApexIntensity       = quantPLight.MeasuredApexIntensity
+                    Correlation_Light_Heavy     = corrLightHeavy
+                    SearchRTMinusFittedRT       = searchRTMinusFittedRTLight 
+                    ClusterComparison           = clusterComparisonLight     
+                    EstimatedParams             = quantPLight.EstimatedParams
+                    X_Xic                       = inferredXicLight.X_Xic
+                    Y_Xic                       = inferredXicLight.Y_Xic 
+                    Y_Xic_uncorrected           = inferredXicLight.Y_Xic_uncorrected 
+                    xPeak                       = peakToQuantifyLight.XData 
+                    yFitted                     = quantPLight.YPredicted
+                    }
+                    |> Some                      
+                match inferredQuant with 
+                | Some successfulQuant -> 
+                    if diagCharts then 
+                        saveChart pepIon.Sequence pepIon.GlobalMod pepIon.Charge averagePSM.X_Xic averagePSM.Y_Xic ms2s averagePSM.WeightedAvgScanTime
+                                        peakToQuantify.XData peakToQuantify.YData quantP.YPredicted successfulQuant.X_Xic successfulQuant.Y_Xic successfulQuant.xPeak successfulQuant.yFitted peaks clusterComparisonTarget.PeakComparisons plotDirectory
+                    {
+                    StringSequence                              = pepIon.Sequence
+                    GlobalMod                                   = pepIon.GlobalMod
+                    Charge                                      = pepIon.Charge
+                    PepSequenceID                               = pepIon.PepSequenceID
+                    ModSequenceID                               = pepIon.ModSequenceID
+                    PrecursorMZ                                 = averagePSM.MeanPrecMz
+                    MeasuredMass                                = avgMass
+                    TheoMass                                    = labeledPeptide.Mass
+                    AbsDeltaMass                                = abs(avgMass-labeledPeptide.Mass)
+                    MeanPercolatorScore                         = averagePSM.MeanScore
+                    QValue                                      = bestQValue
+                    PEPValue                                    = bestPepValue
+                    ProteinNames                                = prots
+                    QuantMz_Light                               = mzLight
+                    Quant_Light                                 = successfulQuant.Area
+                    MeasuredApex_Light                          = successfulQuant.MeasuredApexIntensity
+                    Seo_Light                                   = successfulQuant.StandardErrorOfPrediction
+                    Params_Light                                = successfulQuant.EstimatedParams 
+                    Difference_SearchRT_FittedRT_Light          = successfulQuant.SearchRTMinusFittedRT
+                    KLDiv_Observed_Theoretical_Light            = successfulQuant.ClusterComparison.KLDiv_UnCorrected
+                    KLDiv_CorrectedObserved_Theoretical_Light   = successfulQuant.ClusterComparison.KLDiv_Corrected
+                    QuantMz_Heavy                               = averagePSM.MeanPrecMz
+                    Quant_Heavy                                 = quantP.Area
+                    MeasuredApex_Heavy                          = quantP.MeasuredApexIntensity
+                    Seo_Heavy                                   = quantP.StandardErrorOfPrediction
+                    Params_Heavy                                = quantP.EstimatedParams 
+                    Difference_SearchRT_FittedRT_Heavy          = searchRTMinusFittedRT
+                    KLDiv_Observed_Theoretical_Heavy            = clusterComparisonTarget.KLDiv_UnCorrected
+                    KLDiv_CorrectedObserved_Theoretical_Heavy   = clusterComparisonTarget.KLDiv_Corrected
+                    Correlation_Light_Heavy                     = successfulQuant.Correlation_Light_Heavy
+                    QuantificationSource                        = QuantificationSource.PSM
+                    IsotopicPatternMz_Light                     = successfulQuant.ClusterComparison.PeakComparisons |> Array.map (fun x -> x.Mz)
+                    IsotopicPatternIntensity_Observed_Light     = successfulQuant.ClusterComparison.PeakComparisons |> Array.map (fun x -> x.MeasuredIntensity)
+                    IsotopicPatternIntensity_Corrected_Light    = successfulQuant.ClusterComparison.PeakComparisons |> Array.map (fun x -> x.MeasuredIntensityCorrected)
+                    RtTrace_Light                               = successfulQuant.X_Xic 
+                    IntensityTrace_Observed_Light               = successfulQuant.Y_Xic_uncorrected
+                    IntensityTrace_Corrected_Light              = successfulQuant.Y_Xic
+                    IsotopicPatternMz_Heavy                     = clusterComparisonTarget.PeakComparisons |> Array.map (fun x -> x.Mz)
+                    IsotopicPatternIntensity_Observed_Heavy     = clusterComparisonTarget.PeakComparisons |> Array.map (fun x -> x.MeasuredIntensity)
+                    IsotopicPatternIntensity_Corrected_Heavy    = clusterComparisonTarget.PeakComparisons |> Array.map (fun x -> x.MeasuredIntensityCorrected)
+                    RtTrace_Heavy                               = averagePSM.X_Xic 
+                    IntensityTrace_Observed_Heavy               = averagePSM.Y_Xic_uncorrected
+                    IntensityTrace_Corrected_Heavy              = averagePSM.Y_Xic
+                    }
+                    |> Option.Some
+                | None -> 
                     saveChart pepIon.Sequence pepIon.GlobalMod pepIon.Charge averagePSM.X_Xic averagePSM.Y_Xic ms2s averagePSM.WeightedAvgScanTime
-                                peakToQuantify.XData peakToQuantify.YData quantP.YPredicted inferred_Light.X_Xic inferred_Light.Y_Xic inferred_Light.xPeak inferred_Light.yFitted (*envelopeSumX envelopeSumY*) peaks clusterComparison_Target.PeakComparisons plotDirectory
-                {
-                StringSequence                              = pepIon.Sequence
-                GlobalMod                                   = pepIon.GlobalMod
-                Charge                                      = pepIon.Charge
-                PepSequenceID                               = pepIon.PepSequenceID
-                ModSequenceID                               = pepIon.ModSequenceID
-                PrecursorMZ                                 = averagePSM.MeanPrecMz
-                MeasuredMass                                = avgMass
-                TheoMass                                    = labeledPeptide.Mass
-                AbsDeltaMass                                = abs(avgMass-labeledPeptide.Mass)
-                MeanPercolatorScore                         = averagePSM.MeanScore
-                QValue                                      = bestQValue
-                PEPValue                                    = bestPepValue
-                ProteinNames                                = prots
-                QuantMz_Light                               = mz_Light
-                Quant_Light                                 = inferred_Light.Area
-                MeasuredApex_Light                          = inferred_Light.MeasuredApexIntensity
-                Seo_Light                                   = inferred_Light.StandardErrorOfPrediction
-                Params_Light                                = inferred_Light.EstimatedParams 
-                Difference_SearchRT_FittedRT_Light          = searchRTMinusFittedRT_Light
-                KLDiv_Observed_Theoretical_Light            = clusterComparison_Light.KLDiv_UnCorrected
-                KLDiv_CorrectedObserved_Theoretical_Light   = clusterComparison_Light.KLDiv_Corrected
-                QuantMz_Heavy                               = averagePSM.MeanPrecMz
-                Quant_Heavy                                 = quantP.Area
-                MeasuredApex_Heavy                          = quantP.MeasuredApexIntensity
-                Seo_Heavy                                   = quantP.StandardErrorOfPrediction
-                Params_Heavy                                = quantP.EstimatedParams 
-                Difference_SearchRT_FittedRT_Heavy          = searchRTMinusFittedRT
-                KLDiv_Observed_Theoretical_Heavy            = clusterComparison_Target.KLDiv_UnCorrected
-                KLDiv_CorrectedObserved_Theoretical_Heavy   = clusterComparison_Target.KLDiv_Corrected
-                Correlation_Light_Heavy                     = corrLightHeavy
-                QuantificationSource                        = QuantificationSource.PSM
-                IsotopicPatternMz_Light                     = clusterComparison_Light.PeakComparisons |> Array.map (fun x -> x.Mz)
-                IsotopicPatternIntensity_Observed_Light     = clusterComparison_Light.PeakComparisons |> Array.map (fun x -> x.MeasuredIntensity)
-                IsotopicPatternIntensity_Corrected_Light    = clusterComparison_Light.PeakComparisons |> Array.map (fun x -> x.MeasuredIntensityCorrected)
-                RtTrace_Light                               = inferred_Light.X_Xic 
-                IntensityTrace_Observed_Light               = inferred_Light.Y_Xic_uncorrected
-                IntensityTrace_Corrected_Light              = inferred_Light.Y_Xic
-                IsotopicPatternMz_Heavy                     = clusterComparison_Target.PeakComparisons |> Array.map (fun x -> x.Mz)
-                IsotopicPatternIntensity_Observed_Heavy     = clusterComparison_Target.PeakComparisons |> Array.map (fun x -> x.MeasuredIntensity)
-                IsotopicPatternIntensity_Corrected_Heavy    = clusterComparison_Target.PeakComparisons |> Array.map (fun x -> x.MeasuredIntensityCorrected)
-                RtTrace_Heavy                               = averagePSM.X_Xic 
-                IntensityTrace_Observed_Heavy               = averagePSM.Y_Xic_uncorrected
-                IntensityTrace_Corrected_Heavy              = averagePSM.Y_Xic
-                }
-                |> Option.Some
+                        peakToQuantify.XData peakToQuantify.YData quantP.YPredicted [||] [||] [||] [||] peaks clusterComparisonTarget.PeakComparisons plotDirectory
+                    {
+                    StringSequence                              = pepIon.Sequence
+                    GlobalMod                                   = pepIon.GlobalMod
+                    Charge                                      = pepIon.Charge
+                    PepSequenceID                               = pepIon.PepSequenceID
+                    ModSequenceID                               = pepIon.ModSequenceID
+                    PrecursorMZ                                 = averagePSM.MeanPrecMz
+                    MeasuredMass                                = avgMass
+                    TheoMass                                    = labeledPeptide.Mass
+                    AbsDeltaMass                                = abs(avgMass-labeledPeptide.Mass)
+                    MeanPercolatorScore                         = averagePSM.MeanScore
+                    QValue                                      = bestQValue
+                    PEPValue                                    = bestPepValue
+                    ProteinNames                                = prots
+                    QuantMz_Light                               = mzLight
+                    Quant_Light                                 = nan
+                    MeasuredApex_Light                          = nan
+                    Seo_Light                                   = nan
+                    Params_Light                                = [||] 
+                    Difference_SearchRT_FittedRT_Light          = nan
+                    KLDiv_Observed_Theoretical_Light            = nan
+                    KLDiv_CorrectedObserved_Theoretical_Light   = nan
+                    QuantMz_Heavy                               = averagePSM.MeanPrecMz
+                    Quant_Heavy                                 = quantP.Area
+                    MeasuredApex_Heavy                          = quantP.MeasuredApexIntensity
+                    Seo_Heavy                                   = quantP.StandardErrorOfPrediction
+                    Params_Heavy                                = quantP.EstimatedParams 
+                    Difference_SearchRT_FittedRT_Heavy          = searchRTMinusFittedRT
+                    KLDiv_Observed_Theoretical_Heavy            = clusterComparisonTarget.KLDiv_UnCorrected
+                    KLDiv_CorrectedObserved_Theoretical_Heavy   = clusterComparisonTarget.KLDiv_Corrected
+                    Correlation_Light_Heavy                     = nan
+                    QuantificationSource                        = QuantificationSource.PSM
+                    IsotopicPatternMz_Light                     = [||] 
+                    IsotopicPatternIntensity_Observed_Light     = [||] 
+                    IsotopicPatternIntensity_Corrected_Light    = [||] 
+                    RtTrace_Light                               = [||] 
+                    IntensityTrace_Observed_Light               = [||] 
+                    IntensityTrace_Corrected_Light              = [||] 
+                    IsotopicPatternMz_Heavy                     = clusterComparisonTarget.PeakComparisons |> Array.map (fun x -> x.Mz)
+                    IsotopicPatternIntensity_Observed_Heavy     = clusterComparisonTarget.PeakComparisons |> Array.map (fun x -> x.MeasuredIntensity)
+                    IsotopicPatternIntensity_Corrected_Heavy    = clusterComparisonTarget.PeakComparisons |> Array.map (fun x -> x.MeasuredIntensityCorrected)
+                    RtTrace_Heavy                               = averagePSM.X_Xic 
+                    IntensityTrace_Observed_Heavy               = averagePSM.Y_Xic_uncorrected
+                    IntensityTrace_Corrected_Heavy              = averagePSM.Y_Xic
+                    }
+                    |> Option.Some
             with
-            | ex ->
-                
+            | ex ->             
                 logger.Trace (sprintf "Quantfailed: %A" ex)
                 Option.None
 
@@ -874,34 +1022,24 @@ module PSMBasedQuantification =
             let theoMz = Mass.toMZ unlabledPeptide.Mass (float pepIon.Charge)
             let averagePSM = average getXIC scanTimeToMzCorrection theoMz psmsWithMatchedSums
             let avgMass = Mass.ofMZ (averagePSM.MeanPrecMz) (pepIon.Charge |> float)      
-            let peaks = 
-                try
-                    identifyPeaks averagePSM.X_Xic averagePSM.Y_Xic 
-                with 
-                | ex ->
-                    logger.Trace (sprintf "Quantfailed: %A" ex)
-                    [||]
-            if Array.isEmpty peaks && diagCharts then 
-                Chart.Point(averagePSM.X_Xic, averagePSM.Y_Xic)
-                |> Chart.withTitle(sprintf "Sequence= %s,globalMod = %i_noPeaks" pepIon.Sequence pepIon.GlobalMod)
-                |> Chart.withSize(1500.,800.)
-                |> Chart.SaveHtmlAs(Path.Combine[|plotDirectory; ((pepIon.Sequence |> String.filter (fun x -> x <> '*')) + "_GMod_" + pepIon.GlobalMod.ToString() + "Ch" + pepIon.Charge.ToString() + "_notQuantified")|])
+            let peaks = identifyPeaks averagePSM.X_Xic averagePSM.Y_Xic               
+            if Array.isEmpty peaks then 
+                if diagCharts then saveErrorChart averagePSM.X_Xic averagePSM.Y_Xic pepIon "noPeaks" plotDirectory
+                logger.Trace (sprintf "Quant failed: No Peak detected, Sequence:%s, GlobalMod:%s, Charge:%s" (pepIon.Sequence |> String.filter (fun x -> x <> '*')) (pepIon.GlobalMod.ToString()) (pepIon.Charge.ToString()))
                 None
             else
             let peakToQuantify = BioFSharp.Mz.Quantification.HULQ.getPeakBy peaks averagePSM.WeightedAvgScanTime
             let quantP = BioFSharp.Mz.Quantification.HULQ.quantifyPeak peakToQuantify
             let searchRTMinusFittedRT = searchRTMinusFittedRtTarget averagePSM.WeightedAvgScanTime quantP 
-            if quantP.EstimatedParams |> Array.exists (fun x -> nan.Equals x) || Array.isEmpty quantP.EstimatedParams then 
-                Chart.Point(averagePSM.X_Xic, averagePSM.Y_Xic)
-                |> Chart.withTitle(sprintf "Sequence= %s,globalMod = %i_noPeaks" pepIon.Sequence pepIon.GlobalMod)
-                |> Chart.withSize(1500.,800.)
-                |> Chart.SaveHtmlAs(Path.Combine[|plotDirectory; ((pepIon.Sequence |> String.filter (fun x -> x <> '*')) + "_GMod_" + pepIon.GlobalMod.ToString() + "Ch" + pepIon.Charge.ToString() + "_notQuantified")|])
+            if quantP.EstimatedParams |> Array.exists nan.Equals || Array.isEmpty quantP.EstimatedParams then 
+                if diagCharts then saveErrorChart averagePSM.X_Xic averagePSM.Y_Xic pepIon "fittingFailed" plotDirectory    
+                logger.Trace (sprintf "Quant failed: Peak fitting failed, Sequence:%s, GlobalMod:%s, Charge:%s" (pepIon.Sequence |> String.filter (fun x -> x <> '*')) (pepIon.GlobalMod.ToString()) (pepIon.Charge.ToString()))
                 None
             else
-            let clusterComparison_Target = comparePredictedAndMeasuredIsotopicCluster averagePSM.X_Xic averagePSM.Y_Xic averagePSM.Y_Xic_uncorrected pepIon.Charge unlabledPeptide.BioSequence quantP.EstimatedParams.[1] averagePSM.MeanPrecMz
+            let clusterComparisonTarget = comparePredictedAndMeasuredIsotopicCluster averagePSM.X_Xic averagePSM.Y_Xic averagePSM.Y_Xic_uncorrected pepIon.Charge unlabledPeptide.BioSequence quantP.EstimatedParams.[1] averagePSM.MeanPrecMz
             if diagCharts then 
                 saveChart pepIon.Sequence pepIon.GlobalMod pepIon.Charge averagePSM.X_Xic averagePSM.Y_Xic ms2s averagePSM.WeightedAvgScanTime
-                                    peakToQuantify.XData peakToQuantify.YData quantP.YPredicted  [||] [||] [||] [||] peaks clusterComparison_Target.PeakComparisons plotDirectory
+                                    peakToQuantify.XData peakToQuantify.YData quantP.YPredicted  [||] [||] [||] [||] peaks clusterComparisonTarget.PeakComparisons plotDirectory
             {
             StringSequence                              = pepIon.Sequence
             GlobalMod                                   = pepIon.GlobalMod
@@ -922,8 +1060,8 @@ module PSMBasedQuantification =
             Seo_Light                                   = quantP.StandardErrorOfPrediction
             Params_Light                                = quantP.EstimatedParams 
             Difference_SearchRT_FittedRT_Light          = searchRTMinusFittedRT
-            KLDiv_Observed_Theoretical_Light            = clusterComparison_Target.KLDiv_UnCorrected
-            KLDiv_CorrectedObserved_Theoretical_Light   = clusterComparison_Target.KLDiv_Corrected
+            KLDiv_Observed_Theoretical_Light            = clusterComparisonTarget.KLDiv_UnCorrected
+            KLDiv_CorrectedObserved_Theoretical_Light   = clusterComparisonTarget.KLDiv_Corrected
             QuantMz_Heavy                               = nan
             Quant_Heavy                                 = nan
             MeasuredApex_Heavy                          = nan
@@ -934,9 +1072,9 @@ module PSMBasedQuantification =
             KLDiv_CorrectedObserved_Theoretical_Heavy   = nan
             Correlation_Light_Heavy                     = nan
             QuantificationSource                        = QuantificationSource.PSM
-            IsotopicPatternMz_Light                     = clusterComparison_Target.PeakComparisons|> Array.map (fun x -> x.Mz)
-            IsotopicPatternIntensity_Observed_Light     = clusterComparison_Target.PeakComparisons|> Array.map (fun x -> x.MeasuredIntensity)
-            IsotopicPatternIntensity_Corrected_Light    = clusterComparison_Target.PeakComparisons|> Array.map (fun x -> x.MeasuredIntensityCorrected)
+            IsotopicPatternMz_Light                     = clusterComparisonTarget.PeakComparisons|> Array.map (fun x -> x.Mz)
+            IsotopicPatternIntensity_Observed_Light     = clusterComparisonTarget.PeakComparisons|> Array.map (fun x -> x.MeasuredIntensity)
+            IsotopicPatternIntensity_Corrected_Light    = clusterComparisonTarget.PeakComparisons|> Array.map (fun x -> x.MeasuredIntensityCorrected)
             RtTrace_Light                               = averagePSM.X_Xic 
             IntensityTrace_Observed_Light               = averagePSM.Y_Xic_uncorrected
             IntensityTrace_Corrected_Light              = averagePSM.Y_Xic
