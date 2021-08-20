@@ -1,4 +1,4 @@
-#### 0.0.6 - Friday, June 18, 2021
+#### 0.0.6 - Friday, August 20, 2021
 * update PSMStats Params
 * update PSMBasedQuantification Params
 * minor changes
