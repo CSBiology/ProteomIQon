@@ -462,21 +462,15 @@ module PSMBasedQuantification =
         let peaks' = 
             getSpec inReader closestMS1
             |> Array.filter (fun x -> x.Mz < tarMz + 1. && x.Mz > tarMz - 0.6)
-        [
-        Chart.Point(targetIsotopicPattern_predicted)
-        |> Chart.withTraceName "pred"
-        Chart.Point(peaks'|> Array.map (fun x -> x.Mz,x.Intensity))
-        |> Chart.withTraceName "asis"
-        ]
-        |> Chart.Combine
-        |> Chart.Show
-
         let recordedVsPredictedPattern = 
             targetIsotopicPattern_predicted
-            |> Array.choose (fun (mz,relFreq) -> 
-                match peaks' |> Array.tryFind (fun peak -> abs(peak.Mz - mz) < 4. * ms1AccuracyEstimate  ) with 
-                | None -> None
-                | Some peak -> Some (peak,relFreq)
+            |> Array.choose (fun (mz,relFreq) ->
+                if peaks' |> Array.isEmpty then None
+                else
+                    let closestRealPeak = peaks' |> Array.minBy (fun peak -> abs(peak.Mz - mz)) 
+                    if (abs(closestRealPeak.Mz - mz) < 4. * ms1AccuracyEstimate) then  
+                        Some (closestRealPeak,relFreq)
+                    else None
                 )
             |> Array.groupBy fst
             |> Array.map (fun ((peak),list) -> 
@@ -1094,7 +1088,7 @@ module PSMBasedQuantification =
         
         logger.Trace "executing quantification"
         let quantResults = 
-            qpsmsMzRefined        
+            qpsmsMzRefined 
             |> Array.groupBy (fun x -> 
                 {
                     Sequence             = x.StringSequence     
