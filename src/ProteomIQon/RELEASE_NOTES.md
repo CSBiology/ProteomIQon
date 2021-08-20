@@ -1,3 +1,8 @@
+#### 0.0.6 - Friday, June 18, 2021
+* update PSMStats Params
+* update PSMBasedQuantification Params
+* minor changes
+
 #### 0.0.5 - Friday, June 18, 2021
 * add flag to trigger name based file matching
 * add flag to trigger the creation of diagnostic charts
