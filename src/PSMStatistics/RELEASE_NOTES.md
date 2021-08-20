@@ -1,4 +1,4 @@
-#### 0.0.7 - Tuesday, July 13, 2021
+#### 0.0.7 - Friday, August 20, 2021
 * rework fitting based PEP value calculation
 
 #### 0.0.6 - Tuesday, July 13, 2021
