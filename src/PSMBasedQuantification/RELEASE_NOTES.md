@@ -1,3 +1,8 @@
+#### 0.0.7 - Friday, August 20, 2021
+* refine error logging
+* improve mz refinement and added estimation for mz Window
+* improve precursor accuracy calculation
+
 #### 0.0.5 - Friday, June 18, 2021
 * add flag to trigger name based file matching
 * add flag to trigger the creation of diagnostic charts
