@@ -1,0 +1,20 @@
+2021-07-23 15:19:40.2959 ProteinInference TRACE CLIArguments: [InputFolder
+   ["C:\Users\d_zimmer\ProteomIQonErrorTesting\MinimalData\2_stats\fixedOut\minimal.qpsm"];
+ OutputDirectory
+   "C:\Users\d_zimmer\ProteomIQonErrorTesting\MinimalData\3_prot\MayuOut";
+ PeptideDataBase
+   "C:\Users\d_zimmer\ProteomIQonErrorTesting\MinimalData\0_peptideDB\Minimal.db";
+ ParamFile
+   "C:\Users\d_zimmer\ProteomIQonErrorTesting\MinimalData\3_prot\ProteinInferenceParamsMAYU.json"] 
+2021-07-23 15:19:40.3091 ProteinInference TRACE Database found at given location (C:\Users\d_zimmer\ProteomIQonErrorTesting\MinimalData\0_peptideDB\Minimal.db) 
+2021-07-23 15:19:40.4698 ProteinInference TRACE Inputfiles: [|"C:\Users\d_zimmer\ProteomIQonErrorTesting\MinimalData\2_stats\fixedOut\minimal.qpsm"|] 
+2021-07-28 14:46:27.7596 ProteinInference TRACE CLIArguments: [InputFolder
+   ["C:\Users\d_zimmer\ProteomIQonErrorTesting\MinimalData\2_stats\fixedOut\minimal.qpsm"];
+ OutputDirectory
+   "C:\Users\d_zimmer\ProteomIQonErrorTesting\MinimalData\3_prot\MayuOut";
+ PeptideDataBase
+   "C:\Users\d_zimmer\ProteomIQonErrorTesting\MinimalData\0_peptideDB\Minimal.db";
+ ParamFile
+   "C:\Users\d_zimmer\ProteomIQonErrorTesting\MinimalData\3_prot\ProteinInferenceParamsMAYU.json"] 
+2021-07-28 14:46:27.7835 ProteinInference TRACE Database found at given location (C:\Users\d_zimmer\ProteomIQonErrorTesting\MinimalData\0_peptideDB\Minimal.db) 
+2021-07-28 14:46:27.9444 ProteinInference TRACE Inputfiles: [|"C:\Users\d_zimmer\ProteomIQonErrorTesting\MinimalData\2_stats\fixedOut\minimal.qpsm"|] 

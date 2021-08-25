@@ -1,0 +1,37 @@
+2021-07-15 10:15:48.3886 minimal TRACE Input file: C:\Users\d_zimmer\ProteomIQonErrorTesting\MinimalData\1_psm\out\minimal.psm 
+2021-07-15 10:15:48.3886 minimal TRACE Output directory: C:\Users\d_zimmer\ProteomIQonErrorTesting\MinimalData\2_stats\estimateOut 
+2021-07-15 10:15:48.3886 minimal TRACE Parameters: { Threshold = Estimate { QValueThreshold = 0.01
+                         PepValueThreshold = 0.05
+                         MaxIterations = 15
+                         MinimumIncreaseBetweenIterations = 0.005
+                         PepValueFittingMethod = LinearSpline }
+  FastaHeaderToName = <fun:parseProteinIdUsing@177>
+  KeepTemporaryFiles = true } 
+2021-07-15 10:15:48.4011 minimal TRACE Now performing peptide spectrum matching: C:\Users\d_zimmer\ProteomIQonErrorTesting\MinimalData\1_psm\out\minimal.psm Results will be written to: C:\Users\d_zimmer\ProteomIQonErrorTesting\MinimalData\2_stats\estimateOut 
+2021-07-15 10:15:48.4011 minimal TRACE outFilePath:C:\Users\d_zimmer\ProteomIQonErrorTesting\MinimalData\2_stats\estimateOut\minimal.qpsm 
+2021-07-15 10:15:48.4011 minimal TRACE plotDirectory:C:\Users\d_zimmer\ProteomIQonErrorTesting\MinimalData\2_stats\estimateOut\minimal_plots 
+2021-07-15 10:15:48.4011 minimal TRACE Copy peptide DB into Memory 
+2021-07-15 10:15:48.4011 minimal TRACE Copy peptide DB into Memory: finished 
+2021-07-15 10:15:48.4011 minimal TRACE Read scored PSMs. 
+2021-07-15 10:15:48.4324 minimal TRACE Read scored PSMs: finished 
+2021-07-15 10:15:48.4324 minimal TRACE Prepare processing functions. 
+2021-07-15 10:15:48.4324 minimal TRACE Finished preparing processing functions. 
+2021-07-15 10:15:48.4324 minimal TRACE Prepare training pipeline 
+2021-07-15 10:15:48.4472 minimal TRACE Prepare training pipeline:finished 
+2021-07-15 10:15:48.4472 minimal TRACE Converting psms to PSMToLearn format. 
+2021-07-15 10:15:48.4472 minimal TRACE Converting psms to PSMToLearn format: finished 
+2021-07-15 10:15:48.4722 minimal TRACE Selecting positives for training 
+2021-07-15 10:15:48.4722 minimal TRACE Selecting negatives for training 
+2021-07-15 10:15:49.0831 minimal TRACE System.ArgumentOutOfRangeException: AUC is not defined when there is no negative class in the data (Parameter 'NegSample')
+   at Microsoft.ML.Runtime.Contracts.CheckParam(Boolean f, String paramName, String msg)
+   at Microsoft.ML.Data.EvaluatorBase`1.AucAggregatorBase`1.ComputeWeightedAuc(Double& unweighted)
+   at Microsoft.ML.Data.BinaryClassifierEvaluator.Aggregator.Finish()
+   at Microsoft.ML.Data.BinaryClassifierEvaluator.<>c__DisplayClass32_0.<GetAggregatorConsolidationFuncs>b__0(UInt32 stratColKey, ReadOnlyMemory`1 stratColVal, Aggregator agg)
+   at Microsoft.ML.Data.EvaluatorBase`1.ProcessData(IDataView data, RoleMappedSchema schema, Func`2 activeColsIndices, TAgg aggregator, AggregatorDictionaryBase[] dictionaries)
+   at Microsoft.ML.Data.EvaluatorBase`1.Microsoft.ML.Data.IEvaluator.Evaluate(RoleMappedData data)
+   at Microsoft.ML.Data.BinaryClassifierEvaluator.Evaluate(IDataView data, String label, String score, String probability, String predictedLabel)
+   at Microsoft.ML.BinaryClassificationCatalog.Evaluate(IDataView data, String labelColumnName, String scoreColumnName, String probabilityColumnName, String predictedLabelColumnName)
+   at ProteomIQon.PSMStatistics.trainModel@225(Boolean diagCharts, String plotDirectory, MLContext ctx, FSharpSet`1 positives', FSharpSet`1 negatives') in C:\Users\David Zimmer\source\repos\ProteomIQon\src\PSMStatistics\PSMStatistics.fs:line 254
+   at ProteomIQon.PSMStatistics.psmStats$cont@222-1(Boolean diagCharts, Logger logger, String outFilePath, String plotDirectory, PeptideSpectrumMatchingResult[] psms, FSharpFunc`2 toPSMToLearn, Threshold matchValue, Unit unitVar) 
+2021-07-15 10:15:49.0831 minimal TRACE Machine learning based psm filtering did not succeed, please try a different PEP-value fitting method. This method was developed for large data sets so it might fail for data sets too small of a size. 
+2021-07-15 10:15:49.0831 minimal TRACE Done. 

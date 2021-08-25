@@ -1,0 +1,18 @@
+{
+  "ProteinIdentifierRegex": "id",
+  "Protein": {
+    "Case": "Maximal"
+  },
+  "Peptide": {
+    "Case": "Minimal"
+  },
+  "GroupFiles": true,
+  "GetQValue": {
+    "Case": "LogisticRegression",
+    "Fields": [
+      {
+        "Case": "DecoyTargetRatio"
+      }
+    ]
+  }
+}

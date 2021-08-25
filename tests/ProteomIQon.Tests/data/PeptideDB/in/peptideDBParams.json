@@ -1,0 +1,1 @@
+{"Name":"Minimal","ParseProteinIDRegexPattern":"Cre\\S+|QProt_\\S+","Protease":{"Case":"Trypsin"},"MinMissedCleavages":0,"MaxMissedCleavages":2,"MaxMass":15000.0,"MinPepLength":4,"MaxPepLength":65,"IsotopicMod":[{"Case":"N15"}],"MassMode":{"Case":"Monoisotopic"},"FixedMods":[],"VariableMods":[{"Case":"Oxidation'Met'"},{"Case":"Acetylation'ProtNTerm'"}],"VarModThreshold":4}
