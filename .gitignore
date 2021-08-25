@@ -200,3 +200,5 @@ temp
 /tmp/watch
 docs/tools/YourPathHere
 /src/JoinQuantPepIonsWithProteins/Properties/launchSettings.json
+
+.ionide

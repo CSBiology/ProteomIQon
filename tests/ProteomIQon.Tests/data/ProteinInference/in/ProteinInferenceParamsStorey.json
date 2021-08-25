@@ -1,0 +1,13 @@
+{
+  "ProteinIdentifierRegex": "id",
+  "Protein": {
+    "Case": "Maximal"
+  },
+  "Peptide": {
+    "Case": "Minimal"
+  },
+  "GroupFiles": true,
+  "GetQValue": {
+    "Case": "Storey",
+  }
+}

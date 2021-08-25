@@ -1,0 +1,40 @@
+2021-07-23 15:19:40.6159 ProteinInference_readAndInferFile TRACE Getting proteins with peptide sequence from db 
+2021-07-23 15:19:40.6159 ProteinInference_readAndInferFile TRACE Perfom digestion on reversed proteins for decoy set 
+2021-07-23 15:19:40.6298 ProteinInference_readAndInferFile TRACE Map peptide sequences to proteins 
+2021-07-23 15:19:40.6298 ProteinInference_readAndInferFile TRACE Create combined list 
+2021-07-23 15:19:40.6470 ProteinInference_readAndInferFile TRACE Create a map with peptide scores 
+2021-07-23 15:19:40.6470 ProteinInference_readAndInferFile TRACE Assign scores to decoy set 
+2021-07-23 15:19:40.6612 ProteinInference_readAndInferFile TRACE Assign target and decoy scores inferred proteins 
+2021-07-23 15:19:40.6788 ProteinInference_readAndInferFile TRACE Calculate q values for all proteins 
+2021-07-23 15:19:40.7465 ProteinInference_readAndInferFile TRACE System.Collections.Generic.KeyNotFoundException: An index satisfying the predicate was not found in the collection.
+   at Microsoft.FSharp.Collections.ArrayModule.go@1063-1[T](FSharpFunc`2 predicate, T[] array, Int32 len, Int32 n) in F:\workspace\_work\1\s\src\fsharp\FSharp.Core\array.fs:line 1065
+   at Microsoft.FSharp.Collections.ArrayModule.FindIndex[T](FSharpFunc`2 predicate, T[] array) in F:\workspace\_work\1\s\src\fsharp\FSharp.Core\array.fs:line 1069
+   at ProteomIQon.Fitting'.NonLinearRegression'.LevenbergMarquardtConstrained'.findClosestPoint(Double point, Double[] data) in C:\Users\David Zimmer\source\repos\ProteomIQon\src\ProteomIQon\BioFSharp.Mz_Temp.fs:line 734
+   at ProteomIQon.Fitting'.NonLinearRegression'.LevenbergMarquardtConstrained'.initialParamsOverRange(Double[] xData, Double[] yData, Double[] steepnessRange) in C:\Users\David Zimmer\source\repos\ProteomIQon\src\ProteomIQon\BioFSharp.Mz_Temp.fs:line 775
+   at ProteomIQon.FDRControl'.calculateQValueLogReg[a](Double fdrEstimate, Double bandwidth, a[] data, FSharpFunc`2 isDecoy, FSharpFunc`2 decoyScoreF, FSharpFunc`2 targetScoreF) in C:\Users\David Zimmer\source\repos\ProteomIQon\src\ProteomIQon\BioFSharp.Mz_Temp.fs:line 1536
+   at System.Runtime.CompilerServices.RuntimeHelpers.DispatchTailCalls(IntPtr callersRetAddrSlot, IntPtr callTarget, IntPtr retVal)
+   at ProteomIQon.ProteinInference.initQValue@44-1.Invoke(FSharpFunc`2 isDecoy, FSharpFunc`2 decoyScoreF, FSharpFunc`2 targetScoreF) in C:\Users\David Zimmer\source\repos\ProteomIQon\src\ProteinInference\ProteinInference.fs:line 44
+   at ProteomIQon.ProteinInference.readAndInferFile$cont@221(IntegrationStrictness protein, PeptideUsageForQuantification peptide, Boolean groupFiles, String outDirectory, FSharpList`1 psmInputs, QValueMethod qValMethod, Logger logger, Tuple`2[] proteinsDB, Tuple`2[] reverseProteins, FSharpList`1 classifiedProteins, Unit unitVar) in C:\Users\David Zimmer\source\repos\ProteomIQon\src\ProteinInference\ProteinInference.fs:line 307 
+2021-07-23 15:19:40.7465 ProteinInference_readAndInferFile TRACE Q-Value calculation using the selected method was not possible. Defaulting to "NoQValue".  
+2021-07-23 15:19:40.8632 ProteinInference_readAndInferFile TRACE Writing now minimal 
+2021-07-23 15:19:40.8632 ProteinInference_readAndInferFile TRACE File written to C:\Users\d_zimmer\ProteomIQonErrorTesting\MinimalData\3_prot\MayuOut\minimal.prot 
+2021-07-28 14:46:28.0848 ProteinInference_readAndInferFile TRACE Getting proteins with peptide sequence from db 
+2021-07-28 14:46:28.0848 ProteinInference_readAndInferFile TRACE Perfom digestion on reversed proteins for decoy set 
+2021-07-28 14:46:28.0980 ProteinInference_readAndInferFile TRACE Map peptide sequences to proteins 
+2021-07-28 14:46:28.1027 ProteinInference_readAndInferFile TRACE Create combined list 
+2021-07-28 14:46:28.1027 ProteinInference_readAndInferFile TRACE Create a map with peptide scores 
+2021-07-28 14:46:28.1027 ProteinInference_readAndInferFile TRACE Assign scores to decoy set 
+2021-07-28 14:46:28.1198 ProteinInference_readAndInferFile TRACE Assign target and decoy scores inferred proteins 
+2021-07-28 14:46:28.1198 ProteinInference_readAndInferFile TRACE Calculate q values for all proteins 
+2021-07-28 14:46:28.1758 ProteinInference_readAndInferFile TRACE System.Collections.Generic.KeyNotFoundException: An index satisfying the predicate was not found in the collection.
+   at Microsoft.FSharp.Collections.ArrayModule.go@1063-1[T](FSharpFunc`2 predicate, T[] array, Int32 len, Int32 n) in F:\workspace\_work\1\s\src\fsharp\FSharp.Core\array.fs:line 1065
+   at Microsoft.FSharp.Collections.ArrayModule.FindIndex[T](FSharpFunc`2 predicate, T[] array) in F:\workspace\_work\1\s\src\fsharp\FSharp.Core\array.fs:line 1069
+   at ProteomIQon.Fitting'.NonLinearRegression'.LevenbergMarquardtConstrained'.findClosestPoint(Double point, Double[] data) in C:\Users\David Zimmer\source\repos\ProteomIQon\src\ProteomIQon\BioFSharp.Mz_Temp.fs:line 734
+   at ProteomIQon.Fitting'.NonLinearRegression'.LevenbergMarquardtConstrained'.initialParamsOverRange(Double[] xData, Double[] yData, Double[] steepnessRange) in C:\Users\David Zimmer\source\repos\ProteomIQon\src\ProteomIQon\BioFSharp.Mz_Temp.fs:line 775
+   at ProteomIQon.FDRControl'.calculateQValueLogReg[a](Double fdrEstimate, Double bandwidth, a[] data, FSharpFunc`2 isDecoy, FSharpFunc`2 decoyScoreF, FSharpFunc`2 targetScoreF) in C:\Users\David Zimmer\source\repos\ProteomIQon\src\ProteomIQon\BioFSharp.Mz_Temp.fs:line 1536
+   at System.Runtime.CompilerServices.RuntimeHelpers.DispatchTailCalls(IntPtr callersRetAddrSlot, IntPtr callTarget, IntPtr retVal)
+   at ProteomIQon.ProteinInference.initQValue@44-1.Invoke(FSharpFunc`2 isDecoy, FSharpFunc`2 decoyScoreF, FSharpFunc`2 targetScoreF) in C:\Users\David Zimmer\source\repos\ProteomIQon\src\ProteinInference\ProteinInference.fs:line 44
+   at ProteomIQon.ProteinInference.readAndInferFile$cont@221(IntegrationStrictness protein, PeptideUsageForQuantification peptide, Boolean groupFiles, String outDirectory, FSharpList`1 psmInputs, QValueMethod qValMethod, Logger logger, Tuple`2[] proteinsDB, Tuple`2[] reverseProteins, FSharpList`1 classifiedProteins, Unit unitVar) in C:\Users\David Zimmer\source\repos\ProteomIQon\src\ProteinInference\ProteinInference.fs:line 307 
+2021-07-28 14:46:28.1758 ProteinInference_readAndInferFile TRACE Q-Value calculation using the selected method was not possible. Defaulting to "NoQValue".  
+2021-07-28 14:46:28.2877 ProteinInference_readAndInferFile TRACE Writing now minimal 
+2021-07-28 14:46:28.2969 ProteinInference_readAndInferFile TRACE File written to C:\Users\d_zimmer\ProteomIQonErrorTesting\MinimalData\3_prot\MayuOut\minimal.prot 

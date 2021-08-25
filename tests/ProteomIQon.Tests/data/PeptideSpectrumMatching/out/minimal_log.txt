@@ -1,0 +1,102 @@
+2021-07-15 09:24:30.3505 minimal TRACE Input file: C:\Users\d_zimmer\ProteomIQonErrorTesting\MinimalData\0_mzlite\ms2Andms1PeaksFiltered\minimal.mzlite 
+2021-07-15 09:24:30.3505 minimal TRACE Output directory: C:\Users\d_zimmer\ProteomIQonErrorTesting\MinimalData\1_psm\out 
+2021-07-15 09:24:30.3505 minimal TRACE Parameters: { ChargeStateDeterminationParams = { ExpectedMinimalCharge = 2
+                                     ExpectedMaximumCharge = 5
+                                     Width = 1.1
+                                     MinIntensity = 0.15
+                                     DeltaMinIntensity = 0.3
+                                     NrOfRndSpectra = 10000 }
+  LookUpPPM = 30.0
+  nTerminalSeries = <fun:toDomain@147-6>
+  cTerminalSeries = <fun:toDomain@167-13>
+  AndromedaParams = { PMinPMax = (4, 10)
+                      MatchingIonTolerancePPM = 100.0 } } 
+2021-07-15 09:24:30.3505 minimal TRACE Result file path: C:\Users\d_zimmer\ProteomIQonErrorTesting\MinimalData\1_psm\out\minimal.psm 
+2021-07-15 09:24:30.3505 minimal TRACE Copy peptide DB into Memory. 
+2021-07-15 09:24:30.3720 minimal TRACE Copy peptide DB into Memory: finished. 
+2021-07-15 09:24:30.3720 minimal TRACE Prepare processing functions. 
+2021-07-15 09:24:30.3720 minimal TRACE Charge parameters: { ExpectedMinimalCharge = 2
+  ExpectedMaximumCharge = 5
+  Width = 1.1
+  MinIntensity = 0.15
+  DeltaMinIntensity = 0.3
+  NrOfRndSpectra = 10000 } 
+2021-07-15 09:24:30.4357 minimal TRACE DB parameters: { Name = "Minimal"
+  DbFolder = "C:\Users\d_zimmer\ProteomIQonErrorTesting\MinimalData\0_peptideDB"
+  FastaPath =
+             "C:\Users\d_zimmer\ProteomIQonErrorTesting\MinimalData\0_peptideDB\example.fasta"
+  FastaHeaderToName = <fun:getSDBParams@907>
+  Protease = { Name = "Trypsin"
+               Expression = <fun:Trypsin@175> }
+  MinMissedCleavages = 0
+  MaxMissedCleavages = 2
+  MaxMass = 15000.0
+  MinPepLength = 4
+  MaxPepLength = 65
+  IsotopicMod = [{ Name = "N15"
+                   SourceEl = Di { Symbol = "N"
+                                   X = { AtomicSymbol = "N"
+                                         AtomicNumberZ = 7
+                                         MassNumber = 14
+                                         Mass = 14.003074
+                                         NatAbundance = 0.99636
+                                         RelAtomicMass = 14.0067 }
+                                   Xcomp = 0.99636
+                                   X1 = { AtomicSymbol = "N"
+                                          AtomicNumberZ = 7
+                                          MassNumber = 15
+                                          Mass = 15.0001089
+                                          NatAbundance = 0.00364
+                                          RelAtomicMass = 14.0067 }
+                                   X1comp = 0.00364
+                                   Root = -273.7252747 }
+                   TargetEl = Di { Symbol = "N15"
+                                   X = { AtomicSymbol = "N"
+                                         AtomicNumberZ = 7
+                                         MassNumber = 15
+                                         Mass = 15.0001089
+                                         NatAbundance = 0.00364
+                                         RelAtomicMass = 14.0067 }
+                                   Xcomp = 0.99636
+                                   X1 = { AtomicSymbol = "N"
+                                          AtomicNumberZ = 7
+                                          MassNumber = 14
+                                          Mass = 14.003074
+                                          NatAbundance = 0.99636
+                                          RelAtomicMass = 14.0067 }
+                                   X1comp = 0.00364
+                                   Root = -273.7252747 } }]
+  MassMode = Monoisotopic
+  MassFunction = <fun:memoizeP@25>
+  FixedMods = []
+  VariableMods = [{ Name = "Acetyl(Protein N-Term)"
+                    Accession = "1"
+                    Description = "Acetylation of the protein N-terminus"
+                    IsBiological = true
+                    Composition = "C2H2O"
+                    Site = [Any ProteinNterm]
+                    MType = Plus
+                    XModCode = "ac" }; { Name = "Oxidation'Met'"
+                                         Accession = "35"
+                                         Description = "Oxidation"
+                                         IsBiological = true
+                                         Composition = "O"
+                                         Site = [Specific (Met, Residual)]
+                                         MType = Plus
+                                         XModCode = "ox" }]
+  VarModThreshold = 4 } 
+2021-07-15 09:24:30.4357 minimal TRACE Finished preparing processing functions. 
+2021-07-15 09:24:30.4357 minimal TRACE Init connection to input data base. 
+2021-07-15 09:24:30.4424 minimal TRACE Run ID: sample=0 
+2021-07-15 09:24:30.4424 minimal TRACE Starting charge state determination. 
+2021-07-15 09:24:30.6016 minimal TRACE Finished charge state determination. 
+2021-07-15 09:24:30.6016 minimal TRACE ProteomIQon.PeptideSpectrumMatching+scoreSpectra@372 
+2021-07-15 09:24:30.6016 minimal TRACE Starting peptide spectrum matching. 
+2021-07-15 09:24:30.6156 minimal TRACE 3 spectra with charge 2 
+2021-07-15 09:24:30.6156 minimal TRACE 2 spectra with charge 3 
+2021-07-15 09:24:30.6156 minimal TRACE 3 spectra with charge 2 processed 
+2021-07-15 09:24:30.6156 minimal TRACE 0 
+2021-07-15 09:24:30.7044 minimal TRACE 2 spectra with charge 3 processed 
+2021-07-15 09:24:30.7044 minimal TRACE 0 
+2021-07-15 09:24:30.7124 minimal TRACE Finished peptide spectrum matching. 
+2021-07-15 09:24:30.7124 minimal TRACE Done. 
