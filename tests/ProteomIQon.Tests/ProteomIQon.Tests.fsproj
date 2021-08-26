@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -16,6 +16,8 @@
     <PackageReference Include="YoloDev.Expecto.TestSdk" Version="0.*" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.*" />
     <PackageReference Include="FSharp.Core" Version="4.*" />
+    <PackageReference Include="Fake.DotNet.Cli"/>
+    <PackageReference Include="BioFSharp.Mz" Version="0.1.5-beta" />
   </ItemGroup>
 
   <ItemGroup>
