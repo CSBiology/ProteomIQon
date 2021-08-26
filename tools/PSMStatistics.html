@@ -146,7 +146,7 @@ The reported peptides at user defined local and global FDR cutoffs can then be u
 <tbody>
 <tr class="odd">
 <td><p>Threshold</p></td>
-<td><p>Threshold.Estimate {QValueThreshold = 0.01; PepValueThreshold = 0.05; MaxIterations=15; MinimumIncreaseBetweenIterations=0.005 }</p></td>
+<td><p>Threshold.Estimate {QValueThreshold = 0.01; PepValueThreshold = 0.05;MaxIterations=15;MinimumIncreaseBetweenIterations=0.005; PepValueFittingMethod = LinearLogit}</p></td>
 <td><p>Parameters used for FDR based filtering of scored peptides</p></td>
 </tr>
 <tr class="even">
@@ -166,7 +166,7 @@ The reported peptides at user defined local and global FDR cutoffs can then be u
 <p>Parameters are handed to the cli tool as a .json file. you can download the default file <a href="https://github.com/CSBiology/ProteomIQon/blob/master/src/ProteomIQon/defaultParams/psmstatisticsparams.json">here</a>,
 or use an F# script, which can be downloaded or run in Binder at the top of the page, to write your own parameter file:</p>
 <pre class="fssnip highlighted"><code lang="fsharp"><span class="pp">#r</span> <span class="s">&quot;nuget: BioFSharp.Mz, 0.1.5-beta&quot;</span>
-<span class="pp">#r</span> <span class="s">&quot;nuget: ProteomIQon, 0.0.1&quot;</span>
+<span class="pp">#r</span> <span class="s">&quot;nuget: ProteomIQon, 0.0.6&quot;</span>
 
 <span class="k">open</span> <span onmouseout="hideTip(event, 'fs1', 1)" onmouseover="showTip(event, 'fs1', 1)" class="id">ProteomIQon</span>
 <span class="k">open</span> <span onmouseout="hideTip(event, 'fs1', 2)" onmouseover="showTip(event, 'fs1', 2)" class="id">ProteomIQon</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs2', 3)" onmouseover="showTip(event, 'fs2', 3)" class="m">Domain</span>
@@ -175,14 +175,14 @@ or use an F# script, which can be downloaded or run in Binder at the top of the 
 
 <span class="k">let</span> <span onmouseout="hideTip(event, 'fs5', 6)" onmouseover="showTip(event, 'fs5', 6)" class="id">defaultPSMStatistics</span> <span class="pn">:</span> <span onmouseout="hideTip(event, 'fs6', 7)" onmouseover="showTip(event, 'fs6', 7)" class="m">Dto</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs7', 8)" onmouseover="showTip(event, 'fs7', 8)" class="id">PSMStatisticsParams</span> <span class="o">=</span> 
     <span class="pn">{</span>
-        <span onmouseout="hideTip(event, 'fs8', 9)" onmouseover="showTip(event, 'fs8', 9)" class="prop">Threshold</span> <span class="o">=</span> <span onmouseout="hideTip(event, 'fs8', 10)" onmouseover="showTip(event, 'fs8', 10)" class="rt">Threshold</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs9', 11)" onmouseover="showTip(event, 'fs9', 11)" class="id">Estimate</span> <span class="pn">{</span><span class="prop">QValueThreshold</span> <span class="o">=</span> <span class="n">0.01</span><span class="pn">;</span> <span class="prop">PepValueThreshold</span> <span class="o">=</span> <span class="n">0.05</span><span class="pn">;</span><span class="prop">MaxIterations</span><span class="o">=</span><span class="n">15</span><span class="pn">;</span><span class="prop">MinimumIncreaseBetweenIterations</span><span class="o">=</span><span class="n">0.005</span><span class="pn">}</span>
+        <span onmouseout="hideTip(event, 'fs8', 9)" onmouseover="showTip(event, 'fs8', 9)" class="prop">Threshold</span> <span class="o">=</span> <span onmouseout="hideTip(event, 'fs8', 10)" onmouseover="showTip(event, 'fs8', 10)" class="rt">Threshold</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs9', 11)" onmouseover="showTip(event, 'fs9', 11)" class="id">Estimate</span> <span class="pn">{</span><span class="prop">QValueThreshold</span> <span class="o">=</span> <span class="n">0.01</span><span class="pn">;</span> <span class="prop">PepValueThreshold</span> <span class="o">=</span> <span class="n">0.05</span><span class="pn">;</span><span class="prop">MaxIterations</span><span class="o">=</span><span class="n">15</span><span class="pn">;</span><span class="prop">MinimumIncreaseBetweenIterations</span><span class="o">=</span><span class="n">0.005</span><span class="pn">;</span> <span onmouseout="hideTip(event, 'fs10', 12)" onmouseover="showTip(event, 'fs10', 12)" class="prop">PepValueFittingMethod</span> <span class="o">=</span> <span onmouseout="hideTip(event, 'fs11', 13)" onmouseover="showTip(event, 'fs11', 13)" class="uc">LinearLogit</span><span class="pn">}</span>
         <span class="prop">ParseProteinIDRegexPattern</span>  <span class="o">=</span> <span class="s">&quot;id&quot;</span>
         <span class="prop">KeepTemporaryFiles</span>          <span class="o">=</span> <span class="k">true</span>
     <span class="pn">}</span>
 
-<span class="k">let</span> <span onmouseout="hideTip(event, 'fs10', 12)" onmouseover="showTip(event, 'fs10', 12)" class="id">serialized</span> <span class="o">=</span> 
-    <span onmouseout="hideTip(event, 'fs5', 13)" onmouseover="showTip(event, 'fs5', 13)" class="id">defaultPSMStatistics</span>
-    <span class="o">|&gt;</span> <span onmouseout="hideTip(event, 'fs11', 14)" onmouseover="showTip(event, 'fs11', 14)" class="m">Json</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs12', 15)" onmouseover="showTip(event, 'fs12', 15)" class="id">serialize</span>
+<span class="k">let</span> <span onmouseout="hideTip(event, 'fs12', 14)" onmouseover="showTip(event, 'fs12', 14)" class="id">serialized</span> <span class="o">=</span> 
+    <span onmouseout="hideTip(event, 'fs5', 15)" onmouseover="showTip(event, 'fs5', 15)" class="id">defaultPSMStatistics</span>
+    <span class="o">|&gt;</span> <span onmouseout="hideTip(event, 'fs13', 16)" onmouseover="showTip(event, 'fs13', 16)" class="m">Json</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs14', 17)" onmouseover="showTip(event, 'fs14', 17)" class="id">serialize</span>
 </code></pre>
 <h2><a name="Executing-the-Tool" class="anchor" href="#Executing-the-Tool">Executing the Tool</a></h2>
 <p><strong>Disclaimer</strong> this tool relies on the output of the tools <a href="https://csbiology.github.io/ProteomIQon/tools/peptideDb.html">PeptideDB</a> and <a href="https://csbiology.github.io/ProteomIQon/tools/PeptideSpectrumMatching.html">PeptideSpectrumMatching</a>.</p>
@@ -211,9 +211,11 @@ or use an F# script, which can be downloaded or run in Binder at the top of the 
 <div class="fsdocs-tip" id="fs7">Multiple items<br />module PSMStatisticsParams<br /><br />from ProteomIQon.Dto<br /><br />--------------------<br />type PSMStatisticsParams =<br />&#160;&#160;{ Threshold: Threshold<br />&#160;&#160;&#160;&#160;ParseProteinIDRegexPattern: string<br />&#160;&#160;&#160;&#160;KeepTemporaryFiles: bool }</div>
 <div class="fsdocs-tip" id="fs8">type Threshold =<br />&#160;&#160;| Estimate of EstimationParams<br />&#160;&#160;| Fixed of ScoreCutoff</div>
 <div class="fsdocs-tip" id="fs9">union case Threshold.Estimate: EstimationParams -&gt; Threshold</div>
-<div class="fsdocs-tip" id="fs10">val serialized : string</div>
-<div class="fsdocs-tip" id="fs11">module Json<br /><br />from ProteomIQon</div>
-<div class="fsdocs-tip" id="fs12">val serialize : obj:&#39;a -&gt; string</div>
+<div class="fsdocs-tip" id="fs10">type PepValueFittingMethod = | LinearLogit</div>
+<div class="fsdocs-tip" id="fs11">union case PepValueFittingMethod.LinearLogit: PepValueFittingMethod</div>
+<div class="fsdocs-tip" id="fs12">val serialized : string</div>
+<div class="fsdocs-tip" id="fs13">module Json<br /><br />from ProteomIQon</div>
+<div class="fsdocs-tip" id="fs14">val serialize : obj:&#39;a -&gt; string</div>
 
     </div>
 

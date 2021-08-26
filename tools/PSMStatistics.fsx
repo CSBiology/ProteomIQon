@@ -24,11 +24,11 @@ The reported peptides at user defined local and global FDR cutoffs can then be u
 ## Parameters
 The following table gives an overview of the parameter set:
 
-| **Parameter**                  | **Default Value**                                                                                                                         | **Description**                                                    |
-|--------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------|
-| Threshold                      | Threshold.Estimate {QValueThreshold = 0.01; PepValueThreshold = 0.05; MaxIterations=15; MinimumIncreaseBetweenIterations=0.005 }          | Parameters used for FDR based filtering of scored peptides         |
-| ParseProteinIDRegexPattern     | id                                                                                                                                        | Regex pattern for parsing of the protein IDs in the database       |
-| KeepTemporaryFiles             | false                                                                                                                                     | Indicates if temporary files should be kept or discarded           |
+| **Parameter**                  | **Default Value**                                                                                                                                                           | **Description**                                                    |
+|--------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------|
+| Threshold                      | Threshold.Estimate {QValueThreshold = 0.01; PepValueThreshold = 0.05;MaxIterations=15;MinimumIncreaseBetweenIterations=0.005; PepValueFittingMethod = LinearLogit}          | Parameters used for FDR based filtering of scored peptides         |
+| ParseProteinIDRegexPattern     | id                                                                                                                                                                          | Regex pattern for parsing of the protein IDs in the database       |
+| KeepTemporaryFiles             | false                                                                                                                                                                       | Indicates if temporary files should be kept or discarded           |
 
 ## Parameter Generation
 
@@ -37,7 +37,7 @@ or use an F# script, which can be downloaded or run in Binder at the top of the 
 
 *)
 #r "nuget: BioFSharp.Mz, 0.1.5-beta"
-#r "nuget: ProteomIQon, 0.0.1"
+#r "nuget: ProteomIQon, 0.0.6"
 
 open ProteomIQon
 open ProteomIQon.Domain
@@ -46,7 +46,7 @@ open BioFSharp.Mz
 
 let defaultPSMStatistics : Dto.PSMStatisticsParams = 
     {
-        Threshold = Threshold.Estimate {QValueThreshold = 0.01; PepValueThreshold = 0.05;MaxIterations=15;MinimumIncreaseBetweenIterations=0.005}
+        Threshold = Threshold.Estimate {QValueThreshold = 0.01; PepValueThreshold = 0.05;MaxIterations=15;MinimumIncreaseBetweenIterations=0.005; PepValueFittingMethod = LinearLogit}
         ParseProteinIDRegexPattern  = "id"
         KeepTemporaryFiles          = true
     }
