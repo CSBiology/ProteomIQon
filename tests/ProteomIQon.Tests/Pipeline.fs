@@ -61,25 +61,43 @@ let pipelineTests =
             // run tool
             runDotNet (sprintf "%s -i %s -o %s -p %s" pepDBExe fastaPath outDirectory peptideDBParams) Environment.CurrentDirectory
             let referenceDB =
-                let dbPath = relToDirectory "../../../data/PeptideDB/out/Minimal.db"
+                let dbPath = relToDirectory "../../../data/PeptideDB/out/MinimalReference.db"
                 use cn = SearchDB.getDBConnection dbPath
                 let res = selectAllCleavageIndex cn, selectAllModSequence cn, selectAllPepSequence cn, selectAllProtein cn
                 res
             let testDB =
-                let dbPath = relToDirectory "../../../data/PeptideDB/out/MinimalTest.db"
+                let dbPath = relToDirectory "../../../data/PeptideDB/out/Minimal.db"
                 use cn = SearchDB.getDBConnection dbPath
                 let res = selectAllCleavageIndex cn, selectAllModSequence cn, selectAllPepSequence cn, selectAllProtein cn
                 res
             let compare = referenceDB = testDB
             // cleanup
-            File.Delete (relToDirectory "../../../data/PeptideDB/out/MinimalTest.db")
+            File.Delete (relToDirectory "../../../data/PeptideDB/out/Minimal.db")
             File.Delete (relToDirectory "../../../data/PeptideDB/out/PeptideDB_log.txt")
-            File.Delete (relToDirectory "../../../data/PeptideDB/out/PeptideDB_MinimalTest_log.txt")
+            File.Delete (relToDirectory "../../../data/PeptideDB/out/PeptideDB_Minimal_log.txt")
             Expect.isTrue compare "Peptide databases are different"
     
         testCase "PeptideSpectrumMatching" <| fun _ ->
-            let subject = true
-            Expect.isTrue subject "I compute, therefore I am."
+            let relToDirectory = getRelativePath Environment.CurrentDirectory
+            let db = relToDirectory "../../../data/PeptideSpectrumMatching/in/Minimal.db"
+            let mzlite = relToDirectory "../../../data/PeptideSpectrumMatching/in/minimal.mzlite"
+            let psmParams = relToDirectory "../../../data/PeptideSpectrumMatching/in/defaultParams.json"
+            let outDirectory = relToDirectory "../../../data/PeptideSpectrumMatching/out/"
+            let psmExe = relToDirectory "../../../../../bin/PeptideSpectrumMatching/net5.0/ProteomIQon.PeptideSpectrumMatching.dll"
+            // run tool
+            runDotNet (sprintf "%s -i %s -o %s -p %s -d %s" psmExe mzlite outDirectory psmParams db) Environment.CurrentDirectory
+            let referencePSM = 
+                let psmPath = relToDirectory "../../../data/PeptideSpectrumMatching/out/minimalReference.psm"
+                File.ReadAllLines psmPath
+            let testPSM = 
+                let psmPath = relToDirectory "../../../data/PeptideSpectrumMatching/out/minimal.psm"
+                File.ReadAllLines psmPath
+            let compare = referencePSM = testPSM
+            // cleanup
+            File.Delete (relToDirectory "../../../data/PeptideSpectrumMatching/out/minimal.psm")
+            File.Delete (relToDirectory "../../../data/PeptideSpectrumMatching/out/minimal_log.txt")
+            File.Delete (relToDirectory "../../../data/PeptideSpectrumMatching/out/PeptideSpectrumMatching_log.txt")
+            Expect.isTrue compare "PSMs are different"
 
         testCase "PSMStatistics" <| fun _ ->
             let subject = true
