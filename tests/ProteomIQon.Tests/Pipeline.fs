@@ -7,6 +7,7 @@ open ProteomIQon.Core.InputPaths
 open Fake.DotNet
 open BioFSharp.Mz
 open System.Data.SQLite
+open FSharpAux.IO
 
 let runDotNet cmd workingDir =
     let result =
@@ -100,13 +101,145 @@ let pipelineTests =
             Expect.isTrue compare "PSMs are different"
 
         testCase "PSMStatistics" <| fun _ ->
-            let subject = true
-            Expect.isTrue subject "I compute, therefore I am."
+            let relToDirectory = getRelativePath Environment.CurrentDirectory
+            let db = relToDirectory "../../../data/PSMStatistics/in/Minimal.db"
+            let psm = relToDirectory "../../../data/PSMStatistics/in/minimal.psm"
+            //let psmStatsParamsEstimate = relToDirectory "../../../data/PSMStatistics/in/pSMStatisticsParamsEstimate.json"
+            let psmStatsParamsFixed = relToDirectory "../../../data/PSMStatistics/in/pSMStatisticsParamsFixed.json"
+            //let outDirectoryEstimate = relToDirectory "../../../data/PSMStatistics/out/estimateOut"
+            let outDirectoryFixed = relToDirectory "../../../data/PSMStatistics/out/fixedOut"
+            let psmStatsExe = relToDirectory "../../../../../bin/PSMStatistics/net5.0/ProteomIQon.PSMStatistics.dll"
+            // run tool
+            //runDotNet (sprintf "%s -i %s -o %s -p %s -d %s" psmStatsExe psm outDirectoryEstimate psmStatsParamsEstimate db) Environment.CurrentDirectory
+            runDotNet (sprintf "%s -i %s -o %s -p %s -d %s" psmStatsExe psm outDirectoryFixed psmStatsParamsFixed db) Environment.CurrentDirectory
+            //let referenceQPSMEstimate =
+            //    let qpsmPath = relToDirectory "../../../data/PSMStatistics/out/estimateOut/minimalReference.qpsm"
+            //    File.ReadAllLines qpsmPath
+            //let testQPSMEstimate =
+            //    let qpsmPath = relToDirectory "../../../data/PSMStatistics/out/estimateOut/minimal.qpsm"
+            //    File.ReadAllLines qpsmPath
+            let referenceQPSMFixed =
+                let qpsmPath = relToDirectory "../../../data/PSMStatistics/out/fixedOut/minimalReference.qpsm"
+                File.ReadAllLines qpsmPath
+            let testQPSMFixed =
+                let qpsmPath = relToDirectory "../../../data/PSMStatistics/out/fixedOut/minimal.qpsm"
+                File.ReadAllLines qpsmPath
+            let compare =
+                (*referenceQPSMEstimate = testQPSMEstimate && *)referenceQPSMFixed = testQPSMFixed
+            // cleanup
+            File.Delete (relToDirectory "../../../data/PSMStatistics/out/fixedOut/minimal.qpsm")
+            File.Delete (relToDirectory "../../../data/PSMStatistics/out/fixedOut/minimal_log.txt")
+            File.Delete (relToDirectory "../../../data/PSMStatistics/out/fixedOut/PSMStatistics_log.txt")
+            Directory.Delete (relToDirectory "../../../data/PSMStatistics/out/fixedOut/minimal_plots")
+            Expect.isTrue compare "QPSMs are different"
 
         testCase "PSMBasedQuantification" <| fun _ ->
-            let subject = true
-            Expect.isTrue subject "I compute, therefore I am."
-
+            let relToDirectory = getRelativePath Environment.CurrentDirectory
+            let db = relToDirectory "../../../data/PSMBasedQuantification/in/Minimal.db"
+            let qpsm = relToDirectory "../../../data/PSMBasedQuantification/in/minimal.qpsm"
+            let mzlite = relToDirectory "../../../data/PSMBasedQuantification/in/minimal.mzlite"
+            let quantParams = relToDirectory "../../../data/PSMBasedQuantification/in/QuantificationParams.json"
+            let outDirectory = relToDirectory "../../../data/PSMBasedQuantification/out"
+            let quantExe = relToDirectory "../../../../../bin/PSMBasedQuantification/net5.0/ProteomIQon.PSMBasedQuantification.dll"
+            // run tool
+            runDotNet (sprintf "%s -i %s -ii %s -o %s -p %s -d %s" quantExe mzlite qpsm outDirectory quantParams db) Environment.CurrentDirectory
+            let referenceQuant =
+                let quantPath = relToDirectory "../../../data/PSMBasedQuantification/out/minimalReference.quant"
+                FSharpAux.IO.SchemaReader.Csv.CsvReader<ProteomIQon.Dto.QuantificationResult>().ReadFile(quantPath,'\t',false,1)
+                |> Array.ofSeq
+            let testQuant =
+                let quantPath = relToDirectory "../../../data/PSMBasedQuantification/out/minimal.quant"
+                FSharpAux.IO.SchemaReader.Csv.CsvReader<ProteomIQon.Dto.QuantificationResult>().ReadFile(quantPath,'\t',false,1)
+                |> Array.ofSeq
+            let compare,fields = 
+                let unequalFields =
+                    Array.map2 (fun (reference: ProteomIQon.Dto.QuantificationResult) (test: ProteomIQon.Dto.QuantificationResult) ->
+                        [|
+                            "StringSequence",
+                                test.StringSequence = reference.StringSequence
+                            "GlobalMod",
+                                test.GlobalMod = reference.GlobalMod
+                            "Charge",
+                                test.Charge = reference.Charge
+                            "PepSequenceID",
+                                test.PepSequenceID = reference.PepSequenceID
+                            "ModSequenceID",
+                                test.ModSequenceID = reference.ModSequenceID
+                            "PrecursorMZ",
+                                test.PrecursorMZ >= reference.PrecursorMZ * 0.99 &&
+                                test.PrecursorMZ <= reference.PrecursorMZ * 1.01
+                            "MeasuredMass",
+                                test.MeasuredMass >= reference.MeasuredMass * 0.99 &&
+                                test.MeasuredMass <= reference.MeasuredMass * 1.01
+                            "TheoMass"
+                                ,test.TheoMass = reference.TheoMass
+                            "AbsDeltaMass",
+                                test.AbsDeltaMass >= reference.AbsDeltaMass * 0.7 &&
+                                test.AbsDeltaMass <= reference.AbsDeltaMass * 1.3
+                            "ProteinNames",
+                                test.ProteinNames = reference.ProteinNames
+                            "QuantMz_Light",
+                                test.QuantMz_Light >= reference.QuantMz_Light * 0.99 &&
+                                test.QuantMz_Light <= reference.QuantMz_Light * 1.01
+                            "Quant_Light",
+                                test.Quant_Light >= reference.Quant_Light * 0.99 &&
+                                test.Quant_Light <= reference.Quant_Light * 1.01
+                            "MeasuredApex_Light",
+                                test.MeasuredApex_Light >= reference.MeasuredApex_Light * 0.99 &&
+                                test.MeasuredApex_Light <= reference.MeasuredApex_Light * 1.01
+                            //"Seo_Light",
+                            //    test.Seo_Light >= reference.Seo_Light * 0.99 &&
+                            //    test.Seo_Light <= reference.Seo_Light * 1.01
+                            "Difference_SearchRT_FittedRT_Light",
+                                abs test.Difference_SearchRT_FittedRT_Light >= abs reference.Difference_SearchRT_FittedRT_Light * 0.9 &&
+                                abs test.Difference_SearchRT_FittedRT_Light <= abs reference.Difference_SearchRT_FittedRT_Light * 1.1
+                            "KLDiv_CorrectedObserved_Theoretical_Light",
+                                test.KLDiv_CorrectedObserved_Theoretical_Light >= reference.KLDiv_CorrectedObserved_Theoretical_Light * 0.9 &&
+                                test.KLDiv_CorrectedObserved_Theoretical_Light <= reference.KLDiv_CorrectedObserved_Theoretical_Light * 1.1
+                            "KLDiv_Observed_Theoretical_Light",
+                                test.KLDiv_Observed_Theoretical_Light >= reference.KLDiv_Observed_Theoretical_Light * 0.99 &&
+                                test.KLDiv_Observed_Theoretical_Light <= reference.KLDiv_Observed_Theoretical_Light * 1.01
+                            "QuantMz_Heavy",
+                                test.QuantMz_Heavy >= reference.QuantMz_Heavy * 0.99 &&
+                                test.QuantMz_Heavy <= reference.QuantMz_Heavy * 1.01
+                            "Quant_Heavy",
+                                test.Quant_Heavy >= reference.Quant_Heavy * 0.99 &&
+                                test.Quant_Heavy <= reference.Quant_Heavy * 1.01
+                            "MeasuredApex_Heavy",
+                                test.MeasuredApex_Heavy >= reference.MeasuredApex_Heavy * 0.99 &&
+                                test.MeasuredApex_Heavy <= reference.MeasuredApex_Heavy * 1.01
+                            //"Seo_Heavy",
+                            //    test.Seo_Heavy >= reference.Seo_Heavy * 0.99 &&
+                            //    test.Seo_Heavy <= reference.Seo_Heavy * 1.01
+                            "Difference_SearchRT_FittedRT_Heavy",
+                                abs test.Difference_SearchRT_FittedRT_Heavy >= abs reference.Difference_SearchRT_FittedRT_Heavy * 0.9 &&
+                                abs test.Difference_SearchRT_FittedRT_Heavy <= abs reference.Difference_SearchRT_FittedRT_Heavy * 1.1
+                            "KLDiv_CorrectedObserved_Theoretical_Heavy",
+                                test.KLDiv_CorrectedObserved_Theoretical_Heavy >= reference.KLDiv_CorrectedObserved_Theoretical_Heavy * 0.9 &&
+                                test.KLDiv_CorrectedObserved_Theoretical_Heavy <= reference.KLDiv_CorrectedObserved_Theoretical_Heavy * 1.1
+                            "KLDiv_Observed_Theoretical_Heavy",
+                                test.KLDiv_CorrectedObserved_Theoretical_Heavy >= reference.KLDiv_CorrectedObserved_Theoretical_Heavy * 0.9 &&
+                                test.KLDiv_CorrectedObserved_Theoretical_Heavy <= reference.KLDiv_CorrectedObserved_Theoretical_Heavy * 1.1
+                            "Correlation_Light_Heavy",
+                                test.Correlation_Light_Heavy >= reference.Correlation_Light_Heavy * 0.99 &&
+                                test.Correlation_Light_Heavy <= reference.Correlation_Light_Heavy * 1.01
+                            "QuantificationSource",
+                                test.QuantificationSource = reference.QuantificationSource
+                        |]
+                    ) referenceQuant testQuant
+                    |> Array.collect (
+                        Array.filter (fun (field,equal) -> equal = false)
+                    )
+                    |> Array.distinct
+                    |> Array.map fst
+                if unequalFields |> Array.isEmpty then true , ""
+                else false, unequalFields |> String.concat ";"
+            // cleanup
+            File.Delete (relToDirectory "../../../data/PSMBasedQuantification/out/minimal.quant")
+            File.Delete (relToDirectory "../../../data/PSMBasedQuantification/out/minimal_log.txt")
+            File.Delete (relToDirectory "../../../data/PSMBasedQuantification/out/PSMBasedQuantification_log.txt")
+            Directory.Delete (relToDirectory "../../../data/PSMBasedQuantification/out/minimal_plots")
+            Expect.isTrue compare (sprintf "Quants are different in the following fields: %s" fields)
         testCase "ProteinInference" <| fun _ ->
             let subject = true
             Expect.isTrue subject "I compute, therefore I am."
