@@ -147,8 +147,16 @@ let pipelineTests =
             let quantParams = relToDirectory "../../../data/PSMBasedQuantification/in/QuantificationParams.json"
             let outDirectory = relToDirectory "../../../data/PSMBasedQuantification/out"
             let quantExe = relToDirectory "../../../../../bin/PSMBasedQuantification/net5.0/ProteomIQon.PSMBasedQuantification.dll"
+            // cleanup
+            try
+                File.Delete (relToDirectory "../../../data/PSMBasedQuantification/out/minimal.quant")
+                File.Delete (relToDirectory "../../../data/PSMBasedQuantification/out/minimal_log.txt")
+                File.Delete (relToDirectory "../../../data/PSMBasedQuantification/out/PSMBasedQuantification_log.txt")
+                Directory.Delete (relToDirectory "../../../data/PSMBasedQuantification/out/minimal_plots")
+            with
+            | _ -> ()
             // run tool
-            runDotNet (sprintf "%s -i %s -ii %s -o %s -p %s -d %s" quantExe mzlite qpsm outDirectory quantParams db) Environment.CurrentDirectory
+            runDotNet (sprintf "%s -i %s -ii %s -o %s -p %s -d %s -dc" quantExe mzlite qpsm outDirectory quantParams db) Environment.CurrentDirectory
             let referenceQuant =
                 let quantPath = relToDirectory "../../../data/PSMBasedQuantification/out/minimalReference.quant"
                 FSharpAux.IO.SchemaReader.Csv.CsvReader<ProteomIQon.Dto.QuantificationResult>().ReadFile(quantPath,'\t',false,1)
@@ -188,11 +196,11 @@ let pipelineTests =
                                 test.QuantMz_Light >= reference.QuantMz_Light * 0.99 &&
                                 test.QuantMz_Light <= reference.QuantMz_Light * 1.01
                             "Quant_Light",
-                                test.Quant_Light >= reference.Quant_Light * 0.9 &&
-                                test.Quant_Light <= reference.Quant_Light * 1.1
+                                test.Quant_Light >= reference.Quant_Light * 0.99 &&
+                                test.Quant_Light <= reference.Quant_Light * 1.01
                             "MeasuredApex_Light",
-                                test.MeasuredApex_Light >= reference.MeasuredApex_Light * 0.8 &&
-                                test.MeasuredApex_Light <= reference.MeasuredApex_Light * 1.2
+                                test.MeasuredApex_Light >= reference.MeasuredApex_Light * 0.99 &&
+                                test.MeasuredApex_Light <= reference.MeasuredApex_Light * 1.01
                             //"Seo_Light",
                             //    test.Seo_Light >= reference.Seo_Light * 0.99 &&
                             //    test.Seo_Light <= reference.Seo_Light * 1.01
@@ -209,11 +217,11 @@ let pipelineTests =
                                 test.QuantMz_Heavy >= reference.QuantMz_Heavy * 0.99 &&
                                 test.QuantMz_Heavy <= reference.QuantMz_Heavy * 1.01
                             "Quant_Heavy",
-                                test.Quant_Heavy >= reference.Quant_Heavy * 0.9 &&
-                                test.Quant_Heavy <= reference.Quant_Heavy * 1.1
+                                test.Quant_Heavy >= reference.Quant_Heavy * 0.99 &&
+                                test.Quant_Heavy <= reference.Quant_Heavy * 1.01
                             "MeasuredApex_Heavy",
-                                test.MeasuredApex_Heavy >= reference.MeasuredApex_Heavy * 0.8 &&
-                                test.MeasuredApex_Heavy <= reference.MeasuredApex_Heavy * 1.2
+                                test.MeasuredApex_Heavy >= reference.MeasuredApex_Heavy * 0.99 &&
+                                test.MeasuredApex_Heavy <= reference.MeasuredApex_Heavy * 1.01
                             //"Seo_Heavy",
                             //    test.Seo_Heavy >= reference.Seo_Heavy * 0.99 &&
                             //    test.Seo_Heavy <= reference.Seo_Heavy * 1.01
@@ -240,11 +248,6 @@ let pipelineTests =
                     |> Array.map fst
                 if unequalFields |> Array.isEmpty then true , ""
                 else false, unequalFields |> String.concat ";"
-            // cleanup
-            File.Delete (relToDirectory "../../../data/PSMBasedQuantification/out/minimal.quant")
-            File.Delete (relToDirectory "../../../data/PSMBasedQuantification/out/minimal_log.txt")
-            File.Delete (relToDirectory "../../../data/PSMBasedQuantification/out/PSMBasedQuantification_log.txt")
-            Directory.Delete (relToDirectory "../../../data/PSMBasedQuantification/out/minimal_plots")
             Expect.isTrue compare (sprintf "Quants are different in the following fields: %s" fields)
         testCase "ProteinInference" <| fun _ ->
             let subject = true
