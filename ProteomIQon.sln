@@ -90,6 +90,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{57FEA09C-F
 EndProject
 Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "MzliteToMzML", "src\MzliteToMzML\MzliteToMzML.fsproj", "{9F43B573-639B-42B3-A3BE-9722FC513A7F}"
 EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "LabelFreeProteinQuantification", "src\LabelFreeProteinQuantification\LabelFreeProteinQuantification.fsproj", "{7F8A4865-E8E1-4A68-B01C-FC7BABBDA1B3}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -172,12 +174,17 @@ Global
 		{9F43B573-639B-42B3-A3BE-9722FC513A7F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9F43B573-639B-42B3-A3BE-9722FC513A7F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{9F43B573-639B-42B3-A3BE-9722FC513A7F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7F8A4865-E8E1-4A68-B01C-FC7BABBDA1B3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7F8A4865-E8E1-4A68-B01C-FC7BABBDA1B3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7F8A4865-E8E1-4A68-B01C-FC7BABBDA1B3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7F8A4865-E8E1-4A68-B01C-FC7BABBDA1B3}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{57D972AD-99A0-4354-9DDF-7E0938497454} = {ED8079DD-2B06-4030-9F0F-DC548F98E1C4}
+		{7F8A4865-E8E1-4A68-B01C-FC7BABBDA1B3} = {50F43FA1-4EF7-44AC-9621-34BF5E9D7135}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {D55EAFC0-7966-48AB-9DF6-8CFA23ABABB1}

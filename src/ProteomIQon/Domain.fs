@@ -262,6 +262,7 @@ module Domain =
             AggregatorPepToProt         : AggregationMethod
             Tukey                       : (string*float*Transform) []
         }
+
     module LabeledProteinQuantification = 
         
         type LabeledTransforms = 
@@ -309,7 +310,46 @@ module Domain =
             AggregateModifiedPeptidesParams      : LabeledProteinQuantification.AggregationParams option
             AggregateToProteinGroupsParams       : LabeledProteinQuantification.AggregationParams
         }
+
         
+    module LabelFreeQuantification = 
+        
+        type Transforms = 
+            {
+                Light: float -> float
+            }   
+        
+        type Aggregations = 
+            {
+                Light: seq<float> -> float
+            }   
+        
+        type SingleFilters = 
+            {
+                Light: seq<(float -> bool)>
+            }   
+
+        type GroupFilters = 
+            {
+                Light: seq<(seq<float> -> float -> bool)>
+            }   
+
+        type AggregationParams = 
+            {
+                Transform        : Transforms 
+                SingleFilters    : SingleFilters 
+                GroupFilters     : GroupFilters 
+                Aggregation      : Aggregations
+            }
+
+    type LabelFreeQuantificationParams = 
+        {
+            ModificationFilter : string -> bool 
+            AggregatePeptideChargeStatesParams   : LabelFreeQuantification.AggregationParams option
+            AggregateModifiedPeptidesParams      : LabelFreeQuantification.AggregationParams option
+            AggregateToProteinGroupsParams       : LabelFreeQuantification.AggregationParams
+        } 
+               
     type ConsensusAlignmentAlgorithm = 
         | FastTree
         | Spline 

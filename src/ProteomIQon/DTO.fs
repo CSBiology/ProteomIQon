@@ -396,6 +396,80 @@ module Common =
                     LabeledGroupFilters     = labeledGroupFilters 
                     LabeledAggregation      = labeledAggregations
                 }
+
+    module LabelFreeQuantification = 
+        
+        type Transforms = 
+                {
+                    Light: NumericTransform option 
+                }   
+            
+        type Aggregations = 
+            {
+                Light: NumericAggregation
+            }   
+        
+        type SingleFilters = 
+            {
+                Light: seq<NumericFilter> option
+            }   
+
+        type GroupFilters = 
+            {
+                Light: seq<GroupFilter> option
+            }   
+
+        type AggregationParams = 
+            {
+                Transform        : Transforms option
+                SingleFilters    : SingleFilters option
+                GroupFilters     : GroupFilters option
+                Aggregation      : Aggregations 
+            }
+        
+        module AggregationParams = 
+
+            let toDomain (aggP:AggregationParams) :Domain.LabelFreeQuantification.AggregationParams = 
+                let transforms :Domain.LabelFreeQuantification.Transforms = 
+                    match aggP.Transform with
+                    | Some t -> 
+                        let unpackTransform t = 
+                            match t with 
+                            | Some t -> NumericTransform.toDomain t
+                            | None -> id
+                        {Light = unpackTransform t.Light}
+                    | None -> 
+                        {Light = id}
+                let singleFilters :Domain.LabelFreeQuantification.SingleFilters = 
+                    match aggP.SingleFilters with
+                    | Some f -> 
+                        let unpackTransform (fs:seq<NumericFilter> option) = 
+                            match fs with 
+                            | Some t -> t |> Seq.map NumericFilter.toDomain 
+                            | None -> Seq.empty
+                        {Light = unpackTransform f.Light}
+                    | None -> 
+                        {Light = Seq.empty}
+                let groupFilters :Domain.LabelFreeQuantification.GroupFilters = 
+                    match aggP.GroupFilters with
+                    | Some f -> 
+                        let unpackTransform (fs:seq<GroupFilter> option) = 
+                            match fs with 
+                            | Some t -> t |> Seq.map GroupFilter.toDomain 
+                            | None -> Seq.empty
+                        {Light = unpackTransform f.Light}
+                    | None -> 
+                        {Light = Seq.empty}
+                let aggregations :Domain.LabelFreeQuantification.Aggregations =                     
+                    {
+                        Light = aggP.Aggregation.Light |> NumericAggregation.toDomain 
+                    }     
+                {
+                    Transform        = transforms 
+                    SingleFilters    = singleFilters 
+                    GroupFilters     = groupFilters 
+                    Aggregation      = aggregations
+                }
 /// 
 module Dto =
 
@@ -1174,7 +1248,25 @@ module Dto =
                 AggregateModifiedPeptidesParams         = dtoTableSortParams.AggregateModifiedPeptidesParams    |> Option.map LabeledProteinQuantification.AggregationParams.toDomain
                 AggregateToProteinGroupsParams          = dtoTableSortParams.AggregateToProteinGroupsParams     |> LabeledProteinQuantification.AggregationParams.toDomain
             }
-
+    
+    type LabelFreeQuantificationParams = 
+        {
+        ModificationFilter                   : UseModifiedPeptides 
+        AggregatePeptideChargeStatesParams   : LabelFreeQuantification.AggregationParams option
+        AggregateModifiedPeptidesParams      : LabelFreeQuantification.AggregationParams option
+        AggregateToProteinGroupsParams       : LabelFreeQuantification.AggregationParams
+        }   
+       
+    module LabelFreeQuantificationParams =
+    
+        let inline toDomain (dtoTableSortParams: LabelFreeQuantificationParams): Domain.LabelFreeQuantificationParams = 
+            {
+                ModificationFilter                      = dtoTableSortParams.ModificationFilter |> UseModifiedPeptides.toDomain              
+                AggregatePeptideChargeStatesParams      = dtoTableSortParams.AggregatePeptideChargeStatesParams |> Option.map Common.LabelFreeQuantification.AggregationParams.toDomain 
+                AggregateModifiedPeptidesParams         = dtoTableSortParams.AggregateModifiedPeptidesParams    |> Option.map Common.LabelFreeQuantification.AggregationParams.toDomain
+                AggregateToProteinGroupsParams          = dtoTableSortParams.AggregateToProteinGroupsParams     |> Common.LabelFreeQuantification.AggregationParams.toDomain 
+            }
+            
     type SpectralLibraryParams =
         {
             MatchingTolerancePPM: float
