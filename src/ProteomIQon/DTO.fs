@@ -9,6 +9,7 @@ open FSharpAux.IO.SchemaReader.Attribute
 open MzIO.Binary
 open MzIO.Processing
 
+
 [<AutoOpen>]
 module Common =
 
@@ -83,6 +84,7 @@ module Common =
         | Phosphorylation'Ser'Thr'Tyr'
         | Pyro_Glu'GluNterm'
         | Pyro_Glu'GlnNterm'
+    
 
     module Modification  =
 
@@ -106,6 +108,7 @@ module Common =
             | Pyro_Glu'GluNterm'            -> pyro_Glu'GluNterm'
             | Pyro_Glu'GlnNterm'            -> pyro_Glu'GlnNterm'
 
+        
     type IsotopicMod =
         | N15
         | C13
@@ -202,7 +205,198 @@ module Common =
             | Compression.ZLib          -> BinaryDataCompressionType.ZLib
             | Compression.NumPress      -> BinaryDataCompressionType.NumPress
             | Compression.NumPressZLib  -> BinaryDataCompressionType.NumPressZLib
-///
+
+    type UseModifiedPeptides =
+        | All 
+        | No 
+        | UseOnly of seq<Modification>
+
+    module UseModifiedPeptides =
+
+        let toDomain (useModifiedPeptides:UseModifiedPeptides)  = 
+            match useModifiedPeptides with 
+            | All -> 
+                fun (x:string) -> true
+            | No -> 
+                fun (x:string) -> x.Contains "[" |> not
+            | UseOnly mods -> 
+                let searchMods = 
+                    mods 
+                    |> Seq.map (Modification.toDomain >> (fun x -> x.XModCode))
+                    |> Set.ofSeq
+                fun (x:string) -> 
+                    let pattern = @"(?<=\[)(\w*)(?=\])"
+                    let matches = System.Text.RegularExpressions.Regex.Matches(x,pattern)
+                    // using this in favor of the out commented code since there seems to be a netstandard related issue that 
+                    // hinders resolving that matches implements IEnumerable.
+                    matches.Count = 0 || [for m in matches do searchMods.Contains m.Value] |> Seq.forall id
+                    //Seq.isEmpty matches || (matches |> Seq.forall (fun m -> searchMods.Contains m.Value)) 
+    
+    open FSharp.Stats
+
+    type NumericTransform =
+        | Log2
+        | Substract of float 
+        | Add of float
+        | DivideBy of float
+        | MultiplyBy of float 
+
+    module NumericTransform =     
+        
+        let toDomain transform =
+            match transform with 
+            | Log2          -> log2 
+            | Substract v   -> fun x -> x - v 
+            | Add v         -> fun x -> v + x
+            | DivideBy v    -> fun x -> x / v
+            | MultiplyBy v  -> fun x -> x * v 
+            
+    type NumericAggregation = 
+        | Mean 
+        | Median 
+        | Sum
+    
+    module NumericAggregation =     
+        
+        let toDomain aggregation  = 
+            match aggregation with 
+            | Mean      -> Seq.mean 
+            | Median    -> Seq.median 
+            | Sum       -> Seq.sum 
+
+    type DispersionMeasure =
+        | SEM
+        | StDev
+        | CV
+    
+    module DispersionMeasure =     
+        let toDomain dipsMeasure  = 
+            match dipsMeasure with 
+            | SEM   -> 
+                fun (x:seq<float>) ->
+                    let stDev = Seq.stDev x
+                    stDev / (sqrt (x |> Seq.length |> float))
+            | StDev -> Seq.stDev 
+            | CV    -> Seq.cv 
+
+    type NumericFilter = 
+        | IsBiggerThan of float 
+        | IsSmallerThan of float
+
+    module NumericFilter =     
+        let toDomain filter = 
+            match filter with 
+            | IsBiggerThan v -> fun x -> x > v
+            | IsSmallerThan v -> fun x -> x < v
+
+    type GroupFilter = 
+        | Tukey of float  
+        | Stdev of float
+
+
+    module GroupFilter =
+        let toDomain gf =
+            match gf with 
+            | Tukey threshold -> 
+                fun (values:seq<float>) -> 
+                    let v = Array.ofSeq values
+                    let tukey = FSharp.Stats.Signal.Outliers.tukey threshold
+                    match tukey v with 
+                    | Intervals.Interval.ClosedInterval (lower, upper) -> 
+                        (fun v -> v <= upper && v >= lower)
+                    | _ -> fun v -> false
+            | Stdev threshold ->  
+                fun values -> 
+                    let mean = Seq.mean values
+                    let stdev = Seq.stDev values
+                    (fun v -> v <= (mean+stdev*threshold) && v >= (mean-stdev*threshold)
+                    ) 
+
+
+    module LabeledProteinQuantification = 
+        
+        type LabeledTransforms = 
+                {
+                    Light: NumericTransform option 
+                    Heavy: NumericTransform option
+                    Ratio: NumericTransform option
+                }   
+            
+        type LabeledAggregations = 
+            {
+                Light: NumericAggregation
+                Heavy: NumericAggregation
+                Ratio: NumericAggregation
+            }   
+        
+        type LabeledSingleFilters = 
+            {
+                Light: seq<NumericFilter> option
+                Heavy: seq<NumericFilter> option
+                Ratio: seq<NumericFilter> option
+            }   
+
+        type LabeledGroupFilters = 
+            {
+                Light: seq<GroupFilter> option
+                Heavy: seq<GroupFilter> option
+                Ratio: seq<GroupFilter> option
+            }   
+
+        type AggregationParams = 
+            {
+                LabeledTransform        : LabeledTransforms option
+                LabeledSingleFilters    : LabeledSingleFilters option
+                LabeledGroupFilters     : LabeledGroupFilters option
+                LabeledAggregation      : LabeledAggregations 
+            }
+        
+        module AggregationParams = 
+
+            let toDomain (aggP:AggregationParams) :Domain.LabeledProteinQuantification.AggregationParams = 
+                let labeledTransforms :Domain.LabeledProteinQuantification.LabeledTransforms = 
+                    match aggP.LabeledTransform with
+                    | Some t -> 
+                        let unpackTransform t = 
+                            match t with 
+                            | Some t -> NumericTransform.toDomain t
+                            | None -> id
+                        {Light = unpackTransform t.Light;Heavy = unpackTransform t.Heavy;Ratio = unpackTransform t.Ratio}
+                    | None -> 
+                        {Light = id;Heavy = id;Ratio = id}
+                let labeledSingleFilters :Domain.LabeledProteinQuantification.LabeledSingleFilters = 
+                    match aggP.LabeledSingleFilters with
+                    | Some f -> 
+                        let unpackTransform (fs:seq<NumericFilter> option) = 
+                            match fs with 
+                            | Some t -> t |> Seq.map NumericFilter.toDomain 
+                            | None -> Seq.empty
+                        {Light = unpackTransform f.Light;Heavy = unpackTransform f.Heavy;Ratio = unpackTransform f.Ratio}
+                    | None -> 
+                        {Light = Seq.empty;Heavy = Seq.empty;Ratio = Seq.empty}
+                let labeledGroupFilters :Domain.LabeledProteinQuantification.LabeledGroupFilters = 
+                    match aggP.LabeledGroupFilters with
+                    | Some f -> 
+                        let unpackTransform (fs:seq<GroupFilter> option) = 
+                            match fs with 
+                            | Some t -> t |> Seq.map GroupFilter.toDomain 
+                            | None -> Seq.empty
+                        {Light = unpackTransform f.Light;Heavy = unpackTransform f.Heavy;Ratio = unpackTransform f.Ratio}
+                    | None -> 
+                        {Light = Seq.empty;Heavy = Seq.empty;Ratio = Seq.empty}
+                let labeledAggregations :Domain.LabeledProteinQuantification.LabeledAggregations =                     
+                    {
+                        Light = aggP.LabeledAggregation.Light   |> NumericAggregation.toDomain 
+                        Heavy = aggP.LabeledAggregation.Heavy   |> NumericAggregation.toDomain
+                        Ratio = aggP.LabeledAggregation.Ratio   |> NumericAggregation.toDomain
+                     }     
+                {
+                    LabeledTransform        = labeledTransforms 
+                    LabeledSingleFilters    = labeledSingleFilters 
+                    LabeledGroupFilters     = labeledGroupFilters 
+                    LabeledAggregation      = labeledAggregations
+                }
+/// 
 module Dto =
 
     type PreprocessingParams =
@@ -832,90 +1026,92 @@ module Dto =
         [<FieldAttribute(1)>]
         ProteinGroup                                : string
         [<FieldAttribute(2)>]
-        StringSequence                              : string
+        ProteinGroup_QValue                         : float
         [<FieldAttribute(3)>]
-        PepSequenceID                               : int
+        StringSequence                              : string
         [<FieldAttribute(4)>]
-        ModSequenceID                               : int
+        PepSequenceID                               : int
         [<FieldAttribute(5)>]
-        Charge                                      : int
+        ModSequenceID                               : int
         [<FieldAttribute(6)>]
-        GlobalMod                                   : bool                    
+        Charge                                      : int
         [<FieldAttribute(7)>]
-        PrecursorMZ                                 : float
+        GlobalMod                                   : int                    
         [<FieldAttribute(8)>]
-        MeasuredMass                                : float 
+        PrecursorMZ                                 : float
         [<FieldAttribute(9)>]
-        TheoMass                                    : float
+        MeasuredMass                                : float 
         [<FieldAttribute(10)>]
-        AbsDeltaMass                                : float
+        TheoMass                                    : float
         [<FieldAttribute(11)>]
-        MeanPercolatorScore                         : float
+        AbsDeltaMass                                : float
         [<FieldAttribute(12)>]
-        QValue                                      : float
+        MeanPercolatorScore                         : float
         [<FieldAttribute(13)>]
-        PEPValue                                    : float
+        QValue                                      : float
         [<FieldAttribute(14)>]
-        ProteinNames                                : string
+        PEPValue                                    : float
         [<FieldAttribute(15)>]
-        QuantMz_Light                               : float
+        ProteinNames                                : string
         [<FieldAttribute(16)>]
-        Quant_Light                                 : float
+        QuantMz_Light                               : float
         [<FieldAttribute(17)>]
-        MeasuredApex_Light                          : float 
+        Quant_Light                                 : float
         [<FieldAttribute(18)>]
+        MeasuredApex_Light                          : float 
+        [<FieldAttribute(19)>]
         Seo_Light                                   : float
-        [<FieldAttribute(19)>][<TraceConverter>]
+        [<FieldAttribute(20)>][<TraceConverter>]
         Params_Light                                : float []
-        [<FieldAttribute(20)>]
-        Difference_SearchRT_FittedRT_Light          : float
         [<FieldAttribute(21)>]
-        KLDiv_Observed_Theoretical_Light            : float
+        Difference_SearchRT_FittedRT_Light          : float
         [<FieldAttribute(22)>]
-        KLDiv_CorrectedObserved_Theoretical_Light   : float
+        KLDiv_Observed_Theoretical_Light            : float
         [<FieldAttribute(23)>]
-        QuantMz_Heavy                               : float
+        KLDiv_CorrectedObserved_Theoretical_Light   : float
         [<FieldAttribute(24)>]
-        Quant_Heavy                                 : float
+        QuantMz_Heavy                               : float
         [<FieldAttribute(25)>]
-        MeasuredApex_Heavy                          : float
+        Quant_Heavy                                 : float
         [<FieldAttribute(26)>]
+        MeasuredApex_Heavy                          : float
+        [<FieldAttribute(27)>]
         Seo_Heavy                                   : float
-        [<FieldAttribute(27)>][<TraceConverter>]
+        [<FieldAttribute(28)>][<TraceConverter>]
         Params_Heavy                                : float []        
-        [<FieldAttribute(28)>]
-        Difference_SearchRT_FittedRT_Heavy          : float
         [<FieldAttribute(29)>]
-        KLDiv_Observed_Theoretical_Heavy            : float
+        Difference_SearchRT_FittedRT_Heavy          : float
         [<FieldAttribute(30)>]
-        KLDiv_CorrectedObserved_Theoretical_Heavy   : float
+        KLDiv_Observed_Theoretical_Heavy            : float
         [<FieldAttribute(31)>]
+        KLDiv_CorrectedObserved_Theoretical_Heavy   : float
+        [<FieldAttribute(32)>]
         Correlation_Light_Heavy                     : float
-        [<FieldAttribute(32)>][<QuantSourceConverter>]
+        [<FieldAttribute(33)>][<QuantSourceConverter>]
         QuantificationSource                        : QuantificationSource
-        [<FieldAttribute(33)>][<TraceConverter>]
-        IsotopicPatternMz_Light                     : float []
         [<FieldAttribute(34)>][<TraceConverter>]
-        IsotopicPatternIntensity_Observed_Light     : float []
+        IsotopicPatternMz_Light                     : float []
         [<FieldAttribute(35)>][<TraceConverter>]
-        IsotopicPatternIntensity_Corrected_Light    : float []
+        IsotopicPatternIntensity_Observed_Light     : float []
         [<FieldAttribute(36)>][<TraceConverter>]
-        RtTrace_Light                               : float []
+        IsotopicPatternIntensity_Corrected_Light    : float []
         [<FieldAttribute(37)>][<TraceConverter>]
-        IntensityTrace_Observed_Light               : float []
+        RtTrace_Light                               : float []
         [<FieldAttribute(38)>][<TraceConverter>]
-        IntensityTrace_Corrected_Light              : float []
+        IntensityTrace_Observed_Light               : float []
         [<FieldAttribute(39)>][<TraceConverter>]
-        IsotopicPatternMz_Heavy                     : float []
+        IntensityTrace_Corrected_Light              : float []
         [<FieldAttribute(40)>][<TraceConverter>]
-        IsotopicPatternIntensity_Observed_Heavy     : float []
+        IsotopicPatternMz_Heavy                     : float []
         [<FieldAttribute(41)>][<TraceConverter>]
-        IsotopicPatternIntensity_Corrected_Heavy    : float []
+        IsotopicPatternIntensity_Observed_Heavy     : float []
         [<FieldAttribute(42)>][<TraceConverter>]
-        RtTrace_Heavy                               : float []
+        IsotopicPatternIntensity_Corrected_Heavy    : float []
         [<FieldAttribute(43)>][<TraceConverter>]
-        IntensityTrace_Observed_Heavy               : float []
+        RtTrace_Heavy                               : float []
         [<FieldAttribute(44)>][<TraceConverter>]
+        IntensityTrace_Observed_Heavy               : float []
+        [<FieldAttribute(45)>][<TraceConverter>]
         IntensityTrace_Corrected_Heavy              : float []
         }
 
@@ -929,11 +1125,11 @@ module Dto =
             QuantColumnsOfInterest      : string[]
             ProtColumnsOfInterest       : (string*string)[]
             DistinctPeptideCount        : bool
-            StatisticalMeasurements     : (string*StatisticalMeasurement)[]
-            AggregatorFunction          : AggregationMethod
-            AggregatorFunctionIntensity : AggregationMethod
-            AggregatorPepToProt         : AggregationMethod
-            Tukey                       : (string*float*Transform) []
+            StatisticalMeasurements     : (string*Domain.StatisticalMeasurement)[]
+            AggregatorFunction          : Domain.AggregationMethod
+            AggregatorFunctionIntensity : Domain.AggregationMethod
+            AggregatorPepToProt         : Domain.AggregationMethod
+            Tukey                       : (string*float*Domain.Transform) []
         }
 
     module TableSortParams =
@@ -954,29 +1150,31 @@ module Dto =
                 AggregatorPepToProt         = dtoTableSortParams.AggregatorPepToProt
                 Tukey                       = dtoTableSortParams.Tukey
             }
+                       
 
 
-    type LabeledQuantificationParams =
+    type LabeledQuantificationParams = 
         {
-            FilterHeavyLightCorrelation: float option
-        }
-
-    //module LabeledQuantificationParams =
+        Correlation_Light_Heavy_Threshold    : float option
+        ModificationFilter                   : UseModifiedPeptides 
+        AggregateGlobalModificationsParams   : LabeledProteinQuantification.AggregationParams
+        AggregatePeptideChargeStatesParams   : LabeledProteinQuantification.AggregationParams option
+        AggregateModifiedPeptidesParams      : LabeledProteinQuantification.AggregationParams option
+        AggregateToProteinGroupsParams       : LabeledProteinQuantification.AggregationParams
+        }   
+       
+    module LabeledQuantificationParams =
     
-    //    let inline toDomain (dtoTableSortParams: TableSortParams): Domain.TableSortParams =
-    //        {
-    //            EssentialFields             = dtoTableSortParams.EssentialFields
-    //            QuantFieldsToFilterOn       = dtoTableSortParams.QuantFieldsToFilterOn
-    //            ProtFieldsToFilterOn        = dtoTableSortParams.ProtFieldsToFilterOn
-    //            QuantColumnsOfInterest      = dtoTableSortParams.QuantColumnsOfInterest
-    //            ProtColumnsOfInterest       = dtoTableSortParams.ProtColumnsOfInterest
-    //            DistinctPeptideCount        = dtoTableSortParams.DistinctPeptideCount
-    //            StatisticalMeasurements     = dtoTableSortParams.StatisticalMeasurements
-    //            AggregatorFunction          = dtoTableSortParams.AggregatorFunction
-    //            AggregatorFunctionIntensity = dtoTableSortParams.AggregatorFunctionIntensity
-    //            AggregatorPepToProt         = dtoTableSortParams.AggregatorPepToProt
-    //            Tukey                       = dtoTableSortParams.Tukey
-    //        }
+        let inline toDomain (dtoTableSortParams: LabeledQuantificationParams): Domain.LabeledQuantificationParams = 
+            {
+                Correlation_Light_Heavy_Threshold       = dtoTableSortParams.Correlation_Light_Heavy_Threshold 
+                ModificationFilter                      = dtoTableSortParams.ModificationFilter |> UseModifiedPeptides.toDomain              
+                AggregateGlobalModificationsParams      = dtoTableSortParams.AggregateGlobalModificationsParams |> LabeledProteinQuantification.AggregationParams.toDomain
+                AggregatePeptideChargeStatesParams      = dtoTableSortParams.AggregatePeptideChargeStatesParams |> Option.map LabeledProteinQuantification.AggregationParams.toDomain
+                AggregateModifiedPeptidesParams         = dtoTableSortParams.AggregateModifiedPeptidesParams    |> Option.map LabeledProteinQuantification.AggregationParams.toDomain
+                AggregateToProteinGroupsParams          = dtoTableSortParams.AggregateToProteinGroupsParams     |> LabeledProteinQuantification.AggregationParams.toDomain
+            }
+
     type SpectralLibraryParams =
         {
             MatchingTolerancePPM: float
