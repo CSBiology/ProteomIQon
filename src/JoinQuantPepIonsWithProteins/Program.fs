@@ -6,7 +6,7 @@ open System.Reflection
 open Argu
 open ProteomIQon.Core
 open ProteomIQon.Core.InputPaths
-open Library
+open JoinQuantPepIonsWithProteins
 open CLIArgumentParsing
 
 module console1 =
