@@ -6,271 +6,305 @@ open FSharpAux.IO
 open FSharpAux.IO.SchemaReader
 open FSharpAux.IO.SchemaReader.Attribute
 open Dto
+open FSharp.Stats
+open System.IO
+open ProteomIQon.Drafo
 
-module Core =
-    open Deedle
-    open DynamicObj
-    open System.Collections.Generic
+module LabeledProteinQuantification = 
+    
+    open Domain.LabeledProteinQuantification
 
-    type Key() = 
-        inherit DynamicObj ()
-       
-        member this.addCol(columns:(string*'a)) =
-            this.SetValue columns
-            this  
+    let tryGetQVal s =
+        match s |> Seq.filter (nan.Equals >> not) |> Seq.tryItem 0 with 
+        | Some x -> x 
+        | None -> nan 
 
-        override this.ToString() = 
-            let sb = new System.Text.StringBuilder()
-            // sb.Append
-            (this.GetProperties true)        
-            |> Seq.iter (fun x -> 
-                let value = x.Value.ToString() 
-                sb.AppendLine(x.Key+": "+value)
-                |> ignore
+    let performGlobalModAggregation (transformParams:LabeledTransforms) (singleFilters:LabeledSingleFilters) (groupFilters:LabeledGroupFilters) (aggregations:LabeledAggregations) correlation_Light_Heavy_Threshold modifyKeyColumns keyColumns peptidesAndProteinsIndexed =
+            let light       = peptidesAndProteinsIndexed |> Core.getColumn<float>"Quant_Light"
+            let heavy       = peptidesAndProteinsIndexed |> Core.getColumn<float>"Quant_Heavy"
+            let correlation = peptidesAndProteinsIndexed |> Core.getColumn<float>"Correlation_Light_Heavy"
+            let proteinQVal = peptidesAndProteinsIndexed |> Core.getColumn<float>"ProteinGroup_QValue"
+            /// Zipped
+            let n14ByN15 = Core.zip (fun x y -> x / y) light heavy 
+            /// Transformed 
+            let lightT       = light    |> Core.transform transformParams.Light
+            let heavyT       = heavy    |> Core.transform transformParams.Heavy
+            let n14ByN15T    = n14ByN15 |> Core.transform transformParams.Ratio
+            /// 
+            /// ThresholdFilters
+            let lightTF = singleFilters.Light |> Seq.map (fun f -> Core.createFilter f lightT)
+            let heavyTF = singleFilters.Heavy |> Seq.map (fun f -> Core.createFilter f heavyT)
+            let n14ByN15TF = singleFilters.Ratio |> Seq.map (fun f -> Core.createFilter f n14ByN15T)
+            let correlationF = 
+                match correlation_Light_Heavy_Threshold with 
+                | Some c -> Core.createFilter (fun x -> x > c ) correlation
+                | None -> Core.createFilter (fun x -> true ) correlation
+            /// GroupFilters = 
+            let lightGF = groupFilters.Light |> Seq.map (fun f -> Core.createGroupFilter f modifyKeyColumns keyColumns lightT)
+            let heavyGF = groupFilters.Heavy |> Seq.map (fun f -> Core.createGroupFilter f modifyKeyColumns keyColumns heavyT) 
+            let n14ByN15GF = groupFilters.Ratio |> Seq.map (fun f -> Core.createGroupFilter f modifyKeyColumns keyColumns n14ByN15T)       
+            /// CombinedFilters 
+            let cf = correlationF::([lightTF;heavyTF;n14ByN15TF;lightGF;heavyGF;n14ByN15GF] |> Seq.concat |> List.ofSeq) 
+            /// Aggregated
+            let light_agg :Series<_,float> = Core.aggregate aggregations.Light modifyKeyColumns keyColumns cf lightT 
+            let heavy_agg :Series<_,float> = Core.aggregate aggregations.Heavy modifyKeyColumns keyColumns cf heavyT 
+            let ratio_agg :Series<_,float> = Core.aggregate aggregations.Ratio modifyKeyColumns keyColumns cf n14ByN15T
+            let proteinQVal :Series<_,float> = Core.aggregate tryGetQVal modifyKeyColumns keyColumns cf proteinQVal  
+            /// Assembeled
+            let assembeled = 
+                Core.assemble 
+                    [
+                    "Quant_Light", light_agg :> ISeries<Core.Key>
+                    "Quant_Heavy", heavy_agg :> ISeries<Core.Key>
+                    "Ratio_LightByHeavy", ratio_agg :> ISeries<Core.Key>
+                    "ProteinGroup_QValue", proteinQVal :> ISeries<Core.Key>
+                    ]
+            assembeled
+
+    let performChargeOrModAggregation (transformParams:LabeledTransforms) (singleFilters:LabeledSingleFilters) (groupFilters:LabeledGroupFilters) (aggregations:LabeledAggregations) modifyKeyColumns keyColumns peptidesAndProteinsIndexed =
+            let light       = peptidesAndProteinsIndexed |> Core.getColumn<float>"Quant_Light"
+            let heavy       = peptidesAndProteinsIndexed |> Core.getColumn<float>"Quant_Heavy"
+            let n14ByN15    = peptidesAndProteinsIndexed |> Core.getColumn<float>"Ratio_LightByHeavy"
+            let proteinQVal = peptidesAndProteinsIndexed |> Core.getColumn<float>"ProteinGroup_QValue"
+            /// Transformed 
+            let lightT       = light    |> Core.transform transformParams.Light
+            let heavyT       = heavy    |> Core.transform transformParams.Heavy
+            /// Zipped
+            let n14ByN15T    = n14ByN15 |> Core.transform transformParams.Ratio
+            /// 
+            /// ThresholdFilters
+            let lightTF = singleFilters.Light |> Seq.map (fun f -> Core.createFilter f lightT)
+            let heavyTF = singleFilters.Heavy |> Seq.map (fun f -> Core.createFilter f heavyT)
+            let n14ByN15TF = singleFilters.Ratio |> Seq.map (fun f -> Core.createFilter f n14ByN15T)
+            /// GroupFilters = 
+            let lightGF = groupFilters.Light |> Seq.map (fun f -> Core.createGroupFilter f modifyKeyColumns keyColumns lightT)
+            let heavyGF = groupFilters.Heavy |> Seq.map (fun f -> Core.createGroupFilter f modifyKeyColumns keyColumns heavyT) 
+            let n14ByN15GF = groupFilters.Ratio |> Seq.map (fun f -> Core.createGroupFilter f modifyKeyColumns keyColumns n14ByN15T)       
+            /// CombinedFilters 
+            let cf = ([lightTF;heavyTF;n14ByN15TF;lightGF;heavyGF;n14ByN15GF] |> Seq.concat |> List.ofSeq) 
+            /// Aggregated
+            let light_agg :Series<_,float> = Core.aggregate aggregations.Light modifyKeyColumns keyColumns cf lightT 
+            let heavy_agg :Series<_,float> = Core.aggregate aggregations.Heavy modifyKeyColumns keyColumns cf heavyT 
+            let ratio_agg :Series<_,float> = Core.aggregate aggregations.Ratio modifyKeyColumns keyColumns cf n14ByN15T 
+            let proteinQVal :Series<_,float> = Core.aggregate tryGetQVal modifyKeyColumns keyColumns cf proteinQVal 
+            /// Assembeled
+            let assembeled = 
+                Core.assemble 
+                    [
+                    "Quant_Light", light_agg :> ISeries<Core.Key>
+                    "Quant_Heavy", heavy_agg :> ISeries<Core.Key>
+                    "Ratio_LightByHeavy", ratio_agg :> ISeries<Core.Key>
+                    "ProteinGroup_QValue", proteinQVal :> ISeries<Core.Key>
+                    ]
+            assembeled
+
+    let performPeptideToProteinAggregation (transformParams:LabeledTransforms) (singleFilters:LabeledSingleFilters) (groupFilters:LabeledGroupFilters) (aggregations:LabeledAggregations) modifyKeyColumns keyColumns peptidesAndProteinsIndexed =
+            let sem (x:seq<float>) =
+                let stDev = Seq.stDev x
+                stDev / (sqrt (x |> Seq.length |> float))
+            let light       = peptidesAndProteinsIndexed |> Core.getColumn<float>"Quant_Light"
+            let heavy       = peptidesAndProteinsIndexed |> Core.getColumn<float>"Quant_Heavy"
+            let n14ByN15    = peptidesAndProteinsIndexed |> Core.getColumn<float>"Ratio_LightByHeavy"
+            let proteinQVal = peptidesAndProteinsIndexed |> Core.getColumn<float>"ProteinGroup_QValue"
+            /// Zipped
+            /// Transformed 
+            let lightT       = light    |> Core.transform transformParams.Light
+            let heavyT       = heavy    |> Core.transform transformParams.Heavy
+            let n14ByN15T    = n14ByN15 |> Core.transform transformParams.Ratio           
+            /// 
+            /// ThresholdFilters
+            let lightTF = singleFilters.Light |> Seq.map (fun f -> Core.createFilter f lightT)
+            let heavyTF = singleFilters.Heavy |> Seq.map (fun f -> Core.createFilter f heavyT)
+            let n14ByN15TF = singleFilters.Ratio |> Seq.map (fun f -> Core.createFilter f n14ByN15T)
+            /// GroupFilters = 
+            let lightGF = groupFilters.Light |> Seq.map (fun f -> Core.createGroupFilter f modifyKeyColumns keyColumns lightT)
+            let heavyGF = groupFilters.Heavy |> Seq.map (fun f -> Core.createGroupFilter f modifyKeyColumns keyColumns heavyT) 
+            let n14ByN15GF = groupFilters.Ratio |> Seq.map (fun f -> Core.createGroupFilter f modifyKeyColumns keyColumns n14ByN15T)       
+            /// CombinedFilters 
+            let cf = ([lightTF;heavyTF;n14ByN15TF;lightGF;heavyGF;n14ByN15GF] |> Seq.concat |> List.ofSeq) 
+            /// Aggregated
+            /// Light
+            let light_agg :Series<_,float> = Core.aggregate aggregations.Light modifyKeyColumns keyColumns cf lightT 
+            let nLight :Series<_,int> = Core.aggregate (Seq.length) modifyKeyColumns keyColumns cf lightT       
+            let light_cv :Series<_,float> = Core.aggregate Seq.cv modifyKeyColumns keyColumns cf lightT 
+            let light_stDev :Series<_,float> = Core.aggregate (Seq.stDevBy float) modifyKeyColumns keyColumns cf lightT 
+            let light_SEM :Series<_,float> = Core.aggregate sem modifyKeyColumns keyColumns cf lightT 
+            
+            /// Heavy
+            let heavy_agg :Series<_,float> = Core.aggregate aggregations.Heavy modifyKeyColumns keyColumns cf heavyT 
+            let nHeavy :Series<_,int> = Core.aggregate (Seq.length) modifyKeyColumns keyColumns cf heavyT     
+            let heavy_cv :Series<_,float> = Core.aggregate Seq.cv modifyKeyColumns keyColumns cf heavyT 
+            let heavy_stDev :Series<_,float> = Core.aggregate (Seq.stDevBy float) modifyKeyColumns keyColumns cf heavyT 
+            let heavy_SEM :Series<_,float> = Core.aggregate sem modifyKeyColumns keyColumns cf heavyT 
+            
+            /// Ratio
+            let ratio_agg :Series<_,float> = Core.aggregate aggregations.Ratio modifyKeyColumns keyColumns cf n14ByN15T 
+            let nRatio :Series<_,int> = Core.aggregate (Seq.length) modifyKeyColumns keyColumns cf n14ByN15T
+            let ratio_cv :Series<_,float> = Core.aggregate Seq.cv modifyKeyColumns keyColumns cf n14ByN15T 
+            let ratio_stDev :Series<_,float> = Core.aggregate (Seq.stDevBy float) modifyKeyColumns keyColumns cf n14ByN15T 
+            let ratio_SEM :Series<_,float> = Core.aggregate sem modifyKeyColumns keyColumns cf n14ByN15T  
+                       
+            let proteinQVal :Series<_,float> = Core.aggregate tryGetQVal modifyKeyColumns keyColumns cf proteinQVal 
+            /// Assembeled
+            let assembeled = 
+                Core.assemble 
+                    [
+                    "ProteinGroup_QValue", proteinQVal :> ISeries<Core.Key>
+                    
+                    "ItemsUsedForQuant_Light", nLight :> ISeries<Core.Key>
+                    "Quant_Light", light_agg :> ISeries<Core.Key>
+                    "CV_Quant_Light", light_cv :> ISeries<Core.Key>
+                    "StDev_Quant_Light", light_stDev :> ISeries<Core.Key>
+                    "SEM_Quant_Light", light_SEM :> ISeries<Core.Key>
+                    
+                    "ItemsUsedForQuant_Heavy", nHeavy :> ISeries<Core.Key>
+                    "Quant_Heavy", heavy_agg :> ISeries<Core.Key>
+                    "CV_Quant_Heavy", heavy_cv :> ISeries<Core.Key>
+                    "StDev_Quant_Heavy", heavy_stDev :> ISeries<Core.Key>
+                    "SEM_Quant_Heavy", heavy_SEM :> ISeries<Core.Key>
+                    
+                    "ItemsUsedForQuant_LightByHeavy", nRatio :> ISeries<Core.Key>
+                    "Ratio_LightByHeavy", ratio_agg :> ISeries<Core.Key>
+                    "CV_Quant_Ratio", ratio_cv :> ISeries<Core.Key>
+                    "StDev_Quant_Ratio", ratio_stDev :> ISeries<Core.Key>
+                    "SEM_Quant_Ratio", ratio_SEM :> ISeries<Core.Key>
+                    ]
+            assembeled
+            
+    let labeledQuantification (labeledQuantificationParams:Domain.LabeledQuantificationParams) (outputDir:string) (instrumentOutput:string[]) =
+        let logger = Logging.createLogger "LabeledQuantification"
+        logger.Trace (sprintf "Input files: %A" instrumentOutput)
+        logger.Trace (sprintf "Output directory: %s" outputDir)
+        let modPepFilter (p:ProteinAssignedQuantifiedIon) = p.StringSequence |> labeledQuantificationParams.ModificationFilter
+        let keyCols =         
+            [|
+                "FileName"      
+                "ProteinGroup"  
+                "StringSequence"
+                "PepSequenceID" 
+                "ModSequenceID" 
+                "Charge"        
+                "GlobalMod"     
+            |]
+        let peptidesAndProteinsIndexed = 
+            instrumentOutput
+            |> Array.map (fun fp ->
+                    let peptidesAndProteinsIndexed' =
+                        Csv.CsvReader<ProteinAssignedQuantifiedIon>(SchemaMode=Csv.Fill).ReadFile(fp,'\t',false,1)
+                        |> Array.ofSeq
+                        |> Array.filter modPepFilter
+                        |> Frame.ofRecords
+                        |> Core.indexWithColumnValues keyCols 
+                    logger.Trace (sprintf "QuantAndProt file with name:%s contributes %i quantifications" (System.IO.Path.GetFileNameWithoutExtension fp) (peptidesAndProteinsIndexed'.RowCount))
+                    peptidesAndProteinsIndexed'
                 )
-            (sb.ToString())
-
-        override this.Equals(b) =
-            match b with
-            | :? Key as p -> 
-                let propA = (this.GetProperties true) |> Seq.map (fun x -> x.Key,x.Value) 
-                let propB = (p.GetProperties true) |> Seq.map (fun x -> x.Key,x.Value) 
-                Seq.map2 (fun (x1,x2) (y1,y2) -> x1 = unbox y1 && x2 = unbox y2) propA propB 
-                |> Seq.contains false
-                |> not
-            | _ -> false
-
-        override this.GetHashCode() = 
-            let sb = new System.Text.StringBuilder()
-            // sb.Append
-            (this.GetProperties true)        
-            |> Seq.iter (fun x -> 
-                let value = x.Value.ToString() 
-                sb.Append(value)
-                |> ignore
-                )
-            (sb.ToString())
-            |> hash   
-
-    ///
-    let indexWithColumnValues (keyCols:(seq<string>) ) (f:Frame<_,string>) :Frame<Key,_>= 
-        f
-        |> Frame.indexRowsUsing (fun s -> 
-                keyCols
-                |> Seq.fold (fun key x -> 
-                    let value = s.GetAs<string>(x) 
-                    key.addCol (x,value)
-                    ) (Key())
-            )  
-
-    ///
-    let readFrame fp = Frame.ReadCsv(fp,hasHeaders=true,inferTypes=false,separators="\t")
-      
-    ///
-    let readAndIndexFrame keyCols fp = 
-        readFrame fp
-        |> indexWithColumnValues keyCols
-
-    ///
-    let inline getColumn<'a> column (f:Frame<Key, string> )  =
-        f.GetColumn<'a>(column)
-
-    ///
-    let inline seriesToFrame (s: Series<Key, 'a>) =
-        s
-        |> Series.map (fun k s -> 
-            (k.GetProperties true) 
-            |> Seq.map (fun x -> x.Key,x.Value)
-            |> Series.ofObservations
-        )    
-        |> Frame.ofRows
-        |> Frame.addCol "Value" s
-        |> Frame.indexRowsOrdinally
-
-    ///
-    let inline rowKeyToColumns (f: Frame<Key, string>) =
-        let rowKeysAsColumns = 
-            f
-            |> Frame.mapRows (fun k s -> 
-                (k.GetProperties true) 
-                |> Seq.map (fun x -> x.Key,x.Value)
-                |> Series.ofObservations
-            )    
-            |> Frame.ofRows
-        Frame.join JoinKind.Inner rowKeysAsColumns f 
-        |> Frame.indexRowsOrdinally
-
-    ///
-    let createFilter (op : 'a -> bool) (s: Series<'KeyType, 'a>) = 
-        s
-        |> Series.mapValues op
-
-    ///
-    let transform (op : 'a -> 'b) (s: Series<'KeyType, 'a>) = 
-        s
-        |> Series.mapValues op
-
-    ///
-    let zip (op : 'a -> 'a -> 'b) (s1: Series<'KeyType, 'a>) (s2: Series<'KeyType, 'a>) = 
-        Series.zipInner s1 s2
-        |> Series.mapValues (fun (s1,s2) -> 
-            op s1 s2
-            )
-
-    ///
-    let dropAllPropertiesBut (properties:seq<string>) (key:Key) = 
-        let newK = Key()
-        key.GetProperties true
-        |> Seq.filter (fun x -> properties |> Seq.contains x.Key )
-        |> Seq.fold (fun (k:Key) x -> k.addCol (x.Key,x.Value) ) newK
-
-    ///
-    let dropProperties (properties:seq<string>) (key:Key) = 
-        let newK = Key()
-        key.GetProperties true
-        |> Seq.filter (fun x -> properties |> Seq.contains x.Key |> not)
-        |> Seq.fold (fun (k:Key) x -> k.addCol (x.Key,x.Value) ) newK
-
-    ///
-    let groupTransform (op :'a [] -> 'a -> 'b) (newKeys:seq<string>) (s: Series<'KeyType, 'a>) =
-        s
-        |> Series.groupBy (fun k v -> dropAllPropertiesBut newKeys k )
-        |> Series.mapValues (fun valueCol -> 
-            let fInit = valueCol |> Series.values |> Array.ofSeq |> op
-            let filterCol = 
-                valueCol
-                |> Series.mapValues fInit
-            filterCol 
-        )
-        |> Series.values
-        |> Series.mergeAll
-
-    ///
-    let createGroupFilter (op :'a [] -> 'a -> bool) (newKeys:seq<string>) (s: Series<'KeyType, 'a>) =
-        groupTransform op newKeys s
-
-    ///
-    let aggregate (op : seq<'a> -> 'b) (newKeys:seq<string>) (filters:seq<Series<Key,bool>>) (col:Series<Key,'a>) = 
-        let filtered = 
-            filters
-            |> Seq.map (fun s -> 
-                System.Guid.NewGuid(),
-                s |> Series.filterValues id)
-            |> Series.ofObservations
-            |> Frame.ofColumns
-            |> Frame.dropSparseRows
-        let colID = (System.Guid.NewGuid())
-        filtered
-        |> Frame.addCol colID col
-        |> Frame.dropSparseRows
-        |> Frame.applyLevel (dropAllPropertiesBut newKeys) (fun s -> s |> Series.values |> op)
-        |> Frame.getCol colID
-
-    ///
-    let assemble (cols:seq<(string * #ISeries<Key>)>) =
-        Frame.ofColumns cols
-
-    ///
-    let pivot (pivotCol:string) (assembeledFrame:Frame<Key,string>) =
-        assembeledFrame
-        |> Frame.nestBy (fun k -> 
-            let value: string option = k.TryGetTypedValue pivotCol
-            value.Value
-            )
-        |> Series.map (fun k f ->
-                f
-                |> Frame.mapColKeys (fun ck -> sprintf "%s.%s" k ck)
-                |> Frame.mapRowKeys (dropProperties [pivotCol])
-            )
-        |> Series.values
-        |> Frame.mergeAll
-
-//module Library = 
-//    open System.IO
-  
-
-//    let labeledQuantification (correlationFilter:float option) (useModifiedPeptides:bool) (treatModifiedPeptidesAs:bool) (outputDir:string) (instrumentOutput:string[]) =
-
-//        let logger = Logging.createLogger "LabeledQuantification"
-
-//        logger.Trace (sprintf "Input files: %A" instrumentOutput)
-//        logger.Trace (sprintf "Output directory: %s" outputDir)
-
-//        // initialize Reader and Transaction
-//        let outFilePath =
-//            let fileName = "LabeledQuant.txt"
-//            Path.Combine [|outputDir;fileName|]
-//        logger.Trace (sprintf "Result file path: %s" outFilePath)
-
-//        let peptidesAndProteins = 
-//            instrumentOutput
-//            |> Array.map ( fun fp ->
-//                Csv.CsvReader<ProteinAssignedQuantifiedIon>(SchemaMode=Csv.Fill).ReadFile(fp,'\t',false,1)
-//                |> Array.ofSeq
-//                |> Frame.ofRecords
-//                )
-//            |> Frame.mergeAll
+            |> Frame.mergeAll
+        logger.Trace (sprintf "Starting Aggregation with %i quantifications" (peptidesAndProteinsIndexed.RowCount))       
+        /// Step 1: Aggregate GlobalModifications
+        ///
+        let globalModAggregated =
+            let gParams = labeledQuantificationParams.AggregateGlobalModificationsParams
+            performGlobalModAggregation 
+                gParams.LabeledTransform gParams.LabeledSingleFilters gParams.LabeledGroupFilters gParams.LabeledAggregation labeledQuantificationParams.Correlation_Light_Heavy_Threshold 
+                    Core.dropKeyColumns ["GlobalMod";"ModSequenceID"] peptidesAndProteinsIndexed
+        logger.Trace (sprintf "Global Modification aggregation yields %i quantifications" (globalModAggregated.RowCount))   
+        /// Step 2: Aggregate Charges
+        ///  
+        let chargesAggregated = 
+            match labeledQuantificationParams.AggregatePeptideChargeStatesParams with 
+            | Some chParams ->
+                let res = 
+                    performChargeOrModAggregation 
+                        chParams.LabeledTransform chParams.LabeledSingleFilters chParams.LabeledGroupFilters chParams.LabeledAggregation 
+                            Core.dropKeyColumns ["Charge"] globalModAggregated
+                logger.Trace (sprintf "Charge State to modified peptide sequence aggregation yields %i quantifications." (res.RowCount))
+                res  
+            | None ->  
+                logger.Trace (sprintf "Charge state aggregation is skipped.") 
+                globalModAggregated       
+        /// Step 3: Aggregate Modifications
+        let modificationsAggregated = 
+            match labeledQuantificationParams.AggregateModifiedPeptidesParams with
+            | Some modParams ->
+                let res = 
+                    performChargeOrModAggregation 
+                        modParams.LabeledTransform modParams.LabeledSingleFilters modParams.LabeledGroupFilters modParams.LabeledAggregation 
+                            Core.dropKeyColumns ["StringSequence";] chargesAggregated
+                logger.Trace (sprintf "Modified peptide sequence to peptide Sequence aggregation yields %i quantifications." (res.RowCount)) 
+                res
+            | None -> 
+                logger.Trace (sprintf "Modified peptide sequence to peptide Sequence aggregation is skipped.")
+                chargesAggregated
+        /// Step 4: Aggregate To Proteins
+        let proteins = 
+            let pParams = labeledQuantificationParams.AggregateToProteinGroupsParams
+            let res = 
+                performPeptideToProteinAggregation
+                    pParams.LabeledTransform pParams.LabeledSingleFilters pParams.LabeledGroupFilters pParams.LabeledAggregation 
+                                 Core.dropAllKeyColumnsBut ["FileName";"ProteinGroup"] modificationsAggregated
+            logger.Trace (sprintf "Peptide to Protein Group aggregation yields %i quantifications." (res.RowCount))                
+            res
+        /// 
+        let proteinsPivoted = 
+           proteins
+           |> Core.pivot "FileName"
+           |> Core.rowKeyToColumns 
+        logger.Trace (sprintf "Finally, %i Protein Groups are reported across all files. %i of all protein groups were quantified across all samples." (proteinsPivoted.RowCount) (proteinsPivoted.DropSparseRows().RowCount))           
         
-//        let keyCols =         
-//            [|
-//                "FileName"      
-//                "ProteinGroup"  
-//                "StringSequence"
-//                "PepSequenceID" 
-//                "ModSequenceID" 
-//                "Charge"        
-//                "GlobalMod"     
-//            |]
-//        /// Step 1: Aggregate GlobalModifications
-//        ///
-//        let peptidesAndProteinsIndexed = Core.indexWithColumnValues keyCols peptidesAndProteins
-//        /// Cols
-//        let heavy       = peptidesAndProteinsIndexed |> Core.getColumn<float>"MeasuredApex_Heavy"
-//        let light       = peptidesAndProteinsIndexed |> Core.getColumn<float>"MeasuredApex_Light"
-//        let correlation = peptidesAndProteinsIndexed |> Core.getColumn<float>"Correlation_Light_Heavy"
-//        let gMod        = peptidesAndProteinsIndexed |> Core.getColumn<bool>"GlobalMod"
-//        /// Zipped
-//        let N14ByN15 = Core.zip (fun x y -> x / y) light heavy
-//        /// Filters
-//        let correlationF = 
-//            match correlationFilter with 
-//            | Some c -> 
-//                Core.createFilter (fun x -> x > c ) correlation
-//            | None -> 
-//                Core.createFilter (fun x -> x > 0. ) correlation
-//        let filterOutLight = Core.createFilter id gMod
-//        let filterOutHeavy = Core.createFilter (id >> not) gMod
-//        /// Aggregated
-//        let light_agg :Series<_,float> = aggregate Seq.mean aggregationLevel [] light 
-//        let heavy_agg :Series<_,float> = aggregate Seq.mean aggregationLevel [] heavy 
-//        let ratio_agg :Series<_,float> = aggregate Seq.mean aggregationLevel [] N14ByN15 
-//        let correlation_agg :Series<_,float> = aggregate Seq.mean aggregationLevel [] correlation 
-//        let patternLight_Mz_agg :Series<_,string> = aggregate (Seq.item 0)  aggregationLevel [filterOutHeavy] lightPatternMz
-//        let patternLight_Int_agg :Series<_,string> = aggregate (Seq.item 0)  aggregationLevel [filterOutHeavy] lightPatternI
-//        let patternHeavy_Mz_agg :Series<_,string> = aggregate (Seq.item 0)  aggregationLevel [filterOutLight] heavyPatternMz
-//        let patternHeavy__Int_agg :Series<_,string> = aggregate (Seq.item 0)  aggregationLevel [filterOutLight] heavyPatternI
-//        /// Assembeled
-//        let assembeled = 
-//            assemble 
-//                [
-//                "Light"  , light_agg :> ISeries<Key>
-//                "Heavy"  , heavy_agg :> ISeries<Key>
-//                "Ratio"  , ratio_agg :> ISeries<Key>
-//                "CorrelationLightHeavy", correlation_agg :> ISeries<Key>
-//                "lightPatternMz", patternLight_Mz_agg :> ISeries<Key>
-//                "lightPatternI", patternLight_Int_agg :> ISeries<Key>
-//                "heavyPatternMz", patternHeavy_Mz_agg :> ISeries<Key>
-//                "heavyPatternI", patternHeavy__Int_agg :> ISeries<Key>
-//                ]
-//        /// Step 2: Aggregate Charges
+        /// Write files
+        let outFilePathG =
+           let fileName = "GlobModAggregation.txt"
+           Path.Combine [|outputDir;fileName|]
+        (globalModAggregated |> Core.rowKeyToColumns).SaveCsv(outFilePathG,separator='\t',includeRowKeys=false)
+        if labeledQuantificationParams.AggregatePeptideChargeStatesParams.IsSome then 
+            let outFilePathC =
+               let fileName = "ChargeAggregation.txt"
+               Path.Combine [|outputDir;fileName|]
+            (chargesAggregated |> Core.rowKeyToColumns).SaveCsv(outFilePathC,separator='\t',includeRowKeys=false)
+        if labeledQuantificationParams.AggregateModifiedPeptidesParams.IsSome then 
+            let outFilePathM =
+               let fileName = "ModificationAggregation.txt"
+               Path.Combine [|outputDir;fileName|]
+            (modificationsAggregated |> Core.rowKeyToColumns).SaveCsv(outFilePathM,separator='\t',includeRowKeys=false)        
+        let outFilePathP =
+           let fileName = "ProteinAggregation.txt"
+           Path.Combine [|outputDir;fileName|]
+        (proteins |> Core.rowKeyToColumns).SaveCsv(outFilePathP,separator='\t',includeRowKeys=false)
+        let outFilePath =
+           let fileName = "LabeledQuant.txt"
+           Path.Combine [|outputDir;fileName|]
+        proteinsPivoted.SaveCsv(outFilePath,separator='\t',includeRowKeys=false)
 
-//        /// Step 3: Aggregate Modifications
 
-//        /// Step 3: Aggregate Peptides
 
-//        let toSave = 
-//            assembeled
-//            |> pivot "FileName"
-//            |> rowKeyToColumns 
-//        toSave.Print()
-//        toSave.SaveCsv((Path.Combine [|outDir; "Quantifications.txt"|]),separator='\t',includeRowKeys=false)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
