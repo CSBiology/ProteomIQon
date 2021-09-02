@@ -262,8 +262,54 @@ module Domain =
             AggregatorPepToProt         : AggregationMethod
             Tukey                       : (string*float*Transform) []
         }
-   
+    module LabeledProteinQuantification = 
+        
+        type LabeledTransforms = 
+            {
+                Light: float -> float
+                Heavy: float -> float
+                Ratio: float -> float
+            }   
+        
+        type LabeledAggregations = 
+            {
+                Light: seq<float> -> float
+                Heavy: seq<float> -> float
+                Ratio: seq<float> -> float
+            }   
+        
+        type LabeledSingleFilters = 
+            {
+                Light: seq<(float -> bool)>
+                Heavy: seq<(float -> bool)>
+                Ratio: seq<(float -> bool)>
+            }   
 
+        type LabeledGroupFilters = 
+            {
+                Light: seq<(seq<float> -> float -> bool)>
+                Heavy: seq<(seq<float> -> float -> bool)>
+                Ratio: seq<(seq<float> -> float -> bool)>
+            }   
+
+        type AggregationParams = 
+            {
+                LabeledTransform        : LabeledTransforms 
+                LabeledSingleFilters    : LabeledSingleFilters 
+                LabeledGroupFilters     : LabeledGroupFilters 
+                LabeledAggregation      : LabeledAggregations
+            }
+
+    type LabeledQuantificationParams = 
+        {
+            Correlation_Light_Heavy_Threshold: float option
+            ModificationFilter : string -> bool 
+            AggregateGlobalModificationsParams   : LabeledProteinQuantification.AggregationParams
+            AggregatePeptideChargeStatesParams   : LabeledProteinQuantification.AggregationParams option
+            AggregateModifiedPeptidesParams      : LabeledProteinQuantification.AggregationParams option
+            AggregateToProteinGroupsParams       : LabeledProteinQuantification.AggregationParams
+        }
+        
     type ConsensusAlignmentAlgorithm = 
         | FastTree
         | Spline 

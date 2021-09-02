@@ -11,7 +11,7 @@ open ProteomIQon
 open Dto
 
 
-module Library = 
+module JoinQuantPepIonsWithProteins = 
   
     ///
     let joinQuantPepIonsWithProteins outDirectory (quantifiedPeptides:string) (proteins:string) = //(param: TableSortParams) =
@@ -35,7 +35,9 @@ module Library =
                         |}
                         )
                 )
-            |> Frame.sliceCols ["ProteinGroup";"PeptideSequence"]
+            |> Frame.sliceCols ["ProteinGroup";"PeptideSequence";"QValue"]
+            |> Frame.mapColKeys (fun ck -> if ck = "QValue" then "ProteinGroup_QValue" else ck)
+            // 
         let peptideIons =
             Csv.CsvReader<Dto.QuantificationResult>(SchemaMode=Csv.Fill).ReadFile(quantifiedPeptides,'\t',false,1)
             |> Array.ofSeq
@@ -49,13 +51,13 @@ module Library =
                     PepSequenceID = s.GetAs<int>("PepSequenceID")
                     ModSequenceID = s.GetAs<int>("ModSequenceID")
                     Charge = s.GetAs<int>("Charge") 
-                    GlobalMod = s.GetAs<bool>("GlobalMod")
+                    GlobalMod = s.GetAs<int>("GlobalMod")
                 |}
                 )
         let peptidesWithProteins =
             Frame.align 
                 (fun (k: ({| ProteinGroup: string;StringSequence: string; |})) -> k.StringSequence ) 
-                (fun (k: ({| StringSequence: string;PepSequenceID: int;ModSequenceID: int;Charge: int;GlobalMod: bool; |})) -> k.StringSequence) 
+                (fun (k: ({| StringSequence: string;PepSequenceID: int;ModSequenceID: int;Charge: int;GlobalMod: int; |})) -> k.StringSequence) 
                 proteins filteredPeptideIons
             |> Frame.mapRowKeys (fun (s,prot,pep) -> 
                 {| 
@@ -73,6 +75,7 @@ module Library =
             { 
             FileName                                    = k.FileName
             ProteinGroup                                = k.ProteinGroup
+            ProteinGroup_QValue                         = s.GetAs<float>("ProteinGroup_QValue",nan)
             StringSequence                              = k.StringSequence
             PepSequenceID                               = k.PepSequenceID
             ModSequenceID                               = k.ModSequenceID
