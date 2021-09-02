@@ -102,35 +102,41 @@ let pipelineTests =
 
         testCase "PSMStatistics" <| fun _ ->
             let relToDirectory = getRelativePath Environment.CurrentDirectory
-            let db = relToDirectory "../../../data/PSMStatistics/in/Minimal.db"
-            let psm = relToDirectory "../../../data/PSMStatistics/in/minimal.psm"
-            //let psmStatsParamsEstimate = relToDirectory "../../../data/PSMStatistics/in/pSMStatisticsParamsEstimate.json"
+            let dbEstimate = relToDirectory "../../../data/PSMStatistics/in/MinimalEstimate.db"
+            let dbFixed = relToDirectory "../../../data/PSMStatistics/in/MinimalFixed.db"
+            let psmEstimate = relToDirectory "../../../data/PSMStatistics/in/minimalEstimate.psm"
+            let psmFixed = relToDirectory "../../../data/PSMStatistics/in/minimalFixed.psm"
+            let psmStatsParamsEstimate = relToDirectory "../../../data/PSMStatistics/in/pSMStatisticsParamsEstimate.json"
             let psmStatsParamsFixed = relToDirectory "../../../data/PSMStatistics/in/pSMStatisticsParamsFixed.json"
-            //let outDirectoryEstimate = relToDirectory "../../../data/PSMStatistics/out/estimateOut"
+            let outDirectoryEstimate = relToDirectory "../../../data/PSMStatistics/out/estimateOut"
             let outDirectoryFixed = relToDirectory "../../../data/PSMStatistics/out/fixedOut"
             let psmStatsExe = relToDirectory "../../../../../bin/PSMStatistics/net5.0/ProteomIQon.PSMStatistics.dll"
             // run tool
-            //runDotNet (sprintf "%s -i %s -o %s -p %s -d %s" psmStatsExe psm outDirectoryEstimate psmStatsParamsEstimate db) Environment.CurrentDirectory
-            runDotNet (sprintf "%s -i %s -o %s -p %s -d %s" psmStatsExe psm outDirectoryFixed psmStatsParamsFixed db) Environment.CurrentDirectory
-            //let referenceQPSMEstimate =
-            //    let qpsmPath = relToDirectory "../../../data/PSMStatistics/out/estimateOut/minimalReference.qpsm"
-            //    File.ReadAllLines qpsmPath
-            //let testQPSMEstimate =
-            //    let qpsmPath = relToDirectory "../../../data/PSMStatistics/out/estimateOut/minimal.qpsm"
-            //    File.ReadAllLines qpsmPath
+            runDotNet (sprintf "%s -i %s -o %s -p %s -d %s" psmStatsExe psmEstimate outDirectoryEstimate psmStatsParamsEstimate dbEstimate) Environment.CurrentDirectory
+            runDotNet (sprintf "%s -i %s -o %s -p %s -d %s" psmStatsExe psmFixed outDirectoryFixed psmStatsParamsFixed dbFixed) Environment.CurrentDirectory
+            let referenceQPSMEstimate =
+                let qpsmPath = relToDirectory "../../../data/PSMStatistics/out/estimateOut/minimalReference.qpsm"
+                File.ReadAllLines qpsmPath
+            let testQPSMEstimate =
+                let qpsmPath = relToDirectory "../../../data/PSMStatistics/out/estimateOut/minimalEstimate.qpsm"
+                File.ReadAllLines qpsmPath
             let referenceQPSMFixed =
                 let qpsmPath = relToDirectory "../../../data/PSMStatistics/out/fixedOut/minimalReference.qpsm"
                 File.ReadAllLines qpsmPath
             let testQPSMFixed =
-                let qpsmPath = relToDirectory "../../../data/PSMStatistics/out/fixedOut/minimal.qpsm"
+                let qpsmPath = relToDirectory "../../../data/PSMStatistics/out/fixedOut/minimalFixed.qpsm"
                 File.ReadAllLines qpsmPath
             let compare =
-                (*referenceQPSMEstimate = testQPSMEstimate && *)referenceQPSMFixed = testQPSMFixed
+                referenceQPSMEstimate = testQPSMEstimate && referenceQPSMFixed = testQPSMFixed
             // cleanup
-            File.Delete (relToDirectory "../../../data/PSMStatistics/out/fixedOut/minimal.qpsm")
-            File.Delete (relToDirectory "../../../data/PSMStatistics/out/fixedOut/minimal_log.txt")
+            File.Delete (relToDirectory "../../../data/PSMStatistics/out/fixedOut/minimalFixed.qpsm")
+            File.Delete (relToDirectory "../../../data/PSMStatistics/out/fixedOut/minimalFixed_log.txt")
             File.Delete (relToDirectory "../../../data/PSMStatistics/out/fixedOut/PSMStatistics_log.txt")
-            Directory.Delete (relToDirectory "../../../data/PSMStatistics/out/fixedOut/minimal_plots")
+            Directory.Delete (relToDirectory "../../../data/PSMStatistics/out/fixedOut/minimalFixed_plots")
+            File.Delete (relToDirectory "../../../data/PSMStatistics/out/estimateOut/minimalEstimate.qpsm")
+            File.Delete (relToDirectory "../../../data/PSMStatistics/out/estimateOut/minimalEstimate_log.txt")
+            File.Delete (relToDirectory "../../../data/PSMStatistics/out/estimateOut/PSMStatistics_log.txt")
+            Directory.Delete (relToDirectory "../../../data/PSMStatistics/out/estimateOut/minimalEstimate_plots")
             Expect.isTrue compare "QPSMs are different"
 
         testCase "PSMBasedQuantification" <| fun _ ->
@@ -182,11 +188,11 @@ let pipelineTests =
                                 test.QuantMz_Light >= reference.QuantMz_Light * 0.99 &&
                                 test.QuantMz_Light <= reference.QuantMz_Light * 1.01
                             "Quant_Light",
-                                test.Quant_Light >= reference.Quant_Light * 0.99 &&
-                                test.Quant_Light <= reference.Quant_Light * 1.01
+                                test.Quant_Light >= reference.Quant_Light * 0.9 &&
+                                test.Quant_Light <= reference.Quant_Light * 1.1
                             "MeasuredApex_Light",
-                                test.MeasuredApex_Light >= reference.MeasuredApex_Light * 0.99 &&
-                                test.MeasuredApex_Light <= reference.MeasuredApex_Light * 1.01
+                                test.MeasuredApex_Light >= reference.MeasuredApex_Light * 0.8 &&
+                                test.MeasuredApex_Light <= reference.MeasuredApex_Light * 1.2
                             //"Seo_Light",
                             //    test.Seo_Light >= reference.Seo_Light * 0.99 &&
                             //    test.Seo_Light <= reference.Seo_Light * 1.01
@@ -203,11 +209,11 @@ let pipelineTests =
                                 test.QuantMz_Heavy >= reference.QuantMz_Heavy * 0.99 &&
                                 test.QuantMz_Heavy <= reference.QuantMz_Heavy * 1.01
                             "Quant_Heavy",
-                                test.Quant_Heavy >= reference.Quant_Heavy * 0.99 &&
-                                test.Quant_Heavy <= reference.Quant_Heavy * 1.01
+                                test.Quant_Heavy >= reference.Quant_Heavy * 0.9 &&
+                                test.Quant_Heavy <= reference.Quant_Heavy * 1.1
                             "MeasuredApex_Heavy",
-                                test.MeasuredApex_Heavy >= reference.MeasuredApex_Heavy * 0.99 &&
-                                test.MeasuredApex_Heavy <= reference.MeasuredApex_Heavy * 1.01
+                                test.MeasuredApex_Heavy >= reference.MeasuredApex_Heavy * 0.8 &&
+                                test.MeasuredApex_Heavy <= reference.MeasuredApex_Heavy * 1.2
                             //"Seo_Heavy",
                             //    test.Seo_Heavy >= reference.Seo_Heavy * 0.99 &&
                             //    test.Seo_Heavy <= reference.Seo_Heavy * 1.01
