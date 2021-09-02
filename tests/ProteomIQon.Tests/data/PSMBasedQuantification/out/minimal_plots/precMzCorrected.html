@@ -1,0 +1,61 @@
+
+<!DOCTYPE html>
+<html>
+    <head>
+        <!-- Plotly.js -->
+        <meta http-equiv="X-UA-Compatible" content="IE=11" >
+        <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+        <style>
+        .container {
+          padding-right: 25px;
+          padding-left: 25px;
+          margin-right: 0 auto;
+          margin-left: 0 auto;
+        }
+        @media (min-width: 768px) {
+          .container {
+            width: 750px;
+          }
+        }
+        @media (min-width: 992px) {
+          .container {
+            width: 970px;
+          }
+        }
+        @media (min-width: 1200px) {
+          .container {
+            width: 1170px;
+          }
+        }
+        </style>
+    </head>
+    <body>
+      <div id="e51a29ab-f8f4-4552-a19b-b33dd2ac4a6b" style="width: 600px; height: 600px;"><!-- Plotly chart will be drawn inside this DIV --></div>
+<script type="text/javascript">
+
+            var renderPlotly = function() {
+            var fsharpPlotlyRequire = requirejs.config({context:'fsharp-plotly',paths:{plotly:'https://cdn.plot.ly/plotly-latest.min'}}) || require;
+            fsharpPlotlyRequire(['plotly'], function(Plotly) {
+
+            var data = [{"type":"scatter","x":[32.9949,33.36088333,33.18005],"y":[-0.005827966810045382,-0.004831616810008654,-0.003989566809991629],"mode":"markers","marker":{},"name":"Raw"},{"type":"scatter","x":[32.9949,33.36088333,33.18005],"y":[-0.005827966810045382,-0.004831616810008654,-0.003989566809991629],"mode":"markers","marker":{},"name":"Corrected"}];
+            var layout = {};
+            var config = {};
+            Plotly.newPlot('e51a29ab-f8f4-4552-a19b-b33dd2ac4a6b', data, layout, config);
+});
+            };
+            if ((typeof(requirejs) !==  typeof(Function)) || (typeof(requirejs.config) !== typeof(Function))) {
+                var script = document.createElement("script");
+                script.setAttribute("src", "https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js");
+                script.onload = function(){
+                    renderPlotly();
+                };
+                document.getElementsByTagName("head")[0].appendChild(script);
+            }
+            else {
+                renderPlotly();
+            }
+</script>
+
+      
+    </body>
+</html>
