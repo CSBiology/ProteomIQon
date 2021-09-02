@@ -197,7 +197,7 @@ module PackageTasks =
     open BasicTasks
     open TestTasks
 
-    let pack = BuildTask.create "Pack" [clean; build; runTests; copyBinaries] {
+    let pack = BuildTask.create "Pack" [clean; build; copyBinaries] {
         if promptYesNo (sprintf "creating stable package OK?") 
             then
                 !! "src/**/*.*proj"
@@ -225,7 +225,7 @@ module PackageTasks =
         else failwith "aborted"
     }
 
-    let packProj = BuildTask.create "PackProj" [clean; buildProj; runTestsProj; copyBinariesProj] {
+    let packProj = BuildTask.create "PackProj" [clean; buildProj; copyBinariesProj] {
         if promptYesNo (sprintf "creating stable package OK?")
             then
                 projPattern
@@ -253,7 +253,7 @@ module PackageTasks =
         else failwith "aborted"
         }
 
-    let packPrerelease = BuildTask.create "PackPrerelease" [setPrereleaseTag; clean; build; runTests; copyBinaries] {
+    let packPrerelease = BuildTask.create "PackPrerelease" [setPrereleaseTag; clean; build; copyBinaries] {
         if promptYesNo (sprintf "package suffix will be %s OK?" prereleaseSuffix )
             then 
                 !! "src/**/*.*proj"
@@ -283,7 +283,7 @@ module PackageTasks =
             failwith "aborted"
     }
 
-    let packPrereleaseProj = BuildTask.create "PackPrereleaseProj" [setPrereleaseTag; clean; buildProj; runTestsProj; copyBinariesProj] {
+    let packPrereleaseProj = BuildTask.create "PackPrereleaseProj" [setPrereleaseTag; clean; buildProj; copyBinariesProj] {
         if promptYesNo (sprintf "package tag will be %s OK?" prereleaseTag )
             then 
                 projPattern
