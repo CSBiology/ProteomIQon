@@ -287,4 +287,227 @@ let pipelineTests =
             File.Delete (relToDirectory "../../../data/ProteinInference/out/mayuOut/ProteinInference_readAndInferFile_log.txt")
             File.Delete (relToDirectory "../../../data/ProteinInference/out/mayuOut/QValueGraph.html")
             Expect.isTrue compare "Prots are different"
+        testCase "LabelFreeProteinQuantification" <| fun _ ->
+            let relToDirectory = getRelativePath Environment.CurrentDirectory
+            let quantAndProt = relToDirectory "../../../data/LabelFreeProteinQuantification/in/minimal.quantAndProt"
+            let labelFreeQuantificationParams = "../../../data/LabelFreeProteinQuantification/in/LabelFreeQuantificationParams.json"
+            let labelFreeQuantificationParamsChargeAgg = "../../../data/LabelFreeProteinQuantification/in/LabelFreeQuantificationParams_ChargeAgg.json"
+            let labelFreeQuantificationParamsChargeAggModAgg = "../../../data/LabelFreeProteinQuantification/in/LabelFreeQuantificationParams_ChargeAgg_ModAgg.json"
+            let labelFreeQuantificationParamsTransformFilterSum = "../../../data/LabelFreeProteinQuantification/in/LabelFreeQuantificationParams_Transform_Filter_Sum.json"
+            let outDirectory = "../../../data/LabelFreeProteinQuantification/out/normal"
+            let outDirectoryChargeAgg = "../../../data/LabelFreeProteinQuantification/out/chargeAgg"
+            let outDirectoryChargeAggModAgg = "../../../data/LabelFreeProteinQuantification/out/chargeAggModAgg"
+            let outDirectoryTransformFilterSum = "../../../data/LabelFreeProteinQuantification/out/transformFilterSum"
+            let labelFreeExe = relToDirectory "../../../../../bin/LabelFreeProteinQuantification/net5.0/ProteomIQon.LabelFreeProteinQuantification.dll"
+            runDotNet (sprintf "%s -i %s -o %s -p %s" labelFreeExe quantAndProt outDirectory labelFreeQuantificationParams) Environment.CurrentDirectory
+            runDotNet (sprintf "%s -i %s -o %s -p %s" labelFreeExe quantAndProt outDirectoryChargeAgg labelFreeQuantificationParamsChargeAgg) Environment.CurrentDirectory
+            runDotNet (sprintf "%s -i %s -o %s -p %s" labelFreeExe quantAndProt outDirectoryChargeAggModAgg labelFreeQuantificationParamsChargeAggModAgg) Environment.CurrentDirectory
+            runDotNet (sprintf "%s -i %s -o %s -p %s" labelFreeExe quantAndProt outDirectoryTransformFilterSum labelFreeQuantificationParamsTransformFilterSum) Environment.CurrentDirectory
+            let referenceLabelFree =
+                let labelFree = relToDirectory "../../../data/LabelFreeProteinQuantification/out/normal/minimalReference.txt"
+                File.ReadAllLines labelFree,
+                let labelFreeProtein = relToDirectory "../../../data/LabelFreeProteinQuantification/out/normal/minimalProteinReference.txt"
+                File.ReadAllLines labelFreeProtein
+            let labelFree =
+                let labelFree = relToDirectory "../../../data/LabelFreeProteinQuantification/out/normal/LabelFreeQuant.txt"
+                File.ReadAllLines labelFree,
+                let labelFreeProtein = relToDirectory "../../../data/LabelFreeProteinQuantification/out/normal/ProteinAggregation.txt"
+                File.ReadAllLines labelFreeProtein
+            let referenceLabelFreeChargeAgg =
+                let labelFree = relToDirectory "../../../data/LabelFreeProteinQuantification/out/chargeAgg/minimalReference.txt"
+                File.ReadAllLines labelFree,
+                let labelFreeProtein = relToDirectory "../../../data/LabelFreeProteinQuantification/out/chargeAgg/minimalProteinReference.txt"
+                File.ReadAllLines labelFreeProtein,
+                let labelFreeCharge = relToDirectory "../../../data/LabelFreeProteinQuantification/out/chargeAgg/minimalChargeReference.txt"
+                File.ReadAllLines labelFreeCharge
+            let labelFreeChargeAgg =
+                let labelFree = relToDirectory "../../../data/LabelFreeProteinQuantification/out/chargeAgg/LabelFreeQuant.txt"
+                File.ReadAllLines labelFree,
+                let labelFreeProtein = relToDirectory "../../../data/LabelFreeProteinQuantification/out/chargeAgg/ProteinAggregation.txt"
+                File.ReadAllLines labelFreeProtein,
+                let labelFreeCharge = relToDirectory "../../../data/LabelFreeProteinQuantification/out/chargeAgg/ChargeAggregation.txt"
+                File.ReadAllLines labelFreeCharge
+            let referenceLabelFreeChargeAggModAgg =
+                let labelFree = relToDirectory "../../../data/LabelFreeProteinQuantification/out/chargeAggModAgg/minimalReference.txt"
+                File.ReadAllLines labelFree,
+                let labelFreeProtein = relToDirectory "../../../data/LabelFreeProteinQuantification/out/chargeAggModAgg/minimalProteinReference.txt"
+                File.ReadAllLines labelFreeProtein,
+                let labelFreeCharge = relToDirectory "../../../data/LabelFreeProteinQuantification/out/chargeAggModAgg/minimalChargeReference.txt"
+                File.ReadAllLines labelFreeCharge,
+                let labelFreeCharge = relToDirectory "../../../data/LabelFreeProteinQuantification/out/chargeAggModAgg/minimalModificationReference.txt"
+                File.ReadAllLines labelFreeCharge
+            let labelFreeChargeAggModAgg =
+                let labelFree = relToDirectory "../../../data/LabelFreeProteinQuantification/out/chargeAggModAgg/LabelFreeQuant.txt"
+                File.ReadAllLines labelFree,
+                let labelFreeProtein = relToDirectory "../../../data/LabelFreeProteinQuantification/out/chargeAggModAgg/ProteinAggregation.txt"
+                File.ReadAllLines labelFreeProtein,
+                let labelFreeCharge = relToDirectory "../../../data/LabelFreeProteinQuantification/out/chargeAggModAgg/ChargeAggregation.txt"
+                File.ReadAllLines labelFreeCharge,
+                let labelFreeCharge = relToDirectory "../../../data/LabelFreeProteinQuantification/out/chargeAggModAgg/ModificationAggregation.txt"
+                File.ReadAllLines labelFreeCharge
+            let referenceLabelFreeTransformFilterSum =
+                let labelFree = relToDirectory "../../../data/LabelFreeProteinQuantification/out/transformFilterSum/minimalReference.txt"
+                File.ReadAllLines labelFree,
+                let labelFreeProtein = relToDirectory "../../../data/LabelFreeProteinQuantification/out/transformFilterSum/minimalProteinReference.txt"
+                File.ReadAllLines labelFreeProtein
+            let labelFreeTransformFilterSum =
+                let labelFree = relToDirectory "../../../data/LabelFreeProteinQuantification/out/transformFilterSum/LabelFreeQuant.txt"
+                File.ReadAllLines labelFree,
+                let labelFreeProtein = relToDirectory "../../../data/LabelFreeProteinQuantification/out/transformFilterSum/ProteinAggregation.txt"
+                File.ReadAllLines labelFreeProtein
+            let compare = referenceLabelFree = labelFree && referenceLabelFreeChargeAgg = labelFreeChargeAgg && referenceLabelFreeChargeAggModAgg = labelFreeChargeAggModAgg && referenceLabelFreeTransformFilterSum = labelFreeTransformFilterSum
+            // cleanup
+            File.Delete (relToDirectory "../../../data/LabelFreeProteinQuantification/out/normal/LabeledProteinQuantification_log.txt")
+            File.Delete (relToDirectory "../../../data/LabelFreeProteinQuantification/out/normal/LabeledQuantification_log.txt")
+            File.Delete (relToDirectory "../../../data/LabelFreeProteinQuantification/out/normal/LabelFreeQuant.txt")
+            File.Delete (relToDirectory "../../../data/LabelFreeProteinQuantification/out/normal/ProteinAggregation.txt")
+            File.Delete (relToDirectory "../../../data/LabelFreeProteinQuantification/out/chargeAgg/LabeledProteinQuantification_log.txt")
+            File.Delete (relToDirectory "../../../data/LabelFreeProteinQuantification/out/chargeAgg/LabeledQuantification_log.txt")
+            File.Delete (relToDirectory "../../../data/LabelFreeProteinQuantification/out/chargeAgg/LabelFreeQuant.txt")
+            File.Delete (relToDirectory "../../../data/LabelFreeProteinQuantification/out/chargeAgg/ProteinAggregation.txt")
+            File.Delete (relToDirectory "../../../data/LabelFreeProteinQuantification/out/chargeAgg/ChargeAggregation.txt")
+            File.Delete (relToDirectory "../../../data/LabelFreeProteinQuantification/out/chargeAggModAgg/LabeledProteinQuantification_log.txt")
+            File.Delete (relToDirectory "../../../data/LabelFreeProteinQuantification/out/chargeAggModAgg/LabeledQuantification_log.txt")
+            File.Delete (relToDirectory "../../../data/LabelFreeProteinQuantification/out/chargeAggModAgg/LabelFreeQuant.txt")
+            File.Delete (relToDirectory "../../../data/LabelFreeProteinQuantification/out/chargeAggModAgg/ProteinAggregation.txt")
+            File.Delete (relToDirectory "../../../data/LabelFreeProteinQuantification/out/chargeAggModAgg/ChargeAggregation.txt")
+            File.Delete (relToDirectory "../../../data/LabelFreeProteinQuantification/out/chargeAggModAgg/ModificationAggregation.txt")
+            File.Delete (relToDirectory "../../../data/LabelFreeProteinQuantification/out/transformFilterSum/LabeledProteinQuantification_log.txt")
+            File.Delete (relToDirectory "../../../data/LabelFreeProteinQuantification/out/transformFilterSum/LabeledQuantification_log.txt")
+            File.Delete (relToDirectory "../../../data/LabelFreeProteinQuantification/out/transformFilterSum/LabelFreeQuant.txt")
+            File.Delete (relToDirectory "../../../data/LabelFreeProteinQuantification/out/transformFilterSum/ProteinAggregation.txt")
+            Expect.isTrue compare "Output files are not identical"
+
+        testCase "LabeledProteinQuantification" <| fun _ ->
+            let relToDirectory = getRelativePath Environment.CurrentDirectory
+            let quantAndProt = relToDirectory "../../../data/LabeledProteinQuantification/in/minimal.quantAndProt"
+            let labeledQuantificationParams = "../../../data/LabeledProteinQuantification/in/LabeledQuantificationParams.json"
+            let labeledQuantificationParamsCorrChargeAgg = "../../../data/LabeledProteinQuantification/in/LabeledQuantificationParams_CorrFilter_ChargeAgg.json"
+            let labeledQuantificationParamsCorrChargeAggModAgg = "../../../data/LabeledProteinQuantification/in/LabeledQuantificationParams_CorrFilter_ChargeAgg_ModAgg.json"
+            let labeledQuantificationParamsTransformFilterSum = "../../../data/LabeledProteinQuantification/in/LabeledQuantificationParams_Transform_Filter_Sum.json"
+            let labeledQuantificationParamsCorr = "../../../data/LabeledProteinQuantification/in/LabeledQuantificationParams_withCorrFilter.json"
+            let outDirectory = "../../../data/LabeledProteinQuantification/out/normal"
+            let outDirectoryCorrChargeAgg = "../../../data/LabeledProteinQuantification/out/corrFilterChargeAgg"
+            let outDirectoryCorrChargeAggModAgg = "../../../data/LabeledProteinQuantification/out/corrFilterChargeAggModAgg"
+            let outDirectoryTransformFilterSum = "../../../data/LabeledProteinQuantification/out/transformFilterSum"
+            let outDirectoryCorr = "../../../data/LabeledProteinQuantification/out/corrFilter"
+            let labeledExe = relToDirectory "../../../../../bin/LabeledProteinQuantification/net5.0/ProteomIQon.LabeledProteinQuantification.dll"
+            runDotNet (sprintf "%s -i %s -o %s -p %s" labeledExe quantAndProt outDirectory labeledQuantificationParams) Environment.CurrentDirectory
+            runDotNet (sprintf "%s -i %s -o %s -p %s" labeledExe quantAndProt outDirectoryCorrChargeAgg labeledQuantificationParamsCorrChargeAgg) Environment.CurrentDirectory
+            runDotNet (sprintf "%s -i %s -o %s -p %s" labeledExe quantAndProt outDirectoryCorrChargeAggModAgg labeledQuantificationParamsCorrChargeAggModAgg) Environment.CurrentDirectory
+            runDotNet (sprintf "%s -i %s -o %s -p %s" labeledExe quantAndProt outDirectoryTransformFilterSum labeledQuantificationParamsTransformFilterSum) Environment.CurrentDirectory
+            runDotNet (sprintf "%s -i %s -o %s -p %s" labeledExe quantAndProt outDirectoryCorr labeledQuantificationParamsCorr) Environment.CurrentDirectory
+            let referenceLabeled =
+                let labeled = relToDirectory "../../../data/LabeledProteinQuantification/out/normal/minimalReference.txt"
+                File.ReadAllLines labeled,
+                let labeledProtein = relToDirectory "../../../data/LabeledProteinQuantification/out/normal/minimalProteinReference.txt"
+                File.ReadAllLines labeledProtein,
+                let labeledGlobMod = relToDirectory "../../../data/LabeledProteinQuantification/out/normal/minimalGlobModReference.txt"
+                File.ReadAllLines labeledGlobMod
+            let labeled =
+                let labeled = relToDirectory "../../../data/LabeledProteinQuantification/out/normal/LabeledQuant.txt"
+                File.ReadAllLines labeled,
+                let labeledProtein = relToDirectory "../../../data/LabeledProteinQuantification/out/normal/ProteinAggregation.txt"
+                File.ReadAllLines labeledProtein,
+                let labeledGlobMod = relToDirectory "../../../data/LabeledProteinQuantification/out/normal/GlobModAggregation.txt"
+                File.ReadAllLines labeledGlobMod
+            let referenceLabeledCorrChargeAgg =
+                let labeled = relToDirectory "../../../data/LabeledProteinQuantification/out/corrFilterChargeAgg/minimalReference.txt"
+                File.ReadAllLines labeled,
+                let labeledProtein = relToDirectory "../../../data/LabeledProteinQuantification/out/corrFilterChargeAgg/minimalProteinReference.txt"
+                File.ReadAllLines labeledProtein,
+                let labeledCharge = relToDirectory "../../../data/LabeledProteinQuantification/out/corrFilterChargeAgg/minimalChargeReference.txt"
+                File.ReadAllLines labeledCharge,
+                let labeledGlobMod = relToDirectory "../../../data/LabeledProteinQuantification/out/corrFilterChargeAgg/minimalGlobModReference.txt"
+                File.ReadAllLines labeledGlobMod
+            let labeledCorrChargeAgg =
+                let labeled = relToDirectory "../../../data/LabeledProteinQuantification/out/corrFilterChargeAgg/LabeledQuant.txt"
+                File.ReadAllLines labeled,
+                let labeledProtein = relToDirectory "../../../data/LabeledProteinQuantification/out/corrFilterChargeAgg/ProteinAggregation.txt"
+                File.ReadAllLines labeledProtein,
+                let labeledCharge = relToDirectory "../../../data/LabeledProteinQuantification/out/corrFilterChargeAgg/ChargeAggregation.txt"
+                File.ReadAllLines labeledCharge,
+                let labeledGlobMod = relToDirectory "../../../data/LabeledProteinQuantification/out/corrFilterChargeAgg/GlobModAggregation.txt"
+                File.ReadAllLines labeledGlobMod
+            let referenceLabeledCorrChargeAggModAgg =
+                let labeled = relToDirectory "../../../data/LabeledProteinQuantification/out/corrFilterChargeAggModAgg/minimalReference.txt"
+                File.ReadAllLines labeled,
+                let labeledProtein = relToDirectory "../../../data/LabeledProteinQuantification/out/corrFilterChargeAggModAgg/minimalProteinReference.txt"
+                File.ReadAllLines labeledProtein,
+                let labeledCharge = relToDirectory "../../../data/LabeledProteinQuantification/out/corrFilterChargeAggModAgg/minimalChargeReference.txt"
+                File.ReadAllLines labeledCharge,
+                let labeledCharge = relToDirectory "../../../data/LabeledProteinQuantification/out/corrFilterChargeAggModAgg/minimalModificationReference.txt"
+                File.ReadAllLines labeledCharge,
+                let labeledGlobMod = relToDirectory "../../../data/LabeledProteinQuantification/out/corrFilterChargeAggModAgg/minimalGlobModReference.txt"
+                File.ReadAllLines labeledGlobMod
+            let labeledCorrChargeAggModAgg =
+                let labeled = relToDirectory "../../../data/LabeledProteinQuantification/out/corrFilterChargeAggModAgg/LabeledQuant.txt"
+                File.ReadAllLines labeled,
+                let labeledProtein = relToDirectory "../../../data/LabeledProteinQuantification/out/corrFilterChargeAggModAgg/ProteinAggregation.txt"
+                File.ReadAllLines labeledProtein,
+                let labeledCharge = relToDirectory "../../../data/LabeledProteinQuantification/out/corrFilterChargeAggModAgg/ChargeAggregation.txt"
+                File.ReadAllLines labeledCharge,
+                let labeledCharge = relToDirectory "../../../data/LabeledProteinQuantification/out/corrFilterChargeAggModAgg/ModificationAggregation.txt"
+                File.ReadAllLines labeledCharge,
+                let labeledGlobMod = relToDirectory "../../../data/LabeledProteinQuantification/out/corrFilterChargeAggModAgg/GlobModAggregation.txt"
+                File.ReadAllLines labeledGlobMod
+            let referenceLabeledTransformFilterSum =
+                let labeled = relToDirectory "../../../data/LabeledProteinQuantification/out/transformFilterSum/minimalReference.txt"
+                File.ReadAllLines labeled,
+                let labeledProtein = relToDirectory "../../../data/LabeledProteinQuantification/out/transformFilterSum/minimalProteinReference.txt"
+                File.ReadAllLines labeledProtein,
+                let labeledGlobMod = relToDirectory "../../../data/LabeledProteinQuantification/out/transformFilterSum/minimalGlobModReference.txt"
+                File.ReadAllLines labeledGlobMod
+            let labeledTransformFilterSum =
+                let labeled = relToDirectory "../../../data/LabeledProteinQuantification/out/transformFilterSum/LabeledQuant.txt"
+                File.ReadAllLines labeled,
+                let labeledProtein = relToDirectory "../../../data/LabeledProteinQuantification/out/transformFilterSum/ProteinAggregation.txt"
+                File.ReadAllLines labeledProtein,
+                let labeledGlobMod = relToDirectory "../../../data/LabeledProteinQuantification/out/transformFilterSum/GlobModAggregation.txt"
+                File.ReadAllLines labeledGlobMod
+            let referenceLabeledCorr =
+                let labeled = relToDirectory "../../../data/LabeledProteinQuantification/out/corrFilter/minimalReference.txt"
+                File.ReadAllLines labeled,
+                let labeledProtein = relToDirectory "../../../data/LabeledProteinQuantification/out/corrFilter/minimalProteinReference.txt"
+                File.ReadAllLines labeledProtein,
+                let labeledGlobMod = relToDirectory "../../../data/LabeledProteinQuantification/out/corrFilter/minimalGlobModReference.txt"
+                File.ReadAllLines labeledGlobMod
+            let labeledCorr =
+                let labeled = relToDirectory "../../../data/LabeledProteinQuantification/out/corrFilter/LabeledQuant.txt"
+                File.ReadAllLines labeled,
+                let labeledProtein = relToDirectory "../../../data/LabeledProteinQuantification/out/corrFilter/ProteinAggregation.txt"
+                File.ReadAllLines labeledProtein,
+                let labeledGlobMod = relToDirectory "../../../data/LabeledProteinQuantification/out/corrFilter/GlobModAggregation.txt"
+                File.ReadAllLines labeledGlobMod
+            let compare = referenceLabeled = labeled && referenceLabeledCorrChargeAgg = labeledCorrChargeAgg && referenceLabeledCorrChargeAggModAgg = labeledCorrChargeAggModAgg && referenceLabeledTransformFilterSum = labeledTransformFilterSum && referenceLabeledCorr = labeledCorr
+            // cleanup
+            File.Delete (relToDirectory "../../../data/LabeledProteinQuantification/out/normal/LabeledProteinQuantification_log.txt")
+            File.Delete (relToDirectory "../../../data/LabeledProteinQuantification/out/normal/LabeledQuantification_log.txt")
+            File.Delete (relToDirectory "../../../data/LabeledProteinQuantification/out/normal/LabeledQuant.txt")
+            File.Delete (relToDirectory "../../../data/LabeledProteinQuantification/out/normal/ProteinAggregation.txt")
+            File.Delete (relToDirectory "../../../data/LabeledProteinQuantification/out/normal/GlobModAggregation.txt")
+            File.Delete (relToDirectory "../../../data/LabeledProteinQuantification/out/corrFilter/LabeledProteinQuantification_log.txt")
+            File.Delete (relToDirectory "../../../data/LabeledProteinQuantification/out/corrFilter/LabeledQuantification_log.txt")
+            File.Delete (relToDirectory "../../../data/LabeledProteinQuantification/out/corrFilter/LabeledQuant.txt")
+            File.Delete (relToDirectory "../../../data/LabeledProteinQuantification/out/corrFilter/ProteinAggregation.txt")
+            File.Delete (relToDirectory "../../../data/LabeledProteinQuantification/out/corrFilter/GlobModAggregation.txt")
+            File.Delete (relToDirectory "../../../data/LabeledProteinQuantification/out/corrFilterChargeAgg/LabeledProteinQuantification_log.txt")
+            File.Delete (relToDirectory "../../../data/LabeledProteinQuantification/out/corrFilterChargeAgg/LabeledQuantification_log.txt")
+            File.Delete (relToDirectory "../../../data/LabeledProteinQuantification/out/corrFilterChargeAgg/LabeledQuant.txt")
+            File.Delete (relToDirectory "../../../data/LabeledProteinQuantification/out/corrFilterChargeAgg/ProteinAggregation.txt")
+            File.Delete (relToDirectory "../../../data/LabeledProteinQuantification/out/corrFilterChargeAgg/GlobModAggregation.txt")
+            File.Delete (relToDirectory "../../../data/LabeledProteinQuantification/out/corrFilterChargeAgg/ChargeAggregation.txt")
+            File.Delete (relToDirectory "../../../data/LabeledProteinQuantification/out/corrFilterChargeAggModAgg/LabeledProteinQuantification_log.txt")
+            File.Delete (relToDirectory "../../../data/LabeledProteinQuantification/out/corrFilterChargeAggModAgg/LabeledQuantification_log.txt")
+            File.Delete (relToDirectory "../../../data/LabeledProteinQuantification/out/corrFilterChargeAggModAgg/LabeledQuant.txt")
+            File.Delete (relToDirectory "../../../data/LabeledProteinQuantification/out/corrFilterChargeAggModAgg/ProteinAggregation.txt")
+            File.Delete (relToDirectory "../../../data/LabeledProteinQuantification/out/corrFilterChargeAggModAgg/GlobModAggregation.txt")
+            File.Delete (relToDirectory "../../../data/LabeledProteinQuantification/out/corrFilterChargeAggModAgg/ChargeAggregation.txt")
+            File.Delete (relToDirectory "../../../data/LabeledProteinQuantification/out/corrFilterChargeAggModAgg/ModificationAggregation.txt")
+            File.Delete (relToDirectory "../../../data/LabeledProteinQuantification/out/transformFilterSum/LabeledProteinQuantification_log.txt")
+            File.Delete (relToDirectory "../../../data/LabeledProteinQuantification/out/transformFilterSum/LabeledQuantification_log.txt")
+            File.Delete (relToDirectory "../../../data/LabeledProteinQuantification/out/transformFilterSum/LabeledQuant.txt")
+            File.Delete (relToDirectory "../../../data/LabeledProteinQuantification/out/transformFilterSum/ProteinAggregation.txt")
+            File.Delete (relToDirectory "../../../data/LabeledProteinQuantification/out/transformFilterSum/GlobModAggregation.txt")
+            Expect.isTrue compare "Output files are not identical"
     ]
