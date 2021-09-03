@@ -1,0 +1,1 @@
+{"ModificationFilter":{"Case":"All"},"AggregatePeptideChargeStatesParams":{"Case":"Some","Fields":[{"Transform":null,"SingleFilters":null,"GroupFilters":null,"Aggregation":{"Light":{"Case":"Mean"}}}]},"AggregateModifiedPeptidesParams":null,"AggregateToProteinGroupsParams":{"Transform":null,"SingleFilters":null,"GroupFilters":null,"Aggregation":{"Light":{"Case":"Mean"}}}}
