@@ -8,6 +8,6 @@
   },
   "GroupFiles": true,
   "GetQValue": {
-    "Case": "Storey",
+    "Case": "Storey"
   }
 }
