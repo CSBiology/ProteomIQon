@@ -250,6 +250,41 @@ let pipelineTests =
                 else false, unequalFields |> String.concat ";"
             Expect.isTrue compare (sprintf "Quants are different in the following fields: %s" fields)
         testCase "ProteinInference" <| fun _ ->
-            let subject = true
-            Expect.isTrue subject "I compute, therefore I am."
+            let relToDirectory = getRelativePath Environment.CurrentDirectory
+            let db = relToDirectory "../../../data/ProteinInference/in/Minimal.db"
+            let qpsm = relToDirectory "../../../data/ProteinInference/in/minimal.qpsm"
+            let proteinInferenceParamsStorey = relToDirectory "../../../data/ProteinInference/in/ProteinInferenceParamsStorey.json"
+            let proteinInferenceParamsMAYU = relToDirectory "../../../data/ProteinInference/in/ProteinInferenceParamsMAYU.json"
+            let outDirectoryStorey = relToDirectory "../../../data/ProteinInference/out/storeyOut"
+            let outDirectoryMAYU = relToDirectory "../../../data/ProteinInference/out/mayuOut"
+            let protInfExe = relToDirectory "../../../../../bin/ProteinInference/net5.0/ProteomIQon.ProteinInference.dll"
+            runDotNet (sprintf "%s -i %s -o %s -p %s -d %s" protInfExe qpsm outDirectoryStorey proteinInferenceParamsStorey db) Environment.CurrentDirectory
+            runDotNet (sprintf "%s -i %s -o %s -p %s -d %s" protInfExe qpsm outDirectoryMAYU proteinInferenceParamsMAYU db) Environment.CurrentDirectory
+            let referenceProtStorey =
+                let protPath = relToDirectory "../../../data/ProteinInference/out/storeyOut/minimalReference.prot"
+                File.ReadAllLines protPath
+            let protStorey =
+                let protPath = relToDirectory "../../../data/ProteinInference/out/storeyOut/minimal.prot"
+                File.ReadAllLines protPath
+            let referenceProtMAYU =
+                let protPath = relToDirectory "../../../data/ProteinInference/out/mayuOut/minimalReference.prot"
+                File.ReadAllLines protPath
+            let protMAYU =
+                let protPath = relToDirectory "../../../data/ProteinInference/out/mayuOut/minimal.prot"
+                File.ReadAllLines protPath
+            let compare = referenceProtStorey = protStorey && referenceProtMAYU = protMAYU
+            // cleanup
+            File.Delete (relToDirectory "../../../data/ProteinInference/out/storeyOut/minimal.prot")
+            File.Delete (relToDirectory "../../../data/ProteinInference/out/storeyOut/ProteinInference_createClassItemCollection_log.txt")
+            File.Delete (relToDirectory "../../../data/ProteinInference/out/storeyOut/ProteinInference_inferProteins_log.txt")
+            File.Delete (relToDirectory "../../../data/ProteinInference/out/storeyOut/ProteinInference_log.txt")
+            File.Delete (relToDirectory "../../../data/ProteinInference/out/storeyOut/ProteinInference_readAndInferFile_log.txt")
+            File.Delete (relToDirectory "../../../data/ProteinInference/out/storeyOut/QValueGraph.html")
+            File.Delete (relToDirectory "../../../data/ProteinInference/out/mayuOut/minimal.prot")
+            File.Delete (relToDirectory "../../../data/ProteinInference/out/mayuOut/ProteinInference_createClassItemCollection_log.txt")
+            File.Delete (relToDirectory "../../../data/ProteinInference/out/mayuOut/ProteinInference_inferProteins_log.txt")
+            File.Delete (relToDirectory "../../../data/ProteinInference/out/mayuOut/ProteinInference_log.txt")
+            File.Delete (relToDirectory "../../../data/ProteinInference/out/mayuOut/ProteinInference_readAndInferFile_log.txt")
+            File.Delete (relToDirectory "../../../data/ProteinInference/out/mayuOut/QValueGraph.html")
+            Expect.isTrue compare "Prots are different"
     ]
