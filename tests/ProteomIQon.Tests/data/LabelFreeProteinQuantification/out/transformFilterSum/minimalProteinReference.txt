@@ -1,0 +1,2 @@
+FileName	ProteinGroup	ProteinGroup_QValue	ItemsUsedForQuant_Light	Quant_Light	CV_Quant_Light	StDev_Quant_Light	SEM_Quant_Light
+Galaxy104-[HYE124_TTOF6600_DDA_1ug_Ecoli_lgillet_I150212_001.mzML]	P0ACG1	0	12	131.768537126589	0.15378044237230615	1.6886186608398754	0.48746221919726374
