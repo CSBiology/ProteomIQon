@@ -171,6 +171,10 @@ packages/
 
 # Test results produced by build
 TestResults.xml
+tests/ProteomIQon.Tests/data/PSMBasedQuantification/out/minimal_plots/
+tests/ProteomIQon.Tests/data/PSMBasedQuantification/out/minimal.quant
+tests/ProteomIQon.Tests/data/PSMBasedQuantification/out/minimal_log.txt
+tests/ProteomIQon.Tests/data/PSMBasedQuantification/out/PSMBasedQuantification_log.txt
 
 # Nuget outputs
 nuget/*.nupkg
