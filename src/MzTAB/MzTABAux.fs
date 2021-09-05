@@ -38,12 +38,12 @@ module MzTABAux =
 
     type InferredProteinClassItemOut =
         {
-            GroupOfProteinIDs: string
-            PeptideSequence  : string
-            Class            : string
-            TargetScore      : float
-            DecoyScore       : float
-            QValue           : float
+            ProteinGroup    : string
+            PeptideSequence : string
+            Class           : string
+            TargetScore     : float
+            DecoyScore      : float
+            QValue          : float
         }
 
     type PSMStatisticsResult = {
@@ -225,8 +225,8 @@ module MzTABAux =
         |> Array.map (fun x ->
             {
                 x with
-                    GroupOfProteinIDs =
-                        x.GroupOfProteinIDs
+                    ProteinGroup=
+                        x.ProteinGroup
                         |> String.split ';'
                         |> Seq.map (fun y ->
                             y

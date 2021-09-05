@@ -39,7 +39,7 @@ module MzTABSections =
                 |> Array.map (fun x ->
                     let corrProt =
                         correspondingProts
-                        |> Array.find (fun y -> y.GroupOfProteinIDs = x.Protein)
+                        |> Array.find (fun y -> y.ProteinGroup = x.Protein)
                     {|TableSort = x; ProtInf = corrProt|}
                 )
             )
