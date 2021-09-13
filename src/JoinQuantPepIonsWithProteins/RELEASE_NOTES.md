@@ -1,2 +1,2 @@
-#### 0.0.1 - Wednesday September 13, 2021
+#### 0.0.1 - Monday September 13, 2021
 * Initial Release

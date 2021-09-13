@@ -1,3 +1,9 @@
+#### 0.0.7 - Monday, September 13, 2021
+* initial nuget release of
+	* LabelFreeProteinQuantification
+	* LabeledProteinQuantification
+	* JoinQuantPepIonsWithProteins
+
 #### 0.0.6 - Friday, August 20, 2021
 * update PSMStats Params
 * update PSMBasedQuantification Params
