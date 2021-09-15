@@ -13,6 +13,7 @@ index: 10
 [![Notebook]({{root}}img/badge-notebook.svg)]({{root}}{{fsdocs-source-basename}}.ipynb)
 
 # Labeled Protein Quantification
+
 **Disclaimer** this tool needs a [quantAndProt]({{root}}tools/JoinQuantPepIonsWithProteins.html) file, which combines the results from [ProteinInference]({{root}}tools/ProteinInference.html) 
 and [PSMBasedQuantification]({{root}}tools/PSMBasedQuantification.html).
 
@@ -21,9 +22,9 @@ for their proteins.
 
 This tool performs the aggregation from the peptides to the protein in several steps. The first step for the labeled protein quantification is the aggregation of the differently labeled peptides. Peptides with the same sequence, modifications and 
 charge are aggregated and the ratio between the intensity from the light and heavy version is calculated. The next two aggregation steps are optional. One of them is the aggregation based on charge state. Similarily to the first step, peptides with 
-the same sequence and modifications, but different charge states are being aggregated. The next optional step does the same for peptides with the same sequence, but different modification. Those steps build upon each other. The last step is the aggregation of 
+the same sequence and modifications, but different charge states are being aggregated. The next optional step does the same for peptides with the same sequence, but different modifications. Those steps build upon each other. The last step is the aggregation of 
 all peptides of a protein. The result of each aggregation step is given as a tab separated file. The aggregation is performed according to the given parameters for each step. If an optional aggregation is not performed, the next step takes the result from the prior aggregation. For example, if aggregation by charge and 
-modification are skipped, the protein aggregation gets a collection of peptides, where a peptidesequence can occur with different charge states and midifications.
+modification are skipped, the protein aggregation gets a collection of peptides, where a peptidesequence can occur with different charge states and modifications.
 
 ## Parameters
 
