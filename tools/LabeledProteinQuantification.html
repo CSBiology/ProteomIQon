@@ -139,6 +139,85 @@
 <a href="https://csbiology.github.io/ProteomIQon/tools/LabeledProteinQuantification.fsx"><img src="https://csbiology.github.io/ProteomIQon/img/badge-script.svg" alt="Script" /></a>&emsp;
 <a href="https://csbiology.github.io/ProteomIQon/tools/LabeledProteinQuantification.ipynb"><img src="https://csbiology.github.io/ProteomIQon/img/badge-notebook.svg" alt="Notebook" /></a></p>
 <h1><a name="Labeled-Protein-Quantification" class="anchor" href="#Labeled-Protein-Quantification">Labeled Protein Quantification</a></h1>
+<h2><a name="Parameters" class="anchor" href="#Parameters">Parameters</a></h2>
+<h3><a name="LabeledQuantificationParams" class="anchor" href="#LabeledQuantificationParams">LabeledQuantificationParams</a></h3>
+<p>The following table gives an overview of the parameter set:</p>
+<table>
+<thead>
+<tr class="header">
+<th><p><strong>Parameter</strong></p></th>
+<th><p><strong>Default Value</strong></p></th>
+<th><p><strong>Description</strong></p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><p>Correlation_Light_Heavy_Threshold</p></td>
+<td><p>Some 0.0</p></td>
+<td><p>Optional minimum value for the correlation between light and heavy peptide</p></td>
+</tr>
+<tr class="even">
+<td><p>ModificationFilter</p></td>
+<td><p>UseModifiedPeptides.All</p></td>
+<td><p>Specifies which modifications are used during the aggregation steps</p></td>
+</tr>
+<tr class="odd">
+<td><p>AggregateGlobalModificationsParams</p></td>
+<td><p>LabeledProteinQuantification.AggregationParams</p></td>
+<td><p>Specifies how the differently labeled versions of a peptide are aggregated</p></td>
+</tr>
+<tr class="even">
+<td><p>AggregatePeptideChargeStatesParams</p></td>
+<td><p>Some LabeledProteinQuantification.AggregationParams</p></td>
+<td><p>Specifies how the differently charged versions of a peptide are aggregated (optional step)</p></td>
+</tr>
+<tr class="odd">
+<td><p>AggregateModifiedPeptidesParams</p></td>
+<td><p>Some LabeledProteinQuantification.AggregationParams</p></td>
+<td><p>Specifies how the differently modified versions of a peptide are aggregated (optional step)</p></td>
+</tr>
+<tr class="even">
+<td><p>AggregateToProteinGroupsParams</p></td>
+<td><p>LabeledProteinQuantification.AggregationParams</p></td>
+<td><p>Specifies how the peptides of a protein are aggregated</p></td>
+</tr>
+</tbody>
+</table>
+
+<h3><a name="LabeledProteinQuantification-AggregationParams" class="anchor" href="#LabeledProteinQuantification-AggregationParams">LabeledProteinQuantification.AggregationParams</a></h3>
+<p>The following table gives an overview of the parameter set:</p>
+<table>
+<thead>
+<tr class="header">
+<th><p><strong>Parameter</strong></p></th>
+<th><p><strong>Default Value</strong></p></th>
+<th><p><strong>Description</strong></p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><p>LabeledTransform</p></td>
+<td><p>None</p></td>
+<td><p>Possibility to add different transformations to the light or heavy intensities or their ratio</p></td>
+</tr>
+<tr class="even">
+<td><p>LabeledSingleFilters</p></td>
+<td><p>None</p></td>
+<td><p>Possibility to add minimal and/or maximal values for the individual intensity or ratio</p></td>
+</tr>
+<tr class="odd">
+<td><p>LabeledGroupFilters</p></td>
+<td><p>None</p></td>
+<td><p>Possibility to apply a filtering step to the intensities or ratios that are being aggregated</p></td>
+</tr>
+<tr class="even">
+<td><p>LabeledAggregation</p></td>
+<td><p>{Light= NumericAggregation.Mean; Heavy=NumericAggregation.Mean; Ratio=NumericAggregation.Mean}</p></td>
+<td><p>Specifies how the light and heavy intensities and the ratio are aggregated</p></td>
+</tr>
+</tbody>
+</table>
+
 
                 </div>
             </div>
