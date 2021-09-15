@@ -143,6 +143,17 @@
 <p>Results from <a href="https://csbiology.github.io/ProteomIQon/tools/PSMBasedQuantification.html">PSMBasedQuantification</a> contain detailed information about the quantification of every peptide, but only basic informations about the protein they originated from.
 This information is obtained during the <a href="https://csbiology.github.io/ProteomIQon/tools/ProteinInference.html">ProteinInference</a>. This tool takes the results from both tools and combines the qauntification information of each peptide with the more accurate information about
 the corresponding protein including its q-value.</p>
+<h2><a name="Executing-the-Tool" class="anchor" href="#Executing-the-Tool">Executing the Tool</a></h2>
+<p><strong>Disclaimer</strong> this tool needs the results from <a href="https://csbiology.github.io/ProteomIQon/tools/ProteinInference.html">ProteinInference</a> and <a href="https://csbiology.github.io/ProteomIQon/tools/PSMBasedQuantification.html">PSMBasedQuantification</a>.</p>
+<p>To combine all quantified peptides with their infered protein simply call:</p>
+<pre class="fssnip highlighted"><code lang="fsharp"><span class="id">proteomiqon</span><span class="o">-</span><span class="id">joinquantpepionswithproteins</span> <span class="o">-</span><span class="id">i</span> <span class="s">&quot;path/to/your/run/quant&quot;</span> <span class="o">-</span><span class="id">ii</span> <span class="s">&quot;path/to/your/run/prot&quot;</span> <span class="o">-</span><span class="id">o</span> <span class="s">&quot;path/to/your/outDirectory&quot;</span>
+</code></pre>
+<p>It is also possible to call the tool on a list of qaunt and prot files:</p>
+<pre class="fssnip highlighted"><code lang="fsharp"><span class="id">proteomiqon</span><span class="o">-</span><span class="id">joinquantpepionswithproteins</span> <span class="o">-</span><span class="id">i</span> <span class="s">&quot;path/to/your/run1.quant&quot;</span> <span class="s">&quot;path/to/your/run2.quant&quot;</span> <span class="s">&quot;path/to/your/run3.quant&quot;</span> <span class="o">-</span><span class="id">ii</span> <span class="s">&quot;path/to/your/run1.prot&quot;</span> <span class="s">&quot;path/to/your/run2.prot&quot;</span> <span class="s">&quot;path/to/your/run3.prot&quot;</span> <span class="o">-</span><span class="id">o</span> <span class="s">&quot;path/to/your/outDirectory&quot;</span>
+</code></pre>
+<p>A detailed description of the CLI arguments the tool expects can be obtained by calling the tool:</p>
+<pre class="fssnip highlighted"><code lang="fsharp"><span class="id">proteomiqon</span><span class="o">-</span><span class="id">joinquantpepionswithproteins</span> <span class="pn">--</span><span class="id">help</span>
+</code></pre>
 
                 </div>
             </div>
