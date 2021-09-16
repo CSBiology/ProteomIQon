@@ -49,4 +49,57 @@ The following table gives an overview of the parameter set:
 | GroupFilters  | None                             | Possibility to apply a filtering step to the intensities that are being aggregated |
 | Aggregation   | {Light= NumericAggregation.Mean} | Specifies how the intensities are aggregated                                       |
 
+## Parameter Generation
+
+Parameters are handed to the cli tool as a .json file. you can download the default file here: 
+[minimal](https://github.com/CSBiology/ProteomIQon/blob/master/src/ProteomIQon/defaultParams/LabelFreeQuantificationParams.json), 
+[with charge aggregation](https://github.com/CSBiology/ProteomIQon/blob/master/src/ProteomIQon/defaultParams/LabelFreeQuantificationParams_ChargeAgg.json), 
+[with charge and modification aggregation](https://github.com/CSBiology/ProteomIQon/blob/master/src/ProteomIQon/defaultParams/LabelFreeQuantificationParams_ChargeAgg_ModAgg.json).
+Alternatively, you can use an F# script, which can be downloaded or run in Binder at the top of the page, to write your own parameter file:
 *)
+
+#r "nuget: ProteomIQon, 0.0.7"
+
+open ProteomIQon
+open ProteomIQon.Dto
+
+let defaultLabelFreeQuantificationParams :Dto.LabelFreeQuantificationParams = 
+    let chargeParams :Common.LabelFreeQuantification.AggregationParams = 
+        {
+                Transform        = None
+                SingleFilters    = None
+                GroupFilters     = None
+                Aggregation      = {Light= NumericAggregation.Mean}
+        }
+    let modParams :Common.LabelFreeQuantification.AggregationParams = 
+        {
+                Transform        = None
+                SingleFilters    = None
+                GroupFilters     = None
+                Aggregation      = {Light= NumericAggregation.Mean}
+        }
+    let protParams :Common.LabelFreeQuantification.AggregationParams = 
+        {
+                Transform        = None
+                SingleFilters    = None
+                GroupFilters     = None
+                Aggregation      = {Light= NumericAggregation.Mean}
+        }
+    {
+        ModificationFilter                   = UseModifiedPeptides.All 
+        AggregatePeptideChargeStatesParams   = Some modParams // or None
+        AggregateModifiedPeptidesParams      = Some modParams // or None
+        AggregateToProteinGroupsParams       = protParams
+    }   
+
+let serialized = 
+    defaultLabelFreeQuantificationParams
+    |> Json.serialize
+
+(***condition:ipynb***)
+#if IPYNB
+(**
+If you are running this tool in Binder, you can copy the output of the following codeblock and save it in a JSON file.
+*)
+serialized
+#endif // IPYNB
