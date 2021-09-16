@@ -45,5 +45,80 @@ The following table gives an overview of the parameter set:
 | LabeledGroupFilters  | None                                                                                           | Possibility to apply a filtering step to the intensities or ratios that are being aggregated  |
 | LabeledAggregation   | {Light= NumericAggregation.Mean; Heavy=NumericAggregation.Mean; Ratio=NumericAggregation.Mean} | Specifies how the light and heavy intensities and the ratio are aggregated                    |
 
+## Parameter Generation
+
+Parameters are handed to the cli tool as a .json file. you can download the default file here: 
+[minimal](https://github.com/CSBiology/ProteomIQon/blob/master/src/ProteomIQon/defaultParams/LabeledQuantificationParams.json), 
+[with correlation filter](https://github.com/CSBiology/ProteomIQon/blob/master/src/ProteomIQon/defaultParams/LabeledQuantificationParams_withCorrFilter.json), 
+[with correlation filter and charge aggregation](https://github.com/CSBiology/ProteomIQon/blob/master/src/ProteomIQon/defaultParams/LabeledQuantificationParams_CorrFilter_ChargeAgg.json), 
+[with correlation filter and charge and modification aggregation](https://github.com/CSBiology/ProteomIQon/blob/master/src/ProteomIQon/defaultParams/LabeledQuantificationParams_CorrFilter_ChargeAgg_ModAgg.json).
+Alternatively, you can use an F# script, which can be downloaded or run in Binder at the top of the page, to write your own parameter file:
+
+*)
+#r "nuget: ProteomIQon, 0.0.7"
+
+open ProteomIQon
+open ProteomIQon.Dto
+
+let defaultLabeledQuantificationParams :Dto.LabeledQuantificationParams = 
+
+    let globalModParams :Common.LabeledProteinQuantification.AggregationParams = 
+        {
+                LabeledTransform        = None
+                LabeledSingleFilters    = None
+                LabeledGroupFilters     = None
+                LabeledAggregation      = {Light= NumericAggregation.Mean; Heavy=NumericAggregation.Mean; Ratio=NumericAggregation.Mean} 
+        }
+    let chargeParams :Common.LabeledProteinQuantification.AggregationParams = 
+        {
+                LabeledTransform        = None
+                LabeledSingleFilters    = None
+                LabeledGroupFilters     = None
+                LabeledAggregation      = {Light= NumericAggregation.Mean; Heavy=NumericAggregation.Mean; Ratio=NumericAggregation.Mean} 
+        }
+
+    let modParams :Common.LabeledProteinQuantification.AggregationParams = 
+        {
+                LabeledTransform        = None
+                LabeledSingleFilters    = None
+                LabeledGroupFilters     = None
+                LabeledAggregation      = {Light= NumericAggregation.Mean; Heavy=NumericAggregation.Mean; Ratio=NumericAggregation.Mean} 
+        }
+    let protParams :Common.LabeledProteinQuantification.AggregationParams = 
+        {
+                LabeledTransform        = None
+                LabeledSingleFilters    = None
+                LabeledGroupFilters     = None
+                LabeledAggregation      = {Light= NumericAggregation.Mean; Heavy=NumericAggregation.Mean; Ratio=NumericAggregation.Mean}
+        }
+    {
+        Correlation_Light_Heavy_Threshold    = Some 0.0
+        ModificationFilter                   = UseModifiedPeptides.All 
+        AggregateGlobalModificationsParams   = globalModParams
+        AggregatePeptideChargeStatesParams   = Some chargeParams // or None
+        AggregateModifiedPeptidesParams      = Some modParams    // or None
+        AggregateToProteinGroupsParams       = protParams
+    }   
+
+let serialized = 
+    defaultLabeledQuantificationParams
+    |> Json.serialize
+(**
+## Executing the Tool
+**Disclaimer** this tool needs a [quantAndProt](https://csbiology.github.io/ProteomIQon/tools/JoinQuantPepIonsWithProteins.html) file, which combines the results from [ProteinInference](https://csbiology.github.io/ProteomIQon/tools/ProteinInference.html) 
+and [PSMBasedQuantification](https://csbiology.github.io/ProteomIQon/tools/PSMBasedQuantification.html).
+
+To generate a quantified protein output for your run simply call:
+
+
+	proteomiqon-labeledproteinquantification -i "path/to/your/run/quantAndProt" -o "path/to/your/outDirectory" -p "path/to/your/params.json"
+
+It is also possible to call the tool on a lists of quantAndProt files:
+
+	proteomiqon-labeledproteinquantification -i "path/to/your/run1.quantAndProt" "path/to/your/run2.quantAndProt" "path/to/your/run3.quantAndProt" "path/to/your/outDirectory" -p "path/to/your/params.json" 
+
+A detailed description of the CLI arguments the tool expects can be obtained by calling the tool:
+
+	proteomiqon-labeledproteinquantification --help
 
 *)
