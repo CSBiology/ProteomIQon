@@ -88,3 +88,22 @@ let defaultLabelFreeQuantificationParams :Dto.LabelFreeQuantificationParams =
 let serialized = 
     defaultLabelFreeQuantificationParams
     |> Json.serialize
+(**
+## Executing the Tool
+**Disclaimer** this tool needs a [quantAndProt](https://csbiology.github.io/ProteomIQon/tools/JoinQuantPepIonsWithProteins.html) file, which combines the results from [ProteinInference](https://csbiology.github.io/ProteomIQon/tools/ProteinInference.html) 
+and [PSMBasedQuantification](https://csbiology.github.io/ProteomIQon/tools/PSMBasedQuantification.html).
+
+To generate a quantified protein output for your run simply call:
+
+
+	proteomiqon-labelfreeproteinquantification -i "path/to/your/run/quantAndProt" -o "path/to/your/outDirectory" -p "path/to/your/params.json"
+
+It is also possible to call the tool on a lists of quantAndProt files:
+
+	proteomiqon-labelfreeproteinquantification -i "path/to/your/run1.quantAndProt" "path/to/your/run2.quantAndProt" "path/to/your/run3.quantAndProt" "path/to/your/outDirectory" -p "path/to/your/params.json" 
+
+A detailed description of the CLI arguments the tool expects can be obtained by calling the tool:
+
+	proteomiqon-labelfreeproteinquantification --help
+
+*)

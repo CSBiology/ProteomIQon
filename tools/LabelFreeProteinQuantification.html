@@ -260,6 +260,18 @@ Alternatively, you can use an F# script, which can be downloaded or run in Binde
     <span onmouseout="hideTip(event, 'fs3', 42)" onmouseover="showTip(event, 'fs3', 42)" class="id">defaultLabelFreeQuantificationParams</span>
     <span class="o">|&gt;</span> <span onmouseout="hideTip(event, 'fs18', 43)" onmouseover="showTip(event, 'fs18', 43)" class="m">Json</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs19', 44)" onmouseover="showTip(event, 'fs19', 44)" class="id">serialize</span>
 </code></pre>
+<h2><a name="Executing-the-Tool" class="anchor" href="#Executing-the-Tool">Executing the Tool</a></h2>
+<p><strong>Disclaimer</strong> this tool needs a <a href="https://csbiology.github.io/ProteomIQon/tools/JoinQuantPepIonsWithProteins.html">quantAndProt</a> file, which combines the results from <a href="https://csbiology.github.io/ProteomIQon/tools/ProteinInference.html">ProteinInference</a>
+and <a href="https://csbiology.github.io/ProteomIQon/tools/PSMBasedQuantification.html">PSMBasedQuantification</a>.</p>
+<p>To generate a quantified protein output for your run simply call:</p>
+<pre class="fssnip highlighted"><code lang="fsharp"><span class="id">proteomiqon</span><span class="o">-</span><span class="id">labelfreeproteinquantification</span> <span class="o">-</span><span class="id">i</span> <span class="s">&quot;path/to/your/run/quantAndProt&quot;</span> <span class="o">-</span><span class="id">o</span> <span class="s">&quot;path/to/your/outDirectory&quot;</span> <span class="o">-</span><span class="id">p</span> <span class="s">&quot;path/to/your/params.json&quot;</span>
+</code></pre>
+<p>It is also possible to call the tool on a lists of quantAndProt files:</p>
+<pre class="fssnip highlighted"><code lang="fsharp"><span class="id">proteomiqon</span><span class="o">-</span><span class="id">labelfreeproteinquantification</span> <span class="o">-</span><span class="id">i</span> <span class="s">&quot;path/to/your/run1.quantAndProt&quot;</span> <span class="s">&quot;path/to/your/run2.quantAndProt&quot;</span> <span class="s">&quot;path/to/your/run3.quantAndProt&quot;</span> <span class="s">&quot;path/to/your/outDirectory&quot;</span> <span class="o">-</span><span class="id">p</span> <span class="s">&quot;path/to/your/params.json&quot;</span> 
+</code></pre>
+<p>A detailed description of the CLI arguments the tool expects can be obtained by calling the tool:</p>
+<pre class="fssnip highlighted"><code lang="fsharp"><span class="id">proteomiqon</span><span class="o">-</span><span class="id">labelfreeproteinquantification</span> <span class="pn">--</span><span class="id">help</span>
+</code></pre>
 
                 </div>
             </div>
