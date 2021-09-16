@@ -216,11 +216,74 @@ modification are skipped, the protein aggregation is performed on previously una
 </tbody>
 </table>
 
+<h2><a name="Parameter-Generation" class="anchor" href="#Parameter-Generation">Parameter Generation</a></h2>
+<p>Parameters are handed to the cli tool as a .json file. you can download the default file here:
+<a href="https://github.com/CSBiology/ProteomIQon/blob/master/src/ProteomIQon/defaultParams/LabelFreeQuantificationParams.json">minimal</a>,
+<a href="https://github.com/CSBiology/ProteomIQon/blob/master/src/ProteomIQon/defaultParams/LabelFreeQuantificationParams_ChargeAgg.json">with charge aggregation</a>,
+<a href="https://github.com/CSBiology/ProteomIQon/blob/master/src/ProteomIQon/defaultParams/LabelFreeQuantificationParams_ChargeAgg_ModAgg.json">with charge and modification aggregation</a>.
+Alternatively, you can use an F# script, which can be downloaded or run in Binder at the top of the page, to write your own parameter file:</p>
+<pre class="fssnip highlighted"><code lang="fsharp"><span class="pp">#r</span> <span class="s">&quot;nuget: ProteomIQon, 0.0.7&quot;</span>
+
+<span class="k">open</span> <span onmouseout="hideTip(event, 'fs1', 1)" onmouseover="showTip(event, 'fs1', 1)" class="id">ProteomIQon</span>
+<span class="k">open</span> <span onmouseout="hideTip(event, 'fs1', 2)" onmouseover="showTip(event, 'fs1', 2)" class="id">ProteomIQon</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs2', 3)" onmouseover="showTip(event, 'fs2', 3)" class="m">Dto</span>
+
+<span class="k">let</span> <span onmouseout="hideTip(event, 'fs3', 4)" onmouseover="showTip(event, 'fs3', 4)" class="id">defaultLabelFreeQuantificationParams</span> <span class="pn">:</span><span onmouseout="hideTip(event, 'fs2', 5)" onmouseover="showTip(event, 'fs2', 5)" class="m">Dto</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs4', 6)" onmouseover="showTip(event, 'fs4', 6)" class="id">LabelFreeQuantificationParams</span> <span class="o">=</span> 
+    <span class="k">let</span> <span onmouseout="hideTip(event, 'fs5', 7)" onmouseover="showTip(event, 'fs5', 7)" class="fn">chargeParams</span> <span class="pn">:</span><span onmouseout="hideTip(event, 'fs6', 8)" onmouseover="showTip(event, 'fs6', 8)" class="m">Common</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs7', 9)" onmouseover="showTip(event, 'fs7', 9)" class="m">LabelFreeQuantification</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs8', 10)" onmouseover="showTip(event, 'fs8', 10)" class="id">AggregationParams</span> <span class="o">=</span> 
+        <span class="pn">{</span>
+                <span class="prop">Transform</span>        <span class="o">=</span> <span onmouseout="hideTip(event, 'fs9', 11)" onmouseover="showTip(event, 'fs9', 11)" class="uc">None</span>
+                <span class="prop">SingleFilters</span>    <span class="o">=</span> <span onmouseout="hideTip(event, 'fs9', 12)" onmouseover="showTip(event, 'fs9', 12)" class="uc">None</span>
+                <span class="prop">GroupFilters</span>     <span class="o">=</span> <span onmouseout="hideTip(event, 'fs9', 13)" onmouseover="showTip(event, 'fs9', 13)" class="uc">None</span>
+                <span class="prop">Aggregation</span>      <span class="o">=</span> <span class="pn">{</span><span class="prop">Light</span><span class="o">=</span> <span onmouseout="hideTip(event, 'fs10', 14)" onmouseover="showTip(event, 'fs10', 14)" class="m">NumericAggregation</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs11', 15)" onmouseover="showTip(event, 'fs11', 15)" class="id">Mean</span><span class="pn">}</span>
+        <span class="pn">}</span>
+    <span class="k">let</span> <span onmouseout="hideTip(event, 'fs12', 16)" onmouseover="showTip(event, 'fs12', 16)" class="fn">modParams</span> <span class="pn">:</span><span onmouseout="hideTip(event, 'fs6', 17)" onmouseover="showTip(event, 'fs6', 17)" class="m">Common</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs7', 18)" onmouseover="showTip(event, 'fs7', 18)" class="m">LabelFreeQuantification</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs8', 19)" onmouseover="showTip(event, 'fs8', 19)" class="id">AggregationParams</span> <span class="o">=</span> 
+        <span class="pn">{</span>
+                <span class="prop">Transform</span>        <span class="o">=</span> <span onmouseout="hideTip(event, 'fs9', 20)" onmouseover="showTip(event, 'fs9', 20)" class="uc">None</span>
+                <span class="prop">SingleFilters</span>    <span class="o">=</span> <span onmouseout="hideTip(event, 'fs9', 21)" onmouseover="showTip(event, 'fs9', 21)" class="uc">None</span>
+                <span class="prop">GroupFilters</span>     <span class="o">=</span> <span onmouseout="hideTip(event, 'fs9', 22)" onmouseover="showTip(event, 'fs9', 22)" class="uc">None</span>
+                <span class="prop">Aggregation</span>      <span class="o">=</span> <span class="pn">{</span><span class="prop">Light</span><span class="o">=</span> <span onmouseout="hideTip(event, 'fs10', 23)" onmouseover="showTip(event, 'fs10', 23)" class="m">NumericAggregation</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs11', 24)" onmouseover="showTip(event, 'fs11', 24)" class="id">Mean</span><span class="pn">}</span>
+        <span class="pn">}</span>
+    <span class="k">let</span> <span onmouseout="hideTip(event, 'fs13', 25)" onmouseover="showTip(event, 'fs13', 25)" class="fn">protParams</span> <span class="pn">:</span><span onmouseout="hideTip(event, 'fs6', 26)" onmouseover="showTip(event, 'fs6', 26)" class="m">Common</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs7', 27)" onmouseover="showTip(event, 'fs7', 27)" class="m">LabelFreeQuantification</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs8', 28)" onmouseover="showTip(event, 'fs8', 28)" class="id">AggregationParams</span> <span class="o">=</span> 
+        <span class="pn">{</span>
+                <span class="prop">Transform</span>        <span class="o">=</span> <span onmouseout="hideTip(event, 'fs9', 29)" onmouseover="showTip(event, 'fs9', 29)" class="uc">None</span>
+                <span class="prop">SingleFilters</span>    <span class="o">=</span> <span onmouseout="hideTip(event, 'fs9', 30)" onmouseover="showTip(event, 'fs9', 30)" class="uc">None</span>
+                <span class="prop">GroupFilters</span>     <span class="o">=</span> <span onmouseout="hideTip(event, 'fs9', 31)" onmouseover="showTip(event, 'fs9', 31)" class="uc">None</span>
+                <span class="prop">Aggregation</span>      <span class="o">=</span> <span class="pn">{</span><span class="prop">Light</span><span class="o">=</span> <span onmouseout="hideTip(event, 'fs10', 32)" onmouseover="showTip(event, 'fs10', 32)" class="m">NumericAggregation</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs11', 33)" onmouseover="showTip(event, 'fs11', 33)" class="id">Mean</span><span class="pn">}</span>
+        <span class="pn">}</span>
+    <span class="pn">{</span>
+        <span class="prop">ModificationFilter</span>                   <span class="o">=</span> <span onmouseout="hideTip(event, 'fs14', 34)" onmouseover="showTip(event, 'fs14', 34)" class="m">UseModifiedPeptides</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs15', 35)" onmouseover="showTip(event, 'fs15', 35)" class="id">All</span> 
+        <span class="prop">AggregatePeptideChargeStatesParams</span>   <span class="o">=</span> <span onmouseout="hideTip(event, 'fs16', 36)" onmouseover="showTip(event, 'fs16', 36)" class="uc">Some</span> <span onmouseout="hideTip(event, 'fs12', 37)" onmouseover="showTip(event, 'fs12', 37)" class="fn">modParams</span> <span class="c">// or None</span>
+        <span class="prop">AggregateModifiedPeptidesParams</span>      <span class="o">=</span> <span onmouseout="hideTip(event, 'fs16', 38)" onmouseover="showTip(event, 'fs16', 38)" class="uc">Some</span> <span onmouseout="hideTip(event, 'fs12', 39)" onmouseover="showTip(event, 'fs12', 39)" class="fn">modParams</span> <span class="c">// or None</span>
+        <span class="prop">AggregateToProteinGroupsParams</span>       <span class="o">=</span> <span onmouseout="hideTip(event, 'fs13', 40)" onmouseover="showTip(event, 'fs13', 40)" class="fn">protParams</span>
+    <span class="pn">}</span>   
+
+<span class="k">let</span> <span onmouseout="hideTip(event, 'fs17', 41)" onmouseover="showTip(event, 'fs17', 41)" class="id">serialized</span> <span class="o">=</span> 
+    <span onmouseout="hideTip(event, 'fs3', 42)" onmouseover="showTip(event, 'fs3', 42)" class="id">defaultLabelFreeQuantificationParams</span>
+    <span class="o">|&gt;</span> <span onmouseout="hideTip(event, 'fs18', 43)" onmouseover="showTip(event, 'fs18', 43)" class="m">Json</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs19', 44)" onmouseover="showTip(event, 'fs19', 44)" class="id">serialize</span>
+</code></pre>
 
                 </div>
             </div>
         </div>
-        
+        <div class="fsdocs-tip" id="fs1">namespace ProteomIQon</div>
+<div class="fsdocs-tip" id="fs2">module Dto<br /><br />from ProteomIQon</div>
+<div class="fsdocs-tip" id="fs3">val defaultLabelFreeQuantificationParams : LabelFreeQuantificationParams</div>
+<div class="fsdocs-tip" id="fs4">Multiple items<br />module LabelFreeQuantificationParams<br /><br />from ProteomIQon.Dto<br /><br />--------------------<br />type LabelFreeQuantificationParams =<br />&#160;&#160;{ ModificationFilter: UseModifiedPeptides<br />&#160;&#160;&#160;&#160;AggregatePeptideChargeStatesParams: AggregationParams option<br />&#160;&#160;&#160;&#160;AggregateModifiedPeptidesParams: AggregationParams option<br />&#160;&#160;&#160;&#160;AggregateToProteinGroupsParams: AggregationParams }</div>
+<div class="fsdocs-tip" id="fs5">val chargeParams : LabelFreeQuantification.AggregationParams</div>
+<div class="fsdocs-tip" id="fs6">module Common<br /><br />from ProteomIQon</div>
+<div class="fsdocs-tip" id="fs7">module LabelFreeQuantification<br /><br />from ProteomIQon.Common</div>
+<div class="fsdocs-tip" id="fs8">Multiple items<br />module AggregationParams<br /><br />from ProteomIQon.Common.LabelFreeQuantification<br /><br />--------------------<br />type AggregationParams =<br />&#160;&#160;{ Transform: Transforms option<br />&#160;&#160;&#160;&#160;SingleFilters: SingleFilters option<br />&#160;&#160;&#160;&#160;GroupFilters: GroupFilters option<br />&#160;&#160;&#160;&#160;Aggregation: Aggregations }</div>
+<div class="fsdocs-tip" id="fs9">union case Option.None: Option&lt;&#39;T&gt;</div>
+<div class="fsdocs-tip" id="fs10">Multiple items<br />module NumericAggregation<br /><br />from ProteomIQon.Common<br /><br />--------------------<br />type NumericAggregation =<br />&#160;&#160;| Mean<br />&#160;&#160;| Median<br />&#160;&#160;| Sum</div>
+<div class="fsdocs-tip" id="fs11">union case NumericAggregation.Mean: NumericAggregation</div>
+<div class="fsdocs-tip" id="fs12">val modParams : LabelFreeQuantification.AggregationParams</div>
+<div class="fsdocs-tip" id="fs13">val protParams : LabelFreeQuantification.AggregationParams</div>
+<div class="fsdocs-tip" id="fs14">Multiple items<br />module UseModifiedPeptides<br /><br />from ProteomIQon.Common<br /><br />--------------------<br />type UseModifiedPeptides =<br />&#160;&#160;| All<br />&#160;&#160;| No<br />&#160;&#160;| UseOnly of seq&lt;Modification&gt;</div>
+<div class="fsdocs-tip" id="fs15">union case UseModifiedPeptides.All: UseModifiedPeptides</div>
+<div class="fsdocs-tip" id="fs16">union case Option.Some: Value: &#39;T -&gt; Option&lt;&#39;T&gt;</div>
+<div class="fsdocs-tip" id="fs17">val serialized : string</div>
+<div class="fsdocs-tip" id="fs18">module Json<br /><br />from ProteomIQon</div>
+<div class="fsdocs-tip" id="fs19">val serialize : obj:&#39;a -&gt; string</div>
+
     </div>
 
     <!-- BEGIN SEARCH BOX: this adds support for the search box -->
