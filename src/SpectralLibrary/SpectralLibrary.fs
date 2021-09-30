@@ -143,14 +143,13 @@ module SpectralLibrary =
         let calcIonSeries aal  =
             Fragmentation.Series.fragmentMasses Fragmentation.Series.bOfBioList Fragmentation.Series.yOfBioList dBParams.MassFunction aal
 
+        // initialize Reader and Transaction
+        logger.Trace "Init connection to input data base."
         let inReader = Core.MzIO.Reader.getReader instrumentOutput
-        //let inRunID = Core.MzIO.Reader.getDefaultRunID inReader
-        logger.Trace "Reading instrument output"
+        Core.MzIO.Reader.openConnection inReader
+        let inRunID  = Core.MzIO.Reader.getDefaultRunID inReader
+        logger.Trace (sprintf "Run ID: %s" inRunID)
         let inTr = inReader.BeginTransaction()
-        logger.Trace "Reading psm file"
-        let psmFile =
-            Seq.fromFileWithCsvSchema<PSMStatisticsResult>(scoredPSMs, '\t', false,schemaMode = FSharpAux.IO.SchemaReader.Csv.SchemaModes.Fill, skipLines = 1)
-            |> Seq.toArray
         logger.Trace "Creating library"
         let createPeptideIons (quant: QuantificationResult []) (psmLookup: Map<(int*int),PSMStatisticsResult[]>) (matchingTolerance: float) =
             quant
@@ -293,8 +292,15 @@ module SpectralLibrary =
                             RelativeMeasuredApex = peptideIon.MeasuredApex/maxMeasuredApex
                     }
                 )
+
         let peptideIons = createPeptideIons quantifiedPeptides psmLookupMap spectralLibraryParams.MatchingTolerancePPM
         Json.serializeAndWrite outFile peptideIons
+
+        inTr.Commit()
+        inTr.Dispose()
+        inReader.Dispose()
+        memoryDB.Dispose()
+        logger.Trace "Done."
             
             //psms
             //|> Seq.collect (fun psm ->
