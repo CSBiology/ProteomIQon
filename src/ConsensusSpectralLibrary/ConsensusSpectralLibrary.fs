@@ -596,7 +596,7 @@ module ConsensusSpectralLibrary =
         
         logger.Trace "Init connection to swath mass spectrum data."
         let inReader = Core.MzIO.Reader.getReader targetSwathFile :?> MzIO.MzSQL.MzSQL
-        inReader.Connection.Open()
+        Core.MzIO.Reader.openConnection inReader
         let inRunID  = Core.MzIO.Reader.getDefaultRunID inReader
         let inTr = inReader.BeginTransaction()
         logger.Trace "Init connection to swath mass spectrum data.:finished"
@@ -660,6 +660,10 @@ module ConsensusSpectralLibrary =
             |> Array.sortBy (fun x -> x.ScanTime)
         logger.Trace "Transfering PeptideIons to Consensus library:finished"
         Json.serializeAndWrite outFilePath consensusLibrary
+
+        inTr.Commit()
+        inTr.Dispose()
+        inReader.Dispose()
         logger.Trace "Creating Consensus library: finished"
         
             
