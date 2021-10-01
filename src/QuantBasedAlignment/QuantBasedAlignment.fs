@@ -425,7 +425,7 @@ module QuantBasedAlignment =
             |> SeqIO'.csv "\t" true false
             |> FSharpAux.IO.SeqIO.Seq.writeOrAppend (outFilePath)
  
- ///
+    ///
     let initAlign (ctx:MLContext) (pepsForLearning: PeptideForLearning []) = 
         let data = ctx.Data.LoadFromEnumerable(pepsForLearning)
         let split = ctx.Data.TrainTestSplit(data, testFraction= 0.1)
@@ -451,8 +451,7 @@ module QuantBasedAlignment =
             let xSource = evalView.GetColumn<float[]>("RtTrace_SourceFile")        |> Seq.map (Array.ofSeq) |> Array.ofSeq
             let ySource = evalView.GetColumn<float[]>("IntensityTrace_SourceFile") |> Seq.map (Array.ofSeq) |> Array.ofSeq
             let xTarget = evalView.GetColumn<float[]>("RtTrace_TargetFile")        |> Seq.map (Array.ofSeq) |> Array.ofSeq
-            let yTarget = evalView.GetColumn<float[]>("IntensityTrace_TargetFile") |> Seq.map (Array.ofSeq) |> Array.ofSeq
-            
+            let yTarget = evalView.GetColumn<float[]>("IntensityTrace_TargetFile") |> Seq.map (Array.ofSeq) |> Array.ofSeq     
             let yHatAfterRefinement,dtwDistanceBefore,dtwDistanceAfter = 
                 [|
                     for i = 0 to xSource.Length-1 do                          
