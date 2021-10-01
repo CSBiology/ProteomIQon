@@ -19,7 +19,7 @@ module CLIArgumentParsing =
                 match s with
                 | QuantifiedPeptides _  -> "Specify quantified peptides, specify a directory containing .quant files."
                 | OutputDirectory  _    -> "Specify the output directory."
-                | ParamFile _           -> "Specify parameter file for peptide spectrum matching."
+                | ParamFile _           -> "Specify parameter file for the peptide based alignment."
                 | DiagnosticCharts _    -> "Set to save diagnostic charts to the output directory."
                 | Parallelism_Level _   -> "Set the number of cores the programm can use. Parallelization occurs on file level. This flag is only of effect if a input directory (-i) is specified."
                 | Log_Level _           -> "Set the log level."

@@ -579,8 +579,7 @@ module AlignmentBasedQuantification =
         
         ///
         let labledQuantification (alignmentResult:AlignmentResult) = 
-            try
-            
+            try          
             let unlabledPeptide = peptideLookUp alignmentResult.StringSequence 0
             let labeledPeptide  = peptideLookUp alignmentResult.StringSequence 1
             let targetPeptide = if alignmentResult.GlobalMod = 0 then unlabledPeptide else labeledPeptide            
@@ -800,9 +799,7 @@ module AlignmentBasedQuantification =
         quantifyTestDataSet alignmentMetrics
         |> SeqIO'.csv "\t" true false
         |> FSharpAux.IO.SeqIO.Seq.writeOrAppend (outFilePathMetrics)
-        logger.Trace "executing quantification metric peptides: finished"
-        
-        
+        logger.Trace "executing quantification metric peptides: finished"      
         logger.Trace "executing quantification"
         alignmentResults        
         |> Array.choose (fun alignmentResult -> 

@@ -1,4 +1,5 @@
 #r "netstandard"
+#r @"../../../bin\MzMLToMzLite\net5.0\Newtonsoft.Json.dll"
 #r @"../../../bin\alignmentbasedquantification\net5.0\FSharp.Stats.dll"
 #r @"../../../bin\ProteomIQon\netstandard2.0\ProteomIQon.dll"
 #r @"../../../bin\alignmentbasedquantification\net5.0\BioFSharp.Mz.dll"
@@ -30,8 +31,9 @@ let defaultPreprocessingParams :Dto.AlignmentBasedQuantificationParams =
 
     let XicExtraction = 
         {
+            TopKPSMs                     = None
             ScanTimeWindow               = 2.
-            MzWindow_Da                  = 0.07 
+            MzWindow_Da                  = Domain.Window.Estimate
             XicProcessing                = Wavelet waveletParams
         }
 
