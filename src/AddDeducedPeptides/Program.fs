@@ -6,7 +6,7 @@ open System.Reflection
 open Argu
 open ProteomIQon.Core
 open ProteomIQon.Core.InputPaths
-open Library
+open AddDeducedPeptides
 open CLIArgumentParsing
 
 module console1 =
@@ -18,23 +18,23 @@ module console1 =
         let directory = Environment.CurrentDirectory
         let getPathRelativeToDir = getRelativePath directory
         let results = parser.Parse argv
-        let i = results.GetResult InstrumentOutput |> List.map getPathRelativeToDir
-        let o = results.GetResult OutputDirectory  |> getPathRelativeToDir
-        let p = results.GetResult ParamFile        |> getPathRelativeToDir
-        Directory.CreateDirectory(o) |> ignore
+        let i  = results.GetResult QuantFiles |> List.map getPathRelativeToDir
+        let ii = results.GetResult ProtFiles |> List.map getPathRelativeToDir
+        let o  = results.GetResult OutputDirectory |> getPathRelativeToDir
         Logging.generateConfig o
-        let logger = Logging.createLogger "PeptideSpectrumMatching"
+        let logger = Logging.createLogger "AddDeducedPeptides"
         logger.Info (sprintf "InputFilePath -i = %A" i)
+        logger.Info (sprintf "InputFilePath -ii = %A" ii)
         logger.Info (sprintf "OutputFilePath -o = %s" o)
-        logger.Info (sprintf "ParamFilePath -p = %s" p)
         logger.Trace (sprintf "CLIArguments: %A" results)
-        let p = 
-            Json.ReadAndDeserialize<Dto.PeptideSpectrumMatchingParams> p
-            |> Dto.PeptideSpectrumMatchingParams.toDomain
-        let files = 
-            parsePaths (fun path -> Directory.GetFiles(path,("*.txt"))) i
+        Directory.CreateDirectory(o) |> ignore
+        let quantFiles = 
+            parsePaths (fun path -> Directory.GetFiles(path,("*.quant"))) i
             |> Array.ofSeq
-        Library.print (results.GetAllResults())
-        Library.print files     
+        let protFiles = 
+            parsePaths (fun path -> Directory.GetFiles(path,("*.prot"))) ii
+            |> Array.ofSeq
+        logger.Trace (sprintf "Inputfiles: \n%A\n%A" quantFiles protFiles)
+        addDeducedPeptides quantFiles protFiles o
         logger.Info "Done"
         0
