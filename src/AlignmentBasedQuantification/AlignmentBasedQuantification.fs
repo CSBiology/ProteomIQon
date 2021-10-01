@@ -100,6 +100,50 @@ module AlignmentBasedQuantification =
     let getSpec (reader:MzIO.IO.IMzIODataReader) (ms1: MzIO.Model.MassSpectrum)  =
         Peaks.unzipIMzliteArray (reader.ReadSpectrumPeaks(ms1.ID).Peaks)
         |> fun (mzData,intensityData) -> PeakArray.zip mzData intensityData
+    
+    ///
+    let lightQualityFilter lowerBorder upperBorder (quantResults:QuantificationResult[]) =
+        let medianApexIntensities = 
+            quantResults
+            |> Array.map (fun x -> x.MeasuredApex_Light)
+            |> Array.filter (fun x -> nan.Equals x |> not)
+            |> Array.median
+        let medianQuantIntensities = 
+            quantResults
+            |> Array.map (fun x -> x.Quant_Light)
+            |> Array.filter (fun x -> nan.Equals x |> not)
+            |> Array.median
+        quantResults
+        |> Array.filter (fun x -> 
+            let qualR = 
+                let apexNorm = x.MeasuredApex_Light / medianApexIntensities
+                let quantNorm =  x.Quant_Light / medianQuantIntensities
+                quantNorm / apexNorm
+                |> log2
+            (qualR > lowerBorder && qualR < upperBorder) || (nan.Equals(qualR) )
+            ) 
+
+    ///
+    let heavyQualityFilter lowerBorder upperBorder (quantResults:QuantificationResult[]) =
+        let medianApexIntensities = 
+            quantResults
+            |> Array.map (fun x -> x.MeasuredApex_Heavy)
+            |> Array.filter (fun x -> nan.Equals x |> not)
+            |> Array.median
+        let medianQuantIntensities = 
+            quantResults
+            |> Array.map (fun x -> x.Quant_Heavy)
+            |> Array.filter (fun x -> nan.Equals x |> not)
+            |> Array.median
+        quantResults
+        |> Array.filter (fun x -> 
+            let qualR = 
+                let apexNorm = x.MeasuredApex_Heavy / medianApexIntensities
+                let quantNorm =  x.Quant_Heavy / medianQuantIntensities
+                quantNorm / apexNorm
+                |> log2
+            (qualR > lowerBorder && qualR < upperBorder) || (nan.Equals(qualR) )
+            )
        
     /// Calculates the Kullback-Leibler divergence Dkl(p||q) from q (theory, model, description, or approximation of p) 
     /// to p (the "true" distribution of data, observations, or a precisely calculated theoretical distribution).
