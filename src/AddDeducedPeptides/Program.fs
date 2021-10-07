@@ -35,6 +35,6 @@ module console1 =
             parsePaths (fun path -> Directory.GetFiles(path,("*.prot"))) ii
             |> Array.ofSeq
         logger.Trace (sprintf "Inputfiles: \n%A\n%A" quantFiles protFiles)
-        addDeducedPeptides quantFiles protFiles o
+        addDeducedPeptides protFiles quantFiles o
         logger.Info "Done"
         0
