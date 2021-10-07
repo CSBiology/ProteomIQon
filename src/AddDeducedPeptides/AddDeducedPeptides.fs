@@ -50,7 +50,7 @@ module AddDeducedPeptides =
         |> Array.map (fun (quantFile, filePath) ->
             let outFilePath =
                 let filename = Path.GetFileNameWithoutExtension filePath
-                Path.Combine[|outDirectory; $"{filename}.quant"|]
+                Path.Combine[|outDirectory; $"{filename}.prot"|]
             let presentPeptides =
                 quantFile
                 |> Array.map (fun x -> x.StringSequence)
