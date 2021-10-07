@@ -32,7 +32,7 @@ module AddDeducedPeptides =
             |> Array.exists (fun x -> x.Length <> 1)
         if ensureEqualProtDetermination then
             failwith "If you are running this tool please infer proteins over all files"
-        let pepProtMap =
+        let pepProt =
             prot
             |> Array.collect (fun protFile ->
                 protFile
@@ -44,22 +44,21 @@ module AddDeducedPeptides =
                     )
                 )
             )
-            |> Array.distinctBy fst
-            |> Map.ofArray
+            |> Array.distinctBy (fun (pep,prot) -> pep, prot.ProteinGroup)
         let assignProts =
             quant
             |> Array.map (fun quantFile ->
                 let presentPeptides =
                     quantFile
                     |> Array.map (fun x -> x.StringSequence)
-                    |> Array.distinct
+                    |> Set.ofArray
                 let protInfResultExpanded =
-                    presentPeptides
-                    |> Array.choose (fun pep ->
-                        let foundProtInf = pepProtMap.TryFind pep
-                        match foundProtInf with
-                        | Some protInf -> Some (pep,protInf)
-                        | None -> None
+                    pepProt
+                    |> Array.choose (fun (pep, prot) ->
+                        if presentPeptides.Contains pep then
+                            Some (pep,prot)
+                        else
+                            None
                     )
                 let protInfResultGrouped =
                     protInfResultExpanded
