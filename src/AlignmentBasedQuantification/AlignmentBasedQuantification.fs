@@ -77,7 +77,6 @@ module AlignmentBasedQuantification =
         PredictedRelFrequency:float
         }
 
-
     type ClusterComparison = {
         PeakComparisons     : PeakComparison []
         KLDiv_UnCorrected   : float
@@ -92,9 +91,10 @@ module AlignmentBasedQuantification =
         yUncorr - y
        
     ///
-    let getClosestMs1 (ms1s: MzIO.Model.MassSpectrum []) scanTime = 
-         ms1s
-         |> Array.minBy (fun ms -> abs (MassSpectrum.getScanTime ms - scanTime))
+    let getClosestMs1 (ms1s: (float*MzIO.Model.MassSpectrum) []) scanTime = 
+        ms1s
+        |> Array.minBy (fun ms -> abs (fst ms - scanTime))
+        |> snd
 
     ///
     let getSpec (reader:MzIO.IO.IMzIODataReader) (ms1: MzIO.Model.MassSpectrum)  =
@@ -416,30 +416,29 @@ module AlignmentBasedQuantification =
         |> Array.ofList
 
     ///
-    let initComparePredictedAndMeasuredIsotopicCluster inReader ms1s ms1AccuracyEstimate x_Xic y_Xic y_Xic_uncorrected ch peptideSequence tarRt tarMz =    
+    let initComparePredictedAndMeasuredIsotopicCluster inReader ms1s ms1AccuracyEstimate (x_Xic:float[]) (y_Xic:float[]) y_Xic_uncorrected ch peptideSequence tarRt tarMz =    
         /// IsotopicCluster
         let targetIsotopicPattern_predicted = 
             generateIsotopicDistributionOfFormulaBySum ch peptideSequence
-    
         let baseLineCorrectionF = getBaseLineCorrectionOffsetAt tarRt x_Xic y_Xic y_Xic_uncorrected
         let closestMS1 = getClosestMs1 ms1s tarRt
         let peaks' = 
             getSpec inReader closestMS1
             |> Array.filter (fun x -> x.Mz < tarMz + 1. && x.Mz > tarMz - 0.6)
-
         let recordedVsPredictedPattern = 
             targetIsotopicPattern_predicted
-            |> Array.choose (fun (mz,relFreq) -> 
-                match peaks' |> Array.tryFind (fun peak -> abs(peak.Mz - mz) < 4. * ms1AccuracyEstimate  ) with 
-                | None -> None
-                | Some peak -> Some (peak,relFreq)
+            |> Array.choose (fun (mz,relFreq) ->
+                if peaks' |> Array.isEmpty then None
+                else
+                    let closestRealPeak = peaks' |> Array.minBy (fun peak -> abs(peak.Mz - mz)) 
+                    if (abs(closestRealPeak.Mz - mz) < 4. * ms1AccuracyEstimate) then  
+                        Some (closestRealPeak,relFreq)
+                    else None
                 )
             |> Array.groupBy fst
             |> Array.map (fun ((peak),list) -> 
-                peak.Mz,peak.Intensity,list |> Array.sumBy snd 
-                )
-            |> Array.map (fun (mz,measuredIntensity,predictedRelFrequency) -> 
-                    {Mz=mz;MeasuredIntensity = measuredIntensity;MeasuredIntensityCorrected= measuredIntensity - baseLineCorrectionF;PredictedRelFrequency= predictedRelFrequency}
+                let (mz,measuredIntensity,predictedRelFrequency) = peak.Mz,peak.Intensity,list |> Array.sumBy snd 
+                {Mz=mz;MeasuredIntensity=measuredIntensity;MeasuredIntensityCorrected=measuredIntensity - baseLineCorrectionF;PredictedRelFrequency= predictedRelFrequency}
                 )
             |> Array.filter (fun (isoP:PeakComparison) -> isoP.MeasuredIntensityCorrected > 0.)
         let recordedVsPredictedPatternNorm = 
@@ -524,7 +523,8 @@ module AlignmentBasedQuantification =
         let ms1SortedByScanTime =
             massSpectra
             |> Seq.filter (fun ms -> MassSpectrum.getMsLevel ms = 1)
-            |> Seq.sortBy MassSpectrum.getScanTime
+            |> Seq.map (fun ms -> MassSpectrum.getScanTime ms, ms)
+            |> Seq.sortBy fst
             |> Array.ofSeq
         logger.Trace "Read and sort ms1s:finished"
 
@@ -569,8 +569,7 @@ module AlignmentBasedQuantification =
         
         
         ///
-        let comparePredictedAndMeasuredIsotopicCluster = 
-            initComparePredictedAndMeasuredIsotopicCluster inReader ms1SortedByScanTime ms1AccuracyEstimate     
+        let comparePredictedAndMeasuredIsotopicCluster = initComparePredictedAndMeasuredIsotopicCluster inReader ms1SortedByScanTime ms1AccuracyEstimate     
         
         ///
         let getXIC = 
@@ -582,8 +581,7 @@ module AlignmentBasedQuantification =
         
         logger.Trace "init lookup functions:finished"
         
-        logger.Trace "init quantification functions"
-        
+        logger.Trace "init quantification functions"  
         let quantifyTestDataSet (metrics:AlignmentMetricsDTO []) = 
             metrics
             |> Array.map (fun testPep -> 
@@ -618,8 +616,6 @@ module AlignmentBasedQuantification =
                     Y_ReQuant                            = targetQuant.Area
                 }
                 )
-        
-        
         
         ///
         let labledQuantification (alignmentResult:AlignmentResult) = 
@@ -838,20 +834,29 @@ module AlignmentBasedQuantification =
                 logger.Trace (sprintf "Quantfailed: %A" ex)
                 Option.None
         logger.Trace "init quantification functions:finished"
-        
         logger.Trace (sprintf "executing quantification of %i metric peptides" alignmentMetrics.Length)
         quantifyTestDataSet alignmentMetrics
         |> SeqIO'.csv "\t" true false
         |> FSharpAux.IO.SeqIO.Seq.writeOrAppend (outFilePathMetrics)
         logger.Trace "executing quantification metric peptides: finished"      
         logger.Trace "executing quantification"
-        alignmentResults        
-        |> Array.choose (fun alignmentResult -> 
+        let quantResults = 
+            alignmentResults        
+            |> Array.choose (fun alignmentResult -> 
+                if processParams.PerformLabeledQuantification then 
+                    labledQuantification alignmentResult
+                else
+                    lableFreeQuantification alignmentResult
+                )      
+        let filteredResults = 
             if processParams.PerformLabeledQuantification then 
-                labledQuantification alignmentResult
+                quantResults
+                |> heavyQualityFilter -2. 2.
+                |> lightQualityFilter -2. 2.          
             else
-                lableFreeQuantification alignmentResult
-            )
+                quantResults
+                |> lightQualityFilter -2. 2.
+        filteredResults
         |> SeqIO'.csv "\t" true false
         |> FSharpAux.IO.SeqIO.Seq.writeOrAppend (outFilePath)
         inTr.Commit()
