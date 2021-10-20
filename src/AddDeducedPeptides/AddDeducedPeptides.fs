@@ -4,21 +4,22 @@ open System.IO
 open ProteomIQon.Dto
 open FSharpAux
 open FSharpAux.IO
+open FSharpAux.IO.SchemaReader
 
 module AddDeducedPeptides = 
   
-    let addDeducedPeptides (protFiles: string []) (quantFiles: string []) (outFolder: string) = 
+    let addDeducedPeptides (protFiles: string []) (quantFiles: string []) (outDirectory: string) = 
         let prot =
             protFiles
             |> Array.map (fun path ->
-                SeqIO.Seq.fromFileWithCsvSchema<ProteinInferenceResult>(path,'\t',false, skipLines=1)
+                Csv.CsvReader<ProteinInferenceResult>(SchemaMode=Csv.Fill).ReadFile(path,'\t',false,1)
                 |> Array.ofSeq
             )
         let quant =
             quantFiles
             |> Array.map (fun path ->
-                SeqIO.Seq.fromFileWithCsvSchema<QuantificationResult>(path,'\t',false, skipLines=1)
-                |> Array.ofSeq
+                Csv.CsvReader<QuantificationResult>(SchemaMode=Csv.Fill).ReadFile(path,'\t',false,1)
+                |> Array.ofSeq, path
             )
         let ensureEqualProtDetermination =
             prot
@@ -45,39 +46,42 @@ module AddDeducedPeptides =
                 )
             )
             |> Array.distinctBy (fun (pep,prot) -> pep, prot.ProteinGroup)
-        let assignProts =
-            quant
-            |> Array.map (fun quantFile ->
-                let presentPeptides =
-                    quantFile
-                    |> Array.map (fun x -> x.StringSequence)
-                    |> Set.ofArray
-                let protInfResultExpanded =
-                    pepProt
-                    |> Array.choose (fun (pep, prot) ->
-                        if presentPeptides.Contains pep then
-                            Some (pep,prot)
-                        else
-                            None
-                    )
-                let protInfResultGrouped =
-                    protInfResultExpanded
-                    |> Array.groupBy (fun (pep,protInf) -> protInf.ProteinGroup)
-                    |> Array.map snd
-                let protInfResultsCombined =
-                    protInfResultGrouped
-                    |> Array.map (fun group ->
-                        let peps =
-                            group
-                            |> Array.map fst
-                            |> String.concat ";"
+        quant
+        |> Array.map (fun (quantFile, filePath) ->
+            let outFilePath =
+                let filename = Path.GetFileNameWithoutExtension filePath
+                Path.Combine[|outDirectory; $"{filename}.prot"|]
+            let presentPeptides =
+                quantFile
+                |> Array.map (fun x -> x.StringSequence)
+                |> Set.ofArray
+            let protInfResultExpanded =
+                pepProt
+                |> Array.choose (fun (pep, prot) ->
+                    if presentPeptides.Contains pep then
+                        Some (pep,prot)
+                    else
+                        None
+                )
+            let protInfResultGrouped =
+                protInfResultExpanded
+                |> Array.groupBy (fun (pep,protInf) -> protInf.ProteinGroup)
+                |> Array.map snd
+            let protInfResultsCombined =
+                protInfResultGrouped
+                |> Array.map (fun group ->
+                    let peps =
                         group
-                        |> Array.head
-                        |> snd
-                        |> fun protInf ->
-                            {protInf with PeptideSequence = peps}
+                        |> Array.map fst
+                        |> String.concat ";"
+                    group
+                    |> Array.head
+                    |> snd
+                    |> fun protInf ->
+                        {protInf with PeptideSequence = peps}
 
-                    )
-                protInfResultsCombined
-            )
-        assignProts
+                )
+            protInfResultsCombined
+            |> SeqIO.Seq.CSV "\t" true false
+            |> SeqIO.Seq.writeOrAppend outFilePath
+        )
