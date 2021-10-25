@@ -15,16 +15,12 @@ open MzIO.IO.MzML
 module MzMLToMzLite =
 
     ///
-    let private initPeakPicking (peakMap: Map<string,byte[]>) (peakPickingParams:PeakPicking) (outputDir:string) (instrumentOutput:string)=
+    let private initPeakPicking (reader: MzMLReader) (peakPickingParams:PeakPicking) (outputDir:string) (instrumentOutput:string)=
 
         //outputDir and instrumentOutput only added for logger
         let logger = Logging.createLogger (Path.GetFileNameWithoutExtension instrumentOutput)
-        let decoder = new BinaryDataDecoder()
         let getP1D (id: string)=
-            let bytePeak = peakMap.[id]
-            let newP1D = new Peak1DArray()
-            newP1D.CompressionType <- BinaryDataCompressionType.ZLib
-            decoder.Decode (newP1D, bytePeak)
+            reader.getSpecificPeak1DArraySequential(id)
         match peakPickingParams with
         | PeakPicking.ProfilePeaks ->
             fun (massSpec:MassSpectrum) ->
@@ -141,9 +137,11 @@ module MzMLToMzLite =
 
         logger.Trace "Init connection to input data base."
         // initialize Reader and Transaction
-        let inReader = new MzMLReader(instrumentOutput)
-        let inRunID  = Core.MzIO.Reader.getDefaultRunID inReader
-        let inTr = inReader.BeginTransaction()
+        let inReaderMS = new MzMLReader(instrumentOutput)
+        let inReaderPeaks = new MzMLReader(instrumentOutput)
+        let inRunID  = Core.MzIO.Reader.getDefaultRunID inReaderMS
+        let inTrMS = inReaderMS.BeginTransaction()
+        let inTrPeaks = inReaderPeaks.BeginTransaction()
 
         logger.Trace "Creating mzlite file."
         // initialize Reader and Transaction
@@ -158,21 +156,17 @@ module MzMLToMzLite =
         let outTr = outReader.BeginTransaction()
         //logger.Trace "Inserting Model."
         //outReader.InsertModel inReader.Model
-        logger.Trace "Initializing SpectrumID-Peak Map"
-        let specPeakMap = 
-            inReader.getAllPeak1DArraysWithID(inRunID)
-            |> Map.ofSeq
-        logger.Trace "Finished SpectrumID-Peak Map"
+
         logger.Trace "Initiating peak picking functions."
         // Initialize PeakPickingFunctions
-        let ms1PeakPicking = initPeakPicking specPeakMap processParams.MS1PeakPicking outputDir instrumentOutput
-        let ms2PeakPicking = initPeakPicking specPeakMap processParams.MS2PeakPicking outputDir instrumentOutput
+        let ms1PeakPicking = initPeakPicking inReaderPeaks processParams.MS1PeakPicking outputDir instrumentOutput
+        let ms2PeakPicking = initPeakPicking inReaderPeaks processParams.MS2PeakPicking outputDir instrumentOutput
 
         logger.Trace "Getting mass spectra."
         // Get all mass spectra
         let massSpectra = 
-            inReader.ReadMassSpectra(inRunID)
-            |> Array.ofSeq
+            inReaderMS.ReadMassSpectra(inRunID)
+
         logger.Trace "Filtering mass spectra according to retention time."
         // Filter mass spectra by minimum or maximum scan time time.
         let massSpectraF =
@@ -197,25 +191,30 @@ module MzMLToMzLite =
                               )
             | None, None ->
                 massSpectra
-                |> Seq.ofArray
-        logger.Trace (sprintf "Copying %i mass spectra to output data base." (Seq.length massSpectraF))
+
+        //logger.Trace (sprintf "Copying %i mass spectra to output data base." (Seq.length massSpectraF))
         ///
-        massSpectraF
-        |> Seq.filter (fun ms ->
-                            let level = MassSpectrum.getMsLevel ms
-                            level = 1 || level = 2
-                      )
-        |> Seq.iteri (fun i ms ->
-                        if i%1000 = 0 then logger.Trace (sprintf "%i" i)
-                        try
-                            insertSprectrum processParams.Compress outReader outRunID ms1PeakPicking ms2PeakPicking ms
-                        with
-                        | ex ->
-                            logger.Trace (sprintf "File:%s ID: %s could not be inserted. Exeption:%A" instrumentOutput ms.ID ex)
-                    )
-        inTr.Commit()
-        inTr.Dispose()
-        inReader.Dispose()
+        let insert =
+            massSpectraF
+            |> Seq.filter (fun ms ->
+                                let level = MassSpectrum.getMsLevel ms
+                                level = 1 || level = 2
+                          )
+            |> Seq.iteri (fun i ms ->
+                            if i%1000 = 0 then logger.Trace (sprintf "%i" i)
+                            try
+                                insertSprectrum processParams.Compress outReader outRunID ms1PeakPicking ms2PeakPicking ms
+                            with
+                            | ex ->
+                                logger.Trace (sprintf "File:%s ID: %s could not be inserted. Exeption:%A" instrumentOutput ms.ID ex)
+                        )
+        insert
+        inTrMS.Commit()
+        inTrMS.Dispose()
+        inTrPeaks.Commit()
+        inTrPeaks.Dispose()
+        inReaderMS.Dispose()
+        inReaderPeaks.Dispose()
         outTr.Commit()
         outTr.Dispose()
         outReader.Dispose()
