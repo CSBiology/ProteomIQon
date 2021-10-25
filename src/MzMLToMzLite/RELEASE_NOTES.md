@@ -1,3 +1,7 @@
+#### 0.0.7 - Monday, October 25, 2021
+* Change peak retrieving function from map to sequential read function to reduce memory requirement
+* Try inserting model present in mzML file
+
 #### 0.0.6 - Wednesday, June 23, 2021
 * add different file endings in directory search for case sensitive os
 
