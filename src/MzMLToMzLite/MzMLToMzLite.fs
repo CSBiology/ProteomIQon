@@ -154,9 +154,13 @@ module MzMLToMzLite =
         /// All files created by this application will have a unified runID.
         let outRunID  = Core.MzIO.Reader.getDefaultRunID outReader
         let outTr = outReader.BeginTransaction()
-        //logger.Trace "Inserting Model."
-        //outReader.InsertModel inReader.Model
-
+        logger.Trace "Try inserting Model."
+        try
+            outReader.InsertModel inReaderMS.Model
+            logger.Trace "Model inserted."
+        with
+        | ex -> logger.Trace $"Inserting model failed: {ex}"
+        inReaderMS.ResetReader()
         logger.Trace "Initiating peak picking functions."
         // Initialize PeakPickingFunctions
         let ms1PeakPicking = initPeakPicking inReaderPeaks processParams.MS1PeakPicking outputDir instrumentOutput
