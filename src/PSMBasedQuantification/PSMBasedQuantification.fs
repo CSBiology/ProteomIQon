@@ -499,7 +499,6 @@ module PSMBasedQuantification =
        
     ///
     let quantifyPeptides diagCharts (processParams:Domain.QuantificationParams) (outputDir:string) (cn:SQLiteConnection) (instrumentOutput:string) (scoredPSMs:string)  =
-
         let logger = Logging.createLogger (Path.GetFileNameWithoutExtension scoredPSMs)
         logger.Trace (sprintf "Input file: %s" instrumentOutput)
         logger.Trace (sprintf "Output directory: %s" outputDir)

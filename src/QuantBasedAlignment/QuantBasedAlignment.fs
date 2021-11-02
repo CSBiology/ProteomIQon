@@ -10,7 +10,8 @@ open Plotly.NET
 open BioFSharp
 open Microsoft
 open Microsoft.ML
-open Microsoft.ML.Data   
+open Microsoft.ML.Data
+open Microsoft.ML.AutoML   
 open Dto
 open Dto.QuantificationResult
 
@@ -87,13 +88,34 @@ module QuantBasedAlignment =
             [<ColumnName("Sequence")>]
             Sequence                     : string
             [<ColumnName("GlobalMod")>]
-            GlobalMod                    : int
+            GlobalMod                    : string
             [<ColumnName("Charge")>]
-            Charge                       : int
+            Charge                       : string
             [<ColumnName("PepSequenceID")>]
-            PepSequenceID                : int
+            PepSequenceID                : string
             [<ColumnName("ModSequenceID")>]
-            ModSequenceID                : int
+            ModSequenceID                : string
+            [<ColumnName("SourceScanTime")>]
+            SourceScanTime               : float32
+            [<ColumnName("TargetScanTime")>]
+            TargetScanTime               : float32
+            [<ColumnName("ScanTimeDifference")>]
+            ScanTimeDifference           : float32
+        }
+    
+    [<CLIMutable>]
+    type PeptideComplete = 
+        {
+            [<ColumnName("Sequence")>]
+            Sequence                     : string
+            [<ColumnName("GlobalMod")>]
+            GlobalMod                    : string
+            [<ColumnName("Charge")>]
+            Charge                       : string
+            [<ColumnName("PepSequenceID")>]
+            PepSequenceID                : string
+            [<ColumnName("ModSequenceID")>]
+            ModSequenceID                : string
             [<ColumnName("SourceScanTime")>]
             SourceScanTime               : float32
             [<ColumnName("SourceIntensity")>]
@@ -105,36 +127,46 @@ module QuantBasedAlignment =
             [<ColumnName("TargetIntensity")>]
             TargetIntensity              : float32
             [<ColumnName("RtTrace_SourceFile")>]
-            RtTrace_SourceFile           : float []
+            RtTrace_SourceFile                              : float [] 
             [<ColumnName("IntensityTrace_SourceFile")>]
-            IntensityTrace_SourceFile    : float []
+            IntensityTrace_SourceFile                       : float []
             [<ColumnName("RtTrace_TargetFile")>]
-            RtTrace_TargetFile           : float []
+            RtTrace_TargetFile                              : float []
             [<ColumnName("IntensityTrace_TargetFile")>]
-            IntensityTrace_TargetFile    : float []            
+            IntensityTrace_TargetFile                       : float []          
             [<ColumnName("IsotopicPatternMz_SourceFile")>]
-            IsotopicPatternMz_SourceFile                    : float []            
+            IsotopicPatternMz_SourceFile                    : float []          
             [<ColumnName("IsotopicPatternIntensity_Observed_SourceFile")>]
-            IsotopicPatternIntensity_Observed_SourceFile    : float []            
+            IsotopicPatternIntensity_Observed_SourceFile    : float []         
             [<ColumnName("IsotopicPatternMz_TargetFile")>]
-            IsotopicPatternMz_TargetFile                  : float []            
+            IsotopicPatternMz_TargetFile                    : float []         
             [<ColumnName("IsotopicPatternIntensity_Observed_TargetFile")>]
-            IsotopicPatternIntensity_Observed_TargetFile  : float []
+            IsotopicPatternIntensity_Observed_TargetFile    : float []
         }
-    
+
     /////
     //let formatString s = String.filter (fun x -> Char.IsUpper x) s
-    
+
     ///
     let toPeptideForLearning (targetPep:QuantificationResult option) (sourcePep:QuantificationResult) = 
         match targetPep with 
         | Some tP -> 
             {
                 Sequence                                        = (*formatString*) sourcePep.StringSequence
-                GlobalMod                                       = sourcePep.GlobalMod    
-                Charge                                          = sourcePep.Charge       
-                PepSequenceID                                   = sourcePep.PepSequenceID
-                ModSequenceID                                   = sourcePep.ModSequenceID
+                GlobalMod                                       = sourcePep.GlobalMod          |> string      
+                Charge                                          = sourcePep.Charge             |> string
+                PepSequenceID                                   = sourcePep.PepSequenceID      |> string
+                ModSequenceID                                   = sourcePep.ModSequenceID      |> string
+                SourceScanTime                                  = getTargetScanTime sourcePep  |> float32
+                TargetScanTime                                  = getTargetScanTime tP         |> float32
+                ScanTimeDifference                              = ((getTargetScanTime tP) - (getTargetScanTime sourcePep)) |> float32
+            },
+            {
+                Sequence                                        = (*formatString*) sourcePep.StringSequence
+                GlobalMod                                       = sourcePep.GlobalMod          |> string      
+                Charge                                          = sourcePep.Charge             |> string
+                PepSequenceID                                   = sourcePep.PepSequenceID      |> string
+                ModSequenceID                                   = sourcePep.ModSequenceID      |> string
                 SourceScanTime                                  = getTargetScanTime sourcePep  |> float32
                 SourceIntensity                                 = getTargetIntensity sourcePep |> float32
                 SourceStabw                                     = getTargetStabw sourcePep     |> float32
@@ -152,10 +184,20 @@ module QuantBasedAlignment =
         | None -> 
             {
                 Sequence                                        = (*formatString*) sourcePep.StringSequence
-                GlobalMod                                       = sourcePep.GlobalMod    
-                Charge                                          = sourcePep.Charge       
-                PepSequenceID                                   = sourcePep.PepSequenceID
-                ModSequenceID                                   = sourcePep.ModSequenceID
+                GlobalMod                                       = sourcePep.GlobalMod          |> string   
+                Charge                                          = sourcePep.Charge             |> string
+                PepSequenceID                                   = sourcePep.PepSequenceID      |> string
+                ModSequenceID                                   = sourcePep.ModSequenceID      |> string
+                SourceScanTime                                  = getTargetScanTime sourcePep  |> float32
+                TargetScanTime                                  = nan                          |> float32
+                ScanTimeDifference                              = nan                          |> float32
+            },
+            {
+                Sequence                                        = (*formatString*) sourcePep.StringSequence
+                GlobalMod                                       = sourcePep.GlobalMod          |> string   
+                Charge                                          = sourcePep.Charge             |> string
+                PepSequenceID                                   = sourcePep.PepSequenceID      |> string
+                ModSequenceID                                   = sourcePep.ModSequenceID      |> string
                 SourceScanTime                                  = getTargetScanTime sourcePep  |> float32
                 SourceIntensity                                 = getTargetIntensity sourcePep |> float32
                 SourceStabw                                     = getTargetStabw sourcePep     |> float32
@@ -179,7 +221,6 @@ module QuantBasedAlignment =
             TargetScanTime : float32
         }
 
-
     ///
     let getQuantifiedPeptides (quantFilePath:string) = 
         ///
@@ -197,35 +238,41 @@ module QuantBasedAlignment =
         filteredPeptides 
     
     /// Reads quant files, filters for quality quantifications and creates AlignmentFiles.
-    let createAlignmentFiles (quantFilePaths:string []) = 
-        let quantifiedPeptides = 
-            quantFilePaths
+    let createAlignmentFiles (sourceFiles :string []) (targetFile:string) = 
+        let toAlignmentFile (allPepIons:PeptideIon []) (filePath:string) peptides = 
+            let presentPeptides = 
+                peptides 
+                |> Array.map (fun qp -> toPeptideIon qp, qp)
+                |> Map.ofArray
+            let missingPeptides = 
+                allPepIons
+                |> Array.filter (fun pep -> 
+                    let pepUnMod = {pep with GlobalMod = 0}
+                    let pepMod = {pep with GlobalMod = 1}
+                    (presentPeptides.ContainsKey pepMod || presentPeptides.ContainsKey pepUnMod) 
+                    |> not
+                    )
+            {
+                FileName                   = Path.GetFileNameWithoutExtension(filePath)
+                QuantifiedPeptides         = presentPeptides 
+                MissingPeptides            = missingPeptides 
+                GainedPeptides             = [||]
+            }
+        let targetPeptides = 
+            targetFile 
+            |> getQuantifiedPeptides
+        let sourcePeptides = 
+            sourceFiles
             |> Array.map getQuantifiedPeptides
         let allPeptideIons =
-            quantifiedPeptides
+            sourcePeptides
+            |> Array.append [|targetPeptides|] 
             |> Array.concat
             |> Array.map (fun qp -> toPeptideIon qp)
             |> Array.distinct
-        Array.map2 (fun (qFp:string) qps -> 
-                let presentPeptides = 
-                    qps 
-                    |> Array.map (fun qp -> toPeptideIon qp, qp)
-                    |> Map.ofArray
-                let missingPeptides = 
-                    allPeptideIons
-                    |> Array.filter (fun pep -> 
-                        let pepUnMod = {pep with GlobalMod = 0}
-                        let pepMod = {pep with GlobalMod = 1}
-                        (presentPeptides.ContainsKey pepMod || presentPeptides.ContainsKey pepUnMod) 
-                        |> not
-                        )
-                {
-                    FileName                   = Path.GetFileNameWithoutExtension(qFp)
-                    QuantifiedPeptides         = presentPeptides 
-                    MissingPeptides            = missingPeptides 
-                    GainedPeptides             = [||]
-                }
-            ) quantFilePaths quantifiedPeptides
+        let targetAlignmentFile = toAlignmentFile allPeptideIons targetFile targetPeptides
+        let sourceAlignmentFiles = Array.map2 (toAlignmentFile allPeptideIons) sourceFiles sourcePeptides
+        sourceAlignmentFiles, targetAlignmentFile 
 
     /// Calculates the median of absolute scan time differences between shared peptide Ions. This serves as an estimator for overall
     /// File difference
@@ -239,18 +286,18 @@ module QuantBasedAlignment =
         |> Seq.filter (isNan >> not)
         |> Seq.median
 
-    /// determines order of alignment based on the calculated file difference. 
-    // calculateFileDifference can be easily factored out if needed. 
-    let findAlignmentOrder (alignmentFiles: AlignmentFile []) =
-        alignmentFiles
-        |> Array.mapi (fun i af -> 
-                af,
-                [| 
-                    for j = 0 to alignmentFiles.Length-1 do 
-                        if j <> i then calculateFileDifference af alignmentFiles.[j], alignmentFiles.[j]
-                |]
-                |> Array.sortBy fst
-            )
+    // /// determines order of alignment based on the calculated file difference. 
+    // // calculateFileDifference can be easily factored out if needed. 
+    // let findAlignmentOrder (alignmentFiles: AlignmentFile []) =
+    //     alignmentFiles
+    //     |> Array.mapi (fun i af -> 
+    //             af,
+    //             [| 
+    //                 for j = 0 to alignmentFiles.Length-1 do 
+    //                     if j <> i then calculateFileDifference af alignmentFiles.[j], alignmentFiles.[j]
+    //             |]
+    //             |> Array.sortBy fst
+    //         )
     
     ///
     let createAlignmentResult (quantifiedPeptide:QuantificationResult) (scanTimePrediction:ScanTimePrediction) = 
@@ -274,7 +321,7 @@ module QuantBasedAlignment =
     ///
     type ModelMetrics = 
         {
-        Metrics                             : RegressionMetrics
+        RSquared                             : float
         Sequence                            : string []
         GlobalMod                           : int []
         Charge                              : int []
@@ -303,7 +350,7 @@ module QuantBasedAlignment =
     ///
     let createMetricsChart fileName (*stabwMedian*) (rnd:System.Random) (metrics:ModelMetrics) = 
         ///
-        let traceName = (sprintf "#TestPeptides:%i Rsquared:%f RMS:%f, %s " metrics.X_Test.Length metrics.Metrics.RSquared metrics.Metrics.MeanAbsoluteError fileName)
+        let traceName = ""//(sprintf "#TestPeptides:%i Rsquared:%f RMS:%f, %s " metrics.X_Test.Length metrics.Metrics.RSquared metrics.Metrics.MeanAbsoluteError fileName)
         let color = getRandomColor rnd |> FSharpAux.Colors.toWebColor        
         let xVsY = 
             [
@@ -413,7 +460,6 @@ module QuantBasedAlignment =
                         Y_RtTrace                            = metrics.Y_RtTrace.[i]
                         Y_IntensityTrace                     = metrics.Y_IntensityTrace.[i]   
                         DtwDistanceBefore                    = metrics.DtwDistanceBefore.[i]
-
                     }
             |]
         if System.IO.File.Exists outFilePath then 
@@ -424,37 +470,121 @@ module QuantBasedAlignment =
             data
             |> SeqIO'.csv "\t" true false
             |> FSharpAux.IO.SeqIO.Seq.writeOrAppend (outFilePath)
- 
+
     ///
-    let initAlign (ctx:MLContext) (pepsForLearning: PeptideForLearning []) = 
-        let data = ctx.Data.LoadFromEnumerable(pepsForLearning)
-        let split = ctx.Data.TrainTestSplit(data, testFraction= 0.1)
+    let initAlign (logger:NLog.Logger) (ctx:MLContext) (pepsForLearning: (PeptideForLearning*PeptideComplete) []) = 
+        logger.Trace ("Sampling test and train data")
+        let train,test = 
+            let getBinIdx width scantime = int ((scantime / width))    
+            let knotX,train,test = 
+                pepsForLearning
+                |> Array.groupBy (fun (pl,_) -> getBinIdx 10. (pl.SourceScanTime |> float))
+                |> Array.map (fun (binIdx,ions) -> 
+                    let dataS = ions |> Array.shuffleFisherYates
+                    let knotX = 
+                        dataS 
+                        |> Array.map fst
+                        |> Array.maxBy (fun x -> x.SourceScanTime)
+                    let train,test =
+                        let nTest = 
+                            (float dataS.Length) * 0.9
+                            |> int
+                        dataS.[.. nTest], dataS.[nTest+1 ..] 
+                    float knotX.SourceScanTime, train, test
+                    )
+                |> Array.unzip3
+            train |> Array.concat |> Array.sortBy (fun (pepLearning,pepComp) -> pepLearning.SourceScanTime), test |> Array.concat |> Array.sortBy (fun (pepLearning,pepComp) -> pepLearning.SourceScanTime)
+        let trainLearn,trainComp = train |> Array.unzip
+        let testLearn,testComp = test |> Array.unzip
+        logger.Trace ("Sampling test and train data:finished")
+        
+        logger.Trace ("Training Fast Tree")
+        let trainView = ctx.Data.LoadFromEnumerable(trainLearn)
+        // let testView = ctx.Data.LoadFromEnumerable(testLearn)
         let trainer = ctx.Regression.Trainers.Gam(featureColumnName="Features",labelColumnName="TargetScanTime")
         let pipeline =    
             (ctx.Transforms.Concatenate("Features","SourceScanTime")|> downcastPipeline)
               .Append(trainer)
-        let model = pipeline.Fit(split.TrainSet)    
+        let model = pipeline.Fit(trainView) 
+        logger.Trace ("Training Fast Tree:finished")        
+        logger.Trace ("Training Spline")
+        let knots = 
+            let upB = model.LastTransformer.Model.GetBinUpperBounds 0
+            let bounds = (upB |> Array.ofSeq |> fun x -> x.[0..x.Length-2])
+            bounds 
+            |> Array.choose (fun b -> 
+                match trainLearn |> Array.tryFind (fun x -> float x.SourceScanTime > b) with 
+                | Some x -> x.SourceScanTime |> float |> Some
+                | None -> None
+                )   
+            |> Array.mapi (fun i x -> if i%2 = 0 then Some x else None)
+            |> Array.choose id   
+        logger.Trace (sprintf "Number of knots selected:%i" knots.Length)
+        // let spline = ProteomIQon.Spline.smoothingSpline (train |> Array.map (fun (x,y) -> float x.SourceScanTime, float x.TargetScanTime)) (knots)
+        let spline = FSharp.Stats.Fitting.Spline.smoothingSpline (train |> Array.map (fun (x,y) -> float x.SourceScanTime, float x.TargetScanTime)) (knots)        
+        let trainer lambda = 
+            let fit = spline lambda 
+            let x,y,yHat = 
+                train
+                |> Array.map (fun (x,y) -> 
+                    x, x.TargetScanTime, fit (float x.SourceScanTime)
+                    )
+                |> Array.unzip3
+            let rS = FSharp.Stats.Fitting.GoodnessOfFit.calculateDeterminationFromValue yHat (Array.map float y)
+            lambda, rS, fit                  
+        logger.Trace ("Optimizing Lambdas")
+        let models =      
+            [|0.001 .. 0.01 .. 1.|]
+            |> Array.map trainer
+        let lambda,rSquared,model = 
+            models
+            |> Array.maxBy (fun (x,y,z) -> y )                  
+        logger.Trace (sprintf "Optimizing Lambdas:Finished, selected lamda:%f" lambda)
+        [
+            train
+            |> Array.map (fun (x,y) -> 
+                    x.SourceScanTime, (float x.TargetScanTime)
+                    )
+            |> Chart.Point    
+            Chart.Point(knots,knots)
+            models
+            |> Array.map (fun (x,y,z) -> 
+                train
+                |> Array.map (fun (x,y) -> 
+                        x.SourceScanTime, z (float x.SourceScanTime)
+                        )
+                |> Chart.Line
+                |> Chart.withTraceName (sprintf "lambda %f" x)
+                )
+            |> Chart.Combine
+        ]
+        |> Chart.Combine
+        |> Chart.Show
+        models
+        |> Array.map (fun (x,y,z) -> x,y)
+        |> Chart.Point
+        |> Chart.Show
+        logger.Trace ("Training Spline:Finished")
         let metrics =             
-            let metrics = ctx.Regression.Evaluate(model.Transform(split.TestSet),labelColumnName="TargetScanTime")
-            let evalView = model.Transform(split.TestSet)
-            let sequence      = evalView.GetColumn<string>("Sequence")   |> Array.ofSeq
-            let globalMod     = evalView.GetColumn<int>("GlobalMod")     |> Array.ofSeq
-            let charge        = evalView.GetColumn<int>("Charge")        |> Array.ofSeq
-            let pepSequenceID = evalView.GetColumn<int>("PepSequenceID") |> Array.ofSeq
-            let modSequenceID = evalView.GetColumn<int>("ModSequenceID") |> Array.ofSeq
-            let i             = evalView.GetColumn<float32>("SourceIntensity")     |> Seq.map float |> Array.ofSeq
-            let std           = evalView.GetColumn<float32>("SourceStabw")         |> Seq.map float |> Array.ofSeq
-            let x             = evalView.GetColumn<float32>("SourceScanTime")      |> Seq.map float |> Array.ofSeq
-            let y             = evalView.GetColumn<float32>("TargetScanTime")      |> Seq.map float |> Array.ofSeq
-            let yHat          = evalView.GetColumn<float32>("Score")               |> Seq.map float |> Array.ofSeq
-            let yIntensities    = evalView.GetColumn<float32>("TargetIntensity")   |> Seq.map float |> Array.ofSeq
-            let xSource = evalView.GetColumn<float[]>("RtTrace_SourceFile")        |> Seq.map (Array.ofSeq) |> Array.ofSeq
-            let ySource = evalView.GetColumn<float[]>("IntensityTrace_SourceFile") |> Seq.map (Array.ofSeq) |> Array.ofSeq
-            let xTarget = evalView.GetColumn<float[]>("RtTrace_TargetFile")        |> Seq.map (Array.ofSeq) |> Array.ofSeq
-            let yTarget = evalView.GetColumn<float[]>("IntensityTrace_TargetFile") |> Seq.map (Array.ofSeq) |> Array.ofSeq     
+            let rSquared = rSquared
+            let yHat          = testComp |> Seq.map (fun x -> model (float x.SourceScanTime))|> Array.ofSeq
+            let sequence      = testComp |> Seq.map (fun x -> x.Sequence)       |> Array.ofSeq
+            let globalMod     = testComp |> Seq.map (fun x -> x.GlobalMod)      |> Array.ofSeq
+            let charge        = testComp |> Seq.map (fun x -> x.Charge)         |> Array.ofSeq
+            let pepSequenceID = testComp |> Seq.map (fun x -> x.PepSequenceID)  |> Array.ofSeq
+            let modSequenceID = testComp |> Seq.map (fun x -> x.ModSequenceID)  |> Array.ofSeq
+            let i             =  testComp |> Seq.map (fun x -> float x.SourceIntensity)  |> Array.ofSeq
+            let std           =  testComp |> Seq.map (fun x -> float x.SourceStabw)      |> Array.ofSeq
+            let x             =  testComp |> Seq.map (fun x -> float x.SourceScanTime)   |> Array.ofSeq
+            let y             =  testComp |> Seq.map (fun x -> float x.TargetScanTime)   |> Array.ofSeq
+            let yIntensities  =  testComp |> Seq.map (fun x -> float x.TargetIntensity)  |> Array.ofSeq
+            let xSource = testComp |> Seq.map (fun x -> Array.ofSeq x.RtTrace_SourceFile)         |> Array.ofSeq
+            let ySource = testComp |> Seq.map (fun x -> Array.ofSeq x.IntensityTrace_SourceFile)  |> Array.ofSeq
+            let xTarget = testComp |> Seq.map (fun x -> Array.ofSeq x.RtTrace_TargetFile)         |> Array.ofSeq
+            let yTarget = testComp |> Seq.map (fun x -> Array.ofSeq x.IntensityTrace_TargetFile)  |> Array.ofSeq     
             let yHatAfterRefinement,dtwDistanceBefore,dtwDistanceAfter = 
                 [|
-                    for i = 0 to xSource.Length-1 do                          
+                    for i = 0 to xSource.Length-1 do                         
                         printfn "%i %i %i %i" xSource.[i].Length ySource.[i].Length xTarget.[i].Length yTarget.[i].Length
                         let target = Array.zip xTarget.[i] (DTW'.zNorm yTarget.[i])
                         let source = Array.zip xSource.[i] (DTW'.zNorm ySource.[i])
@@ -472,17 +602,17 @@ module QuantBasedAlignment =
                 |]
                 |> Array.unzip3
 
-            let x_IsotopicPatternMz = evalView.GetColumn<float[]>("IsotopicPatternMz_SourceFile")                                 |> Seq.map (Array.ofSeq) |> Array.ofSeq
-            let x_IsotopicPatternIntensity_Observed = evalView.GetColumn<float[]>("IsotopicPatternIntensity_Observed_SourceFile") |> Seq.map (Array.ofSeq) |> Array.ofSeq
-            let y_IsotopicPatternMz = evalView.GetColumn<float[]>("IsotopicPatternMz_TargetFile")                                 |> Seq.map (Array.ofSeq) |> Array.ofSeq
-            let y_IsotopicPatternIntensity_Observed = evalView.GetColumn<float[]>("IsotopicPatternIntensity_Observed_TargetFile") |> Seq.map (Array.ofSeq) |> Array.ofSeq       
+            let x_IsotopicPatternMz                 = testComp |> Seq.map (fun x -> Array.ofSeq x.IsotopicPatternMz_SourceFile)                 |> Array.ofSeq
+            let x_IsotopicPatternIntensity_Observed = testComp |> Seq.map (fun x -> Array.ofSeq x.IsotopicPatternIntensity_Observed_SourceFile) |> Array.ofSeq
+            let y_IsotopicPatternMz                 = testComp |> Seq.map (fun x -> Array.ofSeq x.IsotopicPatternMz_TargetFile)                 |> Array.ofSeq
+            let y_IsotopicPatternIntensity_Observed = testComp |> Seq.map (fun x -> Array.ofSeq x.IsotopicPatternIntensity_Observed_TargetFile) |> Array.ofSeq       
             {
-                Metrics                             = metrics
+                RSquared                            = rSquared
                 Sequence                            = sequence                           
-                GlobalMod                           = globalMod                          
-                Charge                              = charge                             
-                PepSequenceID                       = pepSequenceID                      
-                ModSequenceID                       = modSequenceID                      
+                GlobalMod                           = globalMod     |> Array.map int                     
+                Charge                              = charge        |> Array.map int                     
+                PepSequenceID                       = pepSequenceID |> Array.map int                     
+                ModSequenceID                       = modSequenceID |> Array.map int                     
                 X_Intensities                       = i
                 X_Stabw                             = std      
                 X_Test                              = x
@@ -500,17 +630,28 @@ module QuantBasedAlignment =
                 Y_IntensityTrace                    = yTarget
                 DtwDistanceBefore                   = dtwDistanceBefore
             }
-        let predF = ctx.Model.CreatePredictionEngine<PeptideForLearning,ScanTimePrediction>(model)
+
+        // Spline
         let predict quantifiedPeptide = 
             quantifiedPeptide
             |> toPeptideForLearning None
-            |> predF.Predict
+            |> fun (pepToLearn,pepComp) -> 
+                let v = model (float pepToLearn.SourceScanTime)        
+                {
+                TargetScanTime = float32 v
+                }
             |> createAlignmentResult quantifiedPeptide
+
         metrics, predict
-            
+
+    type Alignment = {
+        Metrics      : ModelMetrics
+        MetricsChart : GenericChart.GenericChart
+        AlignFunc    : (QuantificationResult->AlignmentResult)
+        SourceFile   : AlignmentFile
+        }
     ///
-    let performAlignment outDir rnd align (target: AlignmentFile) (source: AlignmentFile) =
-        
+    let performAlignment outDir rnd align (target: AlignmentFile) (source: AlignmentFile) =    
         ///
         let peptidesForLearning = 
             target.QuantifiedPeptides
@@ -523,109 +664,97 @@ module QuantBasedAlignment =
                 ) 
             |> Array.ofSeq
             |> Array.shuffleFisherYates
-        
         ///
         let metrics,model: ModelMetrics*(QuantificationResult->AlignmentResult) = 
             align peptidesForLearning
-        
-        ///
-        let peptideIonsToTransfer,peptideIonsStillMissing = 
-            target.MissingPeptides
-            |> Array.fold (fun (pepsToTransfer,stillMissingPeps) missingPep -> 
-                match Map.tryFind missingPep source.QuantifiedPeptides with 
-                | Some pepToTransfer -> (pepToTransfer::pepsToTransfer,stillMissingPeps)
-                | None -> (pepsToTransfer,missingPep::stillMissingPeps)
-                ) ([],[])
-        
-        ///
-        let alignmentResults : AlignmentResult [] = 
-            peptideIonsToTransfer 
-            |> List.toArray 
-            |> Array.map model 
-        
-        /////
-        //let stabwMedian = 
-        //    target.QuantifiedPeptides
-        //    |> Seq.map (fun x -> getTargetStabw x.Value)
-        //    |> Seq.filter (fun x -> nan.Equals x |> not)
-        //    |> Seq.median
 
-        ///
-        saveMetrics outDir target.FileName source.FileName metrics
-        createMetricsChart source.FileName (*stabwMedian*) rnd metrics,
-        {target with MissingPeptides = peptideIonsStillMissing |> Array.ofList; GainedPeptides = Array.append target.GainedPeptides alignmentResults}
+        {
+        Metrics      = metrics
+        MetricsChart = createMetricsChart source.FileName (*stabwMedian*) rnd metrics
+        AlignFunc    = model
+        SourceFile   = source
+        }
         
     ///
-    let alignFiles diagCharts (logger:NLog.Logger) (processParams:AlignmentParams) (outputDir:string) (quantFiles:string []) = 
-
-        logger.Trace (sprintf "Input directory: %A" quantFiles)
+    let alignFiles diagCharts (processParams:AlignmentParams) (outputDir:string) (sourceFiles:string []) (targetFile:string) = 
+        let logger = Logging.createLogger (Path.GetFileNameWithoutExtension targetFile)
+        logger.Trace (sprintf "target file: %A" targetFile)
+        logger.Trace (sprintf "source files: %A" sourceFiles)
         logger.Trace (sprintf "Output directory: %s" outputDir)
         logger.Trace (sprintf "Parameters: %A" processParams)
-        
         let getPlotFilePathFilePath (plotName:string) (fileName:string) =
             let fileName = (Path.GetFileNameWithoutExtension fileName) + "_" + plotName 
             Path.Combine [|outputDir;fileName|]
-        
         logger.Trace "Init align function"
-        let ctx = new ML.MLContext()
-        let rnd = new System.Random()
-        let align = initAlign ctx
+        let ctx = ML.MLContext()
+        let rnd = System.Random()
+        let align = initAlign logger ctx
         logger.Trace "Init align function: finished"
          
-        logger.Trace "Reading and preparing .quant file for alignment"
-        let alignmentFiles = createAlignmentFiles quantFiles
-        logger.Trace "Reading and preparing .quant file for alignment: finished"
-               
-        logger.Trace "Determining Alignment order"
-        let alignmentFilesOrdered = findAlignmentOrder alignmentFiles
-        logger.Trace "Determining Alignment order: finished"
-        
-        if diagCharts then 
-            logger.Trace "Plotting file distances"
-            let chart = 
-                alignmentFilesOrdered
-                |> Array.map (fun (target,sources) ->
-                        Chart.Point(sources |> Array.mapi (fun i x -> (snd x).FileName, fst x))
-                        |> Chart.withTraceName target.FileName
-                        |> Chart.withX_AxisStyle("FileNames")
-                        |> Chart.withY_AxisStyle("Median absolute difference of peptide ion scan times")
-                        |> Chart.withSize(1000.,1000.)
-                        |> Chart.SaveHtmlAs(getPlotFilePathFilePath "differences" target.FileName)
-                    )
-            logger.Trace "Plotting file distances: finished"
-             
-        logger.Trace "Performing Alignment"
-        let alignments = 
-            alignmentFilesOrdered 
-            |> Array.map (fun (target,sources) -> 
-                let chart,result =
-                    sources
-                    |> Array.fold (fun (charts,tar) (dis,source)  -> 
-                        logger.Trace (sprintf "Performing Alignment %s vs %s" tar.FileName source.FileName)
-                        let chart',tar' = performAlignment outputDir rnd align tar source
-                        logger.Trace (sprintf "Performing Alignment %s vs %s: finished" tar.FileName source.FileName)
-                        logger.Trace (sprintf "Missing peptides before: %i, now:%i" tar.MissingPeptides.Length tar'.MissingPeptides.Length)
-                        chart'::charts,tar'
-                        ) ([],target)
-                if diagCharts then 
-                    chart
-                    |> Chart.Combine
-                    |> Chart.withTitle(target.FileName)
-                    |> Chart.SaveHtmlAs(getPlotFilePathFilePath "Metrics" target.FileName)                    
-                result 
-                )
-        logger.Trace "Performing Alignment: finished"
+        logger.Trace "Reading and preparing .quant files for alignment"
+        let sourceAlignmentFiles, targetAlignmentFile  = createAlignmentFiles sourceFiles targetFile
+        logger.Trace "Reading and preparing .quant files for alignment: finished"
+
+        logger.Trace "Performing Alignments"
+        let alignmentsSortedByQuality = 
+            let alignments =
+                sourceAlignmentFiles
+                |> Array.map (fun (sourceFile)  -> 
+                    logger.Trace (sprintf "Performing Alignment %s vs %s" targetAlignmentFile.FileName sourceFile.FileName)
+                    let alignResult = performAlignment outputDir rnd align targetAlignmentFile sourceFile
+                    saveMetrics outputDir targetAlignmentFile.FileName sourceFile.FileName alignResult.Metrics
+                    logger.Trace (sprintf "Performing Alignment %s vs %s: finished" targetAlignmentFile.FileName sourceFile.FileName)
+                    alignResult
+                    ) 
+            let sortedByQuality = 
+                alignments
+                |> Array.sortByDescending (fun x -> x.Metrics.RSquared)
+            if diagCharts then 
+                sortedByQuality
+                |> Array.map (fun x -> x.MetricsChart)
+                |> Chart.Combine
+                |> Chart.withTitle(targetAlignmentFile.FileName)
+                |> Chart.SaveHtmlAs(getPlotFilePathFilePath "Metrics" targetAlignmentFile.FileName)                    
+            sortedByQuality 
+        logger.Trace "Performing Alignments: finished"
+        // if diagCharts then 
+        //     logger.Trace "Plotting file distances"
+        //     let chart = 
+        //         alignmentFilesOrdered
+        //         |> Array.map (fun (target,sources) ->
+        //                 Chart.Point(sources |> Array.mapi (fun i x -> (snd x).FileName, fst x))
+        //                 |> Chart.withTraceName target.FileName
+        //                 |> Chart.withX_AxisStyle("FileNames")
+        //                 |> Chart.withY_AxisStyle("Median absolute difference of peptide ion scan times")
+        //                 |> Chart.withSize(1000.,1000.)
+        //                 |> Chart.SaveHtmlAs(getPlotFilePathFilePath "differences" target.FileName)
+        //             )
+        //     logger.Trace "Plotting file distances: finished"
+        logger.Trace "Transfer identifications"
+        let result = 
+            alignmentsSortedByQuality
+            |> Array.fold (fun target alignment -> 
+                    let peptideIonsToTransfer,peptideIonsStillMissing = 
+                        target.MissingPeptides
+                        |> Array.fold (fun (pepsToTransfer,stillMissingPeps) missingPep -> 
+                            match Map.tryFind missingPep alignment.SourceFile.QuantifiedPeptides with 
+                            | Some pepToTransfer -> (pepToTransfer::pepsToTransfer,stillMissingPeps)
+                            | None -> (pepsToTransfer,missingPep::stillMissingPeps)
+                            ) ([],[])
+                    let alignmentResults : AlignmentResult [] = 
+                        peptideIonsToTransfer 
+                        |> List.toArray 
+                        |> Array.map alignment.AlignFunc 
+                    {target with MissingPeptides = peptideIonsStillMissing |> Array.ofList; GainedPeptides = Array.append target.GainedPeptides alignmentResults}
+                ) targetAlignmentFile
         logger.Trace "Writing Results"
-        alignments
-        |> Array.iter (fun tar -> 
-            let outFilePath =
-                let fileName = (tar.FileName) + ".align"
-                Path.Combine [|outputDir;fileName|]
-            logger.Trace (sprintf "outFilePath:%s" outFilePath)
-            tar.GainedPeptides
-            |> SeqIO'.csv "\t" true false
-            |> FSharpAux.IO.SeqIO.Seq.writeOrAppend (outFilePath)
-            )
+        let outFilePath =
+            let fileName = (result.FileName) + ".align"
+            Path.Combine [|outputDir;fileName|]
+        logger.Trace (sprintf "outFilePath:%s" outFilePath)
+        result.GainedPeptides
+        |> SeqIO'.csv "\t" true false
+        |> FSharpAux.IO.SeqIO.Seq.writeOrAppend (outFilePath)
         logger.Trace "Writing Results:finished"
                 
         
