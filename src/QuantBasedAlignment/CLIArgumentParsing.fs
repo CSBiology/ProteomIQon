@@ -6,7 +6,8 @@ module CLIArgumentParsing =
     open System.IO
 
     type CLIArguments =
-        | [<Mandatory>] [<AltCommandLine("-i")>]  QuantifiedPeptides of path:string list
+        | [<Mandatory>] [<AltCommandLine("-i")>]  TargetFiles of path:string list
+        | [<Mandatory>] [<AltCommandLine("-ii")>] SourceFiles of path:string list
         | [<Mandatory>] [<AltCommandLine("-o")>]  OutputDirectory  of path:string 
         | [<Mandatory>] [<AltCommandLine("-p")>]  ParamFile of path:string
         | [<Unique>]    [<AltCommandLine("-dc")>] DiagnosticCharts 
@@ -17,7 +18,8 @@ module CLIArgumentParsing =
         interface IArgParserTemplate with
             member s.Usage =
                 match s with
-                | QuantifiedPeptides _  -> "Specify quantified peptides, specify a directory containing .quant files."
+                | TargetFiles _         -> "Specify quantified peptides, specify a directory containing .quant files."
+                | SourceFiles _         -> "Specify quantified peptides, specify a directory containing .quant files."
                 | OutputDirectory  _    -> "Specify the output directory."
                 | ParamFile _           -> "Specify parameter file for the peptide based alignment."
                 | DiagnosticCharts _    -> "Set to save diagnostic charts to the output directory."

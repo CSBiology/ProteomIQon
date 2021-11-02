@@ -589,7 +589,7 @@ module AlignmentBasedQuantification =
                 let labeledPeptide  = peptideLookUp testPep.Sequence 1
                 let targetPeptide = if testPep.GlobalMod = 0 then unlabledPeptide else labeledPeptide   
                 let targetMz = Mass.toMZ (targetPeptide.Mass) (testPep.Charge|> float)
-                let targetQuant = quantifyInferredPeak true testPep.X_RtTrace testPep.X_IntensityTrace testPep.X_Test getXIC identifyPeaks targetMz testPep.YHat_Test testPep.YHat_Test
+                let targetQuant = quantifyInferredPeak processParams.PerformLocalWarp testPep.X_RtTrace testPep.X_IntensityTrace testPep.X_Test getXIC identifyPeaks targetMz testPep.YHat_Test testPep.YHat_Test
                 {
                     Sequence                             = testPep.Sequence                            
                     GlobalMod                            = testPep.GlobalMod                           
@@ -624,7 +624,7 @@ module AlignmentBasedQuantification =
             let labeledPeptide  = peptideLookUp alignmentResult.StringSequence 1
             let targetPeptide = if alignmentResult.GlobalMod = 0 then unlabledPeptide else labeledPeptide            
             let targetMz = Mass.toMZ (targetPeptide.Mass) (alignmentResult.Charge|> float)
-            let targetQuant = quantifyInferredPeak true alignmentResult.RtTrace_SourceFile alignmentResult.IntensityTrace_SourceFile alignmentResult.ScanTime_SourceFile getXIC identifyPeaks targetMz alignmentResult.PredictedScanTime alignmentResult.PredictedScanTime
+            let targetQuant = quantifyInferredPeak processParams.PerformLocalWarp alignmentResult.RtTrace_SourceFile alignmentResult.IntensityTrace_SourceFile alignmentResult.ScanTime_SourceFile getXIC identifyPeaks targetMz alignmentResult.PredictedScanTime alignmentResult.PredictedScanTime
             if Array.isEmpty targetQuant.EstimatedParams && diagCharts then 
                 Chart.Point(targetQuant.X_Xic, targetQuant.Y_Xic)
                 |> Chart.withTitle(sprintf "Sequence= %s,globalMod = %i_noPeaks" alignmentResult.StringSequence alignmentResult.GlobalMod)
@@ -767,7 +767,7 @@ module AlignmentBasedQuantification =
                 let labeledPeptide  = peptideLookUp alignmentResult.StringSequence 1
                 let targetPeptide = if alignmentResult.GlobalMod = 0 then unlabledPeptide else labeledPeptide            
                 let targetMz = Mass.toMZ (targetPeptide.Mass) (alignmentResult.Charge|> float)
-                let targetQuant = quantifyInferredPeak true alignmentResult.RtTrace_SourceFile alignmentResult.IntensityTrace_SourceFile alignmentResult.ScanTime_SourceFile getXIC identifyPeaks targetMz alignmentResult.PredictedScanTime alignmentResult.PredictedScanTime
+                let targetQuant = quantifyInferredPeak processParams.PerformLocalWarp alignmentResult.RtTrace_SourceFile alignmentResult.IntensityTrace_SourceFile alignmentResult.ScanTime_SourceFile getXIC identifyPeaks targetMz alignmentResult.PredictedScanTime alignmentResult.PredictedScanTime
                 if Array.isEmpty targetQuant.EstimatedParams && diagCharts then 
                     Chart.Point(targetQuant.X_Xic, targetQuant.Y_Xic)
                     |> Chart.withTitle(sprintf "Sequence= %s,globalMod = %i_noPeaks" alignmentResult.StringSequence alignmentResult.GlobalMod)

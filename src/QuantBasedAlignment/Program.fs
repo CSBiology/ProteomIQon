@@ -18,10 +18,11 @@ module console1 =
         let directory = Environment.CurrentDirectory
         let getPathRelativeToDir = getRelativePath directory
         let results = parser.Parse argv
-        let i = results.GetResult QuantifiedPeptides |> List.map getPathRelativeToDir
-        let o = results.GetResult OutputDirectory    |> getPathRelativeToDir
-        let p = results.GetResult ParamFile          |> getPathRelativeToDir
-        let dc = results.Contains DiagnosticCharts
+        let i   = results.GetResult TargetFiles |> List.map getPathRelativeToDir
+        let ii  = results.GetResult SourceFiles |> List.map getPathRelativeToDir 
+        let o   = results.GetResult OutputDirectory    |> getPathRelativeToDir
+        let p   = results.GetResult ParamFile          |> getPathRelativeToDir
+        let dc  = results.Contains DiagnosticCharts
         Logging.generateConfig o
         let logger = Logging.createLogger "QuantBasedAlignment"
         logger.Info (sprintf "InputFilePath -i = %A" i)
@@ -32,21 +33,30 @@ module console1 =
         //let p =
         //    Json.ReadAndDeserialize<Dto.QuantificationParams> p
         //    |> Dto.QuantificationParams.toDomain
-        let files = 
+        let targetFiles = 
             parsePaths (fun path -> Directory.GetFiles(path,("*.quant"))) i
             |> Array.ofSeq
-        if files.Length = 1 then
+        let sourceFiles = 
+            parsePaths (fun path -> Directory.GetFiles(path,("*.quant"))) i
+            |> Array.ofSeq
+        if targetFiles.Length = 1 then
             logger.Info "single file detected"
-            failwithf "%A contains only one file path, please specify a directory containing .quant files or a list of .quant files." i
+            alignFiles dc {Placeholder=true} o sourceFiles targetFiles.[0]
         else
             logger.Info "directory found"
-            logger.Trace (sprintf ".quant files : %A" files)
+            logger.Trace (sprintf ".quant files : %A" targetFiles)
             let c =
                 match results.TryGetResult Parallelism_Level with
                 | Some c    -> c
                 | None      -> 1
             logger.Trace (sprintf "Program is running on %i cores" c)
-            alignFiles dc logger {Placeholder=true} o files
+            targetFiles
+            |> FSharpAux.PSeq.withDegreeOfParallelism c
+            |> FSharpAux.PSeq.iter (fun (t) -> 
+                let sourceFiles' = 
+                    sourceFiles
+                    |> Array.filter (fun x -> x <> t)
+                alignFiles dc {Placeholder=true} o sourceFiles' t)
             |> ignore
         logger.Info "Done"
         0
