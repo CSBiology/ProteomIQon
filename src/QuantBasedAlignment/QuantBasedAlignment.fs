@@ -1014,13 +1014,13 @@ module QuantBasedAlignment =
         let i   = results.GetResult TargetFiles |> List.map getPathRelativeToDir
         let ii  = results.GetResult SourceFiles |> List.map getPathRelativeToDir 
         let o   = results.GetResult OutputDirectory    |> getPathRelativeToDir
-        let p   = results.GetResult ParamFile          |> getPathRelativeToDir
+        // let p   = results.GetResult ParamFile          |> getPathRelativeToDir
         let dc  = results.Contains DiagnosticCharts
         Logging.generateConfig o
         let logger = Logging.createLogger "QuantBasedAlignment"
         logger.Info (sprintf "InputFilePath -i = %A" i)
         logger.Info (sprintf "OutputFilePath -o = %s" o)
-        logger.Info (sprintf "ParamFilePath -p = %s" p)
+        // logger.Info (sprintf "ParamFilePath -p = %s" p)
         logger.Trace (sprintf "CLIArguments: %A" results)
         Directory.CreateDirectory(o) |> ignore
         //let p =
