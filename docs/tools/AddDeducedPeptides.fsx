@@ -3,7 +3,7 @@
 title: AddDeducedPeptides
 category: Tools
 categoryindex: 1
-index: 7
+index: 8
 ---
 *)
 (**
