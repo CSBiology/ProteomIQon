@@ -9,11 +9,317 @@ open FSharpAux.IO.SchemaReader
 open Plotly.NET
 open BioFSharp
 open Microsoft
-open Microsoft.ML
-open Microsoft.ML.Data
-open Microsoft.ML.AutoML   
+// open Microsoft.ML
+// open Microsoft.ML.Data
+// open Microsoft.ML.AutoML   
 open Dto
 open Dto.QuantificationResult
+open Core.InputPaths
+
+
+// The Spline module was implemented according to a julia implementation available at: https://github.com/nignatiadis/SmoothingSplines.jl/blob/master/LICENSE.md 
+// Copyright (c) 2016: Nikolaos Ignatiadis.
+// Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+// The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+module Spline =
+
+    open MKLNET
+
+
+    ///Helper functions
+    ///  
+    type ReinschQ(values:float[]) =    
+        member m.h = values
+        member m.Item(i,j) = 
+                let h = values 
+                if (i = j) then
+                    1. / h.[i]
+                elif (i = j+1) then
+                    -1. / h.[j] - 1. / h.[j+1]
+                elif (i = j+2) then
+                    1. / h.[j+1]
+                else
+                    0.
+        member m.Size = 
+            let n = values.Length
+            n+1,n-1
+
+
+    //tests
+    let rq = ReinschQ([|5.;5.;5.|])
+    // should be 0.2
+    rq.[0,0]
+    rq.[1,1]
+    // (should be -0.4)
+    rq.[2,1]
+    // (should be 4,2)
+    rq.Size
+
+    let multiplyInplace (out:float[]) (q:ReinschQ) (g:float[]) = 
+        let n = out.Length
+        if n <> (q.Size |> fst)  then failwith "DimensionMismatch"
+        elif g.Length <> (q.Size |> snd) then failwith "DimensionMismatch"
+        else 
+            for i = 0 to n-1 do 
+                out.[i] <- 0.
+                for j = (max 0 (i-2)) to (min i (n-3)) do
+                    out.[i] <- out.[i] + g.[j]*q.[i,j]
+            out
+
+    //tests
+    let testmul1 = 
+        let rq = ReinschQ([|5.;5.;5.|])
+        let out = Array.init 4 (fun x -> 0.)
+        let gTest = [|2.;2.|]
+        // should be [|0.4; -0.4; -0.4; 0.4|]
+        multiplyInplace out rq gTest    
+
+    let testmul2 = 
+        let rq = ReinschQ([|1. .. 10.|])
+        let out = Array.init 11 (fun x -> 0.)
+        let gTest = [|for i = 0 to 8 do yield 2.|]
+        // should be [|2.0; -2.0; 1.110223025e-16; 1.110223025e-16; 0.0; -5.551115123e-17;
+        // -5.551115123e-17; 0.0; 0.0; -0.2; 0.2|]
+        multiplyInplace out rq gTest    
+
+
+    let multiplyInplaceTransposedQ (out:float[]) (q:ReinschQ) (g:float[]) = 
+        let n = out.Length
+        if n <> (q.Size |> snd)  then failwith "DimensionMismatch"
+        elif g.Length <> (q.Size |> fst) then failwith "DimensionMismatch"
+        else 
+            let h = q.h
+            let mutable deltaGP1 = (g.[1] - g.[0])/h.[0]
+            for i = 0 to out.Length-1 do 
+                let deltaG = deltaGP1
+                deltaGP1 <- (g.[i+2] - g.[i+1])/h.[i+1]
+                out.[i] <- deltaGP1 - deltaG
+            out 
+
+    let testmultrans2 = 
+        let rq = ReinschQ([|1. .. 10.|])
+        let out = Array.init 9 (fun x -> 0.)
+        let gTest = [|0. .. 10.|] |> Array.rev
+        // should be   [|0.5; 0.1666666667; 0.08333333333; 0.05; 0.03333333333; 0.02380952381;
+        // 0.01785714286; 0.01388888889; 0.01111111111|]
+        multiplyInplaceTransposedQ out rq gTest    
+
+    ///Helper functions
+    ///  
+    type ReinschR(values:float[]) =    
+        member m.h = values
+        member m.Item(i,j) = 
+            let h = values 
+            if (i=j) then
+                (h.[i] + h.[i+1]) / 3.
+            elif abs(i-j) = 1 then
+                h.[max i j] / 6.
+            else
+                0.
+        member m.Size = 
+            let n = values.Length
+            n-1,n-1
+
+    //tests
+    let reinschrTests =
+        let rr = ReinschR([|5.;5.;5.|])
+        // should be 0.2
+        rr.[0,0]
+        rr.[1,1]
+        // (should be -0.4)
+        rr.[2,1]
+        // (should be 4,2)
+        rr.Size
+
+    ///
+    let QtQpR (h:float[]) (alpha:float) (w:float []) = 
+        let n = h.Length-1
+        let Q = ReinschQ h
+        let R = ReinschR h 
+        let out = Matrix.zero 3 n
+        // main diagonal
+        for i=0 to n-1 do
+            let fstTerm = (Q.[i+2,i] / w.[i+2] - Q.[i+1,i] / w.[i+1]) /  h.[i+1]
+            let sndTerm = (Q.[i+1,i] / w.[i+1] - Q.[i,i] / w.[i]) / h.[i]
+            out.[2,i] <- alpha * (fstTerm - sndTerm) + R.[i,i]
+        // 1st superdiagonal
+        for i=0 to n-2 do
+            let fstTerm = (Q.[i+2,i+1]  / w.[i+2] - Q.[i+1,i+1] / w.[i+1]) / h.[i+1]
+            let sndTerm =  Q.[i+1, i+1] / w.[i+1] / h.[i]
+            out.[1,i+1] <- alpha * (fstTerm - sndTerm) + R.[i, i+1]
+        // 2nd superdiagonal
+        for i=0 to n-3 do
+            let fstTerm = Q.[i+2,i+2] / w.[i+2] / h.[i+1]
+            out.[0,i+2] <- alpha * fstTerm + R.[i,i+2]   
+        out
+
+
+    let QtQpRTests =
+        let rq = [|1. .. 10.|]
+        let out = Array.init (rq.Length+1) (fun x -> 1.)
+        // should be 
+            // matrix [[0.0; 0.0; 1.666666667; 0.8333333333; 0.5; 0.3333333333;
+            //    0.2380952381; 0.1785714286; 0.1388888889]
+            //   [0.0; -11.33333333; -4.222222222; -1.916666667; -0.8; -0.126984127;
+            //    0.3418367347; 0.7033730159; 1.00308642]
+            //   [36.0; 12.22222222; 7.472222222; 6.05; 5.688888889; 5.77324263;
+            //    6.077806122; 6.503858025; 7.002469136]]
+        QtQpR rq 10. out
+
+
+    let QtQpRTests2 =
+        let rq = [|1. .. 10.|]
+        let out = Array.init (rq.Length+1) (fun x -> 1.)
+        // should be 
+            // matrix [[0.0; 0.0; 1.666666667; 0.8333333333; 0.5; 0.3333333333;
+            //    0.2380952381; 0.1785714286; 0.1388888889]
+            //   [0.0; -11.33333333; -4.222222222; -1.916666667; -0.8; -0.126984127;
+            //    0.3418367347; 0.7033730159; 1.00308642]
+            //   [36.0; 12.22222222; 7.472222222; 6.05; 5.688888889; 5.77324263;
+            //    6.077806122; 6.503858025; 7.002469136]]
+        QtQpR rq 10. out
+
+    let diff (x:float []) = 
+        Array.init (x.Length-1) (fun i -> x.[i+1] - x.[i])
+
+    let diffTests = 
+        let t = [|1.;20.;3.;4.;5.|] 
+        diff t
+      
+    let initFullSparseRpαQtQ (RpαQtQ:matrix) =
+        let indexSequence = 
+            [|
+                for m = 0 to 2 do
+                    for n = 0 to RpαQtQ.NumCols-1 do 
+                        if m = 2 then n,n,RpαQtQ.[m,n]
+                        
+                        if m = 1 && n > 0 then 
+                            n-1,n,RpαQtQ.[m,n] 
+                        if m = 0 && n > 1 then 
+                            n-2,n,RpαQtQ.[m,n]
+                        
+                        if m = 1 && n > 0 then 
+                            n,n-1,RpαQtQ.[m,n]                    
+                        if m = 0 && n > 1 then 
+                            n,n-2,RpαQtQ.[m,n] 
+            |]
+        Matrix.initSparse RpαQtQ.NumCols RpαQtQ.NumCols indexSequence
+                        
+
+    let initFullSparseRpαQtQTests =
+        let rq = [|1. .. 10.|]
+        let out = Array.init (rq.Length+1) (fun x -> 1.)
+        // should be:
+        // matrix [[36.0; -11.33333333; 1.666666667; 0.0; 0.0; 0.0; 0.0; 0.0; 0.0]
+        //           [0.0; 12.22222222; -4.222222222; 0.8333333333; 0.0; 0.0; 0.0; 0.0;
+        //            0.0]
+        //           [0.0; 0.0; 7.472222222; -1.916666667; 0.5; 0.0; 0.0; 0.0; 0.0]
+        //           [0.0; 0.0; 0.0; 6.05; -0.8; 0.3333333333; 0.0; 0.0; 0.0]
+        //           [0.0; 0.0; 0.0; 0.0; 5.688888889; -0.126984127; 0.2380952381; 0.0;
+        //            0.0]
+        //           [0.0; 0.0; 0.0; 0.0; 0.0; 5.77324263; 0.3418367347; 0.1785714286;
+        //            0.0]
+        //           [0.0; 0.0; 0.0; 0.0; 0.0; 0.0; 6.077806122; 0.7033730159;
+        //            0.1388888889]
+        //           [0.0; 0.0; 0.0; 0.0; 0.0; 0.0; 0.0; 6.503858025; 1.00308642]
+        //           [0.0; 0.0; 0.0; 0.0; 0.0; 0.0; 0.0; 0.0; 7.002469136]]
+        QtQpR rq 10. out
+        |> initFullSparseRpαQtQ
+
+
+    // expects row major matrix
+    let solveLeastSquares (m:matrix) (y:vector) = 
+        let mFlat = 
+            let flat = m |> Matrix.toJaggedArray |> Array.concat
+            let tmp = System.GC.AllocateArray<float>(flat.Length,pinned=true) 
+            flat |> Array.iteri (fun i x -> tmp.[i] <- x)
+            tmp
+        // Computes the Cholesky factorization of a symmetric (Hermitian) positive-definite band matrix.
+        let res = MKLNET.Lapack.pbtrf(Layout.RowMajor,UpLoChar.Upper,m.NumCols,2,mFlat,max 1 (m.NumCols))
+        let yFlat =
+            let tmp = System.GC.AllocateArray<float>(y.Length,pinned=true) 
+            y |> Seq.iteri (fun i x -> tmp.[i] <- x)
+            tmp 
+        let mFlat' = 
+            let tmp = System.GC.AllocateArray<float>(mFlat.Length,pinned=true) 
+            mFlat |> Array.iteri (fun i x -> tmp.[i] <- x)
+            tmp
+        let resT = MKLNET.Lapack.pbtrs(Layout.RowMajor,UpLoChar.Upper,m.NumCols, 2, 1,mFlat',m.NumCols,yFlat,1)
+        yFlat
+
+        
+    let fitSplineSparseLapack (x:float []) (y:float []) lambda = 
+        let ws = Array.create x.Length 1.
+        let diffx = diff x 
+        let RpαQtQ = QtQpR diffx lambda ws
+        let h = diff x
+        let Q = ReinschQ(h)
+        // fitSpline xd yd 2. should yield: gamma = [|-0.1; 0.1; 0.4; -0.1; -0.4; 0.2; 0.2; -0.4|]
+        let gamma = 
+            multiplyInplaceTransposedQ (Array.zeroCreate (x.Length-2)) Q y
+            |> vector 
+            |> solveLeastSquares RpαQtQ
+        let g = 
+            multiplyInplace (Array.zeroCreate (x.Length)) Q (gamma) 
+            |> Array.map2 (fun ws g -> g / ws) ws
+            |> Array.map (fun g -> g * lambda)
+            |> Array.map2 (fun y g -> y - g ) y
+        g
+
+
+    let initPredict (gamma:float[]) (g:float[]) (x:float[]) (xToPred:float) = 
+        let n = x.Length-1
+        let idxL = 
+            match Array.tryFindIndexBack (fun v -> v <= xToPred) x with
+            | Some i -> i
+            | None -> -1 
+        let idxR = idxL + 1
+        if idxL = -1 then 
+            let gl = g.[0]
+            let gr = g.[1]
+            let gamma' = gamma.[0]
+            let xl = x.[0]
+            let xr = x.[1]
+            let gprime = (gr-gl) / (xr-xl) - 1. / 6. * (xr-xl) * gamma'
+            gl - (xl-xToPred) * gprime
+        elif idxL = n then  
+            let gl = g.[n-1]
+            let gr = g.[n]
+            let gamma' = gamma.[n-2]
+            let xl = x.[n-1]
+            let xr = x.[n]
+            let gprime = (gr-gl) / (xr-xl) + 1./ 6. * (xr-xl) * gamma'
+            gr + (xToPred - xr)*gprime
+        else 
+            let xl = x.[idxL]
+            let xr = x.[idxR]
+            let gammaL = if idxL = 0 then 0. else gamma.[idxL-1]
+            let gammaR = if idxL = n-1 then 0. else gamma.[idxR-1]
+            let gl = g.[idxL]
+            let gr = g.[idxR]
+            let h = xr-xl
+            let tmp = ((xToPred-xl) * gr + (xr-xToPred) * gl) / h
+            tmp - (1. / 6. * (xToPred-xl) * (xr-xToPred) * ((1. + (xToPred-xl) / h) * gammaR + (1.+ (xr-xToPred) / h) * gammaL))
+
+    
+    let fitSplineSparseLapack' (x:float []) (y:float []) lambda = 
+        let ws = Array.create x.Length 1.
+        let diffx = diff x 
+        let RpαQtQ = QtQpR diffx lambda ws
+        let h = diff x
+        let Q = ReinschQ(h)
+        // fitSpline xd yd 2. should yield: gamma = [|-0.1; 0.1; 0.4; -0.1; -0.4; 0.2; 0.2; -0.4|]
+        let gamma = 
+            multiplyInplaceTransposedQ (Array.zeroCreate (x.Length-2)) Q y
+            |> vector 
+            |> solveLeastSquares RpαQtQ
+        let g = 
+            multiplyInplace (Array.zeroCreate (x.Length)) Q (gamma) 
+            |> Array.map2 (fun ws g -> g / ws) ws
+            |> Array.map (fun g -> g * lambda)
+            |> Array.map2 (fun y g -> y - g ) y
+        initPredict gamma g x 
 
 module QuantBasedAlignment = 
 
@@ -51,11 +357,11 @@ module QuantBasedAlignment =
         let index = rnd.Next(0,23)
         paletteArray.[index]
 
-    ///
-    let downcastPipeline (x : IEstimator<_>) = 
-        match x with 
-        | :? IEstimator<ITransformer> as y -> y
-        | _ -> failwith "downcastPipeline: expecting a IEstimator<ITransformer>"
+    // ///
+    // let downcastPipeline (x : IEstimator<_>) = 
+    //     match x with 
+    //     | :? IEstimator<ITransformer> as y -> y
+    //     | _ -> failwith "downcastPipeline: expecting a IEstimator<ITransformer>"
 
     ///
     type PeptideIon = 
@@ -85,62 +391,62 @@ module QuantBasedAlignment =
     [<CLIMutable>]
     type PeptideForLearning = 
         {
-            [<ColumnName("Sequence")>]
+            // [<ColumnName("Sequence")>]
             Sequence                     : string
-            [<ColumnName("GlobalMod")>]
+            // [<ColumnName("GlobalMod")>]
             GlobalMod                    : string
-            [<ColumnName("Charge")>]
+            // [<ColumnName("Charge")>]
             Charge                       : string
-            [<ColumnName("PepSequenceID")>]
+            // [<ColumnName("PepSequenceID")>]
             PepSequenceID                : string
-            [<ColumnName("ModSequenceID")>]
+            // [<ColumnName("ModSequenceID")>]
             ModSequenceID                : string
-            [<ColumnName("SourceScanTime")>]
+            // [<ColumnName("SourceScanTime")>]
             SourceScanTime               : float32
-            [<ColumnName("TargetScanTime")>]
+            // [<ColumnName("TargetScanTime")>]
             TargetScanTime               : float32
-            [<ColumnName("ScanTimeDifference")>]
+            // [<ColumnName("ScanTimeDifference")>]
             ScanTimeDifference           : float32
         }
     
     [<CLIMutable>]
     type PeptideComplete = 
         {
-            [<ColumnName("Sequence")>]
+            // [<ColumnName("Sequence")>]
             Sequence                     : string
-            [<ColumnName("GlobalMod")>]
+            // [<ColumnName("GlobalMod")>]
             GlobalMod                    : string
-            [<ColumnName("Charge")>]
+            // [<ColumnName("Charge")>]
             Charge                       : string
-            [<ColumnName("PepSequenceID")>]
+            // [<ColumnName("PepSequenceID")>]
             PepSequenceID                : string
-            [<ColumnName("ModSequenceID")>]
+            // [<ColumnName("ModSequenceID")>]
             ModSequenceID                : string
-            [<ColumnName("SourceScanTime")>]
+            // [<ColumnName("SourceScanTime")>]
             SourceScanTime               : float32
-            [<ColumnName("SourceIntensity")>]
+            // [<ColumnName("SourceIntensity")>]
             SourceIntensity              : float32
-            [<ColumnName("SourceStabw")>]
+            // [<ColumnName("SourceStabw")>]
             SourceStabw                  : float32
-            [<ColumnName("TargetScanTime")>]
+            // [<ColumnName("TargetScanTime")>]
             TargetScanTime               : float32
-            [<ColumnName("TargetIntensity")>]
+            // [<ColumnName("TargetIntensity")>]
             TargetIntensity              : float32
-            [<ColumnName("RtTrace_SourceFile")>]
+            // [<ColumnName("RtTrace_SourceFile")>]
             RtTrace_SourceFile                              : float [] 
-            [<ColumnName("IntensityTrace_SourceFile")>]
+            // [<ColumnName("IntensityTrace_SourceFile")>]
             IntensityTrace_SourceFile                       : float []
-            [<ColumnName("RtTrace_TargetFile")>]
+            // [<ColumnName("RtTrace_TargetFile")>]
             RtTrace_TargetFile                              : float []
-            [<ColumnName("IntensityTrace_TargetFile")>]
+            // [<ColumnName("IntensityTrace_TargetFile")>]
             IntensityTrace_TargetFile                       : float []          
-            [<ColumnName("IsotopicPatternMz_SourceFile")>]
+            // [<ColumnName("IsotopicPatternMz_SourceFile")>]
             IsotopicPatternMz_SourceFile                    : float []          
-            [<ColumnName("IsotopicPatternIntensity_Observed_SourceFile")>]
+            // [<ColumnName("IsotopicPatternIntensity_Observed_SourceFile")>]
             IsotopicPatternIntensity_Observed_SourceFile    : float []         
-            [<ColumnName("IsotopicPatternMz_TargetFile")>]
+            // [<ColumnName("IsotopicPatternMz_TargetFile")>]
             IsotopicPatternMz_TargetFile                    : float []         
-            [<ColumnName("IsotopicPatternIntensity_Observed_TargetFile")>]
+            // [<ColumnName("IsotopicPatternIntensity_Observed_TargetFile")>]
             IsotopicPatternIntensity_Observed_TargetFile    : float []
         }
 
@@ -217,7 +523,7 @@ module QuantBasedAlignment =
     [<CLIMutable>]
     type ScanTimePrediction = 
         {
-            [<ColumnName("Score")>]
+            // [<ColumnName("Score")>]
             TargetScanTime : float32
         }
 
@@ -273,31 +579,6 @@ module QuantBasedAlignment =
         let targetAlignmentFile = toAlignmentFile allPeptideIons targetFile targetPeptides
         let sourceAlignmentFiles = Array.map2 (toAlignmentFile allPeptideIons) sourceFiles sourcePeptides
         sourceAlignmentFiles, targetAlignmentFile 
-
-    /// Calculates the median of absolute scan time differences between shared peptide Ions. This serves as an estimator for overall
-    /// File difference
-    let calculateFileDifference (a:AlignmentFile) (b:AlignmentFile) =
-        a.QuantifiedPeptides
-        |> Seq.choose (fun a -> 
-            match Map.tryFind a.Key b.QuantifiedPeptides with 
-            | Some qp -> abs (getTargetScanTime qp - getTargetScanTime a.Value) |> Some
-            | None -> None 
-            )
-        |> Seq.filter (isNan >> not)
-        |> Seq.median
-
-    // /// determines order of alignment based on the calculated file difference. 
-    // // calculateFileDifference can be easily factored out if needed. 
-    // let findAlignmentOrder (alignmentFiles: AlignmentFile []) =
-    //     alignmentFiles
-    //     |> Array.mapi (fun i af -> 
-    //             af,
-    //             [| 
-    //                 for j = 0 to alignmentFiles.Length-1 do 
-    //                     if j <> i then calculateFileDifference af alignmentFiles.[j], alignmentFiles.[j]
-    //             |]
-    //             |> Array.sortBy fst
-    //         )
     
     ///
     let createAlignmentResult (quantifiedPeptide:QuantificationResult) (scanTimePrediction:ScanTimePrediction) = 
@@ -472,11 +753,13 @@ module QuantBasedAlignment =
             |> FSharpAux.IO.SeqIO.Seq.writeOrAppend (outFilePath)
 
     ///
-    let initAlign (logger:NLog.Logger) (ctx:MLContext) (pepsForLearning: (PeptideForLearning*PeptideComplete) []) = 
+    // let initAlign (logger:NLog.Logger) (ctx:MLContext) (pepsForLearning: (PeptideForLearning*PeptideComplete) []) = 
+    let initAlign (logger:NLog.Logger) (pepsForLearning: (PeptideForLearning*PeptideComplete) []) = 
         logger.Trace ("Sampling test and train data")
+        let pepsForLearning = pepsForLearning |> Array.distinctBy (fun (pepLearning,pepComp) -> pepLearning.SourceScanTime)
         let train,test = 
             let getBinIdx width scantime = int ((scantime / width))    
-            let knotX,train,test = 
+            let _,train,test = 
                 pepsForLearning
                 |> Array.groupBy (fun (pl,_) -> getBinIdx 10. (pl.SourceScanTime |> float))
                 |> Array.map (fun (binIdx,ions) -> 
@@ -493,39 +776,15 @@ module QuantBasedAlignment =
                     float knotX.SourceScanTime, train, test
                     )
                 |> Array.unzip3
-            train |> Array.concat |> Array.sortBy (fun (pepLearning,pepComp) -> pepLearning.SourceScanTime), test |> Array.concat |> Array.sortBy (fun (pepLearning,pepComp) -> pepLearning.SourceScanTime)
+            train |> Array.concat |> Array.sortBy (fun (pepLearning,pepComp) -> pepLearning.SourceScanTime), 
+            test |> Array.concat |> Array.sortBy (fun (pepLearning,pepComp) -> pepLearning.SourceScanTime)
         let trainLearn,trainComp = train |> Array.unzip
-        let testLearn,testComp = test |> Array.unzip
-        logger.Trace ("Sampling test and train data:finished")
-        
-        logger.Trace ("Training Fast Tree")
-        let trainView = ctx.Data.LoadFromEnumerable(trainLearn)
-        // let testView = ctx.Data.LoadFromEnumerable(testLearn)
-        let trainer = ctx.Regression.Trainers.Gam(featureColumnName="Features",labelColumnName="TargetScanTime")
-        let pipeline =    
-            (ctx.Transforms.Concatenate("Features","SourceScanTime")|> downcastPipeline)
-              .Append(trainer)
-        let model = pipeline.Fit(trainView) 
-        logger.Trace ("Training Fast Tree:finished")        
+        let testLearn,testComp = test |> Array.unzip    
         logger.Trace ("Training Spline")
-        let knots = 
-            let upB = model.LastTransformer.Model.GetBinUpperBounds 0
-            let bounds = (upB |> Array.ofSeq |> fun x -> x.[0..x.Length-2])
-            bounds 
-            |> Array.choose (fun b -> 
-                match trainLearn |> Array.tryFind (fun x -> float x.SourceScanTime > b) with 
-                | Some x -> x.SourceScanTime |> float |> Some
-                | None -> None
-                )   
-            |> Array.mapi (fun i x -> if i%2 = 0 then Some x else None)
-            |> Array.choose id   
-        logger.Trace (sprintf "Number of knots selected:%i" knots.Length)
-        // let spline = ProteomIQon.Spline.smoothingSpline (train |> Array.map (fun (x,y) -> float x.SourceScanTime, float x.TargetScanTime)) (knots)
-        let spline = FSharp.Stats.Fitting.Spline.smoothingSpline (train |> Array.map (fun (x,y) -> float x.SourceScanTime, float x.TargetScanTime)) (knots)        
         let trainer lambda = 
-            let fit = spline lambda 
+            let fit = Spline.fitSplineSparseLapack' (train |> Array.map (fun (x,y) -> float x.SourceScanTime)) (train |> Array.map (fun (x,y) -> float x.TargetScanTime)) lambda 
             let x,y,yHat = 
-                train
+                test
                 |> Array.map (fun (x,y) -> 
                     x, x.TargetScanTime, fit (float x.SourceScanTime)
                     )
@@ -534,37 +793,36 @@ module QuantBasedAlignment =
             lambda, rS, fit                  
         logger.Trace ("Optimizing Lambdas")
         let models =      
-            [|0.001 .. 0.01 .. 1.|]
+            [|1. .. 1. .. 200.|]
             |> Array.map trainer
         let lambda,rSquared,model = 
             models
             |> Array.maxBy (fun (x,y,z) -> y )                  
         logger.Trace (sprintf "Optimizing Lambdas:Finished, selected lamda:%f" lambda)
-        [
-            train
-            |> Array.map (fun (x,y) -> 
-                    x.SourceScanTime, (float x.TargetScanTime)
-                    )
-            |> Chart.Point    
-            Chart.Point(knots,knots)
-            models
-            |> Array.map (fun (x,y,z) -> 
-                train
-                |> Array.map (fun (x,y) -> 
-                        x.SourceScanTime, z (float x.SourceScanTime)
-                        )
-                |> Chart.Line
-                |> Chart.withTraceName (sprintf "lambda %f" x)
-                )
-            |> Chart.Combine
-        ]
-        |> Chart.Combine
-        |> Chart.Show
-        models
-        |> Array.map (fun (x,y,z) -> x,y)
-        |> Chart.Point
-        |> Chart.Show
         logger.Trace ("Training Spline:Finished")
+        // [
+        //     test
+        //     |> Array.map (fun (x,y) -> 
+        //             x.SourceScanTime, (float x.TargetScanTime)
+        //             )
+        //     |> Chart.Point    
+        //     models
+        //     |> Array.map (fun (x,y,z) -> 
+        //         test
+        //         |> Array.map (fun (x,y) -> 
+        //                 x.SourceScanTime, z (float x.SourceScanTime)
+        //                 )
+        //         |> Chart.Line
+        //         |> Chart.withTraceName (sprintf "lambda %f" x)
+        //         )
+        //     |> Chart.Combine
+        // ]
+        // |> Chart.Combine
+        // // |> Chart.Show
+        // models
+        // |> Array.map (fun (x,y,z) -> x,y)
+        // |> Chart.Point
+        // // |> Chart.Show
         let metrics =             
             let rSquared = rSquared
             let yHat          = testComp |> Seq.map (fun x -> model (float x.SourceScanTime))|> Array.ofSeq
@@ -585,7 +843,6 @@ module QuantBasedAlignment =
             let yHatAfterRefinement,dtwDistanceBefore,dtwDistanceAfter = 
                 [|
                     for i = 0 to xSource.Length-1 do                         
-                        printfn "%i %i %i %i" xSource.[i].Length ySource.[i].Length xTarget.[i].Length yTarget.[i].Length
                         let target = Array.zip xTarget.[i] (DTW'.zNorm yTarget.[i])
                         let source = Array.zip xSource.[i] (DTW'.zNorm ySource.[i])
                         let yRefined = 
@@ -663,7 +920,8 @@ module QuantBasedAlignment =
                 | None -> None
                 ) 
             |> Array.ofSeq
-            |> Array.shuffleFisherYates
+            |> Array.groupBy (fun (x,y) -> x.SourceScanTime)
+            |> Array.map (fun (_,(d)) -> d |> Array.maxBy (fun (x,y) -> y.SourceIntensity))
         ///
         let metrics,model: ModelMetrics*(QuantificationResult->AlignmentResult) = 
             align peptidesForLearning
@@ -686,9 +944,9 @@ module QuantBasedAlignment =
             let fileName = (Path.GetFileNameWithoutExtension fileName) + "_" + plotName 
             Path.Combine [|outputDir;fileName|]
         logger.Trace "Init align function"
-        let ctx = ML.MLContext()
+        // let ctx = ML.MLContext()
         let rnd = System.Random()
-        let align = initAlign logger ctx
+        let align = initAlign logger 
         logger.Trace "Init align function: finished"
          
         logger.Trace "Reading and preparing .quant files for alignment"
@@ -717,19 +975,6 @@ module QuantBasedAlignment =
                 |> Chart.SaveHtmlAs(getPlotFilePathFilePath "Metrics" targetAlignmentFile.FileName)                    
             sortedByQuality 
         logger.Trace "Performing Alignments: finished"
-        // if diagCharts then 
-        //     logger.Trace "Plotting file distances"
-        //     let chart = 
-        //         alignmentFilesOrdered
-        //         |> Array.map (fun (target,sources) ->
-        //                 Chart.Point(sources |> Array.mapi (fun i x -> (snd x).FileName, fst x))
-        //                 |> Chart.withTraceName target.FileName
-        //                 |> Chart.withX_AxisStyle("FileNames")
-        //                 |> Chart.withY_AxisStyle("Median absolute difference of peptide ion scan times")
-        //                 |> Chart.withSize(1000.,1000.)
-        //                 |> Chart.SaveHtmlAs(getPlotFilePathFilePath "differences" target.FileName)
-        //             )
-        //     logger.Trace "Plotting file distances: finished"
         logger.Trace "Transfer identifications"
         let result = 
             alignmentsSortedByQuality
@@ -757,9 +1002,56 @@ module QuantBasedAlignment =
         |> FSharpAux.IO.SeqIO.Seq.writeOrAppend (outFilePath)
         logger.Trace "Writing Results:finished"
                 
-        
-
-        
+    open CLIArgumentParsing
+    open Argu 
+    
+    let execute argv =
+        let errorHandler = ProcessExiter(colorizer = function ErrorCode.HelpText -> None | _ -> Some System.ConsoleColor.Red)
+        let parser = ArgumentParser.Create<CLIArguments>(programName =  (System.Reflection.Assembly.GetExecutingAssembly().GetName().Name),errorHandler=errorHandler)     
+        let directory = Environment.CurrentDirectory
+        let getPathRelativeToDir = getRelativePath directory
+        let results = parser.Parse argv
+        let i   = results.GetResult TargetFiles |> List.map getPathRelativeToDir
+        let ii  = results.GetResult SourceFiles |> List.map getPathRelativeToDir 
+        let o   = results.GetResult OutputDirectory    |> getPathRelativeToDir
+        let p   = results.GetResult ParamFile          |> getPathRelativeToDir
+        let dc  = results.Contains DiagnosticCharts
+        Logging.generateConfig o
+        let logger = Logging.createLogger "QuantBasedAlignment"
+        logger.Info (sprintf "InputFilePath -i = %A" i)
+        logger.Info (sprintf "OutputFilePath -o = %s" o)
+        logger.Info (sprintf "ParamFilePath -p = %s" p)
+        logger.Trace (sprintf "CLIArguments: %A" results)
+        Directory.CreateDirectory(o) |> ignore
+        //let p =
+        //    Json.ReadAndDeserialize<Dto.QuantificationParams> p
+        //    |> Dto.QuantificationParams.toDomain
+        let targetFiles = 
+            parsePaths (fun path -> Directory.GetFiles(path,("*.quant"))) i
+            |> Array.ofSeq
+        let sourceFiles = 
+            parsePaths (fun path -> Directory.GetFiles(path,("*.quant"))) ii
+            |> Array.ofSeq
+        if targetFiles.Length = 1 then
+            logger.Info "single file detected"
+            alignFiles dc {Placeholder=true} o sourceFiles targetFiles.[0]
+        else
+            logger.Info "directory found"
+            logger.Trace (sprintf ".quant files : %A" targetFiles)
+            let c =
+                match results.TryGetResult Parallelism_Level with
+                | Some c    -> c
+                | None      -> 1
+            logger.Trace (sprintf "Program is running on %i cores" c)
+            targetFiles
+            |> FSharpAux.PSeq.withDegreeOfParallelism c
+            |> FSharpAux.PSeq.iter (fun (t) -> 
+                let sourceFiles' = 
+                    sourceFiles
+                    |> Array.filter (fun x -> x <> t)
+                alignFiles dc {Placeholder=true} o sourceFiles' t)
+            |> ignore
+        logger.Info "Done"
 
 
 
