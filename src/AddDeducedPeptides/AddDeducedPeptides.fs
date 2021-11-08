@@ -54,6 +54,7 @@ module AddDeducedPeptides =
             let outFilePath =
                 let filename = Path.GetFileNameWithoutExtension filePath
                 Path.Combine[|outDirectory; $"{filename}.prot"|]
+            // Obtain sequences of present peptides and filter for proteingroups containing those peptides
             let presentPeptides =
                 quantFile
                 |> Array.map (fun x -> x.StringSequence)
