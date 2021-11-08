@@ -1,18 +1,14 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFrameworks>net5.0</TargetFrameworks>
-    <PackAsTool>true</PackAsTool>
-    <ToolCommandName>proteomiqon-quantbasedalignment</ToolCommandName>
     <RootNamespace>QuantBasedAlignment</RootNamespace>
     <AssemblyName>ProteomIQon.QuantBasedAlignment</AssemblyName>
     <Name>ProteomIQon.QuantBasedAlignment</Name>
-    <OutputType>Exe</OutputType>
-    <AppDesignerFolder>Properties</AppDesignerFolder>
-    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
-    <!--<RuntimeIdentifier>win7-x64</RuntimeIdentifier>-->
-    <ServerGarbageCollection>true</ServerGarbageCollection>
-    <InvariantGlobalization>true</InvariantGlobalization>
+    <OutputType>Library</OutputType>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <AllowedOutputExtensionsInPackageBuildOutputFolder>$(AllowedOutputExtensionsInPackageBuildOutputFolder);.pdb</AllowedOutputExtensionsInPackageBuildOutputFolder>
   </PropertyGroup>
   <PropertyGroup>
     <Authors>David Zimmer, Jonathan Ott, Heinrich Lukas Weil, Timo Muehlhaus</Authors>
@@ -28,26 +24,20 @@
     <FsDocsReleaseNotesLink>https://github.com/CSBiology/ProteomIQon/blob/master/RELEASE_NOTES.md</FsDocsReleaseNotesLink>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="QuantBasedAlignment.fs" />
     <Compile Include="CLIArgumentParsing.fs" />
-    <Compile Include="Program.fs" />
+    <Compile Include="QuantBasedAlignment.fs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\ProteomIQon\ProteomIQon.fsproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Argu" Version="6.1.1" />
-    <PackageReference Include="Microsoft.ML" Version="1.6.0" />
-    <PackageReference Include="Microsoft.ML.FastTree" Version="1.6.0" />
-    <PackageReference Include="Microsoft.ML.CpuMath" Version="1.6.0" />
-    <PackageReference Include="Microsoft.ML.LightGbm" Version="1.6.0" />
-    <PackageReference Include="Microsoft.ML.AutoML" Version="0.18.0" />
-    <PackageReference Include="Plotly.NET" Version="2.0.0-beta6" />
     <PackageReference Include="BioFSharp" Version="2.0.0-beta4" />
     <PackageReference Include="FSharp.Stats" Version="0.4.0" />
     <PackageReference Include="FSharpAux" Version="1.0.0" />
     <PackageReference Include="FSharpAux.IO" Version="1.0.0" />
     <PackageReference Include="System.Data.SQLite.Core" Version="1.0.113.7" />
     <PackageReference Include="Plotly.NET" Version="2.0.0-alpha5" />
+    <PackageReference Include="MKL.NET" Version="1.3.2" />
   </ItemGroup>
 </Project>

@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net5.0</TargetFramework>
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>proteomiqon-quantbasedalignment</ToolCommandName>
+    <RootNamespace>QuantBasedAlignment_win_x64</RootNamespace>
+    <AssemblyName>ProteomIQon.QuantBasedAlignment_win_x64</AssemblyName>
+    <Name>ProteomIQon.QuantBasedAlignment_win_x64</Name>
+    <OutputType>Exe</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <ServerGarbageCollection>true</ServerGarbageCollection>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <GenerateDependencyFile>false</GenerateDependencyFile>
+  </PropertyGroup>
+  <PropertyGroup>
+    <Authors>David Zimmer, Jonathan Ott, Heinrich Lukas Weil, Timo Muehlhaus</Authors>
+    <Description>ProteomIQon.QuantBasedAlignment_win_x64 - computational proteomics</Description>
+    <Summary>ProteomIQon.QuantBasedAlignment_win_x64 - computational proteomics</Summary>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://csbiology.github.io/ProteomIQon/</PackageProjectUrl>
+    <!--<PackageIconUrl>https://github.com/CSBiology/ProteomIQon</PackageIconUrl>-->
+    <PackageTags>fsharp dotnet proteomics</PackageTags>
+    <RepositoryUrl>https://github.com/CSBiology/ProteomIQon</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <FsDocsLicenseLink>https://github.com/CSBiology/ProteomIQon/blob/master/LICENSE</FsDocsLicenseLink>
+    <FsDocsReleaseNotesLink>https://github.com/CSBiology/ProteomIQon/blob/master/RELEASE_NOTES.md</FsDocsReleaseNotesLink>
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+  <ItemGroup>
+    <None Include="App.config" />
+    <Compile Include="Program.fs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\ProteomIQon\ProteomIQon.fsproj" />
+    <ProjectReference Include="..\QuantBasedAlignment\QuantBasedAlignment.fsproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Argu" Version="6.1.1" />
+    <PackageReference Include="NLog" Version="4.7.8" />
+    <PackageReference Include="BioFSharp" Version="2.0.0-beta4" />
+    <PackageReference Include="BioFSharp.Mz" Version="0.1.5-beta" />
+    <PackageReference Include="FSharpAux" Version="1.0.0" />
+    <PackageReference Include="FSharpAux.IO" Version="1.0.0" />
+    <PackageReference Include="Plotly.NET" Version="2.0.0-alpha5" />
+    <PackageReference Include="MKL.NET" Version="1.3.2" />
+    <PackageReference Include="MKL.NET.win-x64" Version="2021.4.0.640" >
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+  </ItemGroup>
+  <Target Name="Delete_tbb_thread" AfterTargets="Build">
+      <Message Text="Deleting $(OutDir)/runtimes/win-x64/native/mkl_tbb_thread.1.dll"/>
+      <Delete Files="$(OutDir)/runtimes/win-x64/native/mkl_tbb_thread.1.dll" />
+  </Target>
+  <Target Name="Delete_mkl_sequential" AfterTargets="Build">
+      <Message Text="Deleting $(OutDir)/runtimes/win-x64/native/mkl_sequential.1.dll"/>
+      <Delete Files="$(OutDir)/runtimes/win-x64/native/mkl_sequential.1.dll" />
+  </Target>
+  <ItemGroup>
+      <Content Include="bin/Release/$(TargetFramework)/runtimes/win-x64/native/*.dll" Exclude="bin/Release/$(TargetFramework)/runtimes/win-x64/native/MKL.NET.Native.dll;bin/Release/$(TargetFramework)/runtimes/win-x64/native/SQLite.Interop.dll">
+        <Pack>true</Pack>
+        <PackagePath>\tools\$(TargetFramework)\any\runtimes\win-x64\native\</PackagePath>
+      </Content>
+  </ItemGroup>
+  <ItemGroup>
+      <Content Include="bin/Release/$(TargetFramework)/runtimes/win-x64/lib/netstandard2.0/MKL.NET.dll">
+        <Pack>true</Pack>
+        <PackagePath>\tools\$(TargetFramework)\any\</PackagePath>
+      </Content>
+  </ItemGroup>
+</Project>
