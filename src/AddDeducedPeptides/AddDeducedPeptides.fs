@@ -60,11 +60,8 @@ module AddDeducedPeptides =
                 |> Set.ofArray
             let protInfResultExpanded =
                 pepProt
-                |> Array.choose (fun (pep, prot) ->
-                    if presentPeptides.Contains pep then
-                        Some (pep,prot)
-                    else
-                        None
+                |> Array.filter (fun (pep, prot) ->
+                    presentPeptides.Contains pep
                 )
             // Group by Protein Group to combine them
             let protInfResultGrouped =
