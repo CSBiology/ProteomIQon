@@ -510,4 +510,32 @@ let pipelineTests =
             File.Delete (relToDirectory "../../../data/LabeledProteinQuantification/out/transformFilterSum/ProteinAggregation.txt")
             File.Delete (relToDirectory "../../../data/LabeledProteinQuantification/out/transformFilterSum/GlobModAggregation.txt")
             Expect.isTrue compare "Output files are not identical"
+        testCase "AddDeducedPeptides" <| fun _ ->
+            let relToDirectory = getRelativePath Environment.CurrentDirectory
+            let quantDirectory = relToDirectory "../../../data/AddDeducedPeptides/in/quant"
+            let protDirectory = relToDirectory "../../../data/AddDeducedPeptides/in/prot"
+            let outDirectory = relToDirectory "../../../data/AddDeducedPeptides/out"
+            let addDeducedPeptidesExe = relToDirectory "../../../../../bin/AddDeducedPeptides/net5.0/ProteomIQon.AddDeducedPeptides.dll"
+            // run tool
+            runDotNet (sprintf "%s -i %s -ii %s -o %s" addDeducedPeptidesExe quantDirectory protDirectory outDirectory) Environment.CurrentDirectory
+            let reference1 =
+                let qpsmPath = relToDirectory "../../../data/AddDeducedPeptides/out/minimalReference1.prot"
+                File.ReadAllLines qpsmPath
+            let test1 =
+                let qpsmPath = relToDirectory "../../../data/AddDeducedPeptides/out/minimalQuant1.prot"
+                File.ReadAllLines qpsmPath
+            let reference2 =
+                let qpsmPath = relToDirectory "../../../data/AddDeducedPeptides/out/minimalReference2.prot"
+                File.ReadAllLines qpsmPath
+            let test2 =
+                let qpsmPath = relToDirectory "../../../data/AddDeducedPeptides/out/minimalQuant2.prot"
+                File.ReadAllLines qpsmPath
+
+            let compare =
+                reference1 = test1 && reference2 = test2
+            // cleanup
+            File.Delete (relToDirectory "../../../data/AddDeducedPeptides/out/minimalQuant1.prot")
+            File.Delete (relToDirectory "../../../data/AddDeducedPeptides/out/minimalQuant2.prot")
+            File.Delete (relToDirectory "../../../data/AddDeducedPeptides/out/AddDeducedPeptides_log.txt")
+            Expect.isTrue compare "Deduced Proteins are different"
     ]
