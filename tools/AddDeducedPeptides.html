@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="utf-8">
-    <title>JoinQuantPepIonsWithProteins</title>
+    <title>AddDeducedPeptides</title>
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <meta name="author" content="David Zimmer, Jonathan Ott, Heinrich Lukas Weil, Timo Muehlhaus">
     <link rel="shortcut icon" type="image/x-icon" href="https://csbiology.github.io/ProteomIQon//img/favicon.ico">
@@ -140,24 +140,26 @@
             <div class="section pt-4">
                 <div class="container" id="fsdocs-content">
                     
-<p><a href="https://mybinder.org/v2/gh/csbiology/ProteomIQon/gh-pages?filepath=tools/JoinQuantPepIonsWithProteins.ipynb"><img src="https://csbiology.github.io/ProteomIQon/img/badge-binder.svg" alt="Binder" /></a>&emsp;
-<a href="https://csbiology.github.io/ProteomIQon/tools/JoinQuantPepIonsWithProteins.fsx"><img src="https://csbiology.github.io/ProteomIQon/img/badge-script.svg" alt="Script" /></a>&emsp;
-<a href="https://csbiology.github.io/ProteomIQon/tools/JoinQuantPepIonsWithProteins.ipynb"><img src="https://csbiology.github.io/ProteomIQon/img/badge-notebook.svg" alt="Notebook" /></a></p>
-<h1><a name="Join-Quant-Peptide-Ions-With-Proteins" class="anchor" href="#Join-Quant-Peptide-Ions-With-Proteins">Join Quant Peptide-Ions With Proteins</a></h1>
-<p><strong>Disclaimer</strong> this tool needs the results from <a href="https://csbiology.github.io/ProteomIQon/tools/ProteinInference.html">ProteinInference</a> and <a href="https://csbiology.github.io/ProteomIQon/tools/PSMBasedQuantification.html">PSMBasedQuantification</a>.</p>
-<p>Results from <a href="https://csbiology.github.io/ProteomIQon/tools/PSMBasedQuantification.html">PSMBasedQuantification</a> contain detailed information about the quantification of every peptide, but only basic informations about the protein they originated from.
-This information is obtained during the <a href="https://csbiology.github.io/ProteomIQon/tools/ProteinInference.html">ProteinInference</a>. This tool takes the results from both tools and combines the qauntification information of each peptide with the more accurate information about
-the corresponding protein including its q-value.</p>
+<p><a href="https://mybinder.org/v2/gh/csbiology/ProteomIQon/gh-pages?filepath=tools/AddDeducedPeptides.ipynb"><img src="https://csbiology.github.io/ProteomIQon/img/badge-binder.svg" alt="Binder" /></a>&emsp;
+<a href="https://csbiology.github.io/ProteomIQon/tools/AddDeducedPeptides.fsx"><img src="https://csbiology.github.io/ProteomIQon/img/badge-script.svg" alt="Script" /></a>&emsp;
+<a href="https://csbiology.github.io/ProteomIQon/tools/AddDeducedPeptides.ipynb"><img src="https://csbiology.github.io/ProteomIQon/img/badge-notebook.svg" alt="Notebook" /></a></p>
+<h1><a name="Add-Deduced-Peptides" class="anchor" href="#Add-Deduced-Peptides">Add Deduced Peptides</a></h1>
+<p><strong>Disclaimer</strong> this tool needs <a href="https://csbiology.github.io/ProteomIQon/tools/proteinInference.html">protein inference</a> and <a href="https://csbiology.github.io/ProteomIQon/tools/psmBasedQuantification.html">aligned quant</a>
+files.</p>
+<p>After the alignment based quantification, the protein inference file does no longer match the peptides present in the quantification file. The quantification file now contains additional quantified peptides based on
+information from other quantification files in the same run. If the protein inference was performed on the combined files, then all inference information is still contained in the combined protein inference files. This tool
+takes this combined inference information and assigns it to the peptides present in the new quantification file, thereby creating a new protein inference file.</p>
 <h2><a name="Executing-the-Tool" class="anchor" href="#Executing-the-Tool">Executing the Tool</a></h2>
-<p><strong>Disclaimer</strong> this tool needs the results from <a href="https://csbiology.github.io/ProteomIQon/tools/ProteinInference.html">ProteinInference</a> and <a href="https://csbiology.github.io/ProteomIQon/tools/PSMBasedQuantification.html">PSMBasedQuantification</a>.</p>
-<p>To combine all quantified peptides with their infered protein simply call:</p>
-<pre class="fssnip highlighted"><code lang="fsharp"><span class="id">proteomiqon</span><span class="o">-</span><span class="id">joinquantpepionswithproteins</span> <span class="o">-</span><span class="id">i</span> <span class="s">&quot;path/to/your/run/quant&quot;</span> <span class="o">-</span><span class="id">ii</span> <span class="s">&quot;path/to/your/run/prot&quot;</span> <span class="o">-</span><span class="id">o</span> <span class="s">&quot;path/to/your/outDirectory&quot;</span>
+<pre class="fssnip highlighted"><code lang="fsharp"><span class="id">proteomiqon</span><span class="o">-</span><span class="id">adddeducedpeptides</span> <span class="o">-</span><span class="id">i</span> <span class="s">&quot;path/to/your/run.quant&quot;</span> <span class="o">-</span><span class="id">ii</span> <span class="s">&quot;path/to/your/prot&quot;</span> <span class="o">-</span><span class="id">o</span> <span class="s">&quot;path/to/your/outDirectory&quot;</span>
 </code></pre>
-<p>It is also possible to call the tool on a list of qaunt and prot files:</p>
-<pre class="fssnip highlighted"><code lang="fsharp"><span class="id">proteomiqon</span><span class="o">-</span><span class="id">joinquantpepionswithproteins</span> <span class="o">-</span><span class="id">i</span> <span class="s">&quot;path/to/your/run1.quant&quot;</span> <span class="s">&quot;path/to/your/run2.quant&quot;</span> <span class="s">&quot;path/to/your/run3.quant&quot;</span> <span class="o">-</span><span class="id">ii</span> <span class="s">&quot;path/to/your/run1.prot&quot;</span> <span class="s">&quot;path/to/your/run2.prot&quot;</span> <span class="s">&quot;path/to/your/run3.prot&quot;</span> <span class="o">-</span><span class="id">o</span> <span class="s">&quot;path/to/your/outDirectory&quot;</span>
+<p>It is also possible to call the tool on a lists of quant and prot files.</p>
+<pre class="fssnip highlighted"><code lang="fsharp"><span class="id">proteomiqon</span><span class="o">-</span><span class="id">adddeducedpeptides</span> <span class="o">-</span><span class="id">i</span> <span class="s">&quot;path/to/your/run1.quant&quot;</span> <span class="s">&quot;path/to/your/run2.quant&quot;</span> <span class="s">&quot;path/to/your/run3.quant&quot;</span> <span class="o">-</span><span class="id">ii</span> <span class="s">&quot;path/to/your/run1.prot&quot;</span> <span class="s">&quot;path/to/your/run2.prot&quot;</span> <span class="s">&quot;path/to/your/run3.prot&quot;</span> <span class="o">-</span><span class="id">o</span> <span class="s">&quot;path/to/your/outDirectory&quot;</span>
+</code></pre>
+<p>Alternatively, it is possible to call the tool on folders of quant and prot files.</p>
+<pre class="fssnip highlighted"><code lang="fsharp"><span class="id">proteomiqon</span><span class="o">-</span><span class="id">adddeducedpeptides</span> <span class="o">-</span><span class="id">i</span> <span class="s">&quot;path/to/your/quant&quot;</span> <span class="o">-</span><span class="id">ii</span> <span class="s">&quot;path/to/your/prot&quot;</span> <span class="o">-</span><span class="id">o</span> <span class="s">&quot;path/to/your/outDirectory&quot;</span>
 </code></pre>
 <p>A detailed description of the CLI arguments the tool expects can be obtained by calling the tool:</p>
-<pre class="fssnip highlighted"><code lang="fsharp"><span class="id">proteomiqon</span><span class="o">-</span><span class="id">joinquantpepionswithproteins</span> <span class="pn">--</span><span class="id">help</span>
+<pre class="fssnip highlighted"><code lang="fsharp"><span class="id">proteomiqon</span><span class="o">-</span><span class="id">psmbasedquantification</span> <span class="pn">--</span><span class="id">help</span>
 </code></pre>
 
                 </div>
