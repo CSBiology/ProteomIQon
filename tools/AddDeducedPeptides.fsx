@@ -6,12 +6,12 @@
 [![Notebook](https://csbiology.github.io/ProteomIQon/img/badge-notebook.svg)](https://csbiology.github.io/ProteomIQon/tools/AddDeducedPeptides.ipynb)
 
 # Add Deduced Peptides
-**Disclaimer** this tool needs [protein inference](https://csbiology.github.io/ProteomIQon/tools/proteinInference.html) and [aligned quant](https://csbiology.github.io/ProteomIQon/tools/psmBasedQuantification.html)
+**Disclaimer** this tool needs [protein inference](https://csbiology.github.io/ProteomIQon/tools/ProteinInference.html) and [aligned quant](https://csbiology.github.io/ProteomIQon/tools/PSMBasedQuantification.html)
 files.
 
-After the alignment based quantification, the protein inference file does no longer match the peptides present in the quantification file. The quantification file now contains additional quantified peptides based on 
-information from other quantification files in the same run. If the protein inference was performed on the combined files, then all inference information is still contained in the combined protein inference files. This tool 
-takes this combined inference information and assigns it to the peptides present in the new quantification file, thereby creating a new protein inference file.
+After the alignment based quantification, the protein inference files do no longer match the peptides present in the quantification files. The quantification file now contains additional quantified peptides based on 
+information from other quantification files in the same run. If the protein inference was performed on the combined files earlier, then all inference information is contained in the combined protein inference files. This tool 
+takes this combined inference information and assigns it to the peptides present in the new quantification file, thereby creating a new protein inference result for each quantification.
 
 ## Executing the Tool
 
@@ -27,6 +27,6 @@ Alternatively, it is possible to call the tool on folders of quant and prot file
 
 A detailed description of the CLI arguments the tool expects can be obtained by calling the tool:
 
-	proteomiqon-psmbasedquantification --help
+	proteomiqon-adddeducedpeptides --help
 
 *)

@@ -144,11 +144,11 @@
 <a href="https://csbiology.github.io/ProteomIQon/tools/AddDeducedPeptides.fsx"><img src="https://csbiology.github.io/ProteomIQon/img/badge-script.svg" alt="Script" /></a>&emsp;
 <a href="https://csbiology.github.io/ProteomIQon/tools/AddDeducedPeptides.ipynb"><img src="https://csbiology.github.io/ProteomIQon/img/badge-notebook.svg" alt="Notebook" /></a></p>
 <h1><a name="Add-Deduced-Peptides" class="anchor" href="#Add-Deduced-Peptides">Add Deduced Peptides</a></h1>
-<p><strong>Disclaimer</strong> this tool needs <a href="https://csbiology.github.io/ProteomIQon/tools/proteinInference.html">protein inference</a> and <a href="https://csbiology.github.io/ProteomIQon/tools/psmBasedQuantification.html">aligned quant</a>
+<p><strong>Disclaimer</strong> this tool needs <a href="https://csbiology.github.io/ProteomIQon/tools/ProteinInference.html">protein inference</a> and <a href="https://csbiology.github.io/ProteomIQon/tools/PSMBasedQuantification.html">aligned quant</a>
 files.</p>
-<p>After the alignment based quantification, the protein inference file does no longer match the peptides present in the quantification file. The quantification file now contains additional quantified peptides based on
-information from other quantification files in the same run. If the protein inference was performed on the combined files, then all inference information is still contained in the combined protein inference files. This tool
-takes this combined inference information and assigns it to the peptides present in the new quantification file, thereby creating a new protein inference file.</p>
+<p>After the alignment based quantification, the protein inference files do no longer match the peptides present in the quantification files. The quantification file now contains additional quantified peptides based on
+information from other quantification files in the same run. If the protein inference was performed on the combined files earlier, then all inference information is contained in the combined protein inference files. This tool
+takes this combined inference information and assigns it to the peptides present in the new quantification file, thereby creating a new protein inference result for each quantification.</p>
 <h2><a name="Executing-the-Tool" class="anchor" href="#Executing-the-Tool">Executing the Tool</a></h2>
 <pre class="fssnip highlighted"><code lang="fsharp"><span class="id">proteomiqon</span><span class="o">-</span><span class="id">adddeducedpeptides</span> <span class="o">-</span><span class="id">i</span> <span class="s">&quot;path/to/your/run.quant&quot;</span> <span class="o">-</span><span class="id">ii</span> <span class="s">&quot;path/to/your/prot&quot;</span> <span class="o">-</span><span class="id">o</span> <span class="s">&quot;path/to/your/outDirectory&quot;</span>
 </code></pre>
@@ -159,7 +159,7 @@ takes this combined inference information and assigns it to the peptides present
 <pre class="fssnip highlighted"><code lang="fsharp"><span class="id">proteomiqon</span><span class="o">-</span><span class="id">adddeducedpeptides</span> <span class="o">-</span><span class="id">i</span> <span class="s">&quot;path/to/your/quant&quot;</span> <span class="o">-</span><span class="id">ii</span> <span class="s">&quot;path/to/your/prot&quot;</span> <span class="o">-</span><span class="id">o</span> <span class="s">&quot;path/to/your/outDirectory&quot;</span>
 </code></pre>
 <p>A detailed description of the CLI arguments the tool expects can be obtained by calling the tool:</p>
-<pre class="fssnip highlighted"><code lang="fsharp"><span class="id">proteomiqon</span><span class="o">-</span><span class="id">psmbasedquantification</span> <span class="pn">--</span><span class="id">help</span>
+<pre class="fssnip highlighted"><code lang="fsharp"><span class="id">proteomiqon</span><span class="o">-</span><span class="id">adddeducedpeptides</span> <span class="pn">--</span><span class="id">help</span>
 </code></pre>
 
                 </div>
