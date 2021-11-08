@@ -21,6 +21,7 @@ module AddDeducedPeptides =
                 Csv.CsvReader<QuantificationResult>(SchemaMode=Csv.Fill).ReadFile(path,'\t',false,1)
                 |> Array.ofSeq, path
             )
+        // Fail when the protein inference was not performed on combined files
         let ensureEqualProtDetermination =
             prot
             |> Array.concat
@@ -33,6 +34,7 @@ module AddDeducedPeptides =
             |> Array.exists (fun x -> x.Length <> 1)
         if ensureEqualProtDetermination then
             failwith "If you are running this tool please infer proteins over all files"
+        // Expand all inferred proteins by their peptides and distinct by peptide/protein pairs
         let pepProt =
             prot
             |> Array.collect (fun protFile ->
@@ -46,6 +48,7 @@ module AddDeducedPeptides =
                 )
             )
             |> Array.distinctBy (fun (pep,prot) -> pep, prot.ProteinGroup)
+        // Map over quant files and keep only peptide/protein pairs of peptides present in the file
         quant
         |> Array.map (fun (quantFile, filePath) ->
             let outFilePath =
@@ -63,10 +66,12 @@ module AddDeducedPeptides =
                     else
                         None
                 )
+            // Group by Protein Group to combine them
             let protInfResultGrouped =
                 protInfResultExpanded
                 |> Array.groupBy (fun (pep,protInf) -> protInf.ProteinGroup)
                 |> Array.map snd
+            // Combine the Protein Groups by creating a new PeptideSequence field based on the peptides present in the file for this group
             let protInfResultsCombined =
                 protInfResultGrouped
                 |> Array.map (fun group ->
