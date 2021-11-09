@@ -312,6 +312,26 @@ module PackageTasks =
             failwith "aborted"
     }
 
+    let pusProj = 
+        BuildTask.create "PushNupkg" [] {
+            let proj =
+                let rec loop (acc: IGlobbingPattern) =
+                    if acc |> Seq.isEmpty then
+                        printfn "Package doesn't exist. Try again."
+                        let projName = promptProj projMsg
+                        loop (!! (sprintf "pkg/%s*.nupkg" projName))
+                    else
+                        acc
+                loop (!! (sprintf "pkg/%s*.nupkg" (promptProj projMsg)))
+            projPattern <- proj
+            projPattern
+            |> Seq.iter (fun pkgPath -> 
+                let source = "https://api.nuget.org/v3/index.json"
+                let apikey =  Environment.environVar "NUGET_KEY"
+                let result = DotNet.exec id "nuget" (sprintf "push -s %s -k %s %s --skip-duplicate" source apikey pkgPath)
+                if not result.OK then failwith "failed to push packages"
+                )
+        }
     //let packagedToolPath = Path.getFullName "./pkg/aglet/" 
     
     //Target.create "InstallLocalTool" (fun _ ->
