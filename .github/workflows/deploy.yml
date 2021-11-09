@@ -15,7 +15,7 @@ jobs:
     - name: Setup .NET 5
       uses: actions/setup-dotnet@v1
       with:
-        dotnet-version: 5.0.102
+        dotnet-version: 5.0.400
     - name: Restore tools
       env:
         GithubUser: ${{ secrets.GITHUBUSER }}
