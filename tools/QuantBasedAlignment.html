@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="utf-8">
-    <title>index</title>
+    <title>QuantBasedAlignment</title>
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <meta name="author" content="David Zimmer, Jonathan Ott, Heinrich Lukas Weil, Timo Muehlhaus">
     <link rel="shortcut icon" type="image/x-icon" href="https://csbiology.github.io/ProteomIQon//img/favicon.ico">
@@ -144,27 +144,32 @@
         <div class="column is-10 is-paddingless">
             <div class="section pt-4">
                 <div class="container" id="fsdocs-content">
-                    <p><a href="https://fsharp.org/"><img src="https://img.shields.io/badge/Made%20with-FSharp-rgb(184,69,252).svg" alt="Made with F#" /></a>
-<img src="https://img.shields.io/github/contributors/CSBiology/ProteomIQon" alt="GitHub contributors" /></p>
-<h2><a name="The-ProteomIQon" class="anchor" href="#The-ProteomIQon">The ProteomIQon</a></h2>
-<p>The ProteomIQon is a collection of open source computational proteomics tools to build pipelines for the evaluation of MS derived proteomics data
-written in F#. The current state of the tool chain allows handle tasks like signal detection, peptide identification, quantification and protein inference.</p>
-<img src="https://csbiology.github.io/ProteomIQon/img/PillarsOfCompProt.png" width="1000" height="750" />
-<p>Each ProteomIQon tool is concerned with a specific task. This makes the tool-chain flexibel and easily extendable.
-An example of a prototypical chaining of tools to identify and quantify a mix of 14N and 15N labeled proteins can be found in the <a href="">here</a>.
-We are currently working on the <a href="https://github.com/common-workflow-language">cwl tool and workflow descriptions</a>, so you can expect a to see more workflow graphs in the near future!</p>
-<p>All tools are available using <a href="https://www.nuget.org/profiles/CSBiology">nuget</a> and soon via BioConda.
-Each tool is described in detail on its corresponding documentation page, accessible via the navigation pane, if you think a functionality is missing, feel free to contact us or to join us as a contributor!</p>
-<h2><a name="The-Core-Project" class="anchor" href="#The-Core-Project">The Core Project</a></h2>
-<p>The ProteomIQon core is referenced by all tools. It contains mainly serializable data transfer objects such as tool results and tool parameters, as well as their mapping to domain specific types.
-This is also the place for any kind of code reusable across tools such as thin wrappers around data readers, logging or CLI formatting.</p>
-<h2><a name="Documentation" class="anchor" href="#Documentation">Documentation</a></h2>
-<p>The documentation and tutorials for this library are automatically generated (using the F# Formatting) from .fsx and .md files in the docs folder. If you find a typo, please submit a pull request!</p>
-<h2><a name="Contributing" class="anchor" href="#Contributing">Contributing</a></h2>
-<p>Please refer to the CSB <a href="https://github.com/CSBiology/BioFSharp/blob/developer/.github/CONTRIBUTING.md">Contribution guidelines</a></p>
-<h2><a name="Community-Social" class="anchor" href="#Community-Social">Community/Social</a></h2>
-<p>Want to get in touch with us? We recently joined the twitter crowd:</p>
-<p><a href="https://twitter.com/cs_biology"><img src="https://img.shields.io/twitter/follow/cs_biology.svg?style=social" alt="Twitter Follow" /></a></p>
+                    
+<p><a href="https://mybinder.org/v2/gh/csbiology/ProteomIQon/gh-pages?filepath=tools/QuantBasedAlignment.ipynb"><img src="https://csbiology.github.io/ProteomIQon/img/badge-binder.svg" alt="Binder" /></a>&emsp;
+<a href="https://csbiology.github.io/ProteomIQon/tools/QuantBasedAlignment.fsx"><img src="https://csbiology.github.io/ProteomIQon/img/badge-script.svg" alt="Script" /></a>&emsp;
+<a href="https://csbiology.github.io/ProteomIQon/tools/QuantBasedAlignment.ipynb"><img src="https://csbiology.github.io/ProteomIQon/img/badge-notebook.svg" alt="Notebook" /></a></p>
+<h1><a name="Quantification-based-Alignment" class="anchor" href="#Quantification-based-Alignment">Quantification based Alignment</a></h1>
+<p><strong>Disclaimer</strong> this tool needs <a href="https://csbiology.github.io/ProteomIQon/tools/PSMBasedQuantification.html">aligned quant</a> files.</p>
+<p>One of the drawbacks of data-dependent acquisition is the stochastic nature of peptide ion selection for MSMS fragmentation as a prerequisite for
+peptide identification and quantification. A way to overcome this drawback is the transfer of identified ions from one run to another using the assumption that the run is merely
+lacking a successful MSMS scan, but still containing the peptide itself.
+While this ion transfer is commonly referred to as 'run alignment', strictly speaking, the alignment itself is only the process of finding a function f
+that can map from one point of the rt/mz/intensity plane of a source run (parameter -ii) to a target run (parameter -i).
+In this tool, we use smoothing splines as a nonparametric regression technique to estimate the function f for all given source runs (parameter -ii).
+With this estimators at hand, we are able to predict the scan time of individual ions in the target runs. This calculation can then be used as a starting point for
+further refinements (e.g. local alignments) or quantification procedures.</p>
+<h2><a name="Executing-the-Tool" class="anchor" href="#Executing-the-Tool">Executing the Tool</a></h2>
+<pre class="fssnip highlighted"><code lang="fsharp"><span class="id">proteomiqon</span><span class="o">-</span><span class="id">quantbasedalignment</span> <span class="o">-</span><span class="id">i</span> <span class="s">&quot;path/to/your/targetRun1.quant&quot;</span> <span class="o">-</span><span class="id">ii</span> <span class="s">&quot;path/to/your/sourceRun1.quant&quot;</span> <span class="o">-</span><span class="id">o</span> <span class="s">&quot;path/to/your/outDirectory&quot;</span> 
+</code></pre>
+<p>It is also possible to call the tool on a lists of target and source files. If you have a mulitcore cpu it is possible to align multiple runs in parallel using the -c flag:</p>
+<pre class="fssnip highlighted"><code lang="fsharp"><span class="id">proteomiqon</span><span class="o">-</span><span class="id">quantbasedalignment</span> <span class="o">-</span><span class="id">i</span> <span class="s">&quot;path/to/your/targetRun1.quant&quot;</span> <span class="s">&quot;path/to/your/targetRun2.quant&quot;</span> <span class="o">-</span><span class="id">ii</span> <span class="s">&quot;path/to/your/sourceRun1.quant&quot;</span> <span class="s">&quot;path/to/your/sourceRun2.quant&quot;</span> <span class="o">-</span><span class="id">o</span> <span class="s">&quot;path/to/your/outDirectory&quot;</span> <span class="o">-</span><span class="id">c</span>
+</code></pre>
+<p>Alternatively, it is possible to call the tool on folders of target and source files.</p>
+<pre class="fssnip highlighted"><code lang="fsharp"><span class="id">proteomiqon</span><span class="o">-</span><span class="id">quantbasedalignment</span> <span class="o">-</span><span class="id">i</span> <span class="s">&quot;path/to/your/targets&quot;</span> <span class="o">-</span><span class="id">ii</span> <span class="s">&quot;path/to/your/source&quot;</span> <span class="o">-</span><span class="id">o</span> <span class="s">&quot;path/to/your/outDirectory&quot;</span> 
+</code></pre>
+<p>A detailed description of the CLI arguments the tool expects can be obtained by calling the tool:</p>
+<pre class="fssnip highlighted"><code lang="fsharp"><span class="id">proteomiqon</span><span class="o">-</span><span class="id">quantbasedalignment</span> <span class="pn">--</span><span class="id">help</span>
+</code></pre>
 
                 </div>
             </div>
