@@ -249,6 +249,66 @@ let pipelineTests =
                 if unequalFields |> Array.isEmpty then true , ""
                 else false, unequalFields |> String.concat ";"
             Expect.isTrue compare (sprintf "Quants are different in the following fields: %s" fields)
+
+        testCase "QuantBasedAlignment" <| fun _ ->
+            let relToDirectory = getRelativePath Environment.CurrentDirectory
+            let target = relToDirectory "../../../data/QuantBasedAlignment/in"
+            let sources = relToDirectory "../../../data/QuantBasedAlignment/in"
+            let outDirectory = relToDirectory "../../../data/QuantBasedAlignment/out"
+            let relQuantPath =
+                if System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.Linux) then
+                    "../../../../../bin/QuantBasedAlignment_linux-x64/net5.0/ProteomIQon.QuantBasedAlignment_linux-x64.dll"
+                elif System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.Windows) then
+                    "../../../../../bin/QuantBasedAlignment_win-x64/net5.0/ProteomIQon.QuantBasedAlignment_win_x64.dll"
+                else    
+                    failwith "not supported OS to test QuantBasedAlignment"                
+            let quantExe = relToDirectory relQuantPath
+            // cleanup
+            try
+                File.Delete (relToDirectory "../../../data/QuantBasedAlignment/out/trunc1.align")
+                File.Delete (relToDirectory "../../../data/QuantBasedAlignment/out/trunc1.alignmetric")
+                File.Delete (relToDirectory "../../../data/QuantBasedAlignment/out/trunc1_log.txt")
+                File.Delete (relToDirectory "../../../data/QuantBasedAlignment/out/QuantBasedAlignment_log.txt")
+                File.Delete (relToDirectory "../../../data/QuantBasedAlignment/out/trunc1_Metrics.html")   
+                
+                File.Delete (relToDirectory "../../../data/QuantBasedAlignment/out/trunc2.align")
+                File.Delete (relToDirectory "../../../data/QuantBasedAlignment/out/trunc2.alignmetric")
+                File.Delete (relToDirectory "../../../data/QuantBasedAlignment/out/trunc2_log.txt")
+                File.Delete (relToDirectory "../../../data/QuantBasedAlignment/out/trunc2_Metrics.html")   
+
+                File.Delete (relToDirectory "../../../data/QuantBasedAlignment/out/trunc3.align")
+                File.Delete (relToDirectory "../../../data/QuantBasedAlignment/out/trunc3.alignmetric")
+                File.Delete (relToDirectory "../../../data/QuantBasedAlignment/out/trunc3_log.txt")
+                File.Delete (relToDirectory "../../../data/QuantBasedAlignment/out/trunc3_Metrics.html")   
+            with
+            | _ -> ()
+            // run tool
+            runDotNet (sprintf "%s -i %s -ii %s -o %s" quantExe target sources outDirectory) Environment.CurrentDirectory
+            let referenceAlign =
+                let quantPath = relToDirectory "../../../data/QuantBasedAlignment/out/trunc1_Reference.align"
+                FSharpAux.IO.SchemaReader.Csv.CsvReader<ProteomIQon.Dto.AlignmentResult>().ReadFile(quantPath,'\t',false,1)
+                |> Array.ofSeq
+            let testAlign =
+                let quantPath = relToDirectory "../../../data/QuantBasedAlignment/out/trunc1.align"
+                FSharpAux.IO.SchemaReader.Csv.CsvReader<ProteomIQon.Dto.AlignmentResult>().ReadFile(quantPath,'\t',false,1)
+                |> Array.ofSeq
+            let compare = 
+                    referenceAlign
+                    |> Array.filter (fun (reference: ProteomIQon.Dto.AlignmentResult) ->
+                            testAlign
+                            |> Array.exists (fun (test: ProteomIQon.Dto.AlignmentResult) ->
+                                test.StringSequence = reference.StringSequence
+                                test.GlobalMod = reference.GlobalMod
+                                test.Charge = reference.Charge
+                                test.PepSequenceID = reference.PepSequenceID
+                                test.ModSequenceID = reference.ModSequenceID
+                            )
+                    )  
+                    |> Array.length
+                    |> (=) referenceAlign.Length           
+            Expect.isTrue compare (sprintf "Quants are different in the following fields")
+
+
         testCase "ProteinInference" <| fun _ ->
             let relToDirectory = getRelativePath Environment.CurrentDirectory
             let db = relToDirectory "../../../data/ProteinInference/in/Minimal.db"

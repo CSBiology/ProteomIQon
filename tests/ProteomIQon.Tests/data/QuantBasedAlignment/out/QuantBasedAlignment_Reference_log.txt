@@ -1,0 +1,6 @@
+2021-11-11 17:56:33.1474 QuantBasedAlignment TRACE CLIArguments: [TargetFiles
+   ["C:\Users\d_zimmer\Documents\GitHub\ProteomIQon\tests\ProteomIQon.Tests\bin\Debug\netcoreapp3.1\../../../data/QuantBasedAlignment/in/trunc1.quant"];
+ SourceFiles
+   ["C:\Users\d_zimmer\Documents\GitHub\ProteomIQon\tests\ProteomIQon.Tests\bin\Debug\netcoreapp3.1\../../../data/QuantBasedAlignment/in"];
+ OutputDirectory
+   "C:\Users\d_zimmer\Documents\GitHub\ProteomIQon\tests\ProteomIQon.Tests\bin\Debug\netcoreapp3.1\../../../data/QuantBasedAlignment/out"] 
