@@ -1,0 +1,29 @@
+2021-11-11 21:59:25.3400 trunc3 TRACE target file: "C:\Users\d_zimmer\Documents\GitHub\ProteomIQon\tests\ProteomIQon.Tests\bin\Debug\netcoreapp3.1\../../../data/QuantBasedAlignment/in\trunc3.quant" 
+2021-11-11 21:59:25.3400 trunc3 TRACE source files: [|"C:\Users\d_zimmer\Documents\GitHub\ProteomIQon\tests\ProteomIQon.Tests\bin\Debug\netcoreapp3.1\../../../data/QuantBasedAlignment/in\trunc1.quant";
+  "C:\Users\d_zimmer\Documents\GitHub\ProteomIQon\tests\ProteomIQon.Tests\bin\Debug\netcoreapp3.1\../../../data/QuantBasedAlignment/in\trunc2.quant"|] 
+2021-11-11 21:59:25.3400 trunc3 TRACE Output directory: C:\Users\d_zimmer\Documents\GitHub\ProteomIQon\tests\ProteomIQon.Tests\bin\Debug\netcoreapp3.1\../../../data/QuantBasedAlignment/out 
+2021-11-11 21:59:25.3400 trunc3 TRACE Parameters: { Placeholder = true } 
+2021-11-11 21:59:25.3526 trunc3 TRACE Init align function 
+2021-11-11 21:59:25.3526 trunc3 TRACE Init align function: finished 
+2021-11-11 21:59:25.3526 trunc3 TRACE Reading and preparing .quant files for alignment 
+2021-11-11 21:59:25.4619 trunc3 TRACE Reading and preparing .quant files for alignment: finished 
+2021-11-11 21:59:25.4619 trunc3 TRACE Performing Alignments 
+2021-11-11 21:59:25.4619 trunc3 TRACE Performing Alignment trunc3 vs trunc1 
+2021-11-11 21:59:25.4619 trunc3 TRACE Sampling test and train data 
+2021-11-11 21:59:25.4619 trunc3 TRACE Training Spline 
+2021-11-11 21:59:25.4619 trunc3 TRACE Optimizing Lambdas 
+2021-11-11 21:59:25.4791 trunc3 TRACE Optimizing Lambdas:Finished, selected lamda:2.000000 
+2021-11-11 21:59:25.4791 trunc3 TRACE Training Spline:Finished 
+2021-11-11 21:59:25.5142 trunc3 TRACE Performing Alignment trunc3 vs trunc1: finished 
+2021-11-11 21:59:25.5142 trunc3 TRACE Performing Alignment trunc3 vs trunc2 
+2021-11-11 21:59:25.5142 trunc3 TRACE Sampling test and train data 
+2021-11-11 21:59:25.5142 trunc3 TRACE Training Spline 
+2021-11-11 21:59:25.5142 trunc3 TRACE Optimizing Lambdas 
+2021-11-11 21:59:25.5347 trunc3 TRACE Optimizing Lambdas:Finished, selected lamda:1.000000 
+2021-11-11 21:59:25.5347 trunc3 TRACE Training Spline:Finished 
+2021-11-11 21:59:25.5821 trunc3 TRACE Performing Alignment trunc3 vs trunc2: finished 
+2021-11-11 21:59:25.5821 trunc3 TRACE Performing Alignments: finished 
+2021-11-11 21:59:25.5821 trunc3 TRACE Transfer identifications 
+2021-11-11 21:59:25.5821 trunc3 TRACE Writing Results 
+2021-11-11 21:59:25.5821 trunc3 TRACE outFilePath:C:\Users\d_zimmer\Documents\GitHub\ProteomIQon\tests\ProteomIQon.Tests\bin\Debug\netcoreapp3.1\../../../data/QuantBasedAlignment/out\trunc3.align 
+2021-11-11 21:59:25.6063 trunc3 TRACE Writing Results:finished 

@@ -66,6 +66,10 @@
       <Message Text="Deleting $(OutDir)/runtimes/linux-x64/native/libmkl_sequential.so.1"/>
       <Delete Files="$(OutDir)/runtimes/linux-x64/native/libmkl_sequential.so.1" />
   </Target>
+  <Target Name="CopyMKLDLL" AfterTargets="Build">
+      <Message Text="Copy MKL DLL"/>
+      <Copy SourceFiles="$(OutDir)/runtimes/linux-x64\lib\netstandard2.0\MKL.NET.dll" DestinationFolder="$(OutDir)/"/>
+  </Target>
   <ItemGroup>
       <Content Include="bin/Release/$(TargetFramework)/runtimes/linux-x64/native/*.so" Exclude="bin/Release/$(TargetFramework)/runtimes/linux-x64/native/MKL.NET.Native.so">
         <Pack>true</Pack>

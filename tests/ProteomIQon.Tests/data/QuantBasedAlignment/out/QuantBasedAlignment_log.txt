@@ -1,0 +1,10 @@
+2021-11-11 21:59:24.4490 QuantBasedAlignment TRACE CLIArguments: [TargetFiles
+   ["C:\Users\d_zimmer\Documents\GitHub\ProteomIQon\tests\ProteomIQon.Tests\bin\Debug\netcoreapp3.1\../../../data/QuantBasedAlignment/in"];
+ SourceFiles
+   ["C:\Users\d_zimmer\Documents\GitHub\ProteomIQon\tests\ProteomIQon.Tests\bin\Debug\netcoreapp3.1\../../../data/QuantBasedAlignment/in"];
+ OutputDirectory
+   "C:\Users\d_zimmer\Documents\GitHub\ProteomIQon\tests\ProteomIQon.Tests\bin\Debug\netcoreapp3.1\../../../data/QuantBasedAlignment/out"] 
+2021-11-11 21:59:24.4788 QuantBasedAlignment TRACE .quant files : [|"C:\Users\d_zimmer\Documents\GitHub\ProteomIQon\tests\ProteomIQon.Tests\bin\Debug\netcoreapp3.1\../../../data/QuantBasedAlignment/in\trunc1.quant";
+  "C:\Users\d_zimmer\Documents\GitHub\ProteomIQon\tests\ProteomIQon.Tests\bin\Debug\netcoreapp3.1\../../../data/QuantBasedAlignment/in\trunc2.quant";
+  "C:\Users\d_zimmer\Documents\GitHub\ProteomIQon\tests\ProteomIQon.Tests\bin\Debug\netcoreapp3.1\../../../data/QuantBasedAlignment/in\trunc3.quant"|] 
+2021-11-11 21:59:24.4916 QuantBasedAlignment TRACE Program is running on 1 cores 
