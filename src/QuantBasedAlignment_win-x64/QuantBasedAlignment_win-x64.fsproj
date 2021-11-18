@@ -64,7 +64,7 @@
   <ItemGroup>
       <Content Include="bin/Release/$(TargetFramework)/runtimes/win-x64/native/*.dll" Exclude="bin/Release/$(TargetFramework)/runtimes/win-x64/native/MKL.NET.Native.dll;bin/Release/$(TargetFramework)/runtimes/win-x64/native/SQLite.Interop.dll">
         <Pack>true</Pack>
-        <PackagePath>\tools\$(TargetFramework)\any\runtimes\win-x64\native\</PackagePath>
+        <PackagePath>\tools\$(TargetFramework)\any\</PackagePath>
       </Content>
   </ItemGroup>
   <ItemGroup>
