@@ -18,6 +18,30 @@ open BioFSharp.Mz.SearchDB
 open System.Data
 
 module AlignmentBasedQuantification =
+    
+    module Query = 
+        open System
+        open System.Collections.Generic
+        open System.Linq
+        open MzIO.Commons.Arrays
+        open MzIO.Processing.MzIOLinq
+        open MzIO.Binary
+     
+        /// Extract a rt profile for specified target mass and rt range.
+        /// Mz range peak aggregation is closest lock mz.
+        /// Profile array with index corresponding to continous mass spectra over rt range and mz range given.
+        let initRTProfile (readspecPeaks:string -> Peak1DArray)  (rtIndex: IMzIOArray<RtIndexEntry>) (rtRange: RangeQuery) (mzRange: RangeQuery) =
+            let entries = RtIndexEntry.Search(rtIndex, rtRange).ToArray()
+            //printfn "RtProfile %i" entries.Length
+            let profile = Array.zeroCreate<Peak2D> entries.Length
+            for rtIdx = 0 to entries.Length-1 do
+                let entry = entries.[rtIdx]
+                let peaks = (readspecPeaks entry.SpectrumID).Peaks
+                let p = (RtIndexEntry.MzSearch (peaks, mzRange)).DefaultIfEmpty(Peak1D(0., mzRange.LockValue))
+                        |> fun x -> RtIndexEntry.ClosestMz (x, mzRange.LockValue)
+                        |> fun x -> RtIndexEntry.AsPeak2D (x, entry.Rt)
+                profile.[rtIdx] <- p
+            profile
 
     ///
     type AlignmentQuantMetrics = 
@@ -82,6 +106,49 @@ module AlignmentBasedQuantification =
         KLDiv_UnCorrected   : float
         KLDiv_Corrected     : float
         }
+
+
+    ///
+    let initSpline binningWindowWidth (scanTimeVsDiff: (float*float) []) = 
+        let getBinIdx width scantime = int ((scantime / width))    
+        let knotX,train,test = 
+            let knotX,train,test = 
+                scanTimeVsDiff
+                |> Array.groupBy (fun (s,d) -> getBinIdx binningWindowWidth (s))
+                |> Array.map (fun (binIdx,ions) -> 
+                    let dataS = ions |> Array.shuffleFisherYates
+                    let knotX = 
+                        dataS 
+                        |> Array.map fst
+                        |> Array.max
+                    let train,test =
+                        let nTest = 
+                            (float dataS.Length) * 0.9
+                            |> int
+                        dataS.[.. nTest], dataS.[nTest+1 ..] 
+                    float knotX, train, test
+                    )
+                |> Array.unzip3
+            knotX |> Array.sort, train |> Array.concat |> Array.sortBy fst, test |> Array.concat |> Array.sortBy fst
+        let trainer lambda = 
+            let train' = train 
+            let test' = test 
+            let fit = FSharp.Stats.Fitting.Spline.smoothingSpline train' (knotX) lambda 
+            let rSquared = 
+                let x,y,yHat = 
+                    test'
+                    |> Array.map (fun (x,y) -> 
+                        x, y, fit x
+                        )
+                    |> Array.unzip3
+                let rs = FSharp.Stats.Fitting.GoodnessOfFit.calculateDeterminationFromValue yHat y
+                rs
+            rSquared, fit     
+        let rSquared,model = 
+            [|0.01.. 0.05 .. 0.5|]
+            |> Array.map trainer
+            |> Array.maxBy fst          
+        rSquared, model
 
     ///
     let getBaseLineCorrectionOffsetAt tarRT x_Xic y_Xic y_Xic_uncorrected =
@@ -160,15 +227,14 @@ module AlignmentBasedQuantification =
                            let c = y - b
                            if c < 0. then 0. else c
                        ) yData baseLine
-
     ///
-    let initGetProcessedXIC logger (baseLineCorrection:Domain.BaseLineCorrection option) reader idx scanTimeWindow mzWindow_Da meanScanTime meanPrecMz =
+    let initGetProcessedXIC logger (baseLineCorrection:Domain.BaseLineCorrection option) getPeaks idx scanTimeWindow mzWindow_Da meanScanTime meanPrecMz =
         let rtQuery = Query.createRangeQuery meanScanTime scanTimeWindow
         let mzQuery = Query.createRangeQuery meanPrecMz mzWindow_Da
         let retData',itzData' =
             let tmp =
-                Query.getXIC reader idx rtQuery mzQuery
-                |> Array.map (fun p -> p.Rt , p.Intensity)
+                getPeaks idx rtQuery mzQuery
+                |> Array.map (fun (p:MzIO.Binary.Peak2D) -> p.Rt , p.Intensity)
             tmp
             |> Array.mapi (fun i (rt,intensity) ->
                             if i = 0 || i = tmp.Length-1 || intensity > 0. then
@@ -225,77 +291,112 @@ module AlignmentBasedQuantification =
         InferredScanTimeRefined     : float
         AlignedSource               :(float*float) list
         }
-    
 
+    type XIC = {
+        FinalPrecMz         : float
+        FinalTargetScanTime : float
+        X_Xic               : float []
+        Y_Xic               : float []
+        Y_Xic_uncorrected   : float []
+        AlignedSource       : (float*float) []
+        }
 
-    
     ///
-    let quantifyInferredPeak refineByDTW xSource ySource sourceScanTime getXic identifyPeaks targetMz targetScanTime inferredScanTime =
-        try
-            let (retData,itzData,uncorrectedItzData)   =
-                getXic targetScanTime targetMz
+    let getRefinedXic refineByDTW getXic xSource ySource sourceScanTime scanTimeToMzCorrection theoMz scanTimePrediciton =
+            let correctedMz = scanTimeToMzCorrection scanTimePrediciton + theoMz
+            let (retData,itzDataCorrected,ItzDataUncorrected) = getXic scanTimePrediciton correctedMz
+            let maxItz = itzDataCorrected |> Array.max
             let inferredScanTime, alignedSource = 
                 if not refineByDTW then 
-                    inferredScanTime,[]
+                    scanTimePrediciton,[||]
                 else 
-                    let target = Array.zip retData (DTW'.zNorm itzData)
+                    let target = Array.zip retData (DTW'.zNorm itzDataCorrected)
                     let source = Array.zip xSource (DTW'.zNorm ySource)
-                    let alignedSource = 
-                        DTW'.align target source 
-                    let inferredScanTimeRefined = 
-                        DTW'.align' target source sourceScanTime 
-                        |> snd
-                    inferredScanTimeRefined, alignedSource                    
-            let peaks = identifyPeaks retData itzData
-            if Array.isEmpty peaks then
-                {
-                    Model                       = None 
-                    Area                        = nan
-                    StandardErrorOfPrediction   = nan
-                    MeasuredApexIntensity       = nan
-                    EstimatedParams             = [||]
-                    X_Xic                       = retData
-                    Y_Xic                       = itzData
-                    Y_Xic_uncorrected           = uncorrectedItzData
-                    xPeak                       = [||]
-                    yFitted                     = [||]
-                    InferredScanTimeRefined     = inferredScanTime
-                    AlignedSource               = alignedSource
-                }
-            else
-                let peakToQuantify = BioFSharp.Mz.Quantification.HULQ.getPeakBy peaks inferredScanTime
-                let quantP         = BioFSharp.Mz.Quantification.HULQ.quantifyPeak peakToQuantify
-                {
-                    Model                     = quantP.Model 
-                    Area                      = quantP.Area
-                    StandardErrorOfPrediction = quantP.StandardErrorOfPrediction
-                    MeasuredApexIntensity     = quantP.MeasuredApexIntensity
-                    EstimatedParams           = quantP.EstimatedParams
-                    X_Xic                     = retData
-                    Y_Xic                     = itzData
-                    Y_Xic_uncorrected         = uncorrectedItzData
-                    xPeak                     = peakToQuantify.XData
-                    yFitted                   = quantP.YPredicted
-                    InferredScanTimeRefined     = inferredScanTime
-                    AlignedSource               = alignedSource
-                }
-        with
-        | _ -> 
+                    let alignedSource = DTW'.align target source 
+                    let inferredScanTimeRefined = DTW'.align' target source sourceScanTime |> snd
+                    let normFactor = alignedSource |> List.maxBy snd |> snd
+                    inferredScanTimeRefined, alignedSource |> Array.ofList |> Array.map (fun (x,y) -> x,(y / normFactor) * maxItz)
             {
-                Model                       = None
-                Area                        = nan
-                StandardErrorOfPrediction   = nan
-                MeasuredApexIntensity       = nan
-                EstimatedParams             = [||]
-                X_Xic                       = [||]
-                Y_Xic                       = [||]
-                Y_Xic_uncorrected           = [||]
-                xPeak                       = [||]
-                yFitted                     = [||]
-                InferredScanTimeRefined     = nan
-                AlignedSource               = []
+                FinalPrecMz         = correctedMz
+                FinalTargetScanTime = inferredScanTime
+                X_Xic               = retData
+                Y_Xic               = itzDataCorrected
+                Y_Xic_uncorrected   = ItzDataUncorrected
+                AlignedSource       = alignedSource
             }
 
+    type InferredXic = {
+        X_Xic                       :float[]
+        Y_Xic                       :float[]
+        Y_Xic_uncorrected           :float[]
+        }
+
+    let getInferredXic getXic targetScanTime targetMz =
+        let (retData,itzData,uncorrectedItzData)   =
+                getXic targetScanTime targetMz 
+        {
+        X_Xic               = retData
+        Y_Xic               = itzData
+        Y_Xic_uncorrected   = uncorrectedItzData
+        }
+
+
+    type InferredQuantification = {
+        Model                       :HULQ.PeakModel option
+        Area                        :float
+        StandardErrorOfPrediction   :float
+        MeasuredApexIntensity       :float
+        Correlation_Light_Heavy     :float
+        SearchRTMinusFittedRT       :float
+        ClusterComparison           :ClusterComparison               
+        EstimatedParams             :float[]
+        X_Xic                       :float[]
+        Y_Xic                       :float[]
+        Y_Xic_uncorrected           :float[]
+        xPeak                       :float[]
+        yFitted                     :float[]
+        }
+
+    /// Calculates the difference between the scan time used to retreave the peak and the fitted peak midpoint.
+    let searchRTMinusFittedRtTarget searchRT (fit:HULQ.QuantifiedPeak) = 
+        try
+            searchRT - fit.EstimatedParams.[1] 
+        with
+        | _ -> nan
+
+    ///
+    let saveMetricChart sequence globalMod ch (xXic:float[]) (yXic:float[]) avgScanTime (xScantime:float) 
+            (xToQuantify:float[]) (ypToQuantify:float[]) (fitY:float[]) 
+            inferredScanTimeRefined alignedSource
+            (xXicInferred:float[]) (yXicinferred:float[]) (xInferred:float[]) (inferredFit:float[]) 
+                (pattern:PeakComparison []) plotDirectory =
+        let xic = 
+            [
+            Chart.Point(xXic, yXic)                     |> Chart.withTraceName "Target XIC"
+            Chart.Point(alignedSource)                  |> Chart.withTraceName "Aligned Source XIC"
+            Chart.Point([avgScanTime],[1.])             |> Chart.withTraceName "Inferred Scan Time"
+            Chart.Point([inferredScanTimeRefined],[1.]) |> Chart.withTraceName "Inferred Scan Time Refined"
+            Chart.Point([xScantime],[1.])               |> Chart.withTraceName "ScanTime Source"
+            Chart.Point((xToQuantify), (ypToQuantify))  |> Chart.withTraceName "Identified Target Peak"
+            Chart.Line(xToQuantify,fitY)                |> Chart.withTraceName "Fit of target Peak"
+            Chart.Point(xXicInferred, yXicinferred)     |> Chart.withTraceName "Inferred XIC"
+            Chart.Line(xInferred,inferredFit)           |> Chart.withTraceName "Fit of inferred Peak"
+
+            ]
+            |> Chart.Combine
+        let pattern = 
+            [
+            Chart.Point(pattern |> Array.map (fun x -> x.Mz), pattern |> Array.map (fun x -> x.MeasuredIntensity))          |> Chart.withTraceName "Measured"
+            Chart.Point(pattern |> Array.map (fun x -> x.Mz), pattern |> Array.map (fun x -> x.MeasuredIntensityCorrected)) |> Chart.withTraceName "Measured Corrected"
+            Chart.Point(pattern |> Array.map (fun x -> x.Mz), pattern |> Array.map (fun x -> x.PredictedRelFrequency))      |> Chart.withTraceName "Predicted Relative Frequency"
+            ]
+            |> Chart.Combine
+        [xic;pattern]
+        |> Chart.Stack(2, 0.1)
+        |> Chart.withTitle(sprintf "Sequence= %s,globalMod = %i" sequence globalMod)
+        |> Chart.withSize(2500.,800.)
+        |> Chart.SaveHtmlAs(Path.Combine[|plotDirectory; ((sequence |> String.filter (fun x -> x <> '*')) + "_GMod_" + globalMod.ToString() + "Ch" + ch.ToString())|])
+        
     ///
     let saveChart sequence globalMod ch (xXic:float[]) (yXic:float[]) avgScanTime 
             (xToQuantify:float[]) (ypToQuantify:float[]) (fitY:float[]) 
@@ -328,7 +429,12 @@ module AlignmentBasedQuantification =
         |> Chart.withSize(2500.,800.)
         |> Chart.SaveHtmlAs(Path.Combine[|plotDirectory; ((sequence |> String.filter (fun x -> x <> '*')) + "_GMod_" + globalMod.ToString() + "Ch" + ch.ToString())|])
             
-           
+    let saveErrorChart (xXic:float[]) (yXic:float[]) pepSeq gMod ch desc plotDirectory =      
+        Chart.Point(xXic, yXic)
+        |> Chart.withTitle(sprintf "Sequence= %s,globalMod = %i_%s" pepSeq gMod desc)
+        |> Chart.withSize(1500.,800.)
+        |> Chart.SaveHtmlAs(Path.Combine[|plotDirectory; ((pepSeq |> String.filter (fun x -> x <> '*')) + "_GMod_" + gMod.ToString() + "Ch" + ch.ToString() + "_notQuantified")|])
+               
     // Method is based on: https://doi.org/10.1021/ac0600196
     /// Estimates the autocorrelation at lag 1 of a blank signal (containing only noise). Subsequently, the signal of interest is smoothed
     /// several times by a savitzky golay filter using constant polynomial order and variing windowWidth. For each iteration, the deviation
@@ -378,7 +484,7 @@ module AlignmentBasedQuantification =
         | _ -> nan
 
     /// Aims to provide the best scan time estimate when quanitfying a inferred peak.
-    let chooseScanTime maxDiff searchRTMinusFittedRT initialScanTime quantP = 
+    let chooseScanTime maxDiff searchRTMinusFittedRT initialScanTime (quantP:HULQ.QuantifiedPeak) = 
         if Array.isEmpty quantP.EstimatedParams then
             initialScanTime 
         elif abs searchRTMinusFittedRT > maxDiff then
@@ -387,20 +493,20 @@ module AlignmentBasedQuantification =
             quantP.EstimatedParams.[1]
 
     ///
-    let calcCorrelation (xValues:float []) (targetPeak:InferredPeak) (inferredPeak:InferredPeak) = 
+    let calcCorrelation (xValues:float []) (quantifiedPeak:HULQ.QuantifiedPeak) (inferredPeak:HULQ.QuantifiedPeak) = 
         let getValue (model:HULQ.PeakModel) estParams =
             match model with
             | HULQ.PeakModel.Gaussian m -> 
                 m.GetFunctionValue (vector estParams)
             | HULQ.PeakModel.EMG m -> 
                 m.GetFunctionValue (vector estParams)
-        match targetPeak.Model, inferredPeak.Model with 
+        match quantifiedPeak.Model, inferredPeak.Model with 
         | Some q , Some i -> 
             let xValuesBW = 
                 [|for i = 1 to xValues.Length-1 do abs(xValues.[i] - xValues.[i-1])|]
                 |> Array.median
             let xValues = [|xValues.[0] .. xValuesBW/2. .. xValues.[xValues.Length-1]|]
-            let fQ = getValue q targetPeak.EstimatedParams
+            let fQ = getValue q quantifiedPeak.EstimatedParams
             let yQ = xValues |> Array.map fQ
             let fI = getValue i inferredPeak.EstimatedParams
             let yI = xValues |> Array.map fI
@@ -487,6 +593,14 @@ module AlignmentBasedQuantification =
             else
                 System.IO.Directory.CreateDirectory path |> ignore
                 path
+        let metricPlotDirectory =
+            let fileName = sprintf "%s_metricPlots" (Path.GetFileNameWithoutExtension instrumentOutput)
+            let path = Path.Combine [|outputDir;fileName|]
+            if System.IO.Directory.Exists path then
+                path
+            else
+                System.IO.Directory.CreateDirectory path |> ignore
+                path
         logger.Trace (sprintf "plotDirectory:%s" plotDirectory)
         
         logger.Trace "Copy peptide DB into Memory"
@@ -550,46 +664,124 @@ module AlignmentBasedQuantification =
             |> Array.ofSeq
         logger.Trace "Read scored alignmentResult:finished"
 
-        logger.Trace "Estimate ms1 mz accuracy"
-        ///
-        let ms1AccuracyEstimate = 
-            psmbasedQuant
-            |> Array.filter (fun x -> QuantificationResult.tryTargetGetScanTime x |> Option.isSome)
-            |> Seq.stDevBy (fun x -> abs(x.PrecursorMZ - Mass.toMZ x.TheoMass (float x.Charge)) )
-        logger.Trace (sprintf "Estimate ms1 mz accuracy:finished, accuracy: %f" ms1AccuracyEstimate)          
+        logger.Trace "Estimate precursor mz standard deviation and mz correction."
+        /// auf quantresult umstellen.
+        let ms1AccuracyEstimate,scanTimeToMzCorrection = 
+            let scanTimeVsDelta = 
+                psmbasedQuant
+                //|> Array.filter (Dto.QuantificationResult.tryTargetGetScanTime >> Option.isSome)
+                |> Array.choose (fun x -> 
+                    match Dto.QuantificationResult.tryTargetGetScanTime x with 
+                    | None -> None
+                    | Some scanTime -> 
+                        let precMz = x.PrecursorMZ
+                        let theMz  = Mass.toMZ x.TheoMass (float x.Charge)
+                        let diff = precMz - theMz 
+                        (scanTime, diff)
+                        |> Option.Some
+                    )
+            let borders =
+                scanTimeVsDelta
+                |> Seq.map snd
+                |> Array.ofSeq
+                |> FSharp.Stats.Testing.Outliers.tukey 3.
+            let filteredValues =
+                if nan.Equals(borders.Upper) || nan.Equals(borders.Lower) then 
+                    scanTimeVsDelta
+                else
+                    scanTimeVsDelta
+                    |> Array.filter (fun (s,d) -> d <= borders.Upper && d >= borders.Lower)
+            [
+            Chart.Point(scanTimeVsDelta)
+            |> Chart.withTraceName "Raw"
+            Chart.Point(filteredValues)
+            |> Chart.withTraceName "Filtered"
+            ]
+            |> Chart.Combine
+            |> Chart.withTitle (sprintf "upper border:%f, lower border:%f" borders.Upper borders.Lower)
+            |> Chart.SaveHtmlAs(Path.Combine[|plotDirectory; "mzCorrectionData"|])
+            let scanTimeToMzCorrection =
+                let runTime = scanTimeVsDelta |> Array.maxBy fst |> fst
+                if runTime > 20. && psmbasedQuant.Length > 500 then
+                    let binWidth = 
+                        System.Math.Min(runTime / 2., 20.)
+                    let stabw = filteredValues |> Seq.stDevBy snd
+                    let r,f = initSpline binWidth filteredValues
+                    f
+                else 
+                    let m = 
+                        filteredValues 
+                        |> Seq.map snd 
+                        |> Seq.median 
+                    fun scanTime -> m
+            let stDev = 
+                filteredValues 
+                |> Seq.map snd 
+                |> Seq.stDev
+            if diagCharts then 
+                [
+                Chart.Point(scanTimeVsDelta)
+                |> Chart.withTraceName "Raw"
+                Chart.Line(scanTimeVsDelta |> Array.sortBy fst |> Array.map (fun (st,d) -> st, scanTimeToMzCorrection st))
+                ]
+                |> Chart.Combine
+                |> Chart.SaveHtmlAs(Path.Combine[|plotDirectory; "mzErrorAndCorrection"|])
+            //stDev, scanTimeToMzCorrection 
+            0.05, scanTimeToMzCorrection 
+            
+        logger.Trace (sprintf "Estimate precursor mz standard deviation and mz correction.:finished, standard deviation: %f" ms1AccuracyEstimate) 
+
+        
         logger.Trace "init lookup functions"   
-        
-        //logger.Trace "Estimate mass correction"
-        //let retVsMassError = 
-        //    psmbasedQuant
-        //    |> Array.map (fun x -> QuantificationResult.getTargetScanTime x, (x.PrecursorMZ - Mass.toMZ x.TheoMass (float x.Charge)))
-        //    |> Array.sortBy fst
-        ////FSharp.Stats.Fitting.Spline.smoothingSpline retVsMassError (retVsMassError |> Array.map fst) 1.00
-        //logger.Trace "Estimate mass correction:finished"
-        
-        
         ///
         let comparePredictedAndMeasuredIsotopicCluster = initComparePredictedAndMeasuredIsotopicCluster inReader ms1SortedByScanTime ms1AccuracyEstimate     
         
+        let readSpecPeaksWithMem = FSharpAux.Memoization.memoize inReader.ReadSpectrumPeaks
+        let getPeaks = Query.initRTProfile readSpecPeaksWithMem
         ///
-        let getXIC = 
-            initGetProcessedXIC logger processParams.BaseLineCorrection inReader retTimeIdxed processParams.XicExtraction.ScanTimeWindow 0.05 //processParams.XicExtraction.MzWindow_Da     
+        let getXIC = initGetProcessedXIC logger processParams.BaseLineCorrection getPeaks retTimeIdxed processParams.XicExtraction.ScanTimeWindow ms1AccuracyEstimate     
         
         ///
-        let identifyPeaks = 
-            initIdentifyPeaks processParams.XicExtraction.XicProcessing
+        let identifyPeaks = initIdentifyPeaks processParams.XicExtraction.XicProcessing
         
         logger.Trace "init lookup functions:finished"
         
         logger.Trace "init quantification functions"  
         let quantifyTestDataSet (metrics:AlignmentMetricsDTO []) = 
             metrics
-            |> Array.map (fun testPep -> 
+            |> Array.choose (fun testPep -> 
+                try
                 let unlabledPeptide = peptideLookUp testPep.Sequence 0
                 let labeledPeptide  = peptideLookUp testPep.Sequence 1
-                let targetPeptide = if testPep.GlobalMod = 0 then unlabledPeptide else labeledPeptide   
+                let targetPeptide = if testPep.GlobalMod = 0 then unlabledPeptide else labeledPeptide            
                 let targetMz = Mass.toMZ (targetPeptide.Mass) (testPep.Charge|> float)
-                let targetQuant = quantifyInferredPeak processParams.PerformLocalWarp testPep.X_RtTrace testPep.X_IntensityTrace testPep.X_Test getXIC identifyPeaks targetMz testPep.YHat_Test testPep.YHat_Test
+                let refinedXIC = 
+                    getRefinedXic processParams.PerformLocalWarp getXIC 
+                        testPep.X_RtTrace testPep.X_IntensityTrace testPep.X_Test 
+                            scanTimeToMzCorrection targetMz testPep.YHat_Test
+                let avgMass = Mass.ofMZ (targetMz) (testPep.Charge |> float)
+                let peaks = identifyPeaks refinedXIC.X_Xic refinedXIC.Y_Xic
+                if Array.isEmpty peaks then 
+                    if diagCharts then saveErrorChart refinedXIC.X_Xic refinedXIC.Y_Xic testPep.Sequence testPep.GlobalMod testPep.Charge "noPeaks" plotDirectory
+                    logger.Trace (sprintf "Quant failed: No Peak detected, Sequence:%s, GlobalMod:%s, Charge:%s" (testPep.Sequence |> String.filter (fun x -> x <> '*')) (testPep.GlobalMod.ToString()) (testPep.Charge.ToString()))
+                    None
+                else
+                let peakToQuantify = BioFSharp.Mz.Quantification.HULQ.getPeakBy peaks refinedXIC.FinalTargetScanTime
+                let quantP = BioFSharp.Mz.Quantification.HULQ.quantifyPeak peakToQuantify                        
+                let searchRTMinusFittedRT = searchRTMinusFittedRtTarget refinedXIC.FinalTargetScanTime quantP
+                if quantP.EstimatedParams |> Array.exists nan.Equals || Array.isEmpty quantP.EstimatedParams then 
+                    if diagCharts then saveErrorChart refinedXIC.X_Xic refinedXIC.Y_Xic testPep.Sequence testPep.GlobalMod testPep.Charge "fittingFailed" plotDirectory    
+                    logger.Trace (sprintf "Quant failed: Peak fitting failed, Sequence:%s, GlobalMod:%s, Charge:%s" (testPep.Sequence |> String.filter (fun x -> x <> '*')) (testPep.GlobalMod.ToString()) (testPep.Charge.ToString()))
+                    None
+                else
+                let inferredScanTime = chooseScanTime processParams.XicExtraction.ScanTimeWindow searchRTMinusFittedRT refinedXIC.FinalTargetScanTime quantP 
+                let clusterComparisonTarget = comparePredictedAndMeasuredIsotopicCluster refinedXIC.X_Xic refinedXIC.Y_Xic refinedXIC.Y_Xic_uncorrected testPep.Charge targetPeptide.BioSequence quantP.EstimatedParams.[1] refinedXIC.FinalPrecMz 
+                if diagCharts then 
+                    saveMetricChart testPep.Sequence testPep.GlobalMod testPep.Charge refinedXIC.X_Xic refinedXIC.Y_Xic testPep.Y_Test testPep.X_Test
+                                peakToQuantify.XData quantP.YPredicted quantP.YPredicted 
+                                refinedXIC.FinalTargetScanTime refinedXIC.AlignedSource
+                                [||] [||] [||] [||]
+                                clusterComparisonTarget.PeakComparisons metricPlotDirectory
                 {
                     Sequence                             = testPep.Sequence                            
                     GlobalMod                            = testPep.GlobalMod                           
@@ -613,10 +805,13 @@ module AlignmentBasedQuantification =
                     Y_RtTrace                            = testPep.Y_RtTrace                           
                     Y_IntensityTrace                     = testPep.Y_IntensityTrace                    
                     DtwDistanceBefore                    = testPep.DtwDistanceBefore                   
-                    Y_ReQuant                            = targetQuant.Area
+                    Y_ReQuant                            = quantP.Area
                 }
+                |> Some
+                with
+                | _ -> None
                 )
-        
+                
         ///
         let labledQuantification (alignmentResult:AlignmentResult) = 
             try          
@@ -624,137 +819,322 @@ module AlignmentBasedQuantification =
             let labeledPeptide  = peptideLookUp alignmentResult.StringSequence 1
             let targetPeptide = if alignmentResult.GlobalMod = 0 then unlabledPeptide else labeledPeptide            
             let targetMz = Mass.toMZ (targetPeptide.Mass) (alignmentResult.Charge|> float)
-            let targetQuant = quantifyInferredPeak processParams.PerformLocalWarp alignmentResult.RtTrace_SourceFile alignmentResult.IntensityTrace_SourceFile alignmentResult.ScanTime_SourceFile getXIC identifyPeaks targetMz alignmentResult.PredictedScanTime alignmentResult.PredictedScanTime
-            if Array.isEmpty targetQuant.EstimatedParams && diagCharts then 
-                Chart.Point(targetQuant.X_Xic, targetQuant.Y_Xic)
-                |> Chart.withTitle(sprintf "Sequence= %s,globalMod = %i_noPeaks" alignmentResult.StringSequence alignmentResult.GlobalMod)
-                |> Chart.withSize(1500.,800.)
-                |> Chart.SaveHtmlAs(Path.Combine[|plotDirectory; ((alignmentResult.StringSequence |> String.filter (fun x -> x <> '*')) + "_GMod_" + alignmentResult.GlobalMod.ToString() + "Ch" + alignmentResult.Charge.ToString() + "_notQuantified")|])
+            let refinedXIC = 
+                getRefinedXic processParams.PerformLocalWarp getXIC 
+                    alignmentResult.RtTrace_SourceFile alignmentResult.IntensityTrace_SourceFile alignmentResult.ScanTime_SourceFile 
+                        scanTimeToMzCorrection targetMz alignmentResult.PredictedScanTime
+            let avgMass = Mass.ofMZ (targetMz) (alignmentResult.Charge |> float)
+            let peaks = identifyPeaks refinedXIC.X_Xic refinedXIC.Y_Xic
+            if Array.isEmpty peaks then 
+                if diagCharts then saveErrorChart refinedXIC.X_Xic refinedXIC.Y_Xic alignmentResult.StringSequence alignmentResult.GlobalMod alignmentResult.Charge "noPeaks" plotDirectory
+                logger.Trace (sprintf "Quant failed: No Peak detected, Sequence:%s, GlobalMod:%s, Charge:%s" (alignmentResult.StringSequence |> String.filter (fun x -> x <> '*')) (alignmentResult.GlobalMod.ToString()) (alignmentResult.Charge.ToString()))
                 None
             else
-            let searchRTMinusFittedRT = searchRTMinusFittedRt alignmentResult.PredictedScanTime targetQuant
-            let inferredScanTime = chooseScanTime processParams.XicExtraction.ScanTimeWindow searchRTMinusFittedRT alignmentResult.PredictedScanTime targetQuant
-            let clusterComparison_Target = comparePredictedAndMeasuredIsotopicCluster targetQuant.X_Xic targetQuant.Y_Xic targetQuant.Y_Xic_uncorrected alignmentResult.Charge targetPeptide.BioSequence targetQuant.EstimatedParams.[1] targetMz
-            if alignmentResult.GlobalMod = 0 then
-                let mz_Heavy = Mass.toMZ (labeledPeptide.Mass) (alignmentResult.Charge|> float)
-                let inferred_Heavy = quantifyInferredPeak false alignmentResult.RtTrace_SourceFile alignmentResult.IntensityTrace_SourceFile alignmentResult.ScanTime_SourceFile getXIC identifyPeaks mz_Heavy alignmentResult.PredictedScanTime inferredScanTime
-                let searchRTMinusFittedRT_Heavy = searchRTMinusFittedRt inferredScanTime inferred_Heavy
-                let clusterComparison_Heavy = comparePredictedAndMeasuredIsotopicCluster inferred_Heavy.X_Xic inferred_Heavy.Y_Xic inferred_Heavy.Y_Xic_uncorrected alignmentResult.Charge labeledPeptide.BioSequence targetQuant.EstimatedParams.[1] mz_Heavy
-                let corrLightHeavy  = calcCorrelation targetQuant.X_Xic targetQuant inferred_Heavy  
-                if diagCharts then 
-                    saveChart alignmentResult.StringSequence alignmentResult.GlobalMod alignmentResult.Charge targetQuant.X_Xic targetQuant.Y_Xic alignmentResult.PredictedScanTime
-                                targetQuant.xPeak targetQuant.yFitted targetQuant.yFitted 
-                                targetQuant.InferredScanTimeRefined targetQuant.AlignedSource
-                                inferred_Heavy.X_Xic inferred_Heavy.Y_Xic inferred_Heavy.xPeak inferred_Heavy.yFitted 
-                                clusterComparison_Target.PeakComparisons plotDirectory
-                {
-                StringSequence                              = alignmentResult.StringSequence
-                GlobalMod                                   = alignmentResult.GlobalMod
-                Charge                                      = alignmentResult.Charge
-                PepSequenceID                               = alignmentResult.PepSequenceID
-                ModSequenceID                               = alignmentResult.ModSequenceID
-                PrecursorMZ                                 = alignmentResult.Mz
-                MeasuredMass                                = targetPeptide.Mass
-                TheoMass                                    = targetPeptide.Mass
-                AbsDeltaMass                                = nan
-                MeanPercolatorScore                         = 0.
-                QValue                                      = 0.
-                PEPValue                                    = 0.
-                ProteinNames                                = alignmentResult.ProteinNames
-                QuantMz_Light                               = alignmentResult.Mz
-                Quant_Light                                 = targetQuant.Area
-                MeasuredApex_Light                          = targetQuant.MeasuredApexIntensity
-                Seo_Light                                   = targetQuant.StandardErrorOfPrediction
-                Params_Light                                = targetQuant.EstimatedParams            
-                Difference_SearchRT_FittedRT_Light          = searchRTMinusFittedRT
-                KLDiv_Observed_Theoretical_Light            = clusterComparison_Target.KLDiv_UnCorrected
-                KLDiv_CorrectedObserved_Theoretical_Light   = clusterComparison_Target.KLDiv_Corrected
-                QuantMz_Heavy                               = mz_Heavy
-                Quant_Heavy                                 = inferred_Heavy.Area
-                MeasuredApex_Heavy                          = inferred_Heavy.MeasuredApexIntensity
-                Seo_Heavy                                   = inferred_Heavy.StandardErrorOfPrediction
-                Params_Heavy                                = inferred_Heavy.EstimatedParams 
-                Difference_SearchRT_FittedRT_Heavy          = searchRTMinusFittedRT_Heavy
-                KLDiv_Observed_Theoretical_Heavy            = clusterComparison_Heavy.KLDiv_UnCorrected
-                KLDiv_CorrectedObserved_Theoretical_Heavy   = clusterComparison_Heavy.KLDiv_Corrected
-                Correlation_Light_Heavy                     = corrLightHeavy
-                QuantificationSource                        = QuantificationSource.Alignment
-                IsotopicPatternMz_Light                     = clusterComparison_Target.PeakComparisons |> Array.map (fun x -> x.Mz)
-                IsotopicPatternIntensity_Observed_Light     = clusterComparison_Target.PeakComparisons |> Array.map (fun x -> x.MeasuredIntensity)
-                IsotopicPatternIntensity_Corrected_Light    = clusterComparison_Target.PeakComparisons |> Array.map (fun x -> x.MeasuredIntensityCorrected)
-                RtTrace_Light                               = targetQuant.X_Xic 
-                IntensityTrace_Observed_Light               = targetQuant.Y_Xic_uncorrected
-                IntensityTrace_Corrected_Light              = targetQuant.Y_Xic
-                IsotopicPatternMz_Heavy                     = clusterComparison_Heavy.PeakComparisons |> Array.map (fun x -> x.Mz)
-                IsotopicPatternIntensity_Observed_Heavy     = clusterComparison_Heavy.PeakComparisons |> Array.map (fun x -> x.MeasuredIntensity)
-                IsotopicPatternIntensity_Corrected_Heavy    = clusterComparison_Heavy.PeakComparisons |> Array.map (fun x -> x.MeasuredIntensityCorrected)
-                RtTrace_Heavy                               = inferred_Heavy.X_Xic 
-                IntensityTrace_Observed_Heavy               = inferred_Heavy.Y_Xic_uncorrected
-                IntensityTrace_Corrected_Heavy              = inferred_Heavy.Y_Xic
-                }
-                |> Option.Some
+            let peakToQuantify = BioFSharp.Mz.Quantification.HULQ.getPeakBy peaks refinedXIC.FinalTargetScanTime
+            let quantP = BioFSharp.Mz.Quantification.HULQ.quantifyPeak peakToQuantify                        
+            let searchRTMinusFittedRT = searchRTMinusFittedRtTarget refinedXIC.FinalTargetScanTime quantP
+            if quantP.EstimatedParams |> Array.exists nan.Equals || Array.isEmpty quantP.EstimatedParams then 
+                if diagCharts then saveErrorChart refinedXIC.X_Xic refinedXIC.Y_Xic alignmentResult.StringSequence alignmentResult.GlobalMod alignmentResult.Charge "fittingFailed" plotDirectory    
+                logger.Trace (sprintf "Quant failed: Peak fitting failed, Sequence:%s, GlobalMod:%s, Charge:%s" (alignmentResult.StringSequence |> String.filter (fun x -> x <> '*')) (alignmentResult.GlobalMod.ToString()) (alignmentResult.Charge.ToString()))
+                None
             else
-                let mz_Light = Mass.toMZ (unlabledPeptide.Mass) (alignmentResult.Charge|> float)
-                let inferred_Light = quantifyInferredPeak false alignmentResult.RtTrace_SourceFile alignmentResult.IntensityTrace_SourceFile alignmentResult.ScanTime_SourceFile getXIC identifyPeaks mz_Light alignmentResult.PredictedScanTime inferredScanTime
-                let searchRTMinusFittedRT_Light = searchRTMinusFittedRt inferredScanTime inferred_Light
-                let clusterComparison_Light = comparePredictedAndMeasuredIsotopicCluster inferred_Light.X_Xic inferred_Light.Y_Xic inferred_Light.Y_Xic_uncorrected alignmentResult.Charge unlabledPeptide.BioSequence targetQuant.EstimatedParams.[1] mz_Light 
-                let corrLightHeavy  = calcCorrelation targetQuant.X_Xic targetQuant inferred_Light  
-                if diagCharts then 
-                    saveChart alignmentResult.StringSequence alignmentResult.GlobalMod alignmentResult.Charge targetQuant.X_Xic targetQuant.Y_Xic alignmentResult.PredictedScanTime
-                                targetQuant.xPeak targetQuant.yFitted targetQuant.yFitted 
-                                targetQuant.InferredScanTimeRefined targetQuant.AlignedSource
-                                inferred_Light.X_Xic inferred_Light.Y_Xic inferred_Light.xPeak inferred_Light.yFitted 
-                                clusterComparison_Target.PeakComparisons plotDirectory
-                {
-                StringSequence                              = alignmentResult.StringSequence
-                GlobalMod                                   = alignmentResult.GlobalMod
-                Charge                                      = alignmentResult.Charge
-                PepSequenceID                               = alignmentResult.PepSequenceID
-                ModSequenceID                               = alignmentResult.ModSequenceID
-                PrecursorMZ                                 = alignmentResult.Mz
-                MeasuredMass                                = targetPeptide.Mass
-                TheoMass                                    = targetPeptide.Mass
-                AbsDeltaMass                                = nan
-                MeanPercolatorScore                         = 0.
-                QValue                                      = 0.
-                PEPValue                                    = 0.
-                ProteinNames                                = alignmentResult.ProteinNames
-                QuantMz_Light                               = mz_Light
-                Quant_Light                                 = inferred_Light.Area
-                MeasuredApex_Light                          = inferred_Light.MeasuredApexIntensity
-                Seo_Light                                   = inferred_Light.StandardErrorOfPrediction
-                Params_Light                                = inferred_Light.EstimatedParams 
-                Difference_SearchRT_FittedRT_Light          = searchRTMinusFittedRT_Light
-                KLDiv_Observed_Theoretical_Light            = clusterComparison_Light.KLDiv_UnCorrected
-                KLDiv_CorrectedObserved_Theoretical_Light   = clusterComparison_Light.KLDiv_Corrected
-                QuantMz_Heavy                               = alignmentResult.Mz
-                Quant_Heavy                                 = targetQuant.Area
-                MeasuredApex_Heavy                          = targetQuant.MeasuredApexIntensity
-                Seo_Heavy                                   = targetQuant.StandardErrorOfPrediction
-                Params_Heavy                                = targetQuant.EstimatedParams 
-                Difference_SearchRT_FittedRT_Heavy          = searchRTMinusFittedRT
-                KLDiv_Observed_Theoretical_Heavy            = clusterComparison_Target.KLDiv_UnCorrected
-                KLDiv_CorrectedObserved_Theoretical_Heavy   = clusterComparison_Target.KLDiv_Corrected
-                Correlation_Light_Heavy                     = corrLightHeavy
-                QuantificationSource                        = QuantificationSource.Alignment
-                IsotopicPatternMz_Light                     = clusterComparison_Light.PeakComparisons |> Array.map (fun x -> x.Mz)
-                IsotopicPatternIntensity_Observed_Light     = clusterComparison_Light.PeakComparisons |> Array.map (fun x -> x.MeasuredIntensity)
-                IsotopicPatternIntensity_Corrected_Light    = clusterComparison_Light.PeakComparisons |> Array.map (fun x -> x.MeasuredIntensityCorrected)
-                RtTrace_Light                               = inferred_Light.X_Xic 
-                IntensityTrace_Observed_Light               = inferred_Light.Y_Xic_uncorrected
-                IntensityTrace_Corrected_Light              = inferred_Light.Y_Xic
-                IsotopicPatternMz_Heavy                     = clusterComparison_Target.PeakComparisons |> Array.map (fun x -> x.Mz)
-                IsotopicPatternIntensity_Observed_Heavy     = clusterComparison_Target.PeakComparisons |> Array.map (fun x -> x.MeasuredIntensity)
-                IsotopicPatternIntensity_Corrected_Heavy    = clusterComparison_Target.PeakComparisons |> Array.map (fun x -> x.MeasuredIntensityCorrected)
-                RtTrace_Heavy                               = targetQuant.X_Xic 
-                IntensityTrace_Observed_Heavy               = targetQuant.Y_Xic_uncorrected
-                IntensityTrace_Corrected_Heavy              = targetQuant.Y_Xic
-
-                }
-                |> Option.Some
+            let inferredScanTime = chooseScanTime processParams.XicExtraction.ScanTimeWindow searchRTMinusFittedRT refinedXIC.FinalTargetScanTime quantP 
+            let clusterComparisonTarget = comparePredictedAndMeasuredIsotopicCluster refinedXIC.X_Xic refinedXIC.Y_Xic refinedXIC.Y_Xic_uncorrected alignmentResult.Charge targetPeptide.BioSequence quantP.EstimatedParams.[1] refinedXIC.FinalPrecMz            
+            if alignmentResult.GlobalMod = 0 then
+                let mzHeavy = 
+                    let mz = Mass.toMZ (labeledPeptide.Mass) (alignmentResult.Charge|> float)
+                    let correctedMz = scanTimeToMzCorrection inferredScanTime + mz
+                    correctedMz 
+                let inferredQuant = 
+                    let inferredXicHeavy = getInferredXic getXIC refinedXIC.FinalTargetScanTime mzHeavy    
+                    let inferredPeaksHeavy = identifyPeaks inferredXicHeavy.X_Xic inferredXicHeavy.Y_Xic
+                    if Array.isEmpty inferredPeaksHeavy then 
+                        if diagCharts then saveErrorChart refinedXIC.X_Xic refinedXIC.Y_Xic alignmentResult.StringSequence alignmentResult.GlobalMod alignmentResult.Charge "noInferredPeaks" plotDirectory
+                        logger.Trace (sprintf "Quant failed: No Peak detected, Sequence:%s, GlobalMod:%s, Charge:%s" (alignmentResult.StringSequence |> String.filter (fun x -> x <> '*')) (alignmentResult.GlobalMod.ToString()) (alignmentResult.Charge.ToString()))
+                        None
+                    else
+                    let peakToQuantifyHeavy = BioFSharp.Mz.Quantification.HULQ.getPeakBy inferredPeaksHeavy inferredScanTime
+                    let quantPHeavy         = BioFSharp.Mz.Quantification.HULQ.quantifyPeak peakToQuantifyHeavy          
+                    if quantPHeavy.EstimatedParams |> Array.exists nan.Equals || Array.isEmpty quantPHeavy.EstimatedParams then 
+                        if diagCharts then saveErrorChart refinedXIC.X_Xic refinedXIC.Y_Xic alignmentResult.StringSequence alignmentResult.GlobalMod alignmentResult.Charge "fittingInferredFailed" plotDirectory    
+                        logger.Trace (sprintf "Quant failed: Peak fitting failed, Sequence:%s, GlobalMod:%s, Charge:%s" (alignmentResult.StringSequence |> String.filter (fun x -> x <> '*')) (alignmentResult.GlobalMod.ToString()) (alignmentResult.Charge.ToString()))
+                        None
+                    else
+                    // let inferred_Heavy = quantifyInferredPeak getXIC identifyPeaks mz_Heavy averagePSM.WeightedAvgScanTime inferredScanTime
+                    let searchRTMinusFittedRTHeavy = searchRTMinusFittedRtTarget inferredScanTime quantPHeavy
+                    let clusterComparisonHeavy = comparePredictedAndMeasuredIsotopicCluster inferredXicHeavy.X_Xic inferredXicHeavy.Y_Xic inferredXicHeavy.Y_Xic_uncorrected alignmentResult.Charge labeledPeptide.BioSequence quantP.EstimatedParams.[1] mzHeavy
+                    let corrLightHeavy  = calcCorrelation refinedXIC.X_Xic quantP quantPHeavy
+                    {
+                    Model                       = quantPHeavy.Model
+                    Area                        = quantPHeavy.Area
+                    StandardErrorOfPrediction   = quantPHeavy.StandardErrorOfPrediction
+                    MeasuredApexIntensity       = quantPHeavy.MeasuredApexIntensity
+                    Correlation_Light_Heavy     = corrLightHeavy
+                    SearchRTMinusFittedRT       = searchRTMinusFittedRTHeavy 
+                    ClusterComparison           = clusterComparisonHeavy     
+                    EstimatedParams             = quantPHeavy.EstimatedParams
+                    X_Xic                       = inferredXicHeavy.X_Xic
+                    Y_Xic                       = inferredXicHeavy.Y_Xic 
+                    Y_Xic_uncorrected           = inferredXicHeavy.Y_Xic_uncorrected 
+                    xPeak                       = peakToQuantifyHeavy.XData 
+                    yFitted                     = quantPHeavy.YPredicted
+                    }
+                    |> Some                      
+                match inferredQuant with 
+                | Some successfulQuant -> 
+                    if diagCharts then 
+                        saveChart alignmentResult.StringSequence alignmentResult.GlobalMod alignmentResult.Charge refinedXIC.X_Xic refinedXIC.Y_Xic alignmentResult.PredictedScanTime
+                                    peakToQuantify.XData quantP.YPredicted quantP.YPredicted 
+                                    refinedXIC.FinalTargetScanTime refinedXIC.AlignedSource
+                                    successfulQuant.X_Xic successfulQuant.Y_Xic successfulQuant.xPeak successfulQuant.yFitted
+                                    clusterComparisonTarget.PeakComparisons plotDirectory
+                    {
+                    StringSequence                              = alignmentResult.StringSequence
+                    GlobalMod                                   = alignmentResult.GlobalMod
+                    Charge                                      = alignmentResult.Charge
+                    PepSequenceID                               = alignmentResult.PepSequenceID
+                    ModSequenceID                               = alignmentResult.ModSequenceID
+                    PrecursorMZ                                 = refinedXIC.FinalPrecMz
+                    MeasuredMass                                = avgMass
+                    TheoMass                                    = unlabledPeptide.Mass
+                    AbsDeltaMass                                = abs(avgMass-unlabledPeptide.Mass)
+                    MeanPercolatorScore                         = nan
+                    QValue                                      = nan
+                    PEPValue                                    = nan
+                    ProteinNames                                = alignmentResult.ProteinNames
+                    QuantMz_Light                               = refinedXIC.FinalPrecMz
+                    Quant_Light                                 = quantP.Area
+                    MeasuredApex_Light                          = quantP.MeasuredApexIntensity
+                    Seo_Light                                   = quantP.StandardErrorOfPrediction
+                    Params_Light                                = quantP.EstimatedParams            
+                    Difference_SearchRT_FittedRT_Light          = searchRTMinusFittedRT
+                    KLDiv_Observed_Theoretical_Light            = clusterComparisonTarget.KLDiv_UnCorrected
+                    KLDiv_CorrectedObserved_Theoretical_Light   = clusterComparisonTarget.KLDiv_Corrected
+                    QuantMz_Heavy                               = mzHeavy
+                    Quant_Heavy                                 = successfulQuant.Area
+                    MeasuredApex_Heavy                          = successfulQuant.MeasuredApexIntensity
+                    Seo_Heavy                                   = successfulQuant.StandardErrorOfPrediction
+                    Params_Heavy                                = successfulQuant.EstimatedParams 
+                    Difference_SearchRT_FittedRT_Heavy          = successfulQuant.SearchRTMinusFittedRT
+                    KLDiv_Observed_Theoretical_Heavy            = successfulQuant.ClusterComparison.KLDiv_UnCorrected
+                    KLDiv_CorrectedObserved_Theoretical_Heavy   = successfulQuant.ClusterComparison.KLDiv_Corrected
+                    Correlation_Light_Heavy                     = successfulQuant.Correlation_Light_Heavy
+                    QuantificationSource                        = QuantificationSource.Alignment
+                    IsotopicPatternMz_Light                     = clusterComparisonTarget.PeakComparisons |> Array.map (fun x -> x.Mz)
+                    IsotopicPatternIntensity_Observed_Light     = clusterComparisonTarget.PeakComparisons |> Array.map (fun x -> x.MeasuredIntensity)
+                    IsotopicPatternIntensity_Corrected_Light    = clusterComparisonTarget.PeakComparisons |> Array.map (fun x -> x.MeasuredIntensityCorrected)
+                    RtTrace_Light                               = refinedXIC.X_Xic 
+                    IntensityTrace_Observed_Light               = refinedXIC.Y_Xic_uncorrected
+                    IntensityTrace_Corrected_Light              = refinedXIC.Y_Xic
+                    IsotopicPatternMz_Heavy                     = successfulQuant.ClusterComparison.PeakComparisons |> Array.map (fun x -> x.Mz)
+                    IsotopicPatternIntensity_Observed_Heavy     = successfulQuant.ClusterComparison.PeakComparisons |> Array.map (fun x -> x.MeasuredIntensity)
+                    IsotopicPatternIntensity_Corrected_Heavy    = successfulQuant.ClusterComparison.PeakComparisons |> Array.map (fun x -> x.MeasuredIntensityCorrected)
+                    RtTrace_Heavy                               = successfulQuant.X_Xic 
+                    IntensityTrace_Observed_Heavy               = successfulQuant.Y_Xic_uncorrected
+                    IntensityTrace_Corrected_Heavy              = successfulQuant.Y_Xic
+                    }
+                    |> Option.Some
+                | None -> 
+                    if diagCharts then 
+                        saveChart alignmentResult.StringSequence alignmentResult.GlobalMod alignmentResult.Charge refinedXIC.X_Xic refinedXIC.Y_Xic alignmentResult.PredictedScanTime
+                                    peakToQuantify.XData quantP.YPredicted quantP.YPredicted 
+                                    refinedXIC.FinalTargetScanTime refinedXIC.AlignedSource
+                                    [||] [||] [||] [||]
+                                    clusterComparisonTarget.PeakComparisons plotDirectory
+                    {
+                    StringSequence                              = alignmentResult.StringSequence
+                    GlobalMod                                   = alignmentResult.GlobalMod
+                    Charge                                      = alignmentResult.Charge
+                    PepSequenceID                               = alignmentResult.PepSequenceID
+                    ModSequenceID                               = alignmentResult.ModSequenceID
+                    PrecursorMZ                                 = refinedXIC.FinalPrecMz
+                    MeasuredMass                                = avgMass
+                    TheoMass                                    = unlabledPeptide.Mass
+                    AbsDeltaMass                                = abs(avgMass-unlabledPeptide.Mass)
+                    MeanPercolatorScore                         = nan
+                    QValue                                      = nan
+                    PEPValue                                    = nan
+                    ProteinNames                                = alignmentResult.ProteinNames
+                    QuantMz_Light                               = refinedXIC.FinalPrecMz
+                    Quant_Light                                 = quantP.Area
+                    MeasuredApex_Light                          = quantP.MeasuredApexIntensity
+                    Seo_Light                                   = quantP.StandardErrorOfPrediction
+                    Params_Light                                = quantP.EstimatedParams            
+                    Difference_SearchRT_FittedRT_Light          = searchRTMinusFittedRT
+                    KLDiv_Observed_Theoretical_Light            = clusterComparisonTarget.KLDiv_UnCorrected
+                    KLDiv_CorrectedObserved_Theoretical_Light   = clusterComparisonTarget.KLDiv_Corrected
+                    QuantMz_Heavy                               = mzHeavy
+                    Quant_Heavy                                 = nan
+                    MeasuredApex_Heavy                          = nan
+                    Seo_Heavy                                   = nan
+                    Params_Heavy                                = [||]
+                    Difference_SearchRT_FittedRT_Heavy          = nan
+                    KLDiv_Observed_Theoretical_Heavy            = nan
+                    KLDiv_CorrectedObserved_Theoretical_Heavy   = nan
+                    Correlation_Light_Heavy                     = nan
+                    QuantificationSource                        = QuantificationSource.Alignment
+                    IsotopicPatternMz_Light                     = clusterComparisonTarget.PeakComparisons |> Array.map (fun x -> x.Mz)
+                    IsotopicPatternIntensity_Observed_Light     = clusterComparisonTarget.PeakComparisons |> Array.map (fun x -> x.MeasuredIntensity)
+                    IsotopicPatternIntensity_Corrected_Light    = clusterComparisonTarget.PeakComparisons |> Array.map (fun x -> x.MeasuredIntensityCorrected)
+                    RtTrace_Light                               = refinedXIC.X_Xic 
+                    IntensityTrace_Observed_Light               = refinedXIC.Y_Xic_uncorrected
+                    IntensityTrace_Corrected_Light              = refinedXIC.Y_Xic
+                    IsotopicPatternMz_Heavy                     = [||]
+                    IsotopicPatternIntensity_Observed_Heavy     = [||]
+                    IsotopicPatternIntensity_Corrected_Heavy    = [||]
+                    RtTrace_Heavy                               = [||]
+                    IntensityTrace_Observed_Heavy               = [||]
+                    IntensityTrace_Corrected_Heavy              = [||]
+                    }
+                    |> Option.Some
+            else
+                let mzLight = 
+                    let mz = Mass.toMZ (unlabledPeptide.Mass) (alignmentResult.Charge|> float)
+                    let correctedMz = scanTimeToMzCorrection inferredScanTime + mz
+                    correctedMz   
+                let inferredQuant = 
+                    let inferredXicLight = getInferredXic getXIC refinedXIC.FinalTargetScanTime mzLight    
+                    let inferredPeaksLight = identifyPeaks inferredXicLight.X_Xic inferredXicLight.Y_Xic
+                    if Array.isEmpty inferredPeaksLight then 
+                        if diagCharts then saveErrorChart refinedXIC.X_Xic refinedXIC.Y_Xic alignmentResult.StringSequence alignmentResult.GlobalMod alignmentResult.Charge "noInferredPeaks" plotDirectory
+                        logger.Trace (sprintf "Quant failed: No Peak detected, Sequence:%s, GlobalMod:%s, Charge:%s" (alignmentResult.StringSequence |> String.filter (fun x -> x <> '*')) (alignmentResult.GlobalMod.ToString()) (alignmentResult.Charge.ToString()))
+                        None
+                    else
+                    let peakToQuantifyLight = BioFSharp.Mz.Quantification.HULQ.getPeakBy inferredPeaksLight inferredScanTime
+                    let quantPLight         = BioFSharp.Mz.Quantification.HULQ.quantifyPeak peakToQuantifyLight          
+                    if quantPLight.EstimatedParams |> Array.exists nan.Equals || Array.isEmpty quantPLight.EstimatedParams then 
+                        if diagCharts then saveErrorChart refinedXIC.X_Xic refinedXIC.Y_Xic alignmentResult.StringSequence alignmentResult.GlobalMod alignmentResult.Charge "fittingInferredFailed" plotDirectory    
+                        logger.Trace (sprintf "Quant failed: Peak fitting failed, Sequence:%s, GlobalMod:%s, Charge:%s" (alignmentResult.StringSequence |> String.filter (fun x -> x <> '*')) (alignmentResult.GlobalMod.ToString()) (alignmentResult.Charge.ToString()))
+                        None
+                    else
+                    // let inferred_Heavy = quantifyInferredPeak getXIC identifyPeaks mz_Heavy averagePSM.WeightedAvgScanTime inferredScanTime
+                    let searchRTMinusFittedRTLight = searchRTMinusFittedRtTarget inferredScanTime quantPLight
+                    let clusterComparisonLight = comparePredictedAndMeasuredIsotopicCluster inferredXicLight.X_Xic inferredXicLight.Y_Xic inferredXicLight.Y_Xic_uncorrected alignmentResult.Charge unlabledPeptide.BioSequence quantP.EstimatedParams.[1] mzLight
+                    let corrLightHeavy  = calcCorrelation refinedXIC.X_Xic quantP quantPLight
+                    {
+                    Model                       = quantPLight.Model
+                    Area                        = quantPLight.Area
+                    StandardErrorOfPrediction   = quantPLight.StandardErrorOfPrediction
+                    MeasuredApexIntensity       = quantPLight.MeasuredApexIntensity
+                    Correlation_Light_Heavy     = corrLightHeavy
+                    SearchRTMinusFittedRT       = searchRTMinusFittedRTLight 
+                    ClusterComparison           = clusterComparisonLight     
+                    EstimatedParams             = quantPLight.EstimatedParams
+                    X_Xic                       = inferredXicLight.X_Xic
+                    Y_Xic                       = inferredXicLight.Y_Xic 
+                    Y_Xic_uncorrected           = inferredXicLight.Y_Xic_uncorrected 
+                    xPeak                       = peakToQuantifyLight.XData 
+                    yFitted                     = quantPLight.YPredicted
+                    }
+                    |> Some                      
+                match inferredQuant with 
+                | Some successfulQuant -> 
+                    if diagCharts then 
+                        saveChart alignmentResult.StringSequence alignmentResult.GlobalMod alignmentResult.Charge refinedXIC.X_Xic refinedXIC.Y_Xic alignmentResult.PredictedScanTime
+                                    peakToQuantify.XData quantP.YPredicted quantP.YPredicted 
+                                    refinedXIC.FinalTargetScanTime refinedXIC.AlignedSource
+                                    successfulQuant.X_Xic successfulQuant.Y_Xic successfulQuant.xPeak successfulQuant.yFitted
+                                    clusterComparisonTarget.PeakComparisons plotDirectory
+                    {
+                    StringSequence                              = alignmentResult.StringSequence
+                    GlobalMod                                   = alignmentResult.GlobalMod
+                    Charge                                      = alignmentResult.Charge
+                    PepSequenceID                               = alignmentResult.PepSequenceID
+                    ModSequenceID                               = alignmentResult.ModSequenceID
+                    PrecursorMZ                                 = refinedXIC.FinalPrecMz
+                    MeasuredMass                                = avgMass
+                    TheoMass                                    = labeledPeptide.Mass
+                    AbsDeltaMass                                = abs(avgMass-labeledPeptide.Mass)
+                    MeanPercolatorScore                         = nan
+                    QValue                                      = nan
+                    PEPValue                                    = nan
+                    ProteinNames                                = alignmentResult.ProteinNames
+                    QuantMz_Light                               = mzLight
+                    Quant_Light                                 = successfulQuant.Area
+                    MeasuredApex_Light                          = successfulQuant.MeasuredApexIntensity
+                    Seo_Light                                   = successfulQuant.StandardErrorOfPrediction
+                    Params_Light                                = successfulQuant.EstimatedParams 
+                    Difference_SearchRT_FittedRT_Light          = successfulQuant.SearchRTMinusFittedRT
+                    KLDiv_Observed_Theoretical_Light            = successfulQuant.ClusterComparison.KLDiv_UnCorrected
+                    KLDiv_CorrectedObserved_Theoretical_Light   = successfulQuant.ClusterComparison.KLDiv_Corrected
+                    QuantMz_Heavy                               = refinedXIC.FinalPrecMz
+                    Quant_Heavy                                 = quantP.Area
+                    MeasuredApex_Heavy                          = quantP.MeasuredApexIntensity
+                    Seo_Heavy                                   = quantP.StandardErrorOfPrediction
+                    Params_Heavy                                = quantP.EstimatedParams 
+                    Difference_SearchRT_FittedRT_Heavy          = searchRTMinusFittedRT
+                    KLDiv_Observed_Theoretical_Heavy            = clusterComparisonTarget.KLDiv_UnCorrected
+                    KLDiv_CorrectedObserved_Theoretical_Heavy   = clusterComparisonTarget.KLDiv_Corrected
+                    Correlation_Light_Heavy                     = successfulQuant.Correlation_Light_Heavy
+                    QuantificationSource                        = QuantificationSource.Alignment
+                    IsotopicPatternMz_Light                     = successfulQuant.ClusterComparison.PeakComparisons |> Array.map (fun x -> x.Mz)
+                    IsotopicPatternIntensity_Observed_Light     = successfulQuant.ClusterComparison.PeakComparisons |> Array.map (fun x -> x.MeasuredIntensity)
+                    IsotopicPatternIntensity_Corrected_Light    = successfulQuant.ClusterComparison.PeakComparisons |> Array.map (fun x -> x.MeasuredIntensityCorrected)
+                    RtTrace_Light                               = successfulQuant.X_Xic 
+                    IntensityTrace_Observed_Light               = successfulQuant.Y_Xic_uncorrected
+                    IntensityTrace_Corrected_Light              = successfulQuant.Y_Xic
+                    IsotopicPatternMz_Heavy                     = clusterComparisonTarget.PeakComparisons |> Array.map (fun x -> x.Mz)
+                    IsotopicPatternIntensity_Observed_Heavy     = clusterComparisonTarget.PeakComparisons |> Array.map (fun x -> x.MeasuredIntensity)
+                    IsotopicPatternIntensity_Corrected_Heavy    = clusterComparisonTarget.PeakComparisons |> Array.map (fun x -> x.MeasuredIntensityCorrected)
+                    RtTrace_Heavy                               = refinedXIC.X_Xic 
+                    IntensityTrace_Observed_Heavy               = refinedXIC.Y_Xic_uncorrected
+                    IntensityTrace_Corrected_Heavy              = refinedXIC.Y_Xic
+                    }
+                    |> Option.Some
+                | None -> 
+                    saveChart alignmentResult.StringSequence alignmentResult.GlobalMod alignmentResult.Charge refinedXIC.X_Xic refinedXIC.Y_Xic alignmentResult.PredictedScanTime
+                                peakToQuantify.XData quantP.YPredicted quantP.YPredicted 
+                                refinedXIC.FinalTargetScanTime refinedXIC.AlignedSource
+                                [||] [||] [||] [||]
+                                clusterComparisonTarget.PeakComparisons plotDirectory
+                    {
+                    StringSequence                              = alignmentResult.StringSequence
+                    GlobalMod                                   = alignmentResult.GlobalMod
+                    Charge                                      = alignmentResult.Charge
+                    PepSequenceID                               = alignmentResult.PepSequenceID
+                    ModSequenceID                               = alignmentResult.ModSequenceID
+                    PrecursorMZ                                 = refinedXIC.FinalPrecMz
+                    MeasuredMass                                = avgMass
+                    TheoMass                                    = labeledPeptide.Mass
+                    AbsDeltaMass                                = abs(avgMass-labeledPeptide.Mass)
+                    MeanPercolatorScore                         = nan
+                    QValue                                      = nan
+                    PEPValue                                    = nan
+                    ProteinNames                                = alignmentResult.ProteinNames
+                    QuantMz_Light                               = mzLight
+                    Quant_Light                                 = nan
+                    MeasuredApex_Light                          = nan
+                    Seo_Light                                   = nan
+                    Params_Light                                = [||] 
+                    Difference_SearchRT_FittedRT_Light          = nan
+                    KLDiv_Observed_Theoretical_Light            = nan
+                    KLDiv_CorrectedObserved_Theoretical_Light   = nan
+                    QuantMz_Heavy                               = refinedXIC.FinalPrecMz
+                    Quant_Heavy                                 = quantP.Area
+                    MeasuredApex_Heavy                          = quantP.MeasuredApexIntensity
+                    Seo_Heavy                                   = quantP.StandardErrorOfPrediction
+                    Params_Heavy                                = quantP.EstimatedParams 
+                    Difference_SearchRT_FittedRT_Heavy          = searchRTMinusFittedRT
+                    KLDiv_Observed_Theoretical_Heavy            = clusterComparisonTarget.KLDiv_UnCorrected
+                    KLDiv_CorrectedObserved_Theoretical_Heavy   = clusterComparisonTarget.KLDiv_Corrected
+                    Correlation_Light_Heavy                     = nan
+                    QuantificationSource                        = QuantificationSource.Alignment
+                    IsotopicPatternMz_Light                     = [||] 
+                    IsotopicPatternIntensity_Observed_Light     = [||] 
+                    IsotopicPatternIntensity_Corrected_Light    = [||] 
+                    RtTrace_Light                               = [||] 
+                    IntensityTrace_Observed_Light               = [||] 
+                    IntensityTrace_Corrected_Light              = [||] 
+                    IsotopicPatternMz_Heavy                     = clusterComparisonTarget.PeakComparisons |> Array.map (fun x -> x.Mz)
+                    IsotopicPatternIntensity_Observed_Heavy     = clusterComparisonTarget.PeakComparisons |> Array.map (fun x -> x.MeasuredIntensity)
+                    IsotopicPatternIntensity_Corrected_Heavy    = clusterComparisonTarget.PeakComparisons |> Array.map (fun x -> x.MeasuredIntensityCorrected)
+                    RtTrace_Heavy                               = refinedXIC.X_Xic 
+                    IntensityTrace_Observed_Heavy               = refinedXIC.Y_Xic_uncorrected
+                    IntensityTrace_Corrected_Heavy              = refinedXIC.Y_Xic
+                    }
+                    |> Option.Some
             with
-            | ex ->
-             
+            | ex ->             
                 logger.Trace (sprintf "Quantfailed: %A" ex)
                 Option.None
 
@@ -763,48 +1143,57 @@ module AlignmentBasedQuantification =
             if alignmentResult.GlobalMod <> 0 then 
                 None
             else
-                let unlabledPeptide = peptideLookUp alignmentResult.StringSequence 0
-                let labeledPeptide  = peptideLookUp alignmentResult.StringSequence 1
-                let targetPeptide = if alignmentResult.GlobalMod = 0 then unlabledPeptide else labeledPeptide            
+                let targetPeptide  = peptideLookUp alignmentResult.StringSequence 0          
                 let targetMz = Mass.toMZ (targetPeptide.Mass) (alignmentResult.Charge|> float)
-                let targetQuant = quantifyInferredPeak processParams.PerformLocalWarp alignmentResult.RtTrace_SourceFile alignmentResult.IntensityTrace_SourceFile alignmentResult.ScanTime_SourceFile getXIC identifyPeaks targetMz alignmentResult.PredictedScanTime alignmentResult.PredictedScanTime
-                if Array.isEmpty targetQuant.EstimatedParams && diagCharts then 
-                    Chart.Point(targetQuant.X_Xic, targetQuant.Y_Xic)
-                    |> Chart.withTitle(sprintf "Sequence= %s,globalMod = %i_noPeaks" alignmentResult.StringSequence alignmentResult.GlobalMod)
-                    |> Chart.withSize(1500.,800.)
-                    |> Chart.SaveHtmlAs(Path.Combine[|plotDirectory; ((alignmentResult.StringSequence |> String.filter (fun x -> x <> '*')) + "_GMod_" + alignmentResult.GlobalMod.ToString() + "Ch" + alignmentResult.Charge.ToString() + "_notQuantified")|])
+                let refinedXIC = 
+                    getRefinedXic processParams.PerformLocalWarp getXIC 
+                        alignmentResult.RtTrace_SourceFile alignmentResult.IntensityTrace_SourceFile alignmentResult.ScanTime_SourceFile 
+                            scanTimeToMzCorrection targetMz alignmentResult.PredictedScanTime
+                let avgMass = Mass.ofMZ (targetMz) (alignmentResult.Charge |> float)
+                let peaks = identifyPeaks refinedXIC.X_Xic refinedXIC.Y_Xic
+                if Array.isEmpty peaks then 
+                    if diagCharts then saveErrorChart refinedXIC.X_Xic refinedXIC.Y_Xic alignmentResult.StringSequence alignmentResult.GlobalMod alignmentResult.Charge "noPeaks" plotDirectory
+                    logger.Trace (sprintf "Quant failed: No Peak detected, Sequence:%s, GlobalMod:%s, Charge:%s" (alignmentResult.StringSequence |> String.filter (fun x -> x <> '*')) (alignmentResult.GlobalMod.ToString()) (alignmentResult.Charge.ToString()))
                     None
                 else
-                let searchRTMinusFittedRT = searchRTMinusFittedRt alignmentResult.PredictedScanTime targetQuant 
-                let clusterComparison_Target = comparePredictedAndMeasuredIsotopicCluster targetQuant.X_Xic targetQuant.Y_Xic targetQuant.Y_Xic_uncorrected alignmentResult.Charge targetPeptide.BioSequence targetQuant.EstimatedParams.[1] targetMz
+                let peakToQuantify = BioFSharp.Mz.Quantification.HULQ.getPeakBy peaks refinedXIC.FinalTargetScanTime
+                let quantP = BioFSharp.Mz.Quantification.HULQ.quantifyPeak peakToQuantify                        
+                let searchRTMinusFittedRT = searchRTMinusFittedRtTarget refinedXIC.FinalTargetScanTime quantP
+                if quantP.EstimatedParams |> Array.exists nan.Equals || Array.isEmpty quantP.EstimatedParams then 
+                    if diagCharts then saveErrorChart refinedXIC.X_Xic refinedXIC.Y_Xic alignmentResult.StringSequence alignmentResult.GlobalMod alignmentResult.Charge "fittingFailed" plotDirectory    
+                    logger.Trace (sprintf "Quant failed: Peak fitting failed, Sequence:%s, GlobalMod:%s, Charge:%s" (alignmentResult.StringSequence |> String.filter (fun x -> x <> '*')) (alignmentResult.GlobalMod.ToString()) (alignmentResult.Charge.ToString()))
+                    None
+                else
+                let inferredScanTime = chooseScanTime processParams.XicExtraction.ScanTimeWindow searchRTMinusFittedRT refinedXIC.FinalTargetScanTime quantP 
+                let clusterComparisonTarget = comparePredictedAndMeasuredIsotopicCluster refinedXIC.X_Xic refinedXIC.Y_Xic refinedXIC.Y_Xic_uncorrected alignmentResult.Charge targetPeptide.BioSequence quantP.EstimatedParams.[1] refinedXIC.FinalPrecMz
                 if diagCharts then 
-                    saveChart alignmentResult.StringSequence alignmentResult.GlobalMod alignmentResult.Charge targetQuant.X_Xic targetQuant.Y_Xic alignmentResult.PredictedScanTime
-                                targetQuant.xPeak targetQuant.yFitted targetQuant.yFitted 
-                                targetQuant.InferredScanTimeRefined targetQuant.AlignedSource
-                                [||] [||] [||] [||] 
-                                clusterComparison_Target.PeakComparisons plotDirectory
+                    saveChart alignmentResult.StringSequence alignmentResult.GlobalMod alignmentResult.Charge refinedXIC.X_Xic refinedXIC.Y_Xic alignmentResult.PredictedScanTime
+                                peakToQuantify.XData quantP.YPredicted quantP.YPredicted 
+                                refinedXIC.FinalTargetScanTime refinedXIC.AlignedSource
+                                [||] [||] [||] [||]
+                                clusterComparisonTarget.PeakComparisons plotDirectory
                 {
                 StringSequence                              = alignmentResult.StringSequence
                 GlobalMod                                   = alignmentResult.GlobalMod
                 Charge                                      = alignmentResult.Charge
                 PepSequenceID                               = alignmentResult.PepSequenceID
                 ModSequenceID                               = alignmentResult.ModSequenceID
-                PrecursorMZ                                 = alignmentResult.Mz
-                MeasuredMass                                = targetPeptide.Mass
+                PrecursorMZ                                 = refinedXIC.FinalPrecMz
+                MeasuredMass                                = avgMass
                 TheoMass                                    = targetPeptide.Mass
-                AbsDeltaMass                                = nan
-                MeanPercolatorScore                         = 0.
-                QValue                                      = 0.
-                PEPValue                                    = 0.
+                AbsDeltaMass                                = abs(avgMass-targetPeptide.Mass)
+                MeanPercolatorScore                         = nan
+                QValue                                      = nan
+                PEPValue                                    = nan
                 ProteinNames                                = alignmentResult.ProteinNames
-                QuantMz_Light                               = alignmentResult.Mz
-                Quant_Light                                 = targetQuant.Area
-                MeasuredApex_Light                          = targetQuant.MeasuredApexIntensity
-                Seo_Light                                   = targetQuant.StandardErrorOfPrediction
-                Params_Light                                = targetQuant.EstimatedParams            
+                QuantMz_Light                               = refinedXIC.FinalPrecMz
+                Quant_Light                                 = quantP.Area
+                MeasuredApex_Light                          = quantP.MeasuredApexIntensity
+                Seo_Light                                   = quantP.StandardErrorOfPrediction
+                Params_Light                                = quantP.EstimatedParams            
                 Difference_SearchRT_FittedRT_Light          = searchRTMinusFittedRT
-                KLDiv_Observed_Theoretical_Light            = clusterComparison_Target.KLDiv_UnCorrected
-                KLDiv_CorrectedObserved_Theoretical_Light   = clusterComparison_Target.KLDiv_Corrected
+                KLDiv_Observed_Theoretical_Light            = clusterComparisonTarget.KLDiv_UnCorrected
+                KLDiv_CorrectedObserved_Theoretical_Light   = clusterComparisonTarget.KLDiv_Corrected
                 QuantMz_Heavy                               = nan
                 Quant_Heavy                                 = nan
                 MeasuredApex_Heavy                          = nan
@@ -815,18 +1204,18 @@ module AlignmentBasedQuantification =
                 KLDiv_CorrectedObserved_Theoretical_Heavy   = nan
                 Correlation_Light_Heavy                     = nan
                 QuantificationSource                        = QuantificationSource.Alignment
-                IsotopicPatternMz_Light                     = clusterComparison_Target.PeakComparisons|> Array.map (fun x -> x.Mz)
-                IsotopicPatternIntensity_Observed_Light     = clusterComparison_Target.PeakComparisons|> Array.map (fun x -> x.MeasuredIntensity)
-                IsotopicPatternIntensity_Corrected_Light    = clusterComparison_Target.PeakComparisons|> Array.map (fun x -> x.MeasuredIntensityCorrected)
-                RtTrace_Light                               = targetQuant.X_Xic 
-                IntensityTrace_Observed_Light               = targetQuant.Y_Xic_uncorrected
-                IntensityTrace_Corrected_Light              = targetQuant.Y_Xic
+                IsotopicPatternMz_Light                     = clusterComparisonTarget.PeakComparisons |> Array.map (fun x -> x.Mz)
+                IsotopicPatternIntensity_Observed_Light     = clusterComparisonTarget.PeakComparisons |> Array.map (fun x -> x.MeasuredIntensity)
+                IsotopicPatternIntensity_Corrected_Light    = clusterComparisonTarget.PeakComparisons |> Array.map (fun x -> x.MeasuredIntensityCorrected)
+                RtTrace_Light                               = refinedXIC.X_Xic 
+                IntensityTrace_Observed_Light               = refinedXIC.Y_Xic_uncorrected
+                IntensityTrace_Corrected_Light              = refinedXIC.Y_Xic
                 IsotopicPatternMz_Heavy                     = [||]
                 IsotopicPatternIntensity_Observed_Heavy     = [||]
                 IsotopicPatternIntensity_Corrected_Heavy    = [||]
                 RtTrace_Heavy                               = [||]
                 IntensityTrace_Observed_Heavy               = [||]
-                IntensityTrace_Corrected_Heavy              = [||]                
+                IntensityTrace_Corrected_Heavy              = [||]
                 }
                 |> Option.Some
             with
@@ -834,11 +1223,13 @@ module AlignmentBasedQuantification =
                 logger.Trace (sprintf "Quantfailed: %A" ex)
                 Option.None
         logger.Trace "init quantification functions:finished"
+        
         logger.Trace (sprintf "executing quantification of %i metric peptides" alignmentMetrics.Length)
         quantifyTestDataSet alignmentMetrics
         |> SeqIO'.csv "\t" true false
         |> FSharpAux.IO.SeqIO.Seq.writeOrAppend (outFilePathMetrics)
         logger.Trace "executing quantification metric peptides: finished"      
+        
         logger.Trace "executing quantification"
         let quantResults = 
             alignmentResults        
@@ -856,7 +1247,8 @@ module AlignmentBasedQuantification =
             else
                 quantResults
                 |> lightQualityFilter -2. 2.
-        filteredResults
+        let appendedResults = Array.append psmbasedQuant filteredResults       
+        appendedResults
         |> SeqIO'.csv "\t" true false
         |> FSharpAux.IO.SeqIO.Seq.writeOrAppend (outFilePath)
         inTr.Commit()
