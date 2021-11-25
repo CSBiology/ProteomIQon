@@ -211,7 +211,39 @@ module AlignmentBasedQuantification =
                 |> log2
             (qualR > lowerBorder && qualR < upperBorder) || (nan.Equals(qualR) )
             )
-       
+    
+    /// Can be used to filter out all QuantResults whos absolute difference between fitted scan time and initial scantime
+    /// exceed a given (positive) standard deviation factor (stDevFactor).
+    /// Example: if the search scan time was 30. and fitted Scantime 30.5 the difference between
+    /// fitted scan time and initial scantime is 0.5. If the standard deviation of the peak
+    /// was 0.25, factor is 2. If stDevFactor is 1.5 this quantification is discarded, if it is 3. the quantification is kept.
+    let lightScanTimeDifferenceFilter stDevFactor (quantResults:QuantificationResult[]) =
+        if stDevFactor <= 0. then failwith "stabwfactor has to be positive." else
+        quantResults
+        |> Array.filter (fun qP -> 
+            match QuantificationResult.tryLightGetStabw qP with 
+            | Some stdev -> 
+                let differenceStDevRatio = (abs qP.Difference_SearchRT_FittedRT_Light) / stdev
+                differenceStDevRatio < stDevFactor
+            | None -> false
+            )    
+
+    /// Can be used to filter out all QuantResults whos absolute difference between fitted scan time and initial scantime
+    /// exceed a given (positive) standard deviation factor (stDevFactor).
+    /// Example: if the search scan time was 30. and fitted Scantime 30.5 the difference between
+    /// fitted scan time and initial scantime is 0.5. If the standard deviation of the peak
+    /// was 0.25, factor is 2. If stDevFactor is 1.5 this quantification is discarded, if it is 3. the quantification is kept.
+    let heavyScanTimeDifferenceFilter stDevFactor (quantResults:QuantificationResult[]) =
+        if stDevFactor <= 0. then failwith "stabwfactor has to be positive." else
+        quantResults
+        |> Array.filter (fun qP -> 
+            match QuantificationResult.tryHeavyGetStabw qP with 
+            | Some stdev -> 
+                let differenceStDevRatio = (abs qP.Difference_SearchRT_FittedRT_Heavy) / stdev
+                differenceStDevRatio < stDevFactor
+            | None -> false
+            )
+            
     /// Calculates the Kullback-Leibler divergence Dkl(p||q) from q (theory, model, description, or approximation of p) 
     /// to p (the "true" distribution of data, observations, or a precisely calculated theoretical distribution).
     let klDiv (p:float []) (q:float []) = 
@@ -680,6 +712,11 @@ module AlignmentBasedQuantification =
                         (scanTime, diff)
                         |> Option.Some
                     )
+                |> Array.filter (fun (x,y) -> (nan.Equals(x) |> not) && (nan.Equals(y) |> not))
+                |> Array.sortBy fst
+            //scanTimeVsDelta
+            //|> Array.map (fun x -> sprintf "%f;%f" (fst x) (snd x))
+            //|> FSharpAux.IO.SeqIO.Seq.writeOrAppend (@"C:\Users\Public\David\DataAnalysis\1_Pipeline\AlignQuantN14N15\booo.csv")
             let borders =
                 scanTimeVsDelta
                 |> Seq.map snd
@@ -1242,12 +1279,37 @@ module AlignmentBasedQuantification =
         let filteredResults = 
             if processParams.PerformLabeledQuantification then 
                 quantResults
+                |> lightScanTimeDifferenceFilter 4. 
+                |> heavyScanTimeDifferenceFilter 4. 
                 |> heavyQualityFilter -2. 2.
                 |> lightQualityFilter -2. 2.          
             else
                 quantResults
+                |> lightScanTimeDifferenceFilter 4. 
                 |> lightQualityFilter -2. 2.
-        let appendedResults = Array.append psmbasedQuant filteredResults       
+        let appendedResults = 
+            Array.append psmbasedQuant filteredResults       
+            |> Array.groupBy (fun x -> x.StringSequence,x.ModSequenceID,x.Charge,x.GlobalMod)
+            |> Array.choose (fun (pepIon,ions) -> 
+                if processParams.PerformLabeledQuantification then
+                    let min =
+                        ions
+                        |> Array.minBy (fun x -> 
+                            if x.GlobalMod = 0 then
+                                x.Difference_SearchRT_FittedRT_Light
+                            else
+                                x.Difference_SearchRT_FittedRT_Heavy
+                            )
+                    if nan.Equals min then None else Some min
+                else
+                    let min =
+                        ions
+                        |> Array.minBy (fun x -> 
+                                x.Difference_SearchRT_FittedRT_Light
+                            )
+
+                    if nan.Equals min then None else Some min
+                )
         appendedResults
         |> SeqIO'.csv "\t" true false
         |> FSharpAux.IO.SeqIO.Seq.writeOrAppend (outFilePath)

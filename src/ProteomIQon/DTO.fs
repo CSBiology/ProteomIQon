@@ -911,6 +911,41 @@ module Dto =
             with
             | _ -> [||]
 
+        /// Retrieves the scan time based on the fitted parameter values (HULQ output).
+        let tryLightGetScanTime (qp:QuantificationResult) = 
+            try
+                qp.Params_Light.[1] 
+                |> float
+                |> Some
+            with
+            | _ -> None
+
+        /// Retrieves the scan time based on the fitted parameter values (HULQ output).
+        let tryHeavyGetScanTime (qp:QuantificationResult) = 
+            try
+                qp.Params_Heavy.[1] 
+                |> float
+                |> Some
+            with
+            | _ -> None
+
+        /// Retrieves the scan time based on the fitted parameter values (HULQ output).
+        let tryLightGetStabw (qp:QuantificationResult) = 
+            try
+                qp.Params_Light.[2] 
+                |> float
+                |> Some
+            with
+            | _ -> None
+
+        /// Retrieves the scan time based on the fitted parameter values (HULQ output).
+        let tryHeavyGetStabw (qp:QuantificationResult) = 
+            try
+                qp.Params_Heavy.[2] 
+                |> float
+                |> Some
+            with
+            | _ -> None
     ///
     type AlignmentParams = {
         Placeholder : bool 
