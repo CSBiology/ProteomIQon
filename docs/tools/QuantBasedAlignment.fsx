@@ -3,7 +3,7 @@
 title: QuantBasedAlignment
 category: Tools
 categoryindex: 1
-index: 7
+index: 8
 ---
 *)
 (**
@@ -12,7 +12,7 @@ index: 7
 [![Notebook]({{root}}img/badge-notebook.svg)]({{root}}{{fsdocs-source-basename}}.ipynb)
 
 # Quantification based Alignment
-**Disclaimer** this tool needs [aligned quant]({{root}}tools/PSMBasedQuantification.html) files.
+**Disclaimer** this tool needs [quantified peptides]({{root}}tools/PSMBasedQuantification.html) files.
 
 One of the drawbacks of data-dependent acquisition is the stochastic nature of peptide ion selection for MSMS fragmentation as a prerequisite for
 peptide identification and quantification. A way to overcome this drawback is the transfer of identified ions from one run to another using the assumption that the run is merely
