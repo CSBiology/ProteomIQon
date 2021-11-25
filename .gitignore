@@ -206,3 +206,4 @@ docs/tools/YourPathHere
 /src/JoinQuantPepIonsWithProteins/Properties/launchSettings.json
 
 .ionide
+/src/AlignmentBasedQuantification/Properties/launchSettings.json
