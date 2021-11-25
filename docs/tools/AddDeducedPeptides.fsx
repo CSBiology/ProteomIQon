@@ -3,7 +3,7 @@
 title: AddDeducedPeptides
 category: Tools
 categoryindex: 1
-index: 8
+index: 10
 ---
 *)
 (**
@@ -12,7 +12,7 @@ index: 8
 [![Notebook]({{root}}img/badge-notebook.svg)]({{root}}{{fsdocs-source-basename}}.ipynb)
 
 # Add Deduced Peptides
-**Disclaimer** this tool needs [protein inference]({{root}}tools/ProteinInference.html) and [aligned quant]({{root}}tools/PSMBasedQuantification.html)
+**Disclaimer** this tool needs [protein inference]({{root}}tools/ProteinInference.html) and [aligned quant]({{root}}tools/AlignmentBasedQuantification.html)
 files.
 
 After the alignment based quantification, the protein inference files do no longer match the peptides present in the quantification files. The quantification file now contains additional quantified peptides based on 
