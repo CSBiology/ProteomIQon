@@ -1,12 +1,12 @@
 (**
-// can't yet format YamlFrontmatter (["title: AddDeducedPeptides"; "category: Tools"; "categoryindex: 1"; "index: 8"], Some { StartLine = 2 StartColumn = 0 EndLine = 6 EndColumn = 8 }) to pynb markdown
+// can't yet format YamlFrontmatter (["title: AddDeducedPeptides"; "category: Tools"; "categoryindex: 1"; "index: 10"], Some { StartLine = 2 StartColumn = 0 EndLine = 6 EndColumn = 9 }) to pynb markdown
 
 [![Binder](https://csbiology.github.io/ProteomIQon/img/badge-binder.svg)](https://mybinder.org/v2/gh/csbiology/ProteomIQon/gh-pages?filepath=tools/AddDeducedPeptides.ipynb)&emsp;
 [![Script](https://csbiology.github.io/ProteomIQon/img/badge-script.svg)](https://csbiology.github.io/ProteomIQon/tools/AddDeducedPeptides.fsx)&emsp;
 [![Notebook](https://csbiology.github.io/ProteomIQon/img/badge-notebook.svg)](https://csbiology.github.io/ProteomIQon/tools/AddDeducedPeptides.ipynb)
 
 # Add Deduced Peptides
-**Disclaimer** this tool needs [protein inference](https://csbiology.github.io/ProteomIQon/tools/ProteinInference.html) and [aligned quant](https://csbiology.github.io/ProteomIQon/tools/PSMBasedQuantification.html)
+**Disclaimer** this tool needs [protein inference](https://csbiology.github.io/ProteomIQon/tools/ProteinInference.html) and [aligned quant](https://csbiology.github.io/ProteomIQon/tools/AlignmentBasedQuantification.html)
 files.
 
 After the alignment based quantification, the protein inference files do no longer match the peptides present in the quantification files. The quantification file now contains additional quantified peptides based on 
