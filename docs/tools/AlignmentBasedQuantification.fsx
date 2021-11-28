@@ -119,7 +119,7 @@ and a list of peptides [deduced by alignment]({{root}}tools/QuantBasedAlignment.
 *)
 
 (**
-	proteomiqon-alignmentbasedquantification -i "path/to/your/run.mzlite" -ii "path/to/your/run.qpsm" -d "path/to/your/database.sqlite" -o "path/to/your/outDirectory" -p "path/to/your/params.json"
+	proteomiqon-alignmentbasedquantification -i "path/to/your/run.mzlite" -ii "path/to/your/run.align" -iii "path/to/your/run.alignmetric" -iv "path/to/your/run.quant" -d "path/to/your/database.sqlite" -o "path/to/your/outDirectory" -p "path/to/your/params.json"
 *)
 
 (**
@@ -127,7 +127,7 @@ It is also possible to call the tool on a lists of MS and scored psm files. If y
 *)
 
 (**
-	proteomiqon-alignmentbasedquantification -i "path/to/your/run1.mzlite" "path/to/your/run2.mzlite" "path/to/your/run3.mzlite" -ii "path/to/your/run1.qpsm" "path/to/your/run2.qpsm" "path/to/your/run3.qpsm" -d "path/to/your/database.sqlite" -o "path/to/your/outDirectory" -p "path/to/your/params.json" -c 3
+	proteomiqon-alignmentbasedquantification -i "path/to/your/run1.mzlite" "path/to/your/run2.mzlite" -ii "path/to/your/run1.align" "path/to/your/run2.align" -iii "path/to/your/run1.alignmetric" "path/to/your/run2.alignmetric" -iv "path/to/your/run1.quant" "path/to/your/run2.quant" -d "path/to/your/database.sqlite" -o "path/to/your/outDirectory" -p "path/to/your/params.json" -c 2
 *)
 
 (**
@@ -135,7 +135,7 @@ By default files get matched by their position in the list. To perform a name ba
 *)
 
 (**
-	proteomiqon-alignmentbasedquantification -i "path/to/your/run1.mzlite" "path/to/your/run3.mzlite" "path/to/your/run2.mzlite" -ii "path/to/your/run1.qpsm" "path/to/your/run2.qpsm" "path/to/your/run3.qpsm" -d "path/to/your/database.sqlite" -o "path/to/your/outDirectory" -p "path/to/your/params.json" -c 3 -mf 
+	proteomiqon-alignmentbasedquantification -i "path/to/your/run1.mzlite" "path/to/your/run2.mzlite" -ii "path/to/your/run1.align" "path/to/your/run2.align" -iii "path/to/your/run1.alignmetric" "path/to/your/run2.alignmetric" -iv "path/to/your/run1.quant" "path/to/your/run2.quant" -d "path/to/your/database.sqlite" -o "path/to/your/outDirectory" -p "path/to/your/params.json" -c 2 -mf 
 *)
 
 (**
