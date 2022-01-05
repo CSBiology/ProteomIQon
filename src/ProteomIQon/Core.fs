@@ -12,6 +12,9 @@ open MzIO.Binary
 //open MzIO.Wiff
 //open MzIO.(*Thermo*)
 open MzIO.MzSQL
+open MzIO.Model
+open MzIO.MetaData.PSIMSExtension
+open MzIO.Model.CvParam
 
 module Core =
     
@@ -83,6 +86,48 @@ module Core =
                 match mzReader with
                 | :? MzIO.MzSQL.MzSQL as r -> r.Connection.Open()
                 | _ -> ()
+
+        module Processing =
+            
+            /// Changes the unit for ScanTime (formerly: RetentionTime) of the MassSpectrum to minutes
+            let changeScanTimeToMinutes (massSpectrum: MassSpectrum) =
+                let newScanList = new ScanList()
+                let scans =  
+                    massSpectrum.Scans.GetProperties false
+                    |> Array.ofSeq
+                    |> Array.map (fun scan -> 
+                        match scan.Value with
+                        | :? Scan -> 
+                            let s = (scan.Value :?> Scan)
+                            let rt = s.TryGetValue(PSIMS_Scan.ScanStartTime)
+                            match rt with
+                            | Some t -> 
+                                let oldParam = t :?> IParamBase<IConvertible>
+                                let oldParamValue =
+                                    Convert.ToDouble((tryGetValue oldParam).Value)
+                                let oldParamUnit =
+                                    (tryGetCvUnitAccession oldParam).Value
+                                match oldParamUnit with
+                                | "UO:0000010" ->
+                                    let newParam =
+                                        let timeInMin = oldParamValue / 60.
+                                        let cvParam = new CvParam<IConvertible>(PSIMS_Scan.ScanStartTime, ParamValue.WithCvUnitAccession((timeInMin :> IConvertible), "UO:0000031"))
+                                        cvParam
+                                    s.RemoveItem(PSIMS_Scan.ScanStartTime)
+                                    s.AddCvParam(newParam)
+                                    newScanList.Add(Guid.NewGuid().ToString(),s)
+                                | "UO:0000031" -> newScanList.Add(Guid.NewGuid().ToString(),s)
+                                | _ -> failwith "Unknown Time Unit in Scans"
+
+                            | None -> newScanList.Add(Guid.NewGuid().ToString(),s)
+                        | :? UserParam<IConvertible> ->
+                            newScanList.AddUserParam(scan.Value :?> UserParam<IConvertible>)
+                        | :? CvParam<IConvertible> ->
+                            newScanList.AddCvParam(scan.Value :?> CvParam<IConvertible>)
+                        | _ -> failwith "unexpected input type"
+                    )
+                massSpectrum.Scans <- newScanList
+                massSpectrum
 
 
         module Peaks = 
