@@ -292,6 +292,7 @@ module Common =
     type GroupFilter = 
         | Tukey of float  
         | Stdev of float
+        | TopX  of int
 
 
     module GroupFilter =
@@ -310,7 +311,14 @@ module Common =
                     let mean = Seq.mean values
                     let stdev = Seq.stDev values
                     (fun v -> v <= (mean+stdev*threshold) && v >= (mean-stdev*threshold)
-                    ) 
+                    )
+            | TopX count ->
+                fun (values:seq<float>) -> 
+                    let topX =
+                        values
+                        |> Seq.sortDescending
+                        |> Seq.take count
+                    fun v -> topX |> Seq.contains v
 
 
     module LabeledProteinQuantification = 
