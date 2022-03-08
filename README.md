@@ -1,3 +1,4 @@
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.6335068.svg)](https://doi.org/10.5281/zenodo.6335068)
 [![Made with F#](https://img.shields.io/badge/Made%20with-FSharp-rgb(184,69,252).svg)](https://fsharp.org/)
 ![GitHub contributors](https://img.shields.io/github/contributors/CSBiology/ProteomIQon)
 
@@ -26,6 +27,14 @@ Please refer to the CSB [Contribution guidelines](.github/CONTRIBUTING.md)
 
 Community/Social
 ----------------
+
 Want to get in touch with us? We recently joined the twitter crowd:
 
 [![Twitter Follow](https://img.shields.io/twitter/follow/cs_biology.svg?style=social)](https://twitter.com/cs_biology)
+
+Citation
+----------------
+
+When using ProteomIQon in scientifc or commercial releases, please cite us using the following DOI: `10.5281/zenodo.6335068`
+
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.6335068.svg)](https://doi.org/10.5281/zenodo.6335068)
