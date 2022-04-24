@@ -11,6 +11,7 @@ open MzIO.Processing
 open MzIO.IO
 open MzIO.MzSQL
 open MzIO.IO.MzML
+open ProteomIQon.Core.MzIO.Processing
 
 module MzMLToMzLite =
 
@@ -170,7 +171,6 @@ module MzMLToMzLite =
         // Get all mass spectra
         let massSpectra = 
             inReaderMS.ReadMassSpectra(inRunID)
-
         logger.Trace "Filtering mass spectra according to retention time."
         // Filter mass spectra by minimum or maximum scan time time.
         let massSpectraF =
@@ -195,7 +195,6 @@ module MzMLToMzLite =
                               )
             | None, None ->
                 massSpectra
-
         //logger.Trace (sprintf "Copying %i mass spectra to output data base." (Seq.length massSpectraF))
         ///
         let insert =
@@ -207,7 +206,7 @@ module MzMLToMzLite =
             |> Seq.iteri (fun i ms ->
                             if i%1000 = 0 then logger.Trace (sprintf "%i" i)
                             try
-                                insertSprectrum processParams.Compress outReader outRunID ms1PeakPicking ms2PeakPicking ms
+                                insertSprectrum processParams.Compress outReader outRunID ms1PeakPicking ms2PeakPicking (changeScanTimeToMinutes ms)
                             with
                             | ex ->
                                 logger.Trace (sprintf "File:%s ID: %s could not be inserted. Exeption:%A" instrumentOutput ms.ID ex)
