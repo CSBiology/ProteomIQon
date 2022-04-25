@@ -596,7 +596,7 @@ module PSMBasedQuantification =
             let filteredValues =
                 scanTimeVsDelta
                 |> Array.ofSeq
-                |> Array.filter (fun (s,d) -> d <= borders.Upper && d >= borders.Lower)
+                |> Array.filter (fun (s,d) -> (d <= borders.Upper && d >= borders.Lower) && d < 0.1)
             let scanTimeToMzCorrection =
                 let runTime = scanTimeVsDelta |> Array.maxBy fst |> fst
                 if runTime > 20. && qpsms.Length > 500 then
@@ -1122,7 +1122,7 @@ module PSMBasedQuantification =
             if processParams.PerformLabeledQuantification then 
                 quantResults
                 |> heavyQualityFilter -2. 2.
-                |> lightQualityFilter -2. 2.
+                //|> lightQualityFilter -2. 2.
                 
             else
                 quantResults
