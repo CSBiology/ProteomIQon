@@ -117,6 +117,14 @@ module Core =
                                     s.AddCvParam(newParam)
                                     newScanList.Add(Guid.NewGuid().ToString(),s)
                                 | "UO:0000031" -> newScanList.Add(Guid.NewGuid().ToString(),s)
+                                | "UO:0000032" ->
+                                    let newParam =
+                                        let timeInMin = oldParamValue * 60.
+                                        let cvParam = new CvParam<IConvertible>(PSIMS_Scan.ScanStartTime, ParamValue.WithCvUnitAccession((timeInMin :> IConvertible), "UO:0000031"))
+                                        cvParam
+                                    s.RemoveItem(PSIMS_Scan.ScanStartTime)
+                                    s.AddCvParam(newParam)
+                                    newScanList.Add(Guid.NewGuid().ToString(),s)
                                 | _ -> failwith "Unknown Time Unit in Scans"
 
                             | None -> newScanList.Add(Guid.NewGuid().ToString(),s)
