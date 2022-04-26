@@ -1,3 +1,6 @@
+#### 0.0.8 - Tuesday, April 26, 2022
+* Constrain delta to be < 0.1 for mz error correction
+
 #### 0.0.7 - Friday, August 20, 2021
 * refine error logging
 * improve mz refinement and added estimation for mz Window
