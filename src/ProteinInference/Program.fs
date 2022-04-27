@@ -22,6 +22,7 @@ module console1 =
         let d    = results.GetResult PeptideDataBase |> getPathRelativeToDir
         let o    = results.GetResult OutputDirectory |> getPathRelativeToDir
         let p    = results.GetResult ParamFile |> getPathRelativeToDir
+        let dc   = results.Contains DiagnosticCharts
         let gff3 =
             let path = results.TryGetResult GFF3
             match path with
@@ -49,6 +50,6 @@ module console1 =
             parsePaths (fun path -> Directory.GetFiles(path,("*.qpsm"))) i
             |> Array.ofSeq
         logger.Trace (sprintf "Inputfiles: %A" files)
-        ProteinInference.inferProteins gff3 dbConnection proteinInferenceParams o files
+        ProteinInference.inferProteins dc gff3 dbConnection proteinInferenceParams o files
         logger.Info "Done"
         0

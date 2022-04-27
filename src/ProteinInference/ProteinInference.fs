@@ -44,6 +44,62 @@ module ProteinInference =
              FDRControl'.calculateQValueLogReg fdr bandwidth data 
         | NoQValue -> (fun (a:'a -> bool) (i: 'i -> float) (ii: 'i -> float) -> fun x -> nan)
 
+    let qValueHitsVisualization bandwidth (inferredProteinClassItemScored: ProteinInference'.InferredProteinClassItemQValue[]) path (groupFiles: bool) =
+        let decoy, target = inferredProteinClassItemScored |> Array.partition (fun x -> x.DecoyBigger)
+        // Histogram with relative abundance
+        let freqTarget = FSharp.Stats.Distributions.Frequency.create bandwidth (target |> Array.map (fun x -> x.TargetScore))
+                            |> Map.toArray
+                            |> Array.map (fun x -> fst x, (float (snd x)) / (float target.Length))
+        let freqDecoy  = FSharp.Stats.Distributions.Frequency.create bandwidth (decoy |> Array.map (fun x -> x.DecoyScore))
+                            |> Map.toArray
+                            |> Array.map (fun x -> fst x, (float (snd x)) / (float target.Length))
+        // Histogram with absolute values
+        let freqTarget1 = FSharp.Stats.Distributions.Frequency.create bandwidth (target |> Array.map (fun x -> x.TargetScore))
+                            |> Map.toArray
+        let freqDecoy1  = FSharp.Stats.Distributions.Frequency.create bandwidth (decoy |> Array.map (fun x -> x.DecoyScore))
+                            |> Map.toArray
+        let histogram =
+            [
+                Chart.Column freqTarget 
+                |> Chart.withTraceName "Target"
+                |> Chart.withAxisAnchor(Y=1);
+                Chart.Column freqDecoy |> Chart.withTraceName "Decoy"
+                |> Chart.withAxisAnchor(Y=1);
+                Chart.Column freqTarget1
+                |> Chart.withAxisAnchor(Y=2)
+                |> Chart.withMarkerStyle (Opacity = 0.)
+                |> Chart.withTraceName (Showlegend = false);
+                Chart.Column freqDecoy1
+                |> Chart.withAxisAnchor(Y=2)
+                |> Chart.withMarkerStyle (Opacity = 0.)
+                |> Chart.withTraceName (Showlegend = false)
+            ]
+            |> Chart.Combine
+
+        let sortedQValues =
+            inferredProteinClassItemScored
+            |> Array.map
+                (fun x -> if x.Decoy then
+                            x.DecoyScore, x.QValue
+                            else
+                            x.TargetScore, x.QValue
+                )
+            |> Array.sortBy (fun (score, qVal) -> score)
+
+        [
+            Chart.Point sortedQValues |> Chart.withTraceName "Q-Values";
+            histogram
+        ]
+        |> Chart.Combine
+        |> Chart.withY_AxisStyle("Relative Frequency / Q-Value",Side=StyleParam.Side.Left,Id=1, MinMax = (0., 1.))
+        |> Chart.withY_AxisStyle("Absolute Frequency",Side=StyleParam.Side.Right,Id=2,Overlaying=StyleParam.AxisAnchorId.Y 1, MinMax = (0., float target.Length))
+        |> Chart.withX_AxisStyle "Score"
+        |> Chart.withSize (900., 900.)
+        |> if groupFiles then
+            Chart.SaveHtmlAs (path + @"\QValueGraph")
+           else
+            Chart.SaveHtmlAs (path + @"_QValueGraph")
+
     /// Given a ggf3 and a fasta file, creates a collection of all theoretically possible peptides and the proteins they might
     /// originate from
     ///
@@ -158,7 +214,7 @@ module ProteinInference =
             printfn "\nERROR: Could not build classification map"
             failwithf "\t%s" err.Message
 
-    let readAndInferFile classItemCollection protein peptide groupFiles outDirectory (rawFilePaths: string []) psmInputs (dbConnection: SQLiteConnection) (qValMethod: Domain.QValueMethod) =
+    let readAndInferFile (diagCharts: bool) classItemCollection protein peptide groupFiles outDirectory (rawFilePaths: string []) psmInputs (dbConnection: SQLiteConnection) (qValMethod: Domain.QValueMethod) =
 
         let logger = Logging.createLogger "ProteinInference_readAndInferFile"
 
@@ -303,8 +359,9 @@ module ProteinInference =
                     combWithReverse
                     |> Array.map (FDRControl'.assignQValueToIPCIS qValueFunction)
                 qValuesAssigned
-
-            ProteinInference'.qValueHitsVisualization bandwidth combinedScoredClassesQVal outDirectory groupFiles
+            
+            if diagCharts then
+                qValueHitsVisualization bandwidth combinedScoredClassesQVal outDirectory groupFiles
 
             // Assign results to files in which they can be found
             classifiedProteins
@@ -419,8 +476,9 @@ module ProteinInference =
                         combWithReverse
                         |> Array.map (FDRControl'.assignQValueToIPCIS qValueFunction)
                     qValuesAssigned
-
-                ProteinInference'.qValueHitsVisualization bandwidth inferenceResultScoredQVal outFile groupFiles
+                
+                if diagCharts then
+                    qValueHitsVisualization bandwidth inferenceResultScoredQVal outFile groupFiles
 
                 inferenceResultScoredQVal
                 |> Array.filter (fun inferredPCIQ -> not inferredPCIQ.Decoy)
@@ -438,7 +496,7 @@ module ProteinInference =
                 |> Seq.write outFile
             ) psmInputs
 
-    let inferProteins gff3Location dbConnection (proteinInferenceParams: Domain.ProteinInferenceParams) outDirectory rawFilePaths =
+    let inferProteins diagCharts gff3Location dbConnection (proteinInferenceParams: Domain.ProteinInferenceParams) outDirectory rawFilePaths =
 
         let logger = Logging.createLogger "ProteinInference_inferProteins"
 
@@ -454,5 +512,6 @@ module ProteinInference =
         logger.Trace "Start building ClassItemCollection"
         let classItemCollection, psmInputs = createClassItemCollection gff3Location memoryDB proteinInferenceParams.TryGetProteinIdentifier rawFilePaths
         logger.Trace "Classify and Infer Proteins"
-        readAndInferFile classItemCollection proteinInferenceParams.Protein proteinInferenceParams.Peptide
-                         proteinInferenceParams.GroupFiles outDirectory rawFilePaths psmInputs dbConnection proteinInferenceParams.GetQValue
+        readAndInferFile 
+            diagCharts classItemCollection proteinInferenceParams.Protein proteinInferenceParams.Peptide
+            proteinInferenceParams.GroupFiles outDirectory rawFilePaths psmInputs dbConnection proteinInferenceParams.GetQValue

@@ -11,6 +11,7 @@ module CLIArgumentParsing =
         | [<AltCommandLine("-g")>] GFF3             of path:string 
         | [<AltCommandLine("-o")>] OutputDirectory  of path:string 
         | [<AltCommandLine("-p")>] ParamFile        of path:string
+        | [<Unique>] [<AltCommandLine("-dc")>] DiagnosticCharts 
 
     with
         interface IArgParserTemplate with
@@ -21,4 +22,5 @@ module CLIArgumentParsing =
                 | GFF3 _             -> "specify GFF3 file"
                 | OutputDirectory  _ -> "specify output directory"
                 | ParamFile _        -> "specify param file for protein inference"
+                | DiagnosticCharts _ -> "Set to save diagnostic charts to the output directory."
 
