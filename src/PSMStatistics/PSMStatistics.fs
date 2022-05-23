@@ -352,8 +352,20 @@ module PSMStatistics =
                         |> Array.map (fun x -> (trainedModel x).Score |> float)
                         |> FSharp.Stats.Distributions.Bandwidth.nrd0
                         |> fun x -> x / 4.
+                    let bootstrapData =
+                        let bsData =
+                            bestPSMPerScan
+                            |> Array.map (trainedModel)
+                        let ctxBS = new MLContext()
+                        let data = ctxBS.Data.LoadFromEnumerable bsData
+                        [|1 .. int (ceil (1000000. / (float bestPSMPerScan.Length)))|]
+                        |> Array.collect (fun i -> 
+                            let resample = ctxBS.Data.BootstrapSample(data, i)
+                            let enumerable = ctxBS.Data.CreateEnumerable<PSMPrediction>(resample, false)
+                            enumerable |> Seq.toArray
+                        )
                     match estParams.PepValueFittingMethod with
-                    | LinearLogit -> ProteomIQon.FDRControl'.initCalculateLin logger bw (fun x -> x.Label |> not) (fun x -> float (trainedModel x).Score ) (fun x -> float (trainedModel x).Score) bestPSMPerScan
+                    | LinearLogit -> ProteomIQon.FDRControl'.initCalculateLin logger bw (fun x -> x.PredictedLabel |> not) (fun x -> float x.Score ) (fun x -> float x.Score) bootstrapData
                 let scoreVsQ = 
                     bestPSMPerScan
                     |> Array.map (fun x -> (trainedModel x).Score, getQ (float (trainedModel x).Score))
