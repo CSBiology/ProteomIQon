@@ -1668,24 +1668,43 @@ module FDRControl' =
                 let max = Math.Max((Array.maxBy targetScoreF filteredData) |> targetScoreF, (Array.maxBy decoyScoreF filteredData) |> decoyScoreF)
                 max-min
             let upperBW = Math.Min(10., xPointRange/10.)
-            [|bandwidth .. 0.1 .. upperBW|]
-            |> Array.choose (fun bw ->
+            let calcFitWithBW bw =
+                logger.Trace(sprintf "Calculating with BW: %f" bw)
                 let targetDecoyHis = createTargetDecoyHis bw (isDecoy: 'a -> bool) (decoyScoreF: 'a -> float) (targetScoreF: 'a -> float) (filteredData: 'a[])
+                logger.Trace(sprintf "finished targetDecoyHis with BW: %f" bw)
                 let score',pep' = 
                     calculatePEPValues (fun (_,count,_,_) -> float count) (fun (_,_,decoyCount,_) -> float decoyCount) (fun (_,_,_,medianScore) -> medianScore) targetDecoyHis
                     |> Array.ofList
                     |> Array.unzip
+                logger.Trace(sprintf "finished Score/Pep with BW: %f" bw)
                 let logitScore, logitPEPVal = logitTransformPepValues score' pep'
+                logger.Trace(sprintf "finished logit transform with BW: %f" bw)
                 let coeff = Fitting.LinearRegression.OrdinaryLeastSquares.Linear.Univariable.coefficient (vector logitScore) (vector logitPEPVal)
+                logger.Trace(sprintf "finished coefficient calc with BW: %f" bw)
                 let fittingFunction' = (Fitting.LinearRegression.OrdinaryLeastSquares.Linear.Univariable.fit coeff) >> (fun x -> 10.**(x)/(1.+10.**(x)))
+                logger.Trace(sprintf "finished fitting function with BW: %f" bw)
                 let sos = FSharp.Stats.Fitting.GoodnessOfFit.calculateSumOfSquares fittingFunction' score' pep'
+                logger.Trace(sprintf "finished sum of squares : %f" (sos.Error/sos.Count))
                 if coeff.[1] < 0. then
                     Some (sos.Error/sos.Count, fittingFunction', score', pep', bw)
                 else
                     None
-            )
-            |> Array.minBy (fun (error,_,_,_,_) -> error)
-            |> fun (error, fit,s,p,bw) ->logger.Trace(sprintf "Chosen Bandwidth: %f" bw); fit,s,p
+            let chosenBW =
+                FSharp.Stats.Optimization.Brent.minimizeWith
+                    (fun bw -> 
+                        match (calcFitWithBW bw) with
+                        | Some (error,_,_,_,_) -> error
+                        | None -> 1000000.
+                    )
+                    bandwidth
+                    upperBW
+                    0.1
+                    100
+            match chosenBW with
+            | Some bw ->
+                (calcFitWithBW bw).Value
+                |> fun (error, fit,s,p,bw) ->logger.Trace(sprintf "Chosen Bandwidth: %f" bw); fit,s,p
+            | None -> failwith "No bw could be found"
         fittingFunction
 
 module Fragmentation' =
