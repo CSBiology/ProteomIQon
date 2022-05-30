@@ -1661,7 +1661,7 @@ module FDRControl' =
             count
         )
         |> fun x ->
-            Array.concat [|ones;x;zeros|]
+            Array.concat [|x;zeros|]
         |> Array.unzip3
 
     let calculateSumOfSquaresWeighted (fitFunc:float -> float)  (xData : seq<float>) (yData : seq<float>) (weight : seq<float>) = 
