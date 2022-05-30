@@ -1621,8 +1621,38 @@ module FDRControl' =
         |> Array.sortBy (fun (score,pep,count) -> score)
 
     /// Logit transforms pep values (log10)
-    let logitTransformPepValues score pepVal count  =
-        Array.zip3 score pepVal count
+    let logitTransformPepValues (score: float[]) (pepVal: float[]) (count: float[]) =
+        let zippedData =
+            Array.zip3 score pepVal count
+        let ones =
+            let filtered = 
+                zippedData
+                |> Array.filter (fun (y,x,z) -> x = 1.)
+            let acc =
+                let medianScore =
+                    filtered
+                    |> Array.map (fun (y,x,z) -> y)
+                    |> Array.median
+                let sumCount =
+                    filtered
+                    |> Array.sumBy (fun (y,x,z) -> z)
+                [|medianScore, 10., sumCount|]
+            acc
+        let zeros =
+            let filtered = 
+                zippedData
+                |> Array.filter (fun (y,x,z) -> x = 0.)
+            let acc =
+                let medianScore =
+                    filtered
+                    |> Array.map (fun (y,x,z) -> y)
+                    |> Array.median
+                let sumCount =
+                    filtered
+                    |> Array.sumBy (fun (y,x,z) -> z)
+                [|medianScore, -10., sumCount|]
+            acc
+        zippedData
         // 0 and 1 are + and - infinity
         |> Array.filter (fun (y,x,z) -> x <> 0. && x <> 1.)
         |> Array.map (fun (score,pep,count) ->
@@ -1630,6 +1660,8 @@ module FDRControl' =
             log10 (pep/(1.-pep)),
             count
         )
+        |> fun x ->
+            Array.concat [|ones;x;zeros|]
         |> Array.unzip3
 
     let calculateSumOfSquaresWeighted (fitFunc:float -> float)  (xData : seq<float>) (yData : seq<float>) (weight : seq<float>) = 
