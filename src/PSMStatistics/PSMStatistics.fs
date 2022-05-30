@@ -84,13 +84,6 @@ module PSMStatistics =
             Score : float32 
         }
 
-    [<CLIMutable>]
-    type PEPPrediction = 
-        { 
-            Label : bool;
-            Score : float32 
-        }
-
     type AppliedModel = {
         NPositivesAtFDR : int
         CalcQValue      : float -> float
@@ -362,22 +355,17 @@ module PSMStatistics =
                     let bootstrapData =
                         let bsData =
                             bestPSMPerScan
-                            |> Array.map (fun psmTL ->
-                                {Label = psmTL.Label; Score = (trainedModel psmTL).Score}
-                            )
-                        if bsData.Length < 500000 then
-                            let ctxBS = new MLContext()
-                            let data = ctxBS.Data.LoadFromEnumerable bsData
-                            [|1 .. int (ceil (500000. / (float bestPSMPerScan.Length)))|]
-                            |> Array.collect (fun i -> 
-                                let resample = ctxBS.Data.BootstrapSample(data, i)
-                                let enumerable = ctxBS.Data.CreateEnumerable<PEPPrediction>(resample, false)
-                                enumerable |> Seq.toArray
-                            )
-                        else
-                            bsData
+                            |> Array.map (trainedModel)
+                        let ctxBS = new MLContext()
+                        let data = ctxBS.Data.LoadFromEnumerable bsData
+                        [|1 .. int (ceil (1000000. / (float bestPSMPerScan.Length)))|]
+                        |> Array.collect (fun i -> 
+                            let resample = ctxBS.Data.BootstrapSample(data, i)
+                            let enumerable = ctxBS.Data.CreateEnumerable<PSMPrediction>(resample, false)
+                            enumerable |> Seq.toArray
+                        )
                     match estParams.PepValueFittingMethod with
-                    | LinearLogit -> ProteomIQon.FDRControl'.initCalculateLin logger bw (fun x -> x.Label |> not) (fun x -> float x.Score) (fun x -> float x.Score) bootstrapData
+                    | LinearLogit -> ProteomIQon.FDRControl'.initCalculateLin logger bw (fun x -> x.PredictedLabel |> not) (fun x -> float x.Score ) (fun x -> float x.Score) bootstrapData
                 let scoreVsQ = 
                     bestPSMPerScan
                     |> Array.map (fun x -> (trainedModel x).Score, getQ (float (trainedModel x).Score))
