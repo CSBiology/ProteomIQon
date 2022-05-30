@@ -1632,6 +1632,21 @@ module FDRControl' =
         )
         |> Array.unzip3
 
+    let calculateSumOfSquaresWeighted (fitFunc:float -> float)  (xData : seq<float>) (yData : seq<float>) (weight : seq<float>) = 
+        let meanX = Seq.mean xData
+        let meanY = Seq.mean yData
+        let count,sst,sse,ssxx,ssxy =
+            Seq.zip3 xData yData weight
+            |> Seq.fold (fun (counter,stateSST,stateSSE,stateSSxx,stateSSxy) (x,y,w) -> 
+                                            let exY   = fitFunc x
+                                            let dSSe  = (exY - y) * w
+                                            let dSSt  = (y - meanY) * w
+                                            let dssxx = (x - meanX) * w
+                                            let ssxy  = dssxx * dSSt 
+                                            (counter+1., stateSST + dSSt*dSSt, stateSSE + dSSe*dSSe, stateSSxx + dssxx*dssxx, stateSSxy + ssxy)
+                        ) (0.,0.,0.,0.,0.)       
+        Fitting.GoodnessOfFit.createSumOfSquares (sst - sse) sse sst ssxx ssxy meanX meanY count
+
     /// Calculates monotonized PEP values for a target/decoy dataset based on the decoy/target ratio. Entries are binned with a given bandwidth as intital estiamtor based on the scores. 
     /// Returns a function which maps from score to PEP value based on a fit of a linear function using linear regression. The linear regression is performed on the logit transformed 
     /// pep values. The fit focuses on the pep values centered aound the middle of the score distribution
@@ -1682,7 +1697,7 @@ module FDRControl' =
                 logger.Trace(sprintf "finished coefficient calc with BW: %f" bw)
                 let fittingFunction' = (Fitting.LinearRegression.OrdinaryLeastSquares.Polynomial.fit 1 coeff) >> (fun x -> 10.**(x)/(1.+10.**(x)))
                 logger.Trace(sprintf "finished fitting function with BW: %f" bw)
-                let sos = FSharp.Stats.Fitting.GoodnessOfFit.calculateSumOfSquares fittingFunction' score' pep'
+                let sos = calculateSumOfSquaresWeighted fittingFunction' score' pep' weighting
                 logger.Trace(sprintf "finished sum of squares : %f" (sos.Error/sos.Count))
                 if coeff.[1] < 0. then
                     Some (sos.Error/sos.Count, fittingFunction', score', pep', bw,logitScore,logitPEPVal,logitWeighting,(Fitting.LinearRegression.OrdinaryLeastSquares.Polynomial.fit 1 coeff))
