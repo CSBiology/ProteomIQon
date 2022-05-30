@@ -346,7 +346,7 @@ module PSMStatistics =
                             )
                         )
                 let getQ = BioFSharp.Mz.FDRControl.calculateQValueStorey bestPSMPerScan (fun x -> x.Label |> not) (fun x -> float (trainedModel x).Score ) (fun x -> float (trainedModel x).Score)             
-                let getPep = 
+                let getPep, score, pep, logitS, logitP, logitW, logitFit, chosenBW = 
                     let bw = 
                         bestPSMPerScan
                         |> Array.map (fun x -> (trainedModel x).Score |> float)
@@ -357,9 +357,21 @@ module PSMStatistics =
                 let scoreVsQ = 
                     bestPSMPerScan
                     |> Array.map (fun x -> (trainedModel x).Score, getQ (float (trainedModel x).Score))
+                    |> Array.sortBy fst
                 let scoreVSPep = 
                     bestPSMPerScan
                     |> Array.map (fun x -> (trainedModel x).Score, getPep (float (trainedModel x).Score))
+                    |> Array.sortBy fst
+                let binnedScorePep =
+                    Array.zip score pep
+                let logitScorePep =
+                    Array.zip logitS logitP
+                let scoreVSLogitPEP =
+                    bestPSMPerScan
+                    |> Array.map (fun x -> (trainedModel x).Score, logitFit (float (trainedModel x).Score))
+                    |> Array.sortBy fst
+                let scoreWeight =
+                    Array.zip logitS logitW
                 let tar = 
                     bestPSMPerScan 
                     |> Array.filter (fun x -> x.Label) 
@@ -383,18 +395,30 @@ module PSMStatistics =
                         ]
                         |> Chart.Combine
                         |> Chart.withAxisAnchor(Y=1)
-                        Chart.Point(scoreVsQ)
+                        Chart.Line(scoreVsQ)
                         |> Chart.withAxisAnchor(Y=2)
                         |> Chart.withTraceName "QValue"
-                        Chart.Point(scoreVSPep)
+                        Chart.Line(scoreVSPep)
                         |> Chart.withAxisAnchor(Y=2)
                         |> Chart.withTraceName "PepValue"
+                        Chart.Point(binnedScorePep)
+                        |> Chart.withAxisAnchor(Y=2)
+                        |> Chart.withTraceName "BinnedPepValue"
+                        Chart.Point(logitScorePep)
+                        |> Chart.withAxisAnchor(Y=2)
+                        |> Chart.withTraceName "LogitBinnedPepValue"
+                        Chart.Line(scoreVSLogitPEP)
+                        |> Chart.withAxisAnchor(Y=2)
+                        |> Chart.withTraceName "LogitPepValue"
+                        Chart.Column(scoreWeight)
+                        |> Chart.withAxisAnchor(Y=1)
+                        |> Chart.withTraceName "Score Weight"
                     ]
                     |> Chart.Combine
                     |> Chart.withX_AxisStyle("Score")
                     |> Chart.withY_AxisStyle("Count",Side=StyleParam.Side.Left,Id=1,Showgrid=false)
                     |> Chart.withY_AxisStyle("FDR",Side=StyleParam.Side.Right,Id=2,Overlaying=StyleParam.AxisAnchorId.Y 1,Showgrid=false,MinMax=(0.,0.5))
-                    |> Chart.withTitle (sprintf "#iteration: %i, %i with q < 0.01" iteration (scoreVsQ |> Array.filter (fun x -> snd x <= 0.01) |> Array.length))
+                    |> Chart.withTitle (sprintf "#iteration: %i, %i with q < 0.01 and BW %.2f" iteration (scoreVsQ |> Array.filter (fun x -> snd x <= 0.01) |> Array.length) chosenBW)
                     |> Chart.SaveHtmlAs (Path.Combine [|plotDirectory;"separationAtIteration_" + iteration.ToString()|])
                 {
                     NPositivesAtFDR = nPosTar
