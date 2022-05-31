@@ -1622,46 +1622,14 @@ module FDRControl' =
 
     /// Logit transforms pep values (log10)
     let logitTransformPepValues (score: float[]) (pepVal: float[]) (count: float[]) =
-        let zippedData =
-            Array.zip3 score pepVal count
-        let ones =
-            let filtered = 
-                zippedData
-                |> Array.filter (fun (y,x,z) -> x = 1.)
-            let acc =
-                let medianScore =
-                    filtered
-                    |> Array.map (fun (y,x,z) -> y)
-                    |> Array.median
-                let sumCount =
-                    filtered
-                    |> Array.sumBy (fun (y,x,z) -> z)
-                [|medianScore, 10., sumCount|]
-            acc
-        let zeros =
-            let filtered = 
-                zippedData
-                |> Array.filter (fun (y,x,z) -> x = 0.)
-            let acc =
-                let medianScore =
-                    filtered
-                    |> Array.map (fun (y,x,z) -> y)
-                    |> Array.median
-                let sumCount =
-                    filtered
-                    |> Array.sumBy (fun (y,x,z) -> z)
-                [|medianScore, -10., sumCount|]
-            acc
-        zippedData
+        Array.zip3 score pepVal count
         // 0 and 1 are + and - infinity
         |> Array.filter (fun (y,x,z) -> x <> 0. && x <> 1.)
         |> Array.map (fun (score,pep,count) ->
             score,
-            log10 (pep/(1.-pep)),
+            log (pep/(1.-pep)),
             count
         )
-        |> fun x ->
-            Array.concat [|x;zeros|]
         |> Array.unzip3
 
     let calculateSumOfSquaresWeighted (fitFunc:float -> float)  (xData : seq<float>) (yData : seq<float>) (weight : seq<float>) = 
@@ -1669,14 +1637,14 @@ module FDRControl' =
         let meanY = Seq.mean yData
         let count,sst,sse,ssxx,ssxy =
             Seq.zip3 xData yData weight
-            |> Seq.fold (fun (counter,stateSST,stateSSE,stateSSxx,stateSSxy) (x,y,w) -> 
-                                            let exY   = fitFunc x
-                                            let dSSe  = (exY - y) * w
-                                            let dSSt  = (y - meanY) * w
-                                            let dssxx = (x - meanX) * w
-                                            let ssxy  = dssxx * dSSt 
-                                            (counter+1., stateSST + dSSt*dSSt, stateSSE + dSSe*dSSe, stateSSxx + dssxx*dssxx, stateSSxy + ssxy)
-                        ) (0.,0.,0.,0.,0.)       
+            |> Seq.fold (fun (counter,stateSST,stateSSE,stateSSxx,stateSSxy) (x,y,w) ->
+                let exY   = fitFunc x
+                let dSSe  = (exY - y)
+                let dSSt  = (y - meanY)
+                let dssxx = (x - meanX)
+                let ssxy  = dssxx * dSSt
+                (counter+1., stateSST + dSSt*dSSt*x, stateSSE + dSSe*dSSe*x, stateSSxx + dssxx*dssxx*x, stateSSxy + ssxy)
+            ) (0.,0.,0.,0.,0.)
         Fitting.GoodnessOfFit.createSumOfSquares (sst - sse) sse sst ssxx ssxy meanX meanY count
 
     /// Calculates monotonized PEP values for a target/decoy dataset based on the decoy/target ratio. Entries are binned with a given bandwidth as intital estiamtor based on the scores. 
@@ -1731,16 +1699,12 @@ module FDRControl' =
                 logger.Trace(sprintf "finished fitting function with BW: %f" bw)
                 let sos = calculateSumOfSquaresWeighted fittingFunction' score' pep' weighting
                 logger.Trace(sprintf "finished sum of squares : %f" (sos.Error/sos.Count))
-                if coeff.[1] < 0. then
-                    Some (sos.Error/sos.Count, fittingFunction', score', pep', bw,logitScore,logitPEPVal,logitWeighting,(Fitting.LinearRegression.OrdinaryLeastSquares.Polynomial.fit 1 coeff))
-                else
-                    None
+                (sos.Error/sos.Count, fittingFunction', score', pep', bw,logitScore,logitPEPVal,logitWeighting,(Fitting.LinearRegression.OrdinaryLeastSquares.Polynomial.fit 1 coeff))
             let chosenBW =
                 FSharp.Stats.Optimization.Brent.minimizeWith
                     (fun bw -> 
-                        match (calcFitWithBW bw) with
-                        | Some (error,_,_,_,_,_,_,_,_) -> error
-                        | None -> 1000000.
+                        calcFitWithBW bw
+                        |> fun (error,_,_,_,_,_,_,_,_) -> error
                     )
                     bandwidth
                     upperBW
@@ -1748,7 +1712,7 @@ module FDRControl' =
                     100
             match chosenBW with
             | Some bw ->
-                (calcFitWithBW bw).Value
+                (calcFitWithBW bw)
                 |> fun (error, fit,s,p,bw,logitS,logitP,logitW,logitFit) ->logger.Trace(sprintf "Chosen Bandwidth: %f" bw); fit,s,p,logitS,logitP,logitW,logitFit, bw
             | None -> failwith "No bw could be found"
         fittingFunction, score, pep, logitS, logitP, logitW, logitFit, chosenBW
