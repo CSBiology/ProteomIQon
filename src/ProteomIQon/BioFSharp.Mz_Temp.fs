@@ -1643,7 +1643,7 @@ module FDRControl' =
                 let dSSt  = (y - meanY)
                 let dssxx = (x - meanX)
                 let ssxy  = dssxx * dSSt
-                (counter+1., stateSST + dSSt*dSSt*x, stateSSE + dSSe*dSSe*x, stateSSxx + dssxx*dssxx*x, stateSSxy + ssxy)
+                (counter+1., stateSST + dSSt*dSSt*w, stateSSE + dSSe*dSSe*w, stateSSxx + dssxx*dssxx*w, stateSSxy + ssxy)
             ) (0.,0.,0.,0.,0.)
         Fitting.GoodnessOfFit.createSumOfSquares (sst - sse) sse sst ssxx ssxy meanX meanY count
 
