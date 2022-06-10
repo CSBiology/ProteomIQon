@@ -1647,6 +1647,8 @@ module FDRControl' =
             ) (0.,0.,0.,0.,0.)
         Fitting.GoodnessOfFit.createSumOfSquares (sst - sse) sse sst ssxx ssxy meanX meanY count
 
+    open FSharp.Stats.Fitting.TemporalClassification
+
     /// Calculates monotonized PEP values for a target/decoy dataset based on the decoy/target ratio. Entries are binned with a given bandwidth as intital estiamtor based on the scores. 
     /// Returns a function which maps from score to PEP value based on a fit of a linear function using linear regression. The linear regression is performed on the logit transformed 
     /// pep values. The fit focuses on the pep values centered aound the middle of the score distribution
@@ -1677,7 +1679,7 @@ module FDRControl' =
                     score >= lowerScore && score <= upperScore
             )
         logger.Trace(sprintf "Initial Bandwidth: %f" bandwidth)
-        let fittingFunction, score, pep, logitS, logitP, logitW, logitFit, chosenBW =
+        let fittingFunction, score, pep, (*logitS, logitP, logitW, logitFit,*) chosenBW =
             let xPointRange =
                 let min = Math.Min((Array.minBy targetScoreF filteredData) |> targetScoreF, (Array.minBy decoyScoreF filteredData) |> decoyScoreF)
                 let max = Math.Max((Array.maxBy targetScoreF filteredData) |> targetScoreF, (Array.maxBy decoyScoreF filteredData) |> decoyScoreF)
@@ -1691,31 +1693,44 @@ module FDRControl' =
                     calculatePEPValues (fun (_,count,_,_) -> float count) (fun (_,_,decoyCount,_) -> float decoyCount) (fun (_,_,_,medianScore) -> medianScore) targetDecoyHis
                     |> Array.unzip3
                 logger.Trace(sprintf "finished Score/Pep with BW: %f" bw)
-                let logitScore, logitPEPVal, logitWeighting = logitTransformPepValues score' pep' weighting
-                logger.Trace(sprintf "finished logit transform with BW: %f" bw)
-                let coeff = Fitting.LinearRegression.OrdinaryLeastSquares.Polynomial.coefficientsWithWeighting 1 (vector logitWeighting) (vector logitScore) (vector logitPEPVal)
-                logger.Trace(sprintf "finished coefficient calc with BW: %f" bw)
-                let fittingFunction' = (Fitting.LinearRegression.OrdinaryLeastSquares.Polynomial.fit 1 coeff) >> (fun x -> 10.**(x)/(1.+10.**(x)))
-                logger.Trace(sprintf "finished fitting function with BW: %f" bw)
-                let sos = calculateSumOfSquaresWeighted fittingFunction' score' pep' weighting
+                //let logitScore, logitPEPVal, logitWeighting = logitTransformPepValues score' pep' weighting
+                //logger.Trace(sprintf "finished logit transform with BW: %f" bw)
+                //let coeff = Fitting.LinearRegression.OrdinaryLeastSquares.Polynomial.coefficientsWithWeighting 1 (vector logitWeighting) (vector logitScore) (vector logitPEPVal)
+                //logger.Trace(sprintf "finished coefficient calc with BW: %f" bw)
+                //let fittingFunction' = (Fitting.LinearRegression.OrdinaryLeastSquares.Polynomial.fit 1 coeff) >> (fun x -> 10.**(x)/(1.+10.**(x)))
+                //logger.Trace(sprintf "finished fitting function with BW: %f" bw)
+                let _,fittingFunction =
+                    let est = Fitting.getInitialEstimateOfWeighting (Matrix.initDiagonal (vector weighting)) (vector score') (vector pep')
+                    Fitting.splineDecreasing (vector score') (vector pep') (Matrix.initDiagonal (vector weighting)) 0
+                let tryFitting score =
+                    try
+                        fittingFunction.SplineFunction score
+                    with
+                    | _ -> 
+                        if score < 0. then
+                            fittingFunction.SplineFunction (score + 0.001)
+                        else
+                            fittingFunction.SplineFunction (score - 0.001)
+                let sos = calculateSumOfSquaresWeighted tryFitting score' pep' weighting
                 logger.Trace(sprintf "finished sum of squares : %f" (sos.Error/sos.Count))
-                (sos.Error/sos.Count, fittingFunction', score', pep', bw,logitScore,logitPEPVal,logitWeighting,(Fitting.LinearRegression.OrdinaryLeastSquares.Polynomial.fit 1 coeff))
+                (sos.Error/sos.Count, tryFitting, score', pep', bw(*,logitScore,logitPEPVal,logitWeighting,(Fitting.LinearRegression.OrdinaryLeastSquares.Polynomial.fit 1 coeff)*))
             let chosenBW =
-                FSharp.Stats.Optimization.Brent.minimizeWith
-                    (fun bw -> 
-                        calcFitWithBW bw
-                        |> fun (error,_,_,_,_,_,_,_,_) -> error
-                    )
-                    bandwidth
-                    upperBW
-                    0.1
-                    100
+                //FSharp.Stats.Optimization.Brent.minimizeWith
+                //    (fun bw -> 
+                //        calcFitWithBW bw
+                //        |> fun (error,_,_,_,_) -> error
+                //    )
+                //    bandwidth
+                //    upperBW
+                //    0.1
+                //    100
+                Some 1.
             match chosenBW with
             | Some bw ->
                 (calcFitWithBW bw)
-                |> fun (error, fit,s,p,bw,logitS,logitP,logitW,logitFit) ->logger.Trace(sprintf "Chosen Bandwidth: %f" bw); fit,s,p,logitS,logitP,logitW,logitFit, bw
+                |> fun (error, fit,s,p,bw(*,logitS,logitP,logitW,logitFit*)) ->logger.Trace(sprintf "Chosen Bandwidth: %f" bw); fit,s,p,(*logitS,logitP,logitW,logitFit,*) bw
             | None -> failwith "No bw could be found"
-        fittingFunction, score, pep, logitS, logitP, logitW, logitFit, chosenBW
+        fittingFunction, score, pep,(* logitS, logitP, logitW, logitFit,*) chosenBW
 
 module Fragmentation' =
 

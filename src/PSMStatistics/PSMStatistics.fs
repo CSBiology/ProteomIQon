@@ -346,7 +346,7 @@ module PSMStatistics =
                             )
                         )
                 let getQ = BioFSharp.Mz.FDRControl.calculateQValueStorey bestPSMPerScan (fun x -> x.Label |> not) (fun x -> float (trainedModel x).Score ) (fun x -> float (trainedModel x).Score)             
-                let getPep, score, pep, logitS, logitP, logitW, logitFit, chosenBW = 
+                let getPep, score, pep,(* logitS, logitP, logitW, logitFit*) chosenBW = 
                     let bw = 
                         bestPSMPerScan
                         |> Array.map (fun x -> (trainedModel x).Score |> float)
@@ -364,14 +364,14 @@ module PSMStatistics =
                     |> Array.sortBy fst
                 let binnedScorePep =
                     Array.zip score pep
-                let logitScorePep =
-                    Array.zip logitS logitP
-                let scoreVSLogitPEP =
-                    bestPSMPerScan
-                    |> Array.map (fun x -> (trainedModel x).Score, logitFit (float (trainedModel x).Score))
-                    |> Array.sortBy fst
-                let scoreWeight =
-                    Array.zip logitS logitW
+                //let logitScorePep =
+                //    Array.zip logitS logitP
+                //let scoreVSLogitPEP =
+                //    bestPSMPerScan
+                //    |> Array.map (fun x -> (trainedModel x).Score, logitFit (float (trainedModel x).Score))
+                //    |> Array.sortBy fst
+                //let scoreWeight =
+                //    Array.zip logitS logitW
                 let tar = 
                     bestPSMPerScan 
                     |> Array.filter (fun x -> x.Label) 
@@ -404,15 +404,15 @@ module PSMStatistics =
                         Chart.Point(binnedScorePep)
                         |> Chart.withAxisAnchor(Y=2)
                         |> Chart.withTraceName "BinnedPepValue"
-                        Chart.Point(logitScorePep)
-                        |> Chart.withAxisAnchor(Y=2)
-                        |> Chart.withTraceName "LogitBinnedPepValue"
-                        Chart.Line(scoreVSLogitPEP)
-                        |> Chart.withAxisAnchor(Y=2)
-                        |> Chart.withTraceName "LogitPepValue"
-                        Chart.Column(scoreWeight)
-                        |> Chart.withAxisAnchor(Y=1)
-                        |> Chart.withTraceName "Score Weight"
+                        //Chart.Point(logitScorePep)
+                        //|> Chart.withAxisAnchor(Y=2)
+                        //|> Chart.withTraceName "LogitBinnedPepValue"
+                        //Chart.Line(scoreVSLogitPEP)
+                        //|> Chart.withAxisAnchor(Y=2)
+                        //|> Chart.withTraceName "LogitPepValue"
+                        //Chart.Column(scoreWeight)
+                        //|> Chart.withAxisAnchor(Y=1)
+                        //|> Chart.withTraceName "Score Weight"
                     ]
                     |> Chart.Combine
                     |> Chart.withX_AxisStyle("Score")
