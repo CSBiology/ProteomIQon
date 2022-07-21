@@ -1688,6 +1688,437 @@ module FDRControl' =
             |> fun (error, fit,s,p,bw) ->logger.Trace(sprintf "Chosen Bandwidth: %f" bw); fit,s,p
         fittingFunction
 
+    let initCalculatePEPValueIRLS bandwidth (isDecoy: 'a -> bool) (decoyScoreF: 'a -> float) (targetScoreF: 'a -> float) (data: 'a[]) =
+        
+        let targetDecoyHis = createTargetDecoyHis bandwidth (isDecoy: 'a -> bool) (decoyScoreF: 'a -> float) (targetScoreF: 'a -> float) (data: 'a[])
+
+        let binSize, negativeCounts, scores =
+            targetDecoyHis
+            |> Array.map (fun (_,count,decoyCount,medianScore) ->
+                float count,float decoyCount,medianScore
+            )
+            |> Array.unzip3
+
+        let mutable x = Vector.zeroCreate 1
+        let mutable y = Vector.zeroCreate 1
+        let mutable m = Vector.zeroCreate 1
+        let mutable transf: float -> float = fun x -> x
+
+        let transform deltaLow deltaHigh doLogit doLog (xx: float) =
+            if not doLogit && not doLog then
+                xx
+            elif deltaLow > 0. || deltaHigh > 0. then
+                if doLogit then
+                    log ((xx * (1. - deltaHigh - deltaLow)) + deltaLow)
+                else
+                    log (xx + deltaLow)
+            elif doLogit then
+                log (xx / (1. - xx))
+            else
+                failwith "unexpected transform input"
+
+        let setData (xx: Vector<float>) =
+            x <- Vector.zeroCreate xx.Length
+            let minV = xx |> Vector.toArray |> Array.min
+            let maxV = xx |> Vector.toArray |> Array.max
+            if minV >= 0. && maxV <= 1. then
+                transf <-
+                    transform
+                        (
+                            if minV > 0. then 0. else 1e-20
+                        )
+                        (
+                            if maxV < 1. then 0. else 1e-10
+                        )
+                        true
+                        false
+            if minV >= 0. then
+                transf <-
+                    transform
+                        (
+                            if minV > 0. then 0. else 1e-20
+                        )
+                        0.
+                        false
+                        true
+            x <- xx |> Vector.map transf
+
+        let lrSetData (xx: Vector<float>) (yy: Vector<float>) (mm: Vector<float>) =
+            y <- yy
+            m <- mm
+            setData xx
+
+        lrSetData 
+            (scores |> Vector.ofArray)
+            (negativeCounts |> Vector.ofArray)
+            (binSize |> Vector.ofArray)
+
+        let convergeEpsilon = 1e-4
+        let stepEpsilon = 1e-8
+        let weightSlope = 1e1
+        let scaleAlpha = 1.
+        let tao = 2. / (1. + sqrt(5.0))
+
+        let mutable g = Vector.zeroCreate x.Length
+        let mutable gNew = Vector.zeroCreate x.Length
+        // Change back to zerocreate
+        let mutable w = Vector.init x.Length (fun x -> 1.)
+        let mutable z = Vector.init x.Length (fun x -> 0.5)
+        let mutable gamma = Vector.zeroCreate (x.Length - 2)
+
+        let mutable Q: Matrix<float> = Matrix.zero 1 1
+        let mutable Qt: Matrix<float> = Matrix.zero 1 1
+        let mutable R: Matrix<float> = Matrix.zero 1 1
+        let mutable dx: Vector<float> = Vector.zeroCreate 1
+
+        let mutable p = Array.zeroCreate 1
+
+        let gRange = 35.
+
+        let initg () =
+            let n = x.Length
+            g <- Vector.zeroCreate n
+            gNew <- Vector.zeroCreate n
+            w <- Vector.zeroCreate n
+            z <- Vector.init n (fun x -> 0.5)
+            gamma <- Vector.zeroCreate (n - 2)
+
+        let invlogit (input: float) =
+            let e = exp input
+            e / (1. + e)
+
+        let logit p =
+            log(p / (1. - p))
+
+        let limitg () =
+            for ix = (gNew.Length - 1) downto 0 do
+                gNew.[ix] <- Math.Min(gRange, Math.Max(-gRange,gNew.[ix]))
+
+        let limitgamma () =
+            for ix = (gamma.Length - 1) downto 0 do
+                gamma.[ix] <- Math.Min(gRange, Math.Max(-gRange,gamma.[ix]))
+
+        let calcPZW () =
+            for ix = (z.Length - 1) downto 0 do
+                let e = exp(g.[ix])
+                let epsilon = 1e-15
+                printfn "a"
+                p.[ix] <- Math.Min(Math.Max(e / (1. + e),epsilon), 1. - epsilon)
+                w.[ix] <- Math.Max(m.[ix] * p.[ix] * (1. - p.[ix]), epsilon)
+                z.[ix] <- Math.Min(gRange, Math.Max(-gRange, g.[ix] + (y.[ix] - p.[ix] * m.[ix]) / w.[ix]))
+                printfn "b"
+
+        let lrInitg () =
+            initg()
+            let n = x.Length
+            Array.Resize(&p,n)
+            gNew <- Vector.zeroCreate n
+            for ix = (g.Length - 1) downto 0 do
+            let p = (y.[ix] + 0.05) / (m.[ix] + 0.1)
+            gNew.[ix] <- log(p / (1. - p))
+    
+        let f (b: Matrix<float>) =
+            let a = b.Row 0
+            let c = b.Row 1
+            b
+            |> Matrix.mapiRows (fun i rv ->
+                if i = 0 then c.ToArray()
+                elif i = 1 then a.ToArray()
+                else rv.ToArray()
+            )
+            |> fun x ->
+                [|for i in x do
+                    yield i|]
+            |> Matrix.ofJaggedArray
+
+        let initiateQR () =
+            let n = x.Length
+            let dx' = Vector.zeroCreate (n - 1)
+            for ix = 0 to (n - 2)do
+                dx'.[ix] <- x.[ix + 1] - x.[ix]
+                if not (dx'.[ix] > 0.) then
+                    failwith "value muste be > 0"
+            let Q' = Matrix.zero n (n - 2)
+            let R' = Matrix.zero (n - 2) (n - 2)
+            // Fill Q
+            Q'.[0,0] <- 1. / dx'.[0]
+            Q'.[1,0] <- -1. / dx'.[0] - 1. / dx'.[1]
+            Q'.[1,1] <- 1. / dx'.[1]
+            for j = 2 to (n - 3) do
+                Q'.[j,j - 2] <- 1. / dx'.[j - 1]
+                Q'.[j,j - 1] <- -1. / dx'.[j - 1] - 1. / dx'.[j]
+                Q'.[j,j] <- 1. / dx'.[j]
+            Q'.[n - 2,n - 4] <- 1. / dx'.[n - 3]
+            Q'.[n - 2,n - 3] <- -1. / dx'.[n - 3] - 1. / dx'.[n - 2]
+            Q'.[n - 1,n - 3] <- 1. / dx'.[n - 2]
+            // Fill R
+            for i = 0 to n - 4 do
+                R'.[i,i] <- (dx'.[i] + dx'.[i + 1]) / 3.
+                R'.[i,i + 1] <- dx'.[i + 1] / 6.
+                R'.[i + 1,i] <- dx'.[i + 1] / 6.
+            R'.[n - 3, n - 3] <- (dx'.[n - 3] + dx'.[n - 2]) / 3.
+            let Qt' = Q' |> Matrix.transpose
+            Q <- Q'
+            Qt <- Qt'
+            R <- R'
+            dx <- dx'
+
+        let crossValidation (alpha: float) =
+            let n = R.NumRows
+            let k0 = Vector.zeroCreate n
+            let k1 = Vector.zeroCreate n
+            let k2 = Vector.zeroCreate n
+            let B: Matrix<float> = R + ((Qt * alpha) * ((Matrix.diag (Vector.map2 (fun x y -> x / y) (Vector.init (n + 2) (fun x -> 1.))  w)) * Q))
+            //Get the diagonals from K
+            //ka[i]=B[i,i+a]=B[i+a,i]
+            // Filter 0. in k1 and k2? Diagonals are shorter. Percolator uses packed vectors, so only nonzero elements are present
+            // Maybe Indices are needed later on?
+            // ++row
+            for row = 0 to (n - 1) do
+                for rowPos = ((B.Row row).Length - 1) downto 0 do
+                    // slower, because not packed
+                    let col = rowPos
+                    if col = row then
+                        k0.[row] <- B.[row,rowPos]
+                    if (col + 1) = row then
+                        k1.[row] <- B.[row,rowPos]
+                    if (col + 2) = row then
+                        k2.[row] <- B.[row,rowPos]
+            // LDL decompose Page 26 Green Silverman
+            // d[i]=D[i,i]
+            // la[i]=L[i+a,i]
+            // Vec d(n),l1(n),l2(n)
+            let d = Vector.zeroCreate n
+            let l1 = Vector.zeroCreate n
+            let l2 = Vector.zeroCreate n
+            d.[0] <- k0.[0]
+            l1.[0] <- k1.[0] / d.[0]
+            d.[1] <- k0.[0] - l1.[0] * l1.[0] * d.[0]
+            // ++row
+            for row = 2 to (n - 1) do
+                l2.[row - 2] <- k2.[row - 2] / d.[row - 2]
+                l1.[row - 1] <- (k1.[row - 1] - l1.[row - 2] * l2.[row - 2] * d.[row - 2]) / d.[row - 1]
+                d.[row] <- k0.[row] - l1.[row - 1] * l1.[row - 1] * d.[row - 1] - l2.[row - 2] * l2.[row - 2] * d.[row - 2]
+            // Find diagonals of inverse Page 34 Green Silverman
+            // ba[i]=B^{-1}[i+a,i]=B^{-1}[i,i+a]
+            // Vec b0(n),b1(n),b2(n)
+            let b0 = Vector.zeroCreate n
+            let b1 = Vector.zeroCreate n
+            let b2 = Vector.zeroCreate n
+            // --row
+            for row = (n - 1) downto 0 do
+                if row = (n - 1) then
+                    b0.[n - 1] <- 1. / d.[n - 1]
+                elif row = (n - 2) then
+                    b0.[n - 2] <- 1. / d.[n - 2] - l1.[n - 2] * b1.[n - 2]
+                else
+                    b0.[row] <- 1. / d.[row] - l1.[row] * b1.[row] - l2.[row] * b2.[row]
+                if row = (n - 1) then
+                    b1.[n - 2] <- -l1.[n - 2] * b0.[n - 1]
+                elif row >= 1 then
+                    b1.[row - 1] <- -l1.[row - 1] * b0.[row] - l1.[row] * b1.[row]
+                if row >= 2 then
+                    b2.[row - 2] <- -l1.[row - 2] * b0.[row]
+            // Calculate diagonal elements a[i]=Aii p35 Green Silverman
+            // (expanding q according to p12)
+            //  Vec a(n+2),c(n+1);
+            let a = Vector.zeroCreate n
+            let c = Vector.zeroCreate (n - 1)
+            for ix = 0 to (n - 3) do
+              c.[ix] <- 1. / dx.[ix]
+            for ix = 0 to (n - 1) do
+              if ix > 0 then
+                a.[ix] <- a.[ix] + b0.[ix - 1] * c.[ix - 1] * c.[ix - 1]
+                if ix < (n - 1) then
+                  a.[ix] <- a.[ix] + b0.[ix] * (-c.[ix - 1] - c.[ix]) * (-c.[ix - 1] - c.[ix])
+                  a.[ix] <- a.[ix] + 2. * b1.[ix] * c.[ix] * (-c.[ix - 1] - c.[ix])
+                  a.[ix] <- a.[ix] + 2. * b1.[ix - 1] * c.[ix - 1] * (-c.[ix - 1] - c.[ix])
+                  a.[ix] <- a.[ix] + 2. * b2.[ix - 1] * c.[ix - 1] * c.[ix]
+              if ix < (n - 1) then
+                a.[ix] <- a.[ix] + b0.[ix + 1] * c.[ix] * c.[ix];
+            // Calculating weighted cross validation as described in p
+            let mutable cv = 0.0
+            for ix = 0 to (n - 1) do
+                let f = (z.[ix] - gNew.[ix]) * w.[ix] / (alpha * a.[ix])
+                //double f =(z[ix]-gnew[ix])/(alpha*alpha*a[ix]*a[ix]);
+                cv <- cv + f * f * w[ix];
+            cv
+                
+        let solveInPlace (mat: Matrix<float>) (res: Vector<float>) =
+            Algebra.LinearAlgebra.SolveLinearSystem mat res
+
+        
+        let splineEval (xx: float) =
+            let xxLogit = transf xx
+            let n = x.Length
+            let right =
+                x
+                |> Vector.toArray
+                |> Array.tryFindIndex (fun e -> e >= xxLogit)
+            if right.IsNone then
+                let derl = (g[n - 1] - g[n - 2]) / (x[n - 1] - x[n - 2]) + (x[n - 1] - x[n - 2]) / 6. * gamma[n - 3]
+                let gx = g[n - 1] + (xx - x[n - 1]) * derl
+                gx
+            elif x.[right.Value] = xx then
+                g.[right.Value]
+            elif right.Value > 0 then
+                let left = right.Value - 1
+                let dr = x.[right.Value] - xx
+                let dl = xx - x.[left]
+                let gamr = 
+                    if right.Value < (n - 1) then
+                        gamma.[right.Value - 1]
+                    else
+                        0.
+                let gaml = 
+                    if right.Value > 1 then
+                        gamma.[right.Value - 1 - 1]
+                    else
+                        0.
+                let h = x.[right.Value] - x.[left]
+                let gx = (dl * g.[right.Value] + dr * g.[right.Value - 1]) / h - dl * dr / 6. * ((1.0 + dl / h) * gamr + (1.0 + dr / h) * gaml)
+                gx
+            else
+                let derr = (g.[1] - g.[0]) / (x.[1] - x.[0]) - (x.[1] - x.[0]) / 6. * gamma.[0]
+                let gx = g[0] - (x[0] - xx) * derr
+                gx
+
+        let iterativeReweightedLeastSquares (alpha: float) =
+            let mutable step = 0.
+            let mutable iter = 0
+            // do .. while
+            let mutable init = true
+            let n = x.Length
+            printfn "aaa"
+            while init || ((step > stepEpsilon || step < 0) && iter < 20) do
+                init <- false
+                iter <- iter + 1
+                g <- gNew
+                calcPZW()
+                // strange vector division again
+                let diag = ((Matrix.diag (Vector.map2 (fun x y -> x / y) (Vector.init (n) (fun x -> 1.)) w)) * alpha)
+                let aWiQ = diag * Q
+                let M = R + (Qt * aWiQ)
+                printfn "%A" gamma
+                gamma <- Qt * z
+                printfn "%A" gamma
+                gamma <- solveInPlace M gamma
+                printfn "%A" gamma
+                gNew <- z - (aWiQ*gamma)
+                limitg()
+                let difference = g - gNew
+                step <- (Vector.norm difference) / float n
+            printfn "bbb"
+            g <- gNew
+
+        let evaluateSlope (alpha: float) =
+            iterativeReweightedLeastSquares(alpha)
+            let n = g.Length
+            let mutable mixg = 1
+            let mutable maxg = g.[mixg]
+            for ix = mixg to (n - 2) do
+                //assert(ix=g.index(ix)); //This should be a filled vector
+                if g.[ix] >= maxg then
+                    maxg <- g.[ix]
+                    mixg <- ix
+            let mutable maxSlope = -10e6
+            let mutable slopeix = -1
+            for ix = (mixg + 1) to (n - 3) do
+                let slope = g.[ix - 1] - g.[ix]
+                if slope > maxSlope then
+                    maxSlope <- slope
+                    slopeix <- ix
+            maxSlope * weightSlope + alpha
+
+        let rec alphaLinearSearchBA (min_p': float) (max_p': float) (p1': float) (p2': float) (cv1': float) (cv2': float) =
+            // Minimize Slope score
+            // Use neg log of 0<p<1 so that we allow for searches 0<alpha<inf
+            let mutable oldCV = 0.
+            let mutable min_p = min_p'
+            let mutable max_p = max_p'
+            let mutable p1 = p1'
+            let mutable p2 = p2'
+            let mutable cv1 = cv1'
+            let mutable cv2 = cv2'
+            if cv2 < cv1 then
+                // keep point 2
+                min_p <- p1
+                p1 <- p2
+                p2 <- min_p + tao * (max_p - min_p)
+                oldCV <- cv1
+                cv1 <- cv2
+                cv2 <- evaluateSlope(-scaleAlpha*log(p2))
+            else
+                // keep point 1
+                max_p <- p2
+                p2 <- p1
+                p1 <- min_p + (1. - tao) * (max_p - min_p)
+                oldCV <- cv2
+                cv2 <- cv1
+                cv1 <- evaluateSlope(-scaleAlpha*log(p1))
+            if ((oldCV - (min cv1 cv2)) / oldCV < 1e-5 || (abs(p2 - p1) < 1e-10)) then
+                if cv1 < cv2 then
+                    -scaleAlpha*log(p1)
+                else
+                    -scaleAlpha*log(p2)
+            else
+                alphaLinearSearchBA min_p max_p p1 p2 cv1 cv2
+
+        let roughnessPenaltyIRLS () =
+            initiateQR()
+            initg()
+            let mutable p1 = 1. - tao
+            let mutable p2 = tao
+            let alpha =
+                let mutable min_p = 0.
+                let mutable max_p = 1.
+                let mutable cv1 = (evaluateSlope(-scaleAlpha*log(p1)))
+                let mutable cv2 = (evaluateSlope(-scaleAlpha*log(p2)))
+                alphaLinearSearchBA 
+                    min_p
+                    max_p
+                    p1
+                    p2
+                    cv1
+                    cv2
+            iterativeReweightedLeastSquares(alpha)
+
+
+        lrInitg()
+        limitg()
+        limitgamma()
+        roughnessPenaltyIRLS()
+        data
+        |> Array.filter (isDecoy >> not)
+        |> Array.map (fun x -> 
+            x
+            |> targetScoreF,
+            x
+            |> targetScoreF
+            |> splineEval
+        )
+        |> Array.unzip
+        |> fun (x, y) ->
+            let coeff = FSharp.Stats.Interpolation.LinearSpline.initInterpolate x y
+            let fitLinSp = Interpolation.LinearSpline.interpolate coeff
+            fitLinSp
+
+    let revLogitAndPi01 (peps: float[])=
+        let top = Math.Min(1., Math.Exp(peps |> Array.max))
+        let mutable crap = false
+        peps
+        |> Array.map (fun x ->
+            if crap then
+                top
+            else
+                let temp = Math.Exp x
+                if temp >= top then
+                    crap <- true
+                    top
+                else
+                    temp
+        )
+
 module Fragmentation' =
 
     type LadderedTaggedMass (iontype:Ions.IonTypeFlag,mass:float, number:int, charge: float) =
