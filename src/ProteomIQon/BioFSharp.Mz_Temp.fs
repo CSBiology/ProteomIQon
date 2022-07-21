@@ -1688,7 +1688,7 @@ module FDRControl' =
             |> fun (error, fit,s,p,bw) ->logger.Trace(sprintf "Chosen Bandwidth: %f" bw); fit,s,p
         fittingFunction
 
-    let initCalculatePEPValueIRLS bandwidth (isDecoy: 'a -> bool) (decoyScoreF: 'a -> float) (targetScoreF: 'a -> float) (data: 'a[]) =
+    let initCalculatePEPValueIRLS (logger: NLog.Logger) bandwidth (isDecoy: 'a -> bool) (decoyScoreF: 'a -> float) (targetScoreF: 'a -> float) (data: 'a[]) =
         
         let targetDecoyHis = createTargetDecoyHis bandwidth (isDecoy: 'a -> bool) (decoyScoreF: 'a -> float) (targetScoreF: 'a -> float) (data: 'a[])
 
@@ -1816,23 +1816,11 @@ module FDRControl' =
             for ix = (g.Length - 1) downto 0 do
             let p = (y.[ix] + 0.05) / (m.[ix] + 0.1)
             gNew.[ix] <- log(p / (1. - p))
-    
-        let f (b: Matrix<float>) =
-            let a = b.Row 0
-            let c = b.Row 1
-            b
-            |> Matrix.mapiRows (fun i rv ->
-                if i = 0 then c.ToArray()
-                elif i = 1 then a.ToArray()
-                else rv.ToArray()
-            )
-            |> fun x ->
-                [|for i in x do
-                    yield i|]
-            |> Matrix.ofJaggedArray
 
         let initiateQR () =
             let n = x.Length
+            logger.Trace (sprintf "%i" n)
+            logger.Trace (sprintf "%A" x)
             let dx' = Vector.zeroCreate (n - 1)
             for ix = 0 to (n - 2)do
                 dx'.[ix] <- x.[ix + 1] - x.[ix]
@@ -1941,7 +1929,7 @@ module FDRControl' =
             for ix = 0 to (n - 1) do
                 let f = (z.[ix] - gNew.[ix]) * w.[ix] / (alpha * a.[ix])
                 //double f =(z[ix]-gnew[ix])/(alpha*alpha*a[ix]*a[ix]);
-                cv <- cv + f * f * w[ix];
+                cv <- cv + f * f * w.[ix];
             cv
                 
         let solveInPlace (mat: Matrix<float>) (res: Vector<float>) =
@@ -1956,8 +1944,8 @@ module FDRControl' =
                 |> Vector.toArray
                 |> Array.tryFindIndex (fun e -> e >= xxLogit)
             if right.IsNone then
-                let derl = (g[n - 1] - g[n - 2]) / (x[n - 1] - x[n - 2]) + (x[n - 1] - x[n - 2]) / 6. * gamma[n - 3]
-                let gx = g[n - 1] + (xx - x[n - 1]) * derl
+                let derl = (g.[n - 1] - g.[n - 2]) / (x.[n - 1] - x.[n - 2]) + (x.[n - 1] - x.[n - 2]) / 6. * gamma.[n - 3]
+                let gx = g.[n - 1] + (xx - x.[n - 1]) * derl
                 gx
             elif x.[right.Value] = xx then
                 g.[right.Value]
@@ -1980,7 +1968,7 @@ module FDRControl' =
                 gx
             else
                 let derr = (g.[1] - g.[0]) / (x.[1] - x.[0]) - (x.[1] - x.[0]) / 6. * gamma.[0]
-                let gx = g[0] - (x[0] - xx) * derr
+                let gx = g.[0] - (x.[0] - xx) * derr
                 gx
 
         let iterativeReweightedLeastSquares (alpha: float) =
@@ -1990,7 +1978,7 @@ module FDRControl' =
             let mutable init = true
             let n = x.Length
             printfn "aaa"
-            while init || ((step > stepEpsilon || step < 0) && iter < 20) do
+            while init || ((step > stepEpsilon || step < 0.) && iter < 20) do
                 init <- false
                 iter <- iter + 1
                 g <- gNew

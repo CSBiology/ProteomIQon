@@ -354,7 +354,7 @@ module PSMStatistics =
                         |> fun x -> x / 4.
                     match estParams.PepValueFittingMethod with
                     | LinearLogit -> ProteomIQon.FDRControl'.initCalculateLin logger bw (fun x -> x.Label |> not) (fun x -> float (trainedModel x).Score ) (fun x -> float (trainedModel x).Score) bestPSMPerScan
-                    | IRLS -> ProteomIQon.FDRControl'.initCalculatePEPValueIRLS bw (fun x -> x.Label |> not) (fun x -> float (trainedModel x).Score ) (fun x -> float (trainedModel x).Score) bestPSMPerScan
+                    | IRLS -> ProteomIQon.FDRControl'.initCalculatePEPValueIRLS logger bw (fun x -> x.Label |> not) (fun x -> float (trainedModel x).Score ) (fun x -> float (trainedModel x).Score) bestPSMPerScan
                 let scoreVsQ = 
                     bestPSMPerScan
                     |> Array.map (fun x -> (trainedModel x).Score, getQ (float (trainedModel x).Score))
