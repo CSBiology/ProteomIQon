@@ -93,6 +93,7 @@ module Domain =
 
     type PepValueFittingMethod = 
         | LinearLogit
+        | IRLS
 
 
     type EstimationParams = {
