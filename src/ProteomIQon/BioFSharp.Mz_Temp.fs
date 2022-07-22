@@ -1697,6 +1697,7 @@ module FDRControl' =
             |> Array.map (fun (_,count,decoyCount,medianScore) ->
                 float count,float decoyCount,medianScore
             )
+            |> Array.sortBy (fun (_,_,score) -> score)
             |> Array.unzip3
 
         let mutable x = Vector.zeroCreate 1
@@ -1753,6 +1754,24 @@ module FDRControl' =
             (negativeCounts |> Vector.ofArray)
             (binSize |> Vector.ofArray)
 
+        logger.Trace (
+            scores
+            |> Array.map (fun x -> string x)
+            |> String.concat ";"
+        )
+
+        logger.Trace (
+            negativeCounts
+            |> Array.map (fun x -> string x)
+            |> String.concat ";"
+        )
+
+        logger.Trace (
+            binSize
+            |> Array.map (fun x -> string x)
+            |> String.concat ";"
+        )
+
         let convergeEpsilon = 1e-4
         let stepEpsilon = 1e-8
         let weightSlope = 1e1
@@ -1802,11 +1821,9 @@ module FDRControl' =
             for ix = (z.Length - 1) downto 0 do
                 let e = exp(g.[ix])
                 let epsilon = 1e-15
-                printfn "a"
                 p.[ix] <- Math.Min(Math.Max(e / (1. + e),epsilon), 1. - epsilon)
                 w.[ix] <- Math.Max(m.[ix] * p.[ix] * (1. - p.[ix]), epsilon)
                 z.[ix] <- Math.Min(gRange, Math.Max(-gRange, g.[ix] + (y.[ix] - p.[ix] * m.[ix]) / w.[ix]))
-                printfn "b"
 
         let lrInitg () =
             initg()
@@ -1819,8 +1836,6 @@ module FDRControl' =
 
         let initiateQR () =
             let n = x.Length
-            logger.Trace (sprintf "%i" n)
-            logger.Trace (sprintf "%A" x)
             let dx' = Vector.zeroCreate (n - 1)
             for ix = 0 to (n - 2)do
                 dx'.[ix] <- x.[ix + 1] - x.[ix]
@@ -1850,87 +1865,6 @@ module FDRControl' =
             Qt <- Qt'
             R <- R'
             dx <- dx'
-
-        let crossValidation (alpha: float) =
-            let n = R.NumRows
-            let k0 = Vector.zeroCreate n
-            let k1 = Vector.zeroCreate n
-            let k2 = Vector.zeroCreate n
-            let B: Matrix<float> = R + ((Qt * alpha) * ((Matrix.diag (Vector.map2 (fun x y -> x / y) (Vector.init (n + 2) (fun x -> 1.))  w)) * Q))
-            //Get the diagonals from K
-            //ka[i]=B[i,i+a]=B[i+a,i]
-            // Filter 0. in k1 and k2? Diagonals are shorter. Percolator uses packed vectors, so only nonzero elements are present
-            // Maybe Indices are needed later on?
-            // ++row
-            for row = 0 to (n - 1) do
-                for rowPos = ((B.Row row).Length - 1) downto 0 do
-                    // slower, because not packed
-                    let col = rowPos
-                    if col = row then
-                        k0.[row] <- B.[row,rowPos]
-                    if (col + 1) = row then
-                        k1.[row] <- B.[row,rowPos]
-                    if (col + 2) = row then
-                        k2.[row] <- B.[row,rowPos]
-            // LDL decompose Page 26 Green Silverman
-            // d[i]=D[i,i]
-            // la[i]=L[i+a,i]
-            // Vec d(n),l1(n),l2(n)
-            let d = Vector.zeroCreate n
-            let l1 = Vector.zeroCreate n
-            let l2 = Vector.zeroCreate n
-            d.[0] <- k0.[0]
-            l1.[0] <- k1.[0] / d.[0]
-            d.[1] <- k0.[0] - l1.[0] * l1.[0] * d.[0]
-            // ++row
-            for row = 2 to (n - 1) do
-                l2.[row - 2] <- k2.[row - 2] / d.[row - 2]
-                l1.[row - 1] <- (k1.[row - 1] - l1.[row - 2] * l2.[row - 2] * d.[row - 2]) / d.[row - 1]
-                d.[row] <- k0.[row] - l1.[row - 1] * l1.[row - 1] * d.[row - 1] - l2.[row - 2] * l2.[row - 2] * d.[row - 2]
-            // Find diagonals of inverse Page 34 Green Silverman
-            // ba[i]=B^{-1}[i+a,i]=B^{-1}[i,i+a]
-            // Vec b0(n),b1(n),b2(n)
-            let b0 = Vector.zeroCreate n
-            let b1 = Vector.zeroCreate n
-            let b2 = Vector.zeroCreate n
-            // --row
-            for row = (n - 1) downto 0 do
-                if row = (n - 1) then
-                    b0.[n - 1] <- 1. / d.[n - 1]
-                elif row = (n - 2) then
-                    b0.[n - 2] <- 1. / d.[n - 2] - l1.[n - 2] * b1.[n - 2]
-                else
-                    b0.[row] <- 1. / d.[row] - l1.[row] * b1.[row] - l2.[row] * b2.[row]
-                if row = (n - 1) then
-                    b1.[n - 2] <- -l1.[n - 2] * b0.[n - 1]
-                elif row >= 1 then
-                    b1.[row - 1] <- -l1.[row - 1] * b0.[row] - l1.[row] * b1.[row]
-                if row >= 2 then
-                    b2.[row - 2] <- -l1.[row - 2] * b0.[row]
-            // Calculate diagonal elements a[i]=Aii p35 Green Silverman
-            // (expanding q according to p12)
-            //  Vec a(n+2),c(n+1);
-            let a = Vector.zeroCreate n
-            let c = Vector.zeroCreate (n - 1)
-            for ix = 0 to (n - 3) do
-              c.[ix] <- 1. / dx.[ix]
-            for ix = 0 to (n - 1) do
-              if ix > 0 then
-                a.[ix] <- a.[ix] + b0.[ix - 1] * c.[ix - 1] * c.[ix - 1]
-                if ix < (n - 1) then
-                  a.[ix] <- a.[ix] + b0.[ix] * (-c.[ix - 1] - c.[ix]) * (-c.[ix - 1] - c.[ix])
-                  a.[ix] <- a.[ix] + 2. * b1.[ix] * c.[ix] * (-c.[ix - 1] - c.[ix])
-                  a.[ix] <- a.[ix] + 2. * b1.[ix - 1] * c.[ix - 1] * (-c.[ix - 1] - c.[ix])
-                  a.[ix] <- a.[ix] + 2. * b2.[ix - 1] * c.[ix - 1] * c.[ix]
-              if ix < (n - 1) then
-                a.[ix] <- a.[ix] + b0.[ix + 1] * c.[ix] * c.[ix];
-            // Calculating weighted cross validation as described in p
-            let mutable cv = 0.0
-            for ix = 0 to (n - 1) do
-                let f = (z.[ix] - gNew.[ix]) * w.[ix] / (alpha * a.[ix])
-                //double f =(z[ix]-gnew[ix])/(alpha*alpha*a[ix]*a[ix]);
-                cv <- cv + f * f * w.[ix];
-            cv
                 
         let solveInPlace (mat: Matrix<float>) (res: Vector<float>) =
             Algebra.LinearAlgebra.SolveLinearSystem mat res
@@ -1977,7 +1911,6 @@ module FDRControl' =
             // do .. while
             let mutable init = true
             let n = x.Length
-            printfn "aaa"
             while init || ((step > stepEpsilon || step < 0.) && iter < 20) do
                 init <- false
                 iter <- iter + 1
@@ -1987,16 +1920,12 @@ module FDRControl' =
                 let diag = ((Matrix.diag (Vector.map2 (fun x y -> x / y) (Vector.init (n) (fun x -> 1.)) w)) * alpha)
                 let aWiQ = diag * Q
                 let M = R + (Qt * aWiQ)
-                printfn "%A" gamma
                 gamma <- Qt * z
-                printfn "%A" gamma
                 gamma <- solveInPlace M gamma
-                printfn "%A" gamma
                 gNew <- z - (aWiQ*gamma)
                 limitg()
                 let difference = g - gNew
                 step <- (Vector.norm difference) / float n
-            printfn "bbb"
             g <- gNew
 
         let evaluateSlope (alpha: float) =
@@ -2071,6 +2000,21 @@ module FDRControl' =
                     cv2
             iterativeReweightedLeastSquares(alpha)
 
+        let revLogitAndPi01 (peps: float[])=
+            let top = Math.Min(1., Math.Exp(peps |> Array.max))
+            let mutable crap = false
+            peps
+            |> Array.map (fun x ->
+                if crap then
+                    top
+                else
+                    let temp = Math.Exp x
+                    if temp >= top then
+                        crap <- true
+                        top
+                    else
+                        temp
+            )
 
         lrInitg()
         limitg()
@@ -2078,34 +2022,37 @@ module FDRControl' =
         roughnessPenaltyIRLS()
         data
         |> Array.filter (isDecoy >> not)
-        |> Array.map (fun x -> 
-            x
-            |> targetScoreF,
-            x
-            |> targetScoreF
-            |> splineEval
-        )
+        |> Array.sortByDescending targetScoreF
+        |> fun filteredSorted ->
+            filteredSorted
+            |> Array.map (fun x -> 
+                x
+                |> targetScoreF,
+                x
+                |> targetScoreF
+                |> splineEval
+            )
         |> Array.unzip
+        |> fun (x, y) ->
+            x,
+            y
+            |> revLogitAndPi01
+            |> fun arr ->
+                let head::tail = arr |> Array.rev |> Array.toList
+                tail
+                |> List.fold (fun (acc: float list) newPEPValue ->
+                    let pepValue = acc.Head
+                    if newPEPValue > pepValue then
+                        pepValue::acc
+                    else
+                        newPEPValue::acc
+                )[head]
+                |> Array.ofList
         |> fun (x, y) ->
             let coeff = FSharp.Stats.Interpolation.LinearSpline.initInterpolate x y
             let fitLinSp = Interpolation.LinearSpline.interpolate coeff
             fitLinSp
 
-    let revLogitAndPi01 (peps: float[])=
-        let top = Math.Min(1., Math.Exp(peps |> Array.max))
-        let mutable crap = false
-        peps
-        |> Array.map (fun x ->
-            if crap then
-                top
-            else
-                let temp = Math.Exp x
-                if temp >= top then
-                    crap <- true
-                    top
-                else
-                    temp
-        )
 
 module Fragmentation' =
 
