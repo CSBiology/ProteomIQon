@@ -353,7 +353,7 @@ module PSMStatistics =
                         |> FSharp.Stats.Distributions.Bandwidth.nrd0
                         |> fun x -> x / 4.
                     match estParams.PepValueFittingMethod with
-                    | LinearLogit -> ProteomIQon.FDRControl'.initCalculateLin logger bw (fun x -> x.Label |> not) (fun x -> float (trainedModel x).Score ) (fun x -> float (trainedModel x).Score) bestPSMPerScan
+                    //| LinearLogit -> ProteomIQon.FDRControl'.initCalculateLin logger bw (fun x -> x.Label |> not) (fun x -> float (trainedModel x).Score ) (fun x -> float (trainedModel x).Score) bestPSMPerScan
                     | IRLS -> ProteomIQon.FDRControl'.initCalculatePEPValueIRLS logger 1. (fun x -> x.Label |> not) (fun x -> float (trainedModel x).Score ) (fun x -> float (trainedModel x).Score) bestPSMPerScan
                 let scoreVsQ = 
                     bestPSMPerScan
@@ -384,10 +384,10 @@ module PSMStatistics =
                         ]
                         |> Chart.Combine
                         |> Chart.withAxisAnchor(Y=1)
-                        Chart.Point(scoreVsQ)
+                        Chart.Line(scoreVsQ |> Array.sortBy fst)
                         |> Chart.withAxisAnchor(Y=2)
                         |> Chart.withTraceName "QValue"
-                        Chart.Point(scoreVSPep)
+                        Chart.Line(scoreVSPep |> Array.sortBy fst)
                         |> Chart.withAxisAnchor(Y=2)
                         |> Chart.withTraceName "PepValue"
                     ]
