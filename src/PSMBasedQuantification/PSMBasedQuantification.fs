@@ -950,9 +950,10 @@ module PSMBasedQuantification =
                     IntensityTrace_Corrected_Heavy              = averagePSM.Y_Xic
                     }
                     |> Option.Some
-                | None -> 
-                    saveChart pepIon.Sequence pepIon.GlobalMod pepIon.Charge averagePSM.X_Xic averagePSM.Y_Xic ms2s averagePSM.WeightedAvgScanTime
-                        peakToQuantify.XData peakToQuantify.YData quantP.YPredicted [||] [||] [||] [||] peaks clusterComparisonTarget.PeakComparisons plotDirectory
+                | None ->
+                    if diagCharts then 
+                        saveChart pepIon.Sequence pepIon.GlobalMod pepIon.Charge averagePSM.X_Xic averagePSM.Y_Xic ms2s averagePSM.WeightedAvgScanTime
+                            peakToQuantify.XData peakToQuantify.YData quantP.YPredicted [||] [||] [||] [||] peaks clusterComparisonTarget.PeakComparisons plotDirectory
                     {
                     StringSequence                              = pepIon.Sequence
                     GlobalMod                                   = pepIon.GlobalMod
