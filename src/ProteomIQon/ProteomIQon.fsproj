@@ -79,5 +79,6 @@
     <PackageReference Include="System.Data.SQLite.Core" Version="1.0.113.7" />
     <PackageReference Include="Plotly.NET" Version="2.0.0-alpha5" />
     <PackageReference Include="DynamicObj" Version="0.0.3" />
+	<PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
   </ItemGroup>
 </Project>
