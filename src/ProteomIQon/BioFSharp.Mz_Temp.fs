@@ -1688,6 +1688,23 @@ module FDRControl' =
             |> fun (error, fit,s,p,bw) ->logger.Trace(sprintf "Chosen Bandwidth: %f" bw); fit,s,p
         fittingFunction
 
+    (*******************************************************************************
+    The following function (initCalculatePEPValueIRLS) is adapted from Percolator (https://github.com/percolator/percolator)
+
+    Copyright 2006-2012 Lukas Käll <lukas.kall@scilifelab.se>
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+    *******************************************************************************)
+
     let initCalculatePEPValueIRLS (logger: NLog.Logger) bandwidth (isDecoy: 'a -> bool) (decoyScoreF: 'a -> float) (targetScoreF: 'a -> float) (data: 'a[]) =
         
         let targetDecoyHis = createTargetDecoyHis bandwidth (isDecoy: 'a -> bool) (decoyScoreF: 'a -> float) (targetScoreF: 'a -> float) (data: 'a[])
