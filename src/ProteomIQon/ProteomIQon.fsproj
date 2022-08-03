@@ -30,6 +30,7 @@
     <Compile Include="Ontologies.fs" />
     <Compile Include="DeedleExtensionsTemp.fs" />
     <Compile Include="BioFSharp.Mz_Temp.fs" />
+    <Compile Include="pepValueCalculation.fs" />
     <Compile Include="Logging.fs" />
     <Compile Include="Domain.fs" />
     <Compile Include="DTO.fs" />
