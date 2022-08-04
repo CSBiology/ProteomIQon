@@ -1,3 +1,6 @@
+#### 0.0.8 - Thursday, August 2, 2022
+* susbtitute PEP value calculation with iterative reweighted least squares based method
+
 #### 0.0.7 - Friday, August 20, 2021
 * rework fitting based PEP value calculation
 
