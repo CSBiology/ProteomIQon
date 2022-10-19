@@ -980,13 +980,17 @@ module Dto =
             PredictedScanTime            : float
             [<FieldAttribute(8)>]
             ScanTime_SourceFile          : float
-            [<FieldAttribute(9)>][<TraceConverter>]
-            RtTrace_SourceFile           : float []
-            [<FieldAttribute(10)>][<TraceConverter>]
-            IntensityTrace_SourceFile    : float []
+            [<FieldAttribute(9)>]
+            ApexIntensity_SourceFile     : float
+            [<FieldAttribute(10)>]
+            Quant_SourceFile             : float
             [<FieldAttribute(11)>][<TraceConverter>]
-            IsotopicPatternMz_SourceFile                    : float []            
+            RtTrace_SourceFile           : float []
             [<FieldAttribute(12)>][<TraceConverter>]
+            IntensityTrace_SourceFile    : float []
+            [<FieldAttribute(13)>][<TraceConverter>]
+            IsotopicPatternMz_SourceFile                    : float []            
+            [<FieldAttribute(14)>][<TraceConverter>]
             IsotopicPatternIntensity_Observed_SourceFile    : float []       
         } 
 
