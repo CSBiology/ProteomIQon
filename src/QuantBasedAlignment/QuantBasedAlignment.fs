@@ -592,6 +592,16 @@ module QuantBasedAlignment =
             ProteinNames                                    = quantifiedPeptide.ProteinNames
             PredictedScanTime                               = float scanTimePrediction.TargetScanTime
             ScanTime_SourceFile                             = getTargetScanTime quantifiedPeptide
+            ApexIntensity_SourceFile                        =
+                if quantifiedPeptide.GlobalMod = 1 then
+                    quantifiedPeptide.MeasuredApex_Heavy
+                else
+                    quantifiedPeptide.MeasuredApex_Light
+            Quant_SourceFile                                =
+                if quantifiedPeptide.GlobalMod = 1 then
+                    quantifiedPeptide.Quant_Heavy
+                else
+                    quantifiedPeptide.Quant_Light
             RtTrace_SourceFile                              = getTargetRtTrace quantifiedPeptide
             IntensityTrace_SourceFile                       = getTargetIntensityTrace quantifiedPeptide
             IsotopicPatternMz_SourceFile                    = getIsotopicPatternMz quantifiedPeptide       
@@ -893,7 +903,7 @@ module QuantBasedAlignment =
             quantifiedPeptide
             |> toPeptideForLearning None
             |> fun (pepToLearn,pepComp) -> 
-                let v = model (float pepToLearn.SourceScanTime)        
+                let v = model (float pepToLearn.SourceScanTime)
                 {
                 TargetScanTime = float32 v
                 }
@@ -979,8 +989,8 @@ module QuantBasedAlignment =
         let result = 
             alignmentsSortedByQuality
             |> Array.fold (fun target alignment -> 
-                    let peptideIonsToTransfer,peptideIonsStillMissing = 
-                        target.MissingPeptides
+                    let peptideIonsToTransfer,peptideIonsStillMissing =
+                        Array.append target.MissingPeptides (target.QuantifiedPeptides |> Map.toArray |> Array.map fst)
                         |> Array.fold (fun (pepsToTransfer,stillMissingPeps) missingPep -> 
                             match Map.tryFind missingPep alignment.SourceFile.QuantifiedPeptides with 
                             | Some pepToTransfer -> (pepToTransfer::pepsToTransfer,stillMissingPeps)
