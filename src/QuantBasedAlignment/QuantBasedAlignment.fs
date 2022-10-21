@@ -385,6 +385,7 @@ module QuantBasedAlignment =
         QuantifiedPeptides         : Map<PeptideIon,QuantificationResult> 
         MissingPeptides            : PeptideIon []
         GainedPeptides             : AlignmentResult []
+        PepIonsToAlign             : PeptideIon []
         }
     
 
@@ -563,6 +564,7 @@ module QuantBasedAlignment =
                 QuantifiedPeptides         = presentPeptides 
                 MissingPeptides            = missingPeptides 
                 GainedPeptides             = [||]
+                PepIonsToAlign             = allPepIons
             }
         let targetPeptides = 
             targetFile 
@@ -990,7 +992,7 @@ module QuantBasedAlignment =
             alignmentsSortedByQuality
             |> Array.fold (fun target alignment -> 
                     let peptideIonsToTransfer,peptideIonsStillMissing =
-                        Array.append target.MissingPeptides (target.QuantifiedPeptides |> Map.toArray |> Array.map fst)
+                        target.PepIonsToAlign
                         |> Array.fold (fun (pepsToTransfer,stillMissingPeps) missingPep -> 
                             match Map.tryFind missingPep alignment.SourceFile.QuantifiedPeptides with 
                             | Some pepToTransfer -> (pepToTransfer::pepsToTransfer,stillMissingPeps)
@@ -1000,7 +1002,7 @@ module QuantBasedAlignment =
                         peptideIonsToTransfer 
                         |> List.toArray 
                         |> Array.map alignment.AlignFunc 
-                    {target with MissingPeptides = peptideIonsStillMissing |> Array.ofList; GainedPeptides = Array.append target.GainedPeptides alignmentResults}
+                    {target with MissingPeptides = peptideIonsStillMissing |> Array.ofList; GainedPeptides = Array.append target.GainedPeptides alignmentResults; PepIonsToAlign = peptideIonsStillMissing |> Array.ofList}
                 ) targetAlignmentFile
         logger.Trace "Writing Results"
         let outFilePath =
