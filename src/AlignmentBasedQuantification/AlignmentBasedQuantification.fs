@@ -1289,7 +1289,7 @@ module AlignmentBasedQuantification =
                 |> lightQualityFilter -2. 2.
         let appendedResults = 
             Array.append psmbasedQuant filteredResults       
-            |> Array.groupBy (fun x -> x.StringSequence,x.ModSequenceID,x.Charge,x.GlobalMod)
+            |> Array.groupBy (fun x -> x.StringSequence,x.ModSequenceID,x.Charge,x.GlobalMod, x.QuantificationSource)
             |> Array.choose (fun (pepIon,ions) -> 
                 if processParams.PerformLabeledQuantification then
                     let min =
