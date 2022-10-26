@@ -42,8 +42,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".build", ".build", "{7C6D08
 		build.sh = build.sh
 	EndProjectSection
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{50F43FA1-4EF7-44AC-9621-34BF5E9D7135}"
-EndProject
 Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "Preprocessing", "src\Preprocessing\Preprocessing.fsproj", "{0A1F9600-BCE9-4C30-BCB0-79862585653B}"
 EndProject
 Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "PeptideDB", "src\PeptideDB\PeptideDB.fsproj", "{641B38D1-D3EC-4E07-9387-C3699FD59A83}"
@@ -101,6 +99,8 @@ EndProject
 Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "QuantBasedAlignment_win-x64", "src\QuantBasedAlignment_win-x64\QuantBasedAlignment_win-x64.fsproj", "{5313041F-68F0-4858-8671-D7B08BF1A05F}"
 EndProject
 Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "AddDeducedPeptides", "src\AddDeducedPeptides\AddDeducedPeptides.fsproj", "{47D4F25C-B881-4CCC-9D8A-6B6AA081AC1C}"
+EndProject
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "AlignmentBasedQuantStatistics", "src\AlignmentBasedQuantStatistics\AlignmentBasedQuantStatistics.fsproj", "{96ACA5F1-71C2-4673-A1C5-548D07089DFB}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -200,6 +200,10 @@ Global
 		{47D4F25C-B881-4CCC-9D8A-6B6AA081AC1C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{47D4F25C-B881-4CCC-9D8A-6B6AA081AC1C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{47D4F25C-B881-4CCC-9D8A-6B6AA081AC1C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{96ACA5F1-71C2-4673-A1C5-548D07089DFB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{96ACA5F1-71C2-4673-A1C5-548D07089DFB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{96ACA5F1-71C2-4673-A1C5-548D07089DFB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{96ACA5F1-71C2-4673-A1C5-548D07089DFB}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
