@@ -18,13 +18,17 @@ module console1 =
         let directory = Environment.CurrentDirectory
         let getPathRelativeToDir = getRelativePath directory
         let results = parser.Parse argv
-        let i = results.GetResult InstrumentOutput |> List.map getPathRelativeToDir
+        let i = results.GetResult Quant |> List.map getPathRelativeToDir
+        let ii = results.GetResult Align |> List.map getPathRelativeToDir
+        let iii = results.GetResult AlignedQuant |> List.map getPathRelativeToDir
         let o = results.GetResult OutputDirectory  |> getPathRelativeToDir
         let p = results.GetResult ParamFile        |> getPathRelativeToDir
         Directory.CreateDirectory(o) |> ignore
         Logging.generateConfig o
-        let logger = Logging.createLogger "PeptideSpectrumMatching"
-        logger.Info (sprintf "InputFilePath -i = %A" i)
+        let logger = Logging.createLogger "AlignmentBasedQuantStatistics"
+        logger.Info (sprintf "QuantFilePath -i = %A" i)
+        logger.Info (sprintf "AlignFilePath -i = %A" ii)
+        logger.Info (sprintf "AlignedQuantFilePath -i = %A" iii)
         logger.Info (sprintf "OutputFilePath -o = %s" o)
         logger.Info (sprintf "ParamFilePath -p = %s" p)
         logger.Trace (sprintf "CLIArguments: %A" results)
