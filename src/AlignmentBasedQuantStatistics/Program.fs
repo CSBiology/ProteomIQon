@@ -6,7 +6,7 @@ open System.Reflection
 open Argu
 open ProteomIQon.Core
 open ProteomIQon.Core.InputPaths
-open Library
+open AlignmentBasedQuantStatistics
 open CLIArgumentParsing
 
 module console1 =
@@ -23,6 +23,11 @@ module console1 =
         let iii = results.GetResult AlignedQuant |> List.map getPathRelativeToDir
         let o = results.GetResult OutputDirectory  |> getPathRelativeToDir
         let p = results.GetResult ParamFile        |> getPathRelativeToDir
+        let dc = results.Contains DiagnosticCharts
+        let c =
+            match results.TryGetResult Parallelism_Level with
+            | Some c    -> c
+            | None      -> 1
         Directory.CreateDirectory(o) |> ignore
         Logging.generateConfig o
         let logger = Logging.createLogger "AlignmentBasedQuantStatistics"
@@ -38,7 +43,6 @@ module console1 =
         let files = 
             parsePaths (fun path -> Directory.GetFiles(path,("*.txt"))) i
             |> Array.ofSeq
-        Library.print (results.GetAllResults())
-        Library.print files     
+          
         logger.Info "Done"
         0
