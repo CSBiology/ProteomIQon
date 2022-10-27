@@ -5,6 +5,7 @@ open Microsoft
 open Microsoft.ML
 open Microsoft.ML.Data
 open ProteomIQon.DTW'
+open ProteomIQon.FDRControl'
 open FSharpAux
 open Plotly.NET
 
@@ -29,6 +30,20 @@ module AlignmentBasedQuantStatistics =
             [<ColumnName("Label")>]
             Label                           : bool
         }
+
+    [<CLIMutable>]
+    type ClassPredition = 
+        {
+            [<ColumnName("Score")>]
+            Score       : float32
+            [<ColumnName("Probability")>]
+            Probability : float32
+        }
+    ///
+    let downcastPipeline (x : IEstimator<_>) = 
+        match x with 
+        | :? IEstimator<ITransformer> as y -> y
+        | _ -> failwith "downcastPipeline: expecting a IEstimator<ITransformer>"
 
     let stringToArray s =
         s
@@ -181,128 +196,110 @@ module AlignmentBasedQuantStatistics =
             |> Seq.choose id
     
         trainingSet
+        
+    let learnScore (matchedFiles: (string*string*string)[]) (logger: NLog.Logger) parallelismLevel diagnosticCharts outputDirectory =
+        let trainingsData =
+            matchedFiles
+            |> FSharpAux.PSeq.map (fun (quantFilePath,alignfilePath,alignQuantFilePath) -> createTrainingsData quantFilePath alignfilePath alignQuantFilePath)
+            |> FSharpAux.PSeq.withDegreeOfParallelism parallelismLevel
+            |> Seq.concat
+            |> Array.ofSeq
 
-    //let positiveAlignMetrics =
-    //    alignMetric
-    //    |> Frame.filterRows (fun rk s->
-    //        let completeRK = quant.RowKeys
-    //        let reducedRK = reduced.RowKeys
-    //        let getRK = fun (a,b,c,d,e,f) -> (a,b,c,d,e)
-    //        reducedRK |> Seq.contains (getRK rk) (*&& reducedRK |> Seq.contains (getRK rk) |> not*)
-    //    )
-    //positiveAlignMetrics.RowCount
-    //alignMetric.RowCount
+        //Create the MLContext to share across components for deterministic results
+        let mlContext = MLContext(seed = 1) // Seed set to any number
 
-    //[<CLIMutable>]
-    //type QuantToLearn = {
-    //    StringSequence: string
-    //    GlobalMod: bool
-    //    Charge: int
-    //    PepSequenceID: int
-    //    ModSequenceID: int
-    
-    //}
+        //let fullData = mlContext.Data.LoadFromEnumerable comb
+        // STEP 1: Common data loading configuration   
+        let fullData = mlContext.Data.LoadFromEnumerable trainingsData
 
-
-    //let setFull  = trainingsData
-    //[<CLIMutable>]
-    //type ClassPredition = 
-    //    {
-    //        [<ColumnName("Score")>]
-    //        Score       : float32
-    //        [<ColumnName("Probability")>]
-    //        Probability : float32
-    //    }
-    /////
-    //let downcastPipeline (x : IEstimator<_>) = 
-    //    match x with 
-    //    | :? IEstimator<ITransformer> as y -> y
-    //    | _ -> failwith "downcastPipeline: expecting a IEstimator<ITransformer>"
-
-
-    ////Create the MLContext to share across components for deterministic results
-    //let mlContext = MLContext(seed = 1) // Seed set to any number so you
-
-    ////let fullData = mlContext.Data.LoadFromEnumerable comb
-    //// STEP 1: Common data loading configuration   
-    //let fullData' = mlContext.Data.LoadFromEnumerable setFull
-
-    //let ttdata = mlContext.Data.TrainTestSplit(data=fullData',testFraction = 0.8) 
+        let ttdata = mlContext.Data.TrainTestSplit(data=fullData,testFraction = 0.8) 
       
-    ////STEP 2: Process data, create and train the model 
-    //let pipeline = 
-    //    let trainer = mlContext.BinaryClassification.Trainers.FastTree(featureColumnName="Features",labelColumnName="Label")
-    //    // Process data transformations in pipeline
-    //    (mlContext.Transforms.Concatenate(
-    //            "Features",
-    //            "X_ApexIntensity",
-    //            "X_Intensities",
-    //            "DtwDistanceBefore",
-    //            "Y_ApexIntensity",
-    //            "Y_Intensities",
-    //            "ScanTimeDifference"
-    //            )
-    //        |> downcastPipeline
-    //        ).Append(trainer)
+        //STEP 2: Process data, create and train the model 
+        let pipeline = 
+            let trainer = mlContext.BinaryClassification.Trainers.FastTree(featureColumnName="Features",labelColumnName="Label")
+            // Process data transformations in pipeline
+            (
+                mlContext.Transforms.Concatenate(
+                    "Features",
+                    "X_ApexIntensity",
+                    "X_Intensities",
+                    "DtwDistanceBefore",
+                    "Y_ApexIntensity",
+                    "Y_Intensities",
+                    "ScanTimeDifference"
+                )
+                |> downcastPipeline
+            ).Append(trainer)
 
-    //let model = pipeline.Fit ttdata.TrainSet
+        let model = pipeline.Fit ttdata.TrainSet
 
-    ////// STEP3: Run the prediciton on the test data
-    //let predictions =
-    //    model.Transform ttdata.TestSet
+        //// STEP3: Run the prediciton on the test data
+        let predictions =
+            model.Transform ttdata.TestSet
 
-    //let metrics = 
-    //    mlContext.BinaryClassification.Evaluate(predictions)
-    //metrics
-    ////PREDICTED || positive | negative | Recall
-    ////TRUTH     ||======================
-    //// positive ||    5,636 |      648 | 0.8969
-    //// negative ||      776 |    5,613 | 0.8785
-    ////          ||======================
-    ////Precision ||   0.8790 |   0.8965 |
-    ////"
+        let metrics = 
+            mlContext.BinaryClassification.Evaluate(predictions)
 
-    ////          ||======================
-    ////PREDICTED || positive | negative | Recall
-    ////TRUTH     ||======================
-    //// positive ||   60,179 |    2,340 | 0.9626
-    //// negative ||    5,300 |   19,244 | 0.7841
-    ////          ||======================
-    ////Precision ||   0.9191 |   0.8916 |
+        logger.Trace $"{metrics.ConfusionMatrix.GetFormattedConfusionTable()}"    
 
-    //metrics.ConfusionMatrix.GetFormattedConfusionTable()    
+        let predF = mlContext.Model.CreatePredictionEngine<PeptideForLearning,ClassPredition>(model)
 
+        let predict qp = 
+            qp
+            |> predF.Predict
 
-    //let predF = mlContext.Model.CreatePredictionEngine<PeptideForLearning,ClassPredition>(model)
-
-    //let predict qp = 
-    //    qp
-    //    |> predF.Predict
-
-
-    //let setPositive,setNegative =
-    //    setFull
-    //    |> Array.partition (fun x -> x.Label)
+        let qValueStorey =
+            calculateQValueStorey trainingsData (fun x -> x.Label |> not) (fun x -> float (predict x).Score) (fun x -> float (predict x).Score)
+        
+        if diagnosticCharts then
+            let setPositive,setNegative =
+                trainingsData
+                |> Array.partition (fun x -> x.Label)
+            let positive =
+                setPositive
+                |> Array.map predict
+                |> Array.map (fun x -> x.Probability)
+                |> Chart.Histogram
+                |> Chart.withTraceInfo "Positive"
     
-    //let positive =
-    //    setPositive
-    //    |> Array.map predict
-    //    |> Array.map (fun x -> x.Probability)
-    //    |> Chart.Histogram
-    //    |> Chart.withTraceInfo "Positive"
-    
-    //let negative =
-    //    setNegative
-    //    |> Array.map predict
-    //    |> Array.map (fun x -> x.Probability)
-    //    |> Chart.Histogram
-    //    |> Chart.withTraceInfo "Negative"
+            let negative =
+                setNegative
+                |> Array.map predict
+                |> Array.map (fun x -> x.Probability)
+                |> Chart.Histogram
+                |> Chart.withTraceInfo "Negative"
 
-    //[
-    //    positive
-    //    negative
-    //]
-    //|> Chart.combine
-    //|> Chart.withXAxisStyle("Probability")
-    //|> Chart.withYAxisStyle("Count")
-    //|> Chart.show
+            [
+                positive
+                negative
+            ]
+            |> Chart.combine
+            |> Chart.withXAxisStyle("Probability")
+            |> Chart.withYAxisStyle("Count")
+            |> Chart.saveHtml (System.IO.Path.Combine(outputDirectory,"ProbabilityHistogram"))
+
+            let positiveQVal =
+                setPositive
+                |> Array.map predict
+                |> Array.map (fun x -> qValueStorey(float x.Score))
+                |> Chart.Histogram
+                |> Chart.withTraceInfo "Positive"
+                
+            let negativeQVal =
+                setNegative
+                |> Array.map predict
+                |> Array.map (fun x -> qValueStorey(float x.Score))
+                |> Chart.Histogram
+                |> Chart.withTraceInfo "Negative"
+                
+            [
+                positiveQVal
+                negativeQVal
+            ]
+            |> Chart.combine
+            |> Chart.withXAxisStyle("Q-Value")
+            |> Chart.withYAxisStyle("Count")
+            |> Chart.saveHtml (System.IO.Path.Combine(outputDirectory,"QValueDistribution"))
+            
+            
+            
