@@ -54,7 +54,6 @@ module AlignmentBasedQuantStatistics =
         {
             Source_ApexIntensity = s.GetAs<float32>("align_ApexIntensity_SourceFile")
             Source_Intensities   = s.GetAs<float32>("align_Quant_SourceFile")
-            //Source_Stabw         = s.GetAs<float32>("")
             DtwDistanceBefore    =
                 let source = Array.zip (s.GetAs<string>("align_RtTrace_SourceFile") |> stringToArray) (s.GetAs<string>("align_IntensityTrace_SourceFile") |> stringToArray |> zNorm)
                 let target = 
@@ -136,6 +135,14 @@ module AlignmentBasedQuantStatistics =
                 |> Seq.contains k
             )
 
+        let difference =
+            align
+            |> Frame.filterRows (fun k s ->
+                quant.RowKeys
+                |> Seq.contains k
+                |> not
+            )
+
         let quantMap =
             let quantMzHeavy: Map<string*bool*int*int*int,float> =
                 quant
@@ -161,6 +168,13 @@ module AlignmentBasedQuantStatistics =
 
         let overlapSet =
             Frame.join JoinKind.Inner overlap alignedQuant
+
+        let differenceSet =
+            Frame.join JoinKind.Inner difference alignedQuant
+
+        let finalSet =
+            quant
+            |> Frame.mapColKeys (fun ck -> ck.Replace("quant_",""))
 
         let trainingSet = 
             overlapSet
@@ -194,14 +208,26 @@ module AlignmentBasedQuantStatistics =
             )
             |> Series.values
             |> Seq.choose id
+            
+        let pepForLearningMap =
+            differenceSet
+            |> Frame.mapRows (fun rk s ->
+                toPeptideForLearning true s
+            )
+            |> Series.observations
+            |> Map.ofSeq
     
-        trainingSet
+        trainingSet, finalSet, pepForLearningMap
         
     let learnScore (matchedFiles: (string*string*string)[]) (logger: NLog.Logger) parallelismLevel diagnosticCharts outputDirectory =
-        let trainingsData =
+        let trainingsData, alignmentsToTake, pepFOrLearningMap =
             matchedFiles
             |> FSharpAux.PSeq.map (fun (quantFilePath,alignfilePath,alignQuantFilePath) -> createTrainingsData quantFilePath alignfilePath alignQuantFilePath)
             |> FSharpAux.PSeq.withDegreeOfParallelism parallelismLevel
+            |> Seq.unzip3
+
+        let trainingsData' =
+            trainingsData
             |> Seq.concat
             |> Array.ofSeq
 
@@ -210,7 +236,7 @@ module AlignmentBasedQuantStatistics =
 
         //let fullData = mlContext.Data.LoadFromEnumerable comb
         // STEP 1: Common data loading configuration   
-        let fullData = mlContext.Data.LoadFromEnumerable trainingsData
+        let fullData = mlContext.Data.LoadFromEnumerable trainingsData'
 
         let ttdata = mlContext.Data.TrainTestSplit(data=fullData,testFraction = 0.8) 
       
@@ -249,11 +275,11 @@ module AlignmentBasedQuantStatistics =
             |> predF.Predict
 
         let qValueStorey =
-            calculateQValueStorey trainingsData (fun x -> x.Label |> not) (fun x -> float (predict x).Score) (fun x -> float (predict x).Score)
+            calculateQValueStorey trainingsData' (fun x -> x.Label |> not) (fun x -> float (predict x).Score) (fun x -> float (predict x).Score)
         
         if diagnosticCharts then
             let setPositive,setNegative =
-                trainingsData
+                trainingsData'
                 |> Array.partition (fun x -> x.Label)
             let positive =
                 setPositive
@@ -300,6 +326,7 @@ module AlignmentBasedQuantStatistics =
             |> Chart.withXAxisStyle("Q-Value")
             |> Chart.withYAxisStyle("Count")
             |> Chart.saveHtml (System.IO.Path.Combine(outputDirectory,"QValueDistribution"))
+    
             
             
             
