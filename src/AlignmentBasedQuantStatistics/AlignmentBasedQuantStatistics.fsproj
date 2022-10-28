@@ -44,6 +44,6 @@
 	<PackageReference Include="FSharpAux.IO" Version="1.0.0" />
 	<PackageReference Include="FSharp.Stats" Version="0.4.0" />
 	<PackageReference Include="Deedle" Version="3.0.0-beta.1" />
-    <PackageReference Include="Plotly.NET" Version="3.0.1" />
+	<PackageReference Include="Plotly.NET" Version="2.0.0-alpha5" />
   </ItemGroup>
 </Project>
