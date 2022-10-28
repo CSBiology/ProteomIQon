@@ -13,6 +13,7 @@ module CLIArgumentParsing =
         | [<Mandatory>] [<AltCommandLine("-p")>]   ParamFile of path:string
         | [<Unique>]    [<AltCommandLine("-c")>]    Parallelism_Level of level:int
         | [<Unique>]    [<AltCommandLine("-dc")>]   DiagnosticCharts 
+        | [<Unique>]    [<AltCommandLine("-mf")>]   MatchFiles
     with
         interface IArgParserTemplate with
             member s.Usage =
@@ -23,8 +24,9 @@ module CLIArgumentParsing =
                 | OutputDirectory  _  -> "Specify the output directory."
                 | ParamFile _         -> "Specify parameter file for peptide spectrum matching."
                 | Parallelism_Level _ -> "Set the number of cores the programm can use. Parallelization occurs on file level. This flag is only of effect if a input directory (-i) is specified."
-                | DiagnosticCharts _    -> "Set to save diagnostic charts to the output directory."
-
+                | DiagnosticCharts    -> "Set to save diagnostic charts to the output directory."
+                | MatchFiles          -> "If this flag is set the files specified by Quant, Align AlignedQuant are matched according to their file name, otherwise they are matched by their position in the input lists."
+                
 
 
 
