@@ -286,46 +286,46 @@ module AlignmentBasedQuantStatistics =
                 |> Array.map predict
                 |> Array.map (fun x -> x.Probability)
                 |> Chart.Histogram
-                |> Chart.withTraceInfo "Positive"
+                |> Chart.withTraceName "Positive"
     
             let negative =
                 setNegative
                 |> Array.map predict
                 |> Array.map (fun x -> x.Probability)
                 |> Chart.Histogram
-                |> Chart.withTraceInfo "Negative"
+                |> Chart.withTraceName "Negative"
 
             [
                 positive
                 negative
             ]
-            |> Chart.combine
-            |> Chart.withXAxisStyle("Probability")
-            |> Chart.withYAxisStyle("Count")
-            |> Chart.saveHtml (System.IO.Path.Combine(outputDirectory,"ProbabilityHistogram"))
+            |> Chart.Combine
+            |> Chart.withX_AxisStyle("Probability")
+            |> Chart.withY_AxisStyle("Count")
+            |> Chart.SaveHtmlAs (System.IO.Path.Combine(outputDirectory,"ProbabilityHistogram"))
 
             let positiveQVal =
                 setPositive
                 |> Array.map predict
                 |> Array.map (fun x -> qValueStorey(float x.Score))
                 |> Chart.Histogram
-                |> Chart.withTraceInfo "Positive"
+                |> Chart.withTraceName "Positive"
                 
             let negativeQVal =
                 setNegative
                 |> Array.map predict
                 |> Array.map (fun x -> qValueStorey(float x.Score))
                 |> Chart.Histogram
-                |> Chart.withTraceInfo "Negative"
+                |> Chart.withTraceName "Negative"
                 
             [
                 positiveQVal
                 negativeQVal
             ]
-            |> Chart.combine
-            |> Chart.withXAxisStyle("Q-Value")
-            |> Chart.withYAxisStyle("Count")
-            |> Chart.saveHtml (System.IO.Path.Combine(outputDirectory,"QValueDistribution"))
+            |> Chart.Combine
+            |> Chart.withX_AxisStyle("Q-Value")
+            |> Chart.withY_AxisStyle("Count")
+            |> Chart.SaveHtmlAs (System.IO.Path.Combine(outputDirectory,"QValueDistribution"))
     
             
             

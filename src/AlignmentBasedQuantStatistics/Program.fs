@@ -52,13 +52,13 @@ module console1 =
                     |> Array.ofList
             let alignFiles =
                 if ii.Length = 1 then
-                    Directory.GetFiles(i.[0],("*.align"))
+                    Directory.GetFiles(ii.[0],("*.align"))
                 else
                     ii
                     |> Array.ofList
             let alignQuantFiles =
                 if iii.Length = 1 then
-                    Directory.GetFiles(i.[0],("*.quant"))
+                    Directory.GetFiles(iii.[0],("*.quant"))
                 else
                     iii
                     |> Array.ofList
