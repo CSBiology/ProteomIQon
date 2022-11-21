@@ -42,7 +42,7 @@ module console1 =
             Json.ReadAndDeserialize<Dto.PeptideSpectrumMatchingParams> p
             |> Dto.PeptideSpectrumMatchingParams.toDomain
         if i.Length = 1 && File.Exists i.[0] then
-            learnScore ([|i.[0], ii.[0], iii.[0]|]) logger 1 dc o
+            assignScoreAndQValue ([|i.[0], ii.[0], iii.[0]|]) logger 1 dc o
         elif (i.Length = 1 && Directory.Exists i.[0]) || i.Length > 1 then
             let quantFiles =
                 if i.Length = 1 then
@@ -80,7 +80,7 @@ module console1 =
                             )
                     else 
                         [|for i = 0 to i.Length-1 do yield quantFiles.[i], alignFiles.[i], alignQuantFiles.[i]|]
-            learnScore matchedFiles logger c dc o
+            assignScoreAndQValue matchedFiles logger c dc o
         else
             failwith "The given path to the instrument output is neither a valid file path nor a valid directory path."
           
