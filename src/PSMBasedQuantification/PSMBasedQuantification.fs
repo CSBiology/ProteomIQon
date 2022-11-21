@@ -807,6 +807,8 @@ module PSMBasedQuantification =
                     RtTrace_Heavy                               = successfulQuant.X_Xic 
                     IntensityTrace_Observed_Heavy               = successfulQuant.Y_Xic_uncorrected
                     IntensityTrace_Corrected_Heavy              = successfulQuant.Y_Xic
+                    AlignmentScore                              = nan
+                    AlignmentQValue                             = nan
                     }
                     |> Option.Some
                 | None -> 
@@ -857,6 +859,8 @@ module PSMBasedQuantification =
                     RtTrace_Heavy                               = [||]
                     IntensityTrace_Observed_Heavy               = [||]
                     IntensityTrace_Corrected_Heavy              = [||]
+                    AlignmentScore                              = nan
+                    AlignmentQValue                             = nan
                     }
                     |> Option.Some
             else
@@ -948,6 +952,8 @@ module PSMBasedQuantification =
                     RtTrace_Heavy                               = averagePSM.X_Xic 
                     IntensityTrace_Observed_Heavy               = averagePSM.Y_Xic_uncorrected
                     IntensityTrace_Corrected_Heavy              = averagePSM.Y_Xic
+                    AlignmentScore                              = nan
+                    AlignmentQValue                             = nan
                     }
                     |> Option.Some
                 | None ->
@@ -998,6 +1004,8 @@ module PSMBasedQuantification =
                     RtTrace_Heavy                               = averagePSM.X_Xic 
                     IntensityTrace_Observed_Heavy               = averagePSM.Y_Xic_uncorrected
                     IntensityTrace_Corrected_Heavy              = averagePSM.Y_Xic
+                    AlignmentScore                              = nan
+                    AlignmentQValue                             = nan
                     }
                     |> Option.Some
             with
@@ -1078,6 +1086,8 @@ module PSMBasedQuantification =
             RtTrace_Heavy                               = [||]
             IntensityTrace_Observed_Heavy               = [||]
             IntensityTrace_Corrected_Heavy              = [||]
+            AlignmentScore                              = nan
+            AlignmentQValue                             = nan
             }
             |> Option.Some
             with

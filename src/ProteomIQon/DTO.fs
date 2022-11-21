@@ -822,6 +822,10 @@ module Dto =
         IntensityTrace_Observed_Heavy               : float []
         [<FieldAttribute(42)>][<TraceConverter>]
         IntensityTrace_Corrected_Heavy              : float []
+        [<FieldAttribute(43)>]
+        AlignmentScore                              : float
+        [<FieldAttribute(44)>]
+        AlignmentQValue                             : float
         }
 
     module QuantificationResult = 
@@ -1234,6 +1238,10 @@ module Dto =
         IntensityTrace_Observed_Heavy               : float []
         [<FieldAttribute(45)>][<TraceConverter>]
         IntensityTrace_Corrected_Heavy              : float []
+        [<FieldAttribute(46)>]
+        AlignmentScore                              : float
+        [<FieldAttribute(47)>]
+        AlignmentQValue                             : float
         }
 
     type TableSortParams =

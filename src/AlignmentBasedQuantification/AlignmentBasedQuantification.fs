@@ -969,6 +969,8 @@ module AlignmentBasedQuantification =
                     RtTrace_Heavy                               = successfulQuant.X_Xic 
                     IntensityTrace_Observed_Heavy               = successfulQuant.Y_Xic_uncorrected
                     IntensityTrace_Corrected_Heavy              = successfulQuant.Y_Xic
+                    AlignmentScore                              = nan
+                    AlignmentQValue                             = nan
                     }
                     |> Option.Some
                 | None -> 
@@ -1022,6 +1024,8 @@ module AlignmentBasedQuantification =
                     RtTrace_Heavy                               = [||]
                     IntensityTrace_Observed_Heavy               = [||]
                     IntensityTrace_Corrected_Heavy              = [||]
+                    AlignmentScore                              = nan
+                    AlignmentQValue                             = nan
                     }
                     |> Option.Some
             else
@@ -1116,6 +1120,8 @@ module AlignmentBasedQuantification =
                     RtTrace_Heavy                               = refinedXIC.X_Xic 
                     IntensityTrace_Observed_Heavy               = refinedXIC.Y_Xic_uncorrected
                     IntensityTrace_Corrected_Heavy              = refinedXIC.Y_Xic
+                    AlignmentScore                              = nan
+                    AlignmentQValue                             = nan
                     }
                     |> Option.Some
                 | None -> 
@@ -1168,6 +1174,8 @@ module AlignmentBasedQuantification =
                     RtTrace_Heavy                               = refinedXIC.X_Xic 
                     IntensityTrace_Observed_Heavy               = refinedXIC.Y_Xic_uncorrected
                     IntensityTrace_Corrected_Heavy              = refinedXIC.Y_Xic
+                    AlignmentScore                              = nan
+                    AlignmentQValue                             = nan
                     }
                     |> Option.Some
             with
@@ -1253,6 +1261,8 @@ module AlignmentBasedQuantification =
                 RtTrace_Heavy                               = [||]
                 IntensityTrace_Observed_Heavy               = [||]
                 IntensityTrace_Corrected_Heavy              = [||]
+                AlignmentScore                              = nan
+                AlignmentQValue                             = nan
                 }
                 |> Option.Some
             with
