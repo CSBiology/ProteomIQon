@@ -209,7 +209,7 @@ module AlignmentBasedQuantStatistics =
             |> Series.values
             |> Seq.choose id
             
-        let pepForLearningMap =
+        let pepForLearningToTakeMap =
             differenceSet
             |> Frame.mapRows (fun rk s ->
                 toPeptideForLearning true s
@@ -217,10 +217,10 @@ module AlignmentBasedQuantStatistics =
             |> Series.observations
             |> Map.ofSeq
     
-        trainingSet, finalSet, pepForLearningMap
+        trainingSet, finalSet, pepForLearningToTakeMap
         
-    let learnScore (matchedFiles: (string*string*string)[]) (logger: NLog.Logger) parallelismLevel diagnosticCharts outputDirectory =
-        let trainingsData, alignmentsToTake, pepFOrLearningMap =
+    let assignScoreAndQValue (matchedFiles: (string*string*string)[]) (logger: NLog.Logger) parallelismLevel diagnosticCharts outputDirectory =
+        let trainingsData, allAlignments, pepForLearningToTakeMap =
             matchedFiles
             |> FSharpAux.PSeq.map (fun (quantFilePath,alignfilePath,alignQuantFilePath) -> createTrainingsData quantFilePath alignfilePath alignQuantFilePath)
             |> FSharpAux.PSeq.withDegreeOfParallelism parallelismLevel
@@ -326,6 +326,37 @@ module AlignmentBasedQuantStatistics =
             |> Chart.withX_AxisStyle("Q-Value")
             |> Chart.withY_AxisStyle("Count")
             |> Chart.SaveHtmlAs (System.IO.Path.Combine(outputDirectory,"QValueDistribution"))
+
+        allAlignments
+        |> Seq.mapi (fun i file ->
+            file
+            |> Frame.filterRows (fun rk s ->
+                pepForLearningToTakeMap
+                |> Seq.item i
+                |> Map.containsKey rk ||
+                (s.GetAs<string>("QuantificationSource") = "PSM")
+            )
+            |> Frame.mapRows (fun rk s ->
+                if s.GetAs<string>("QuantificationSource") = "Alignment" then
+                    let prediction =
+                        pepForLearningToTakeMap
+                        |> Seq.item i
+                        |> fun map -> map.[rk]
+                        |> predict
+                    let qValue =
+                        prediction.Score
+                        |> float
+                        |> qValueStorey
+                    s 
+                    |> Series.replace "AlignmentScore" prediction.Score
+                    |> Series.replace "AlignmentQValue" qValue
+                else
+                    s
+            )
+            |> Frame.ofRows
+            |> fun frame ->
+                frame.SaveCsv(System.IO.Path.Combine(outputDirectory, matchedFiles.[i] |> (fun (quantFilePath,alignfilePath,alignQuantFilePath) -> quantFilePath) |> System.IO.Path.GetFileName), includeRowKeys = false)
+        )
     
             
             
