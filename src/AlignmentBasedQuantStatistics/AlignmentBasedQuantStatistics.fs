@@ -41,6 +41,13 @@ module AlignmentBasedQuantStatistics =
             [<ColumnName("Probability")>]
             Probability : float32
         }
+
+    let unzip4 sequence =
+        let (lst1, lst2, lst3, lst4) = 
+            Seq.foldBack (fun (a,b,c,d) (acc1, acc2, acc3, acc4) -> 
+                a::acc1, b::acc2, c::acc3, d::acc4) sequence ([],[],[],[])
+        (Array.ofList lst1, Array.ofList lst2, Array.ofList lst3, Array.ofList lst4)
+
     ///
     let downcastPipeline (x : IEstimator<_>) = 
         match x with 
@@ -180,10 +187,6 @@ module AlignmentBasedQuantStatistics =
         let differenceSet =
             Frame.join JoinKind.Inner difference alignedQuant
 
-        let finalSet =
-            quant
-            |> Frame.mapColKeys (fun ck -> ck.Replace("quant_",""))
-
         let trainingSet = 
             overlapSet
             |> Frame.mapRows (fun rk s ->
@@ -224,15 +227,26 @@ module AlignmentBasedQuantStatistics =
             )
             |> Series.observations
             |> Map.ofSeq
+
+        let quant2 =
+            Frame.ReadCsv(fullQuant, true, separators = "\t")
+            |> Frame.indexRowsUsing (fun s ->
+                s.GetAs<string>("StringSequence"),
+                s.GetAs<bool>("GlobalMod"),
+                s.GetAs<int>("Charge"),
+                s.GetAs<int>("PepSequenceID"),
+                s.GetAs<int>("ModSequenceID")
+            )
     
-        trainingSet, finalSet, pepForLearningToTakeMap
+        trainingSet, alignedQuant, quant2 , pepForLearningToTakeMap
         
     let assignScoreAndQValue (matchedFiles: (string*string*string)[]) (logger: NLog.Logger) parallelismLevel diagnosticCharts outputDirectory =
-        let trainingsData, allAlignments, pepForLearningToTakeMap =
+        let trainingsData, alignedQuants, quants, pepForLearningToTakeMap =
             matchedFiles
-            |> FSharpAux.PSeq.map (fun (quantFilePath,alignfilePath,alignQuantFilePath) -> createTrainingsData quantFilePath alignfilePath alignQuantFilePath)
-            |> FSharpAux.PSeq.withDegreeOfParallelism parallelismLevel
-            |> Seq.unzip3
+            |> Array.map (fun (quantFilePath,alignfilePath,alignQuantFilePath) -> createTrainingsData quantFilePath alignfilePath alignQuantFilePath)
+            //|> FSharpAux.PSeq.map (fun (quantFilePath,alignfilePath,alignQuantFilePath) -> createTrainingsData quantFilePath alignfilePath alignQuantFilePath)
+            //|> FSharpAux.PSeq.withDegreeOfParallelism parallelismLevel
+            |> unzip4
 
         let trainingsData' =
             trainingsData
@@ -335,35 +349,41 @@ module AlignmentBasedQuantStatistics =
             |> Chart.withY_AxisStyle("Count")
             |> Chart.SaveHtmlAs (System.IO.Path.Combine(outputDirectory,"QValueDistribution"))
 
-        allAlignments
-        |> Seq.mapi (fun i file ->
+        alignedQuants
+        |> Array.mapi (fun i file ->
             file
             |> Frame.filterRows (fun rk s ->
-                pepForLearningToTakeMap
-                |> Seq.item i
-                |> Map.containsKey rk ||
-                (s.GetAs<string>("QuantificationSource") = "PSM")
+                pepForLearningToTakeMap.[i]
+                |> Map.containsKey rk
             )
-            |> Frame.mapRows (fun rk s ->
-                if s.GetAs<string>("QuantificationSource") = "Alignment" then
-                    let prediction =
-                        pepForLearningToTakeMap
-                        |> Seq.item i
-                        |> fun map -> map.[rk]
-                        |> predict
-                    let qValue =
-                        prediction.Score
-                        |> float
-                        |> qValueStorey
-                    s 
-                    |> Series.replace "AlignmentScore" prediction.Score
-                    |> Series.replace "AlignmentQValue" qValue
-                else
-                    s
-            )
-            |> Frame.ofRows
             |> fun frame ->
-                frame.SaveCsv(System.IO.Path.Combine(outputDirectory, matchedFiles.[i] |> (fun (quantFilePath,alignfilePath,alignQuantFilePath) -> quantFilePath) |> System.IO.Path.GetFileName), includeRowKeys = false)
+                let scoreSeries =
+                    frame
+                    |> Frame.mapRows (fun rk s ->
+                        let prediction =
+                            pepForLearningToTakeMap.[i]
+                            |> fun map -> map.[rk]
+                            |> predict
+                        float prediction.Score
+                    )
+                let qValSeries =
+                    scoreSeries
+                    |> Series.map (fun rk v ->
+                        let qValue =
+                            v
+                            |> float
+                            |> qValueStorey
+                        qValue
+                    )
+                frame
+                |> Frame.dropCol "AlignmentScore"
+                |> Frame.dropCol "AlignmentQValue"
+                |> Frame.addCol "AlignmentScore" scoreSeries
+                |> Frame.addCol "AlignmentQValue" qValSeries
+            |> Frame.merge quants.[i]
+            |> fun frame ->
+                logger.Trace $"{frame.RowCount}"
+                frame.SaveCsv(System.IO.Path.Combine(outputDirectory, matchedFiles.[i] |> (fun (quantFilePath,alignfilePath,alignQuantFilePath) -> quantFilePath) |> System.IO.Path.GetFileName), includeRowKeys = false, separator = '\t')
         )
     
             

@@ -80,6 +80,10 @@ module console1 =
                             )
                     else 
                         [|for i = 0 to i.Length-1 do yield quantFiles.[i], alignFiles.[i], alignQuantFiles.[i]|]
+            matchedFiles
+            |> Array.map (fun (a,b,c)->
+                logger.Trace $"{a},{b},{c}"
+            )
             assignScoreAndQValue matchedFiles logger c dc o
         else
             failwith "The given path to the instrument output is neither a valid file path nor a valid directory path."
