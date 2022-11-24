@@ -227,18 +227,8 @@ module AlignmentBasedQuantStatistics =
             )
             |> Series.observations
             |> Map.ofSeq
-
-        let quant2 =
-            Frame.ReadCsv(fullQuant, true, separators = "\t")
-            |> Frame.indexRowsUsing (fun s ->
-                s.GetAs<string>("StringSequence"),
-                s.GetAs<bool>("GlobalMod"),
-                s.GetAs<int>("Charge"),
-                s.GetAs<int>("PepSequenceID"),
-                s.GetAs<int>("ModSequenceID")
-            )
     
-        trainingSet, alignedQuant, quant2 , pepForLearningToTakeMap
+        trainingSet, alignedQuant, quant |> Frame.mapColKeys (fun ck -> ck |> String.replace"quant_" ""), pepForLearningToTakeMap
         
     let assignScoreAndQValue (matchedFiles: (string*string*string)[]) (logger: NLog.Logger) parallelismLevel diagnosticCharts outputDirectory =
         let trainingsData, alignedQuants, quants, pepForLearningToTakeMap =
