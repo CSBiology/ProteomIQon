@@ -8,6 +8,8 @@ open ProteomIQon.DTW'
 open ProteomIQon.FDRControl'
 open FSharpAux
 open Plotly.NET
+open FSharpAux.IO
+open FSharpAux.IO.SchemaReader
 
 module AlignmentBasedQuantStatistics =
     
@@ -94,7 +96,9 @@ module AlignmentBasedQuantStatistics =
 
     let createTrainingsData fullQuant align alignQuant=
         let quant =
-            Frame.ReadCsv(fullQuant, true, separators = "\t")
+            Csv.CsvReader<Dto.QuantificationResult>(SchemaMode=Csv.Fill).ReadFile(fullQuant,'\t',false,1)
+            |> Array.ofSeq
+            |> Frame.ofRecords
             |> Frame.indexRowsUsing (fun s ->
                 s.GetAs<string>("StringSequence"),
                 s.GetAs<bool>("GlobalMod"),
@@ -105,7 +109,9 @@ module AlignmentBasedQuantStatistics =
             |> Frame.mapColKeys(fun ck -> "quant_" + ck)
 
         let align = 
-            Frame.ReadCsv(align, true, separators = "\t")
+            Csv.CsvReader<Dto.AlignmentMetricsDTO>(SchemaMode=Csv.Fill).ReadFile(align,'\t',false,1)
+            |> Array.ofSeq
+            |> Frame.ofRecords
             |> Frame.indexRowsUsing (fun s ->
                 s.GetAs<string>("StringSequence"),
                 s.GetAs<bool>("GlobalMod"),
@@ -116,7 +122,9 @@ module AlignmentBasedQuantStatistics =
             |> Frame.mapColKeys(fun ck -> "align_" + ck)
 
         let alignedQuant = 
-            Frame.ReadCsv(alignQuant, true, separators = "\t")
+            Csv.CsvReader<Dto.QuantificationResult>(SchemaMode=Csv.Fill).ReadFile(alignQuant,'\t',false,1)
+            |> Array.ofSeq
+            |> Frame.ofRecords
             |> Frame.filterRows (fun k s ->
                 s.GetAs<string>("QuantificationSource") = "Alignment"
             )
