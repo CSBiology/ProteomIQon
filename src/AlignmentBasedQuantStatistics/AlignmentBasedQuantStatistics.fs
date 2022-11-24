@@ -53,31 +53,26 @@ module AlignmentBasedQuantStatistics =
         match x with 
         | :? IEstimator<ITransformer> as y -> y
         | _ -> failwith "downcastPipeline: expecting a IEstimator<ITransformer>"
-
-    let stringToArray s =
-        s
-        |> String.split ';'
-        |> Array.map float
     
     let toPeptideForLearning positiveSet (s: ObjectSeries<string>) : PeptideForLearning=
         {
             Source_ApexIntensity = s.GetAs<float32>("align_ApexIntensity_SourceFile")
             Source_Intensities   = s.GetAs<float32>("align_Quant_SourceFile")
             DtwDistanceBefore    =
-                let source = Array.zip (s.GetAs<string>("align_RtTrace_SourceFile") |> stringToArray) (s.GetAs<string>("align_IntensityTrace_SourceFile") |> stringToArray |> zNorm)
+                let source = Array.zip (s.GetAs<float[]>("align_RtTrace_SourceFile")) (s.GetAs<float[]>("align_IntensityTrace_SourceFile") |> zNorm)
                 let target = 
                     Array.zip 
                         ( 
                             if s.GetAs<bool>("GlobalMod") then
-                                s.GetAs<string>("RtTrace_Heavy") |> stringToArray
+                                s.GetAs<float[]>("RtTrace_Heavy")
                             else
-                                s.GetAs<string>("RtTrace_Light") |> stringToArray
+                                s.GetAs<float[]>("RtTrace_Light")
                         )
                         ( 
                             if s.GetAs<bool>("GlobalMod") then
-                                s.GetAs<string>("IntensityTrace_Corrected_Heavy") |> stringToArray |> zNorm
+                                s.GetAs<float[]>("IntensityTrace_Corrected_Heavy") |> zNorm
                             else
-                                s.GetAs<string>("IntensityTrace_Corrected_Light") |> stringToArray |> zNorm
+                                s.GetAs<float[]>("IntensityTrace_Corrected_Light") |> zNorm
                         )
                 distance None None None None None None (Array.map snd target) (Array.map snd source)
                 |> float32
@@ -93,10 +88,10 @@ module AlignmentBasedQuantStatistics =
                     s.GetAs<float32>("Quant_Light")
             ScanTimeDifference   = 
                 if s.GetAs<bool>("GlobalMod") then
-                    abs (s.GetAs<float>("align_ScanTime_SourceFile") - (stringToArray (s.GetAs<string>("Params_Heavy"))).[1])
+                    abs (s.GetAs<float>("align_ScanTime_SourceFile") - ((s.GetAs<float[]>("Params_Heavy"))).[1])
                     |> float32
                 else
-                    abs (s.GetAs<float>("align_ScanTime_SourceFile") - (stringToArray (s.GetAs<string>("Params_Light"))).[1])
+                    abs (s.GetAs<float>("align_ScanTime_SourceFile") - ((s.GetAs<float[]>("Params_Light"))).[1])
                     |> float32
             Label = positiveSet
         }
@@ -116,7 +111,7 @@ module AlignmentBasedQuantStatistics =
             |> Frame.mapColKeys(fun ck -> "quant_" + ck)
 
         let align = 
-            Csv.CsvReader<Dto.AlignmentMetricsDTO>(SchemaMode=Csv.Fill).ReadFile(align,'\t',false,1)
+            Csv.CsvReader<Dto.AlignmentResult>(SchemaMode=Csv.Fill).ReadFile(align,'\t',false,1)
             |> Array.ofSeq
             |> Frame.ofRecords
             |> Frame.indexRowsUsing (fun s ->
@@ -133,7 +128,7 @@ module AlignmentBasedQuantStatistics =
             |> Array.ofSeq
             |> Frame.ofRecords
             |> Frame.filterRows (fun k s ->
-                s.GetAs<string>("QuantificationSource") = "Alignment"
+                s.GetAs<Dto.QuantificationSource>("QuantificationSource") = Dto.QuantificationSource.Alignment
             )
             |> Frame.indexRowsUsing (fun s ->
                 s.GetAs<string>("StringSequence"),
