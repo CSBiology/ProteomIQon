@@ -9,11 +9,14 @@ module CLIArgumentParsing =
         | [<Mandatory>] [<AltCommandLine("-i")>]   Quant of path:string list
         | [<Mandatory>] [<AltCommandLine("-ii")>]  Align of path:string list
         | [<Mandatory>] [<AltCommandLine("-iii")>] AlignedQuant of path:string list
+        | [<Mandatory>] [<AltCommandLine("-l")>]   QuantLearn of path:string list
+        | [<Mandatory>] [<AltCommandLine("-ll")>]  AlignLearn of path:string list
+        | [<Mandatory>] [<AltCommandLine("-lll")>] AlignedQuantLearn of path:string list
         | [<Mandatory>] [<AltCommandLine("-o")>]   OutputDirectory  of path:string 
         | [<Mandatory>] [<AltCommandLine("-p")>]   ParamFile of path:string
-        | [<Unique>]    [<AltCommandLine("-c")>]    Parallelism_Level of level:int
-        | [<Unique>]    [<AltCommandLine("-dc")>]   DiagnosticCharts 
-        | [<Unique>]    [<AltCommandLine("-mf")>]   MatchFiles
+        | [<Unique>]    [<AltCommandLine("-c")>]   Parallelism_Level of level:int
+        | [<Unique>]    [<AltCommandLine("-dc")>]  DiagnosticCharts 
+        | [<Unique>]    [<AltCommandLine("-mf")>]  MatchFiles
     with
         interface IArgParserTemplate with
             member s.Usage =
@@ -21,6 +24,9 @@ module CLIArgumentParsing =
                 | Quant _             -> "Specify the quant files or directory"
                 | Align _             -> "Specify the align files or directory"
                 | AlignedQuant _      -> "Specify the aligned quant files or directory"
+                | QuantLearn _        -> "Specify the quant files or directory for learning"
+                | AlignLearn _        -> "Specify the align files or directory for learning"
+                | AlignedQuantLearn _ -> "Specify the aligned quant files or directory for learning"
                 | OutputDirectory  _  -> "Specify the output directory."
                 | ParamFile _         -> "Specify parameter file for peptide spectrum matching."
                 | Parallelism_Level _ -> "Set the number of cores the programm can use. Parallelization occurs on file level. This flag is only of effect if a input directory (-i) is specified."
