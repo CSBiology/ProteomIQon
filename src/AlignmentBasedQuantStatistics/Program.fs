@@ -21,6 +21,9 @@ module console1 =
         let i = results.GetResult Quant |> List.map getPathRelativeToDir
         let ii = results.GetResult Align |> List.map getPathRelativeToDir
         let iii = results.GetResult AlignedQuant |> List.map getPathRelativeToDir
+        let l = results.GetResult QuantLearn |> List.map getPathRelativeToDir
+        let ll = results.GetResult AlignLearn |> List.map getPathRelativeToDir
+        let lll = results.GetResult AlignedQuantLearn |> List.map getPathRelativeToDir
         let o = results.GetResult OutputDirectory  |> getPathRelativeToDir
         let p = results.GetResult ParamFile        |> getPathRelativeToDir
         let dc = results.Contains DiagnosticCharts
@@ -35,6 +38,9 @@ module console1 =
         logger.Info (sprintf "QuantFilePath -i = %A" i)
         logger.Info (sprintf "AlignFilePath -i = %A" ii)
         logger.Info (sprintf "AlignedQuantFilePath -i = %A" iii)
+        logger.Info (sprintf "QuantFilePathForLearning -i = %A" l)
+        logger.Info (sprintf "AlignFilePathForLearning -i = %A" ll)
+        logger.Info (sprintf "AlignedQuantFilePathForLearning -i = %A" lll)
         logger.Info (sprintf "OutputFilePath -o = %s" o)
         logger.Info (sprintf "ParamFilePath -p = %s" p)
         logger.Trace (sprintf "CLIArguments: %A" results)
@@ -43,6 +49,7 @@ module console1 =
             |> Dto.PeptideSpectrumMatchingParams.toDomain
         if i.Length = 1 && File.Exists i.[0] then
             assignScoreAndQValue ([|i.[0], ii.[0], iii.[0]|]) logger 1 dc o
+            |> ignore
         elif (i.Length = 1 && Directory.Exists i.[0]) || i.Length > 1 then
             let quantFiles =
                 if i.Length = 1 then
@@ -62,29 +69,62 @@ module console1 =
                 else
                     iii
                     |> Array.ofList
+            let quantFilesLearning =
+                if l.Length = 1 then
+                    Directory.GetFiles(l.[0],("*.quant"))
+                else
+                    l
+                    |> Array.ofList
+            let alignFilesLearning =
+                if ll.Length = 1 then
+                    Directory.GetFiles(ll.[0],("*.align"))
+                else
+                    ll
+                    |> Array.ofList
+            let alignQuantFilesLearning =
+                if lll.Length = 1 then
+                    Directory.GetFiles(lll.[0],("*.quant"))
+                else
+                    lll
+                    |> Array.ofList
             let matchedFiles =
-                    if mf then 
-                        quantFiles
-                        |> Array.choose (fun quantFilePath ->
-                            match alignFiles |> Array.tryFind (fun alignfilePath -> (Path.GetFileNameWithoutExtension alignfilePath) = (Path.GetFileNameWithoutExtension quantFilePath)) with
-                            | Some alignfilePath -> 
-                                match alignQuantFiles |> Array.tryFind (fun alignQuantFilePath -> (Path.GetFileNameWithoutExtension alignQuantFilePath) = (Path.GetFileNameWithoutExtension alignfilePath)) with
-                                | Some(alignQuantFilePath) ->
-                                    Some(quantFilePath,alignfilePath,alignQuantFilePath)
-                                | None -> 
-                                    logger.Trace (sprintf "no alignQuant file for %s" alignfilePath)
-                                    None
-                            | None ->
-                                logger.Trace (sprintf "no alignment file for %s" quantFilePath)
+                if mf then 
+                    quantFiles
+                    |> Array.choose (fun quantFilePath ->
+                        match alignFiles |> Array.tryFind (fun alignfilePath -> (Path.GetFileNameWithoutExtension alignfilePath) = (Path.GetFileNameWithoutExtension quantFilePath)) with
+                        | Some alignfilePath -> 
+                            match alignQuantFiles |> Array.tryFind (fun alignQuantFilePath -> (Path.GetFileNameWithoutExtension alignQuantFilePath) = (Path.GetFileNameWithoutExtension alignfilePath)) with
+                            | Some(alignQuantFilePath) ->
+                                Some(quantFilePath,alignfilePath,alignQuantFilePath)
+                            | None -> 
+                                logger.Trace (sprintf "no alignQuant file for %s" alignfilePath)
                                 None
-                            )
-                    else 
-                        [|for i = 0 to i.Length-1 do yield quantFiles.[i], alignFiles.[i], alignQuantFiles.[i]|]
-            matchedFiles
-            |> Array.map (fun (a,b,c)->
-                logger.Trace $"{a},{b},{c}"
-            )
+                        | None ->
+                            logger.Trace (sprintf "no alignment file for %s" quantFilePath)
+                            None
+                        )
+                else 
+                    [|for i = 0 to i.Length-1 do yield quantFiles.[i], alignFiles.[i], alignQuantFiles.[i]|]
+            let matchedFilesLearning =
+                if mf then 
+                    quantFilesLearning
+                    |> Array.choose (fun quantFilePath ->
+                        match alignFilesLearning |> Array.tryFind (fun alignfilePath -> (Path.GetFileNameWithoutExtension alignfilePath) = (Path.GetFileNameWithoutExtension quantFilePath)) with
+                        | Some alignfilePath -> 
+                            match alignQuantFilesLearning |> Array.tryFind (fun alignQuantFilePath -> (Path.GetFileNameWithoutExtension alignQuantFilePath) = (Path.GetFileNameWithoutExtension alignfilePath)) with
+                            | Some(alignQuantFilePath) ->
+                                Some(quantFilePath,alignfilePath,alignQuantFilePath)
+                            | None -> 
+                                logger.Trace (sprintf "no alignQuant file for %s" alignfilePath)
+                                None
+                        | None ->
+                            logger.Trace (sprintf "no alignment file for %s" quantFilePath)
+                            None
+                        )
+                else 
+                    [|for i = 0 to i.Length-1 do yield quantFilesLearning.[i], alignFilesLearning.[i], alignQuantFilesLearning.[i]|]
             assignScoreAndQValue matchedFiles logger c dc o
+            |> ignore
         else
             failwith "The given path to the instrument output is neither a valid file path nor a valid directory path."
           

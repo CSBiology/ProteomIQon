@@ -229,8 +229,6 @@ module AlignmentBasedQuantStatistics =
         let trainingsData, alignedQuants, quants, pepForLearningToTakeMap =
             matchedFiles
             |> Array.map (fun (quantFilePath,alignfilePath,alignQuantFilePath) -> createTrainingsData quantFilePath alignfilePath alignQuantFilePath)
-            //|> FSharpAux.PSeq.map (fun (quantFilePath,alignfilePath,alignQuantFilePath) -> createTrainingsData quantFilePath alignfilePath alignQuantFilePath)
-            //|> FSharpAux.PSeq.withDegreeOfParallelism parallelismLevel
             |> unzip4
 
         let trainingsData' =
