@@ -47,10 +47,10 @@ module console1 =
         let p = 
             Json.ReadAndDeserialize<Dto.PeptideSpectrumMatchingParams> p
             |> Dto.PeptideSpectrumMatchingParams.toDomain
-        if i.Length = 1 && File.Exists i.[0] then
-            assignScoreAndQValue ([|i.[0], ii.[0], iii.[0]|]) logger 1 dc o
+        if i.Length = 1 && File.Exists i.[0] && l.Length = 1 && File.Exists l.[0] then
+            assignScoreAndQValue (i.[0], ii.[0], iii.[0]) [|l.[0], ll.[0], lll.[0]|] logger dc o
             |> ignore
-        elif (i.Length = 1 && Directory.Exists i.[0]) || i.Length > 1 then
+        elif ((i.Length = 1 && Directory.Exists i.[0]) || i.Length > 1) && ((l.Length = 1 && Directory.Exists i.[0]) || l.Length > 1) then
             let quantFiles =
                 if i.Length = 1 then
                     Directory.GetFiles(i.[0],("*.quant"))
@@ -123,7 +123,91 @@ module console1 =
                         )
                 else 
                     [|for i = 0 to i.Length-1 do yield quantFilesLearning.[i], alignFilesLearning.[i], alignQuantFilesLearning.[i]|]
-            assignScoreAndQValue matchedFiles logger dc o
+            matchedFiles
+            |> FSharpAux.PSeq.map (fun (matchedFile) -> assignScoreAndQValue matchedFile matchedFilesLearning logger dc o)
+            |> FSharpAux.PSeq.withDegreeOfParallelism c
+            |> Array.ofSeq
+            |> ignore
+        elif ((i.Length = 1 && Directory.Exists i.[0]) || i.Length > 1) && (l.Length = 1 && File.Exists l.[0]) then
+            let quantFiles =
+                if i.Length = 1 then
+                    Directory.GetFiles(i.[0],("*.quant"))
+                else
+                    i
+                    |> Array.ofList
+            let alignFiles =
+                if ii.Length = 1 then
+                    Directory.GetFiles(ii.[0],("*.align"))
+                else
+                    ii
+                    |> Array.ofList
+            let alignQuantFiles =
+                if iii.Length = 1 then
+                    Directory.GetFiles(iii.[0],("*.quant"))
+                else
+                    iii
+                    |> Array.ofList
+            let matchedFiles =
+                if mf then 
+                    quantFiles
+                    |> Array.choose (fun quantFilePath ->
+                        match alignFiles |> Array.tryFind (fun alignfilePath -> (Path.GetFileNameWithoutExtension alignfilePath) = (Path.GetFileNameWithoutExtension quantFilePath)) with
+                        | Some alignfilePath -> 
+                            match alignQuantFiles |> Array.tryFind (fun alignQuantFilePath -> (Path.GetFileNameWithoutExtension alignQuantFilePath) = (Path.GetFileNameWithoutExtension alignfilePath)) with
+                            | Some(alignQuantFilePath) ->
+                                Some(quantFilePath,alignfilePath,alignQuantFilePath)
+                            | None -> 
+                                logger.Trace (sprintf "no alignQuant file for %s" alignfilePath)
+                                None
+                        | None ->
+                            logger.Trace (sprintf "no alignment file for %s" quantFilePath)
+                            None
+                        )
+                else 
+                    [|for i = 0 to i.Length-1 do yield quantFiles.[i], alignFiles.[i], alignQuantFiles.[i]|]
+            matchedFiles
+            |> FSharpAux.PSeq.map (fun (matchedFile) -> assignScoreAndQValue matchedFile [|l.[0], ll.[0], lll.[0]|] logger dc o)
+            |> FSharpAux.PSeq.withDegreeOfParallelism c
+            |> Array.ofSeq
+            |> ignore
+        elif ((i.Length = 1 && File.Exists i.[0]) || i.Length > 1) && ((l.Length = 1 && Directory.Exists i.[0]) || l.Length > 1) then
+            let quantFilesLearning =
+                if l.Length = 1 then
+                    Directory.GetFiles(l.[0],("*.quant"))
+                else
+                    l
+                    |> Array.ofList
+            let alignFilesLearning =
+                if ll.Length = 1 then
+                    Directory.GetFiles(ll.[0],("*.align"))
+                else
+                    ll
+                    |> Array.ofList
+            let alignQuantFilesLearning =
+                if lll.Length = 1 then
+                    Directory.GetFiles(lll.[0],("*.quant"))
+                else
+                    lll
+                    |> Array.ofList
+            let matchedFilesLearning =
+                if mf then 
+                    quantFilesLearning
+                    |> Array.choose (fun quantFilePath ->
+                        match alignFilesLearning |> Array.tryFind (fun alignfilePath -> (Path.GetFileNameWithoutExtension alignfilePath) = (Path.GetFileNameWithoutExtension quantFilePath)) with
+                        | Some alignfilePath -> 
+                            match alignQuantFilesLearning |> Array.tryFind (fun alignQuantFilePath -> (Path.GetFileNameWithoutExtension alignQuantFilePath) = (Path.GetFileNameWithoutExtension alignfilePath)) with
+                            | Some(alignQuantFilePath) ->
+                                Some(quantFilePath,alignfilePath,alignQuantFilePath)
+                            | None -> 
+                                logger.Trace (sprintf "no alignQuant file for %s" alignfilePath)
+                                None
+                        | None ->
+                            logger.Trace (sprintf "no alignment file for %s" quantFilePath)
+                            None
+                        )
+                else 
+                    [|for i = 0 to i.Length-1 do yield quantFilesLearning.[i], alignFilesLearning.[i], alignQuantFilesLearning.[i]|]
+            assignScoreAndQValue (i.[0], ii.[0], iii.[0]) matchedFilesLearning logger dc o
             |> ignore
         else
             failwith "The given path to the instrument output is neither a valid file path nor a valid directory path."
