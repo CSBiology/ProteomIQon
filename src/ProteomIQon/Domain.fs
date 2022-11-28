@@ -350,6 +350,14 @@ module Domain =
             AggregateModifiedPeptidesParams      : LabelFreeQuantification.AggregationParams option
             AggregateToProteinGroupsParams       : LabelFreeQuantification.AggregationParams
         } 
+
+    type AlignmentBasedQuantStatisticsParams =
+        {
+            PositiveQuantMzCutoff: float
+            NegativeQuantMzCutoff: float
+            PositiveQuantCutoff: float
+            NegativeQuantCutoff: float
+        } 
                
     type ConsensusAlignmentAlgorithm = 
         | FastTree
