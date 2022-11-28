@@ -36,11 +36,11 @@ module console1 =
         Logging.generateConfig o
         let logger = Logging.createLogger "AlignmentBasedQuantStatistics"
         logger.Info (sprintf "QuantFilePath -i = %A" i)
-        logger.Info (sprintf "AlignFilePath -i = %A" ii)
-        logger.Info (sprintf "AlignedQuantFilePath -i = %A" iii)
-        logger.Info (sprintf "QuantFilePathForLearning -i = %A" l)
-        logger.Info (sprintf "AlignFilePathForLearning -i = %A" ll)
-        logger.Info (sprintf "AlignedQuantFilePathForLearning -i = %A" lll)
+        logger.Info (sprintf "AlignFilePath -ii = %A" ii)
+        logger.Info (sprintf "AlignedQuantFilePath -iii = %A" iii)
+        logger.Info (sprintf "QuantFilePathForLearning -l = %A" l)
+        logger.Info (sprintf "AlignFilePathForLearning -l = %A" ll)
+        logger.Info (sprintf "AlignedQuantFilePathForLearning -lll = %A" lll)
         logger.Info (sprintf "OutputFilePath -o = %s" o)
         logger.Info (sprintf "ParamFilePath -p = %s" p)
         logger.Trace (sprintf "CLIArguments: %A" results)
@@ -123,7 +123,7 @@ module console1 =
                         )
                 else 
                     [|for i = 0 to i.Length-1 do yield quantFilesLearning.[i], alignFilesLearning.[i], alignQuantFilesLearning.[i]|]
-            assignScoreAndQValue matchedFiles logger c dc o
+            assignScoreAndQValue matchedFiles logger dc o
             |> ignore
         else
             failwith "The given path to the instrument output is neither a valid file path nor a valid directory path."

@@ -96,6 +96,69 @@ module AlignmentBasedQuantStatistics =
             Label = positiveSet
         }
 
+    let createDataToScore fullQuant align alignQuant=
+        let quant =
+            Csv.CsvReader<Dto.QuantificationResult>(SchemaMode=Csv.Fill).ReadFile(fullQuant,'\t',false,1)
+            |> Array.ofSeq
+            |> Frame.ofRecords
+            |> Frame.indexRowsUsing (fun s ->
+                s.GetAs<string>("StringSequence"),
+                s.GetAs<bool>("GlobalMod"),
+                s.GetAs<int>("Charge"),
+                s.GetAs<int>("PepSequenceID"),
+                s.GetAs<int>("ModSequenceID")
+            )
+            |> Frame.mapColKeys(fun ck -> "quant_" + ck)
+
+        let align = 
+            Csv.CsvReader<Dto.AlignmentResult>(SchemaMode=Csv.Fill).ReadFile(align,'\t',false,1)
+            |> Array.ofSeq
+            |> Frame.ofRecords
+            |> Frame.indexRowsUsing (fun s ->
+                s.GetAs<string>("StringSequence"),
+                s.GetAs<bool>("GlobalMod"),
+                s.GetAs<int>("Charge"),
+                s.GetAs<int>("PepSequenceID"),
+                s.GetAs<int>("ModSequenceID")
+            )
+            |> Frame.mapColKeys(fun ck -> "align_" + ck)
+
+        let alignedQuant = 
+            Csv.CsvReader<Dto.QuantificationResult>(SchemaMode=Csv.Fill).ReadFile(alignQuant,'\t',false,1)
+            |> Array.ofSeq
+            |> Frame.ofRecords
+            |> Frame.filterRows (fun k s ->
+                s.GetAs<Dto.QuantificationSource>("QuantificationSource") = Dto.QuantificationSource.Alignment
+            )
+            |> Frame.indexRowsUsing (fun s ->
+                s.GetAs<string>("StringSequence"),
+                s.GetAs<bool>("GlobalMod"),
+                s.GetAs<int>("Charge"),
+                s.GetAs<int>("PepSequenceID"),
+                s.GetAs<int>("ModSequenceID")
+            )
+
+        let difference =
+            align
+            |> Frame.filterRows (fun k s ->
+                quant.RowKeys
+                |> Seq.contains k
+                |> not
+            )
+
+        let differenceSet =
+            Frame.join JoinKind.Inner difference alignedQuant
+
+        let pepForLearningToTakeMap =
+            differenceSet
+            |> Frame.mapRows (fun rk s ->
+                toPeptideForLearning true s
+            )
+            |> Series.observations
+            |> Map.ofSeq
+    
+        alignedQuant, quant |> Frame.mapColKeys (fun ck -> ck |> String.replace"quant_" ""), pepForLearningToTakeMap
+
     let createTrainingsData fullQuant align alignQuant=
         let quant =
             Csv.CsvReader<Dto.QuantificationResult>(SchemaMode=Csv.Fill).ReadFile(fullQuant,'\t',false,1)
@@ -144,15 +207,7 @@ module AlignmentBasedQuantStatistics =
                 quant.RowKeys
                 |> Seq.contains k
             )
-
-        let difference =
-            align
-            |> Frame.filterRows (fun k s ->
-                quant.RowKeys
-                |> Seq.contains k
-                |> not
-            )
-
+            
         let quantMap =
             let quantMzHeavy: Map<string*bool*int*int*int,float> =
                 quant
@@ -178,9 +233,6 @@ module AlignmentBasedQuantStatistics =
 
         let overlapSet =
             Frame.join JoinKind.Inner overlap alignedQuant
-
-        let differenceSet =
-            Frame.join JoinKind.Inner difference alignedQuant
 
         let trainingSet = 
             overlapSet
@@ -214,22 +266,16 @@ module AlignmentBasedQuantStatistics =
             )
             |> Series.values
             |> Seq.choose id
-            
-        let pepForLearningToTakeMap =
-            differenceSet
-            |> Frame.mapRows (fun rk s ->
-                toPeptideForLearning true s
-            )
-            |> Series.observations
-            |> Map.ofSeq
     
-        trainingSet, alignedQuant, quant |> Frame.mapColKeys (fun ck -> ck |> String.replace"quant_" ""), pepForLearningToTakeMap
+        trainingSet
         
-    let assignScoreAndQValue (matchedFiles: (string*string*string)[]) (logger: NLog.Logger) parallelismLevel diagnosticCharts outputDirectory =
-        let trainingsData, alignedQuants, quants, pepForLearningToTakeMap =
-            matchedFiles
+    let assignScoreAndQValue ((quantFile,alignFile,alignQuantFile): (string*string*string)) (matchedFilesLearning: (string*string*string)[]) (logger: NLog.Logger) diagnosticCharts outputDirectory =
+        let trainingsData =
+            matchedFilesLearning
             |> Array.map (fun (quantFilePath,alignfilePath,alignQuantFilePath) -> createTrainingsData quantFilePath alignfilePath alignQuantFilePath)
-            |> unzip4
+
+        let alignedQuants, quants, pepForLearningToTakeMap =
+            createDataToScore quantFile alignFile alignQuantFile
 
         let trainingsData' =
             trainingsData
@@ -333,41 +379,38 @@ module AlignmentBasedQuantStatistics =
             |> Chart.SaveHtmlAs (System.IO.Path.Combine(outputDirectory,"QValueDistribution"))
 
         alignedQuants
-        |> Array.mapi (fun i file ->
-            file
-            |> Frame.filterRows (fun rk s ->
-                pepForLearningToTakeMap.[i]
-                |> Map.containsKey rk
-            )
-            |> fun frame ->
-                let scoreSeries =
-                    frame
-                    |> Frame.mapRows (fun rk s ->
-                        let prediction =
-                            pepForLearningToTakeMap.[i]
-                            |> fun map -> map.[rk]
-                            |> predict
-                        float prediction.Score
-                    )
-                let qValSeries =
-                    scoreSeries
-                    |> Series.map (fun rk v ->
-                        let qValue =
-                            v
-                            |> float
-                            |> qValueStorey
-                        qValue
-                    )
-                frame
-                |> Frame.dropCol "AlignmentScore"
-                |> Frame.dropCol "AlignmentQValue"
-                |> Frame.addCol "AlignmentScore" scoreSeries
-                |> Frame.addCol "AlignmentQValue" qValSeries
-            |> Frame.merge quants.[i]
-            |> fun frame ->
-                logger.Trace $"{frame.RowCount}"
-                frame.SaveCsv(System.IO.Path.Combine(outputDirectory, matchedFiles.[i] |> (fun (quantFilePath,alignfilePath,alignQuantFilePath) -> quantFilePath) |> System.IO.Path.GetFileName), includeRowKeys = false, separator = '\t')
+        |> Frame.filterRows (fun rk s ->
+            pepForLearningToTakeMap
+            |> Map.containsKey rk
         )
+        |> fun frame ->
+            let scoreSeries =
+                frame
+                |> Frame.mapRows (fun rk s ->
+                    let prediction =
+                        pepForLearningToTakeMap
+                        |> fun map -> map.[rk]
+                        |> predict
+                    float prediction.Score
+                )
+            let qValSeries =
+                scoreSeries
+                |> Series.map (fun rk v ->
+                    let qValue =
+                        v
+                        |> float
+                        |> qValueStorey
+                    qValue
+                )
+            frame
+            |> Frame.dropCol "AlignmentScore"
+            |> Frame.dropCol "AlignmentQValue"
+            |> Frame.addCol "AlignmentScore" scoreSeries
+            |> Frame.addCol "AlignmentQValue" qValSeries
+        |> Frame.merge quants
+        |> fun frame ->
+            logger.Trace $"{frame.RowCount}"
+            frame.SaveCsv(System.IO.Path.Combine(outputDirectory, quantFile |> System.IO.Path.GetFileName), includeRowKeys = false, separator = '\t')
     
             
             
