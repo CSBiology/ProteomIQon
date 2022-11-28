@@ -36,6 +36,7 @@
     <Compile Include="DTO.fs" />
     <Compile Include="Json.fs" />
     <Compile Include="Core.fs" />
+    <None Include="Scripts\createAlignmentBasedQuantStatisticsParams.fsx" />
     <None Include="Scripts\createLabeledQuantificationParams.fsx" />
     <None Include="Scripts\createLabeledQuantificationParams_CorrFilter_ChargeAgg.fsx" />
     <None Include="Scripts\createLabeledQuantificationParams_CorrFilter_ChargeAgg_ModAgg.fsx" />

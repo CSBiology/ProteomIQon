@@ -1321,6 +1321,24 @@ module Dto =
                 AggregateModifiedPeptidesParams         = dtoTableSortParams.AggregateModifiedPeptidesParams    |> Option.map Common.LabelFreeQuantification.AggregationParams.toDomain
                 AggregateToProteinGroupsParams          = dtoTableSortParams.AggregateToProteinGroupsParams     |> Common.LabelFreeQuantification.AggregationParams.toDomain 
             }
+
+    type AlignmentBasedQuantStatisticsParams =
+        {
+            PositiveQuantMzCutoff: float
+            NegativeQuantMzCutoff: float
+            PositiveQuantCutoff: float
+            NegativeQuantCutoff: float
+        }
+        
+    module AlignmentBasedQuantStatisticsParams =
+        
+        let inline toDomain (dtoAlignmentBasedQuantStatisticsParams) : Domain.AlignmentBasedQuantStatisticsParams =
+            {
+                PositiveQuantMzCutoff = dtoAlignmentBasedQuantStatisticsParams.PositiveQuantMzCutoff
+                NegativeQuantMzCutoff = dtoAlignmentBasedQuantStatisticsParams.NegativeQuantMzCutoff
+                PositiveQuantCutoff = dtoAlignmentBasedQuantStatisticsParams.PositiveQuantCutoff
+                NegativeQuantCutoff = dtoAlignmentBasedQuantStatisticsParams.NegativeQuantCutoff
+            }
             
     type SpectralLibraryParams =
         {

@@ -159,7 +159,7 @@ module AlignmentBasedQuantStatistics =
     
         alignedQuant, quant |> Frame.mapColKeys (fun ck -> ck |> String.replace"quant_" ""), pepForLearningToTakeMap
 
-    let createTrainingsData fullQuant align alignQuant=
+    let createTrainingsData fullQuant align alignQuant (alignScoreParams: Domain.AlignmentBasedQuantStatisticsParams) =
         let quant =
             Csv.CsvReader<Dto.QuantificationResult>(SchemaMode=Csv.Fill).ReadFile(fullQuant,'\t',false,1)
             |> Array.ofSeq
@@ -244,11 +244,15 @@ module AlignmentBasedQuantStatistics =
                     match originalQuant with
                     | Some o ->
                         if 
-                            abs (quantMap.QuantMzHeavy.[rk] - s.GetAs<float>("QuantMz_Heavy")) < (quantMap.QuantMzHeavy.[rk] * 0.01) &&
-                            abs (quantMap.QuantHeavy.[rk] - s.GetAs<float>("Quant_Heavy")) < (quantMap.QuantHeavy.[rk] * 0.1) then
+                            abs (quantMap.QuantMzHeavy.[rk] - s.GetAs<float>("QuantMz_Heavy")) < (quantMap.QuantMzHeavy.[rk] * (alignScoreParams.PositiveQuantMzCutoff)) &&
+                            abs (quantMap.QuantHeavy.[rk] - s.GetAs<float>("Quant_Heavy")) < (quantMap.QuantHeavy.[rk] * (alignScoreParams.PositiveQuantCutoff)) then
                             Some (toPeptideForLearning true s)
-                        else
+                        elif
+                            abs (quantMap.QuantMzHeavy.[rk] - s.GetAs<float>("QuantMz_Heavy")) > (quantMap.QuantMzHeavy.[rk] * (1. - alignScoreParams.NegativeQuantMzCutoff)) &&
+                            abs (quantMap.QuantHeavy.[rk] - s.GetAs<float>("Quant_Heavy")) > (quantMap.QuantHeavy.[rk] * (1. - alignScoreParams.NegativeQuantCutoff)) then
                             Some (toPeptideForLearning false s)
+                        else
+                            None
                     | None -> None
                 else
                     let originalQuant = 
@@ -257,11 +261,15 @@ module AlignmentBasedQuantStatistics =
                     match originalQuant with
                     | Some o ->
                         if
-                            abs (quantMap.QuantMzLight.[rk] - s.GetAs<float>("QuantMz_Light")) < (quantMap.QuantMzLight.[rk] * 0.01) &&
-                            abs (quantMap.QuantLight.[rk] - s.GetAs<float>("Quant_Light")) < (quantMap.QuantLight.[rk] * 0.1) then
+                            abs (quantMap.QuantMzLight.[rk] - s.GetAs<float>("QuantMz_Light")) < (quantMap.QuantMzLight.[rk] * (alignScoreParams.PositiveQuantMzCutoff)) &&
+                            abs (quantMap.QuantLight.[rk] - s.GetAs<float>("Quant_Light")) < (quantMap.QuantLight.[rk] * (alignScoreParams.PositiveQuantCutoff)) then
                             Some (toPeptideForLearning true s)
-                        else
+                        elif
+                            abs (quantMap.QuantMzLight.[rk] - s.GetAs<float>("QuantMz_Light")) > (quantMap.QuantMzLight.[rk] * (1. - alignScoreParams.NegativeQuantMzCutoff)) &&
+                            abs (quantMap.QuantLight.[rk] - s.GetAs<float>("Quant_Light")) > (quantMap.QuantLight.[rk] * (1. - alignScoreParams.NegativeQuantCutoff)) then
                             Some (toPeptideForLearning false s)
+                        else
+                            None
                     | None -> None
             )
             |> Series.values
@@ -269,10 +277,10 @@ module AlignmentBasedQuantStatistics =
     
         trainingSet
         
-    let assignScoreAndQValue ((quantFile,alignFile,alignQuantFile): (string*string*string)) (matchedFilesLearning: (string*string*string)[]) (logger: NLog.Logger) diagnosticCharts outputDirectory =
+    let assignScoreAndQValue ((quantFile,alignFile,alignQuantFile): (string*string*string)) (matchedFilesLearning: (string*string*string)[]) (logger: NLog.Logger) diagnosticCharts (alignScoreParams: Domain.AlignmentBasedQuantStatisticsParams) outputDirectory =
         let trainingsData =
             matchedFilesLearning
-            |> Array.map (fun (quantFilePath,alignfilePath,alignQuantFilePath) -> createTrainingsData quantFilePath alignfilePath alignQuantFilePath)
+            |> Array.map (fun (quantFilePath,alignfilePath,alignQuantFilePath) -> createTrainingsData quantFilePath alignfilePath alignQuantFilePath alignScoreParams)
 
         let alignedQuants, quants, pepForLearningToTakeMap =
             createDataToScore quantFile alignFile alignQuantFile

@@ -45,10 +45,10 @@ module console1 =
         logger.Info (sprintf "ParamFilePath -p = %s" p)
         logger.Trace (sprintf "CLIArguments: %A" results)
         let p = 
-            Json.ReadAndDeserialize<Dto.PeptideSpectrumMatchingParams> p
-            |> Dto.PeptideSpectrumMatchingParams.toDomain
+            Json.ReadAndDeserialize<Dto.AlignmentBasedQuantStatisticsParams> p
+            |> Dto.AlignmentBasedQuantStatisticsParams.toDomain
         if i.Length = 1 && File.Exists i.[0] && l.Length = 1 && File.Exists l.[0] then
-            assignScoreAndQValue (i.[0], ii.[0], iii.[0]) [|l.[0], ll.[0], lll.[0]|] logger dc o
+            assignScoreAndQValue (i.[0], ii.[0], iii.[0]) [|l.[0], ll.[0], lll.[0]|] logger dc p o
             |> ignore
         elif ((i.Length = 1 && Directory.Exists i.[0]) || i.Length > 1) && ((l.Length = 1 && Directory.Exists i.[0]) || l.Length > 1) then
             let quantFiles =
@@ -124,7 +124,7 @@ module console1 =
                 else 
                     [|for i = 0 to i.Length-1 do yield quantFilesLearning.[i], alignFilesLearning.[i], alignQuantFilesLearning.[i]|]
             matchedFiles
-            |> FSharpAux.PSeq.map (fun (matchedFile) -> assignScoreAndQValue matchedFile matchedFilesLearning logger dc o)
+            |> FSharpAux.PSeq.map (fun (matchedFile) -> assignScoreAndQValue matchedFile matchedFilesLearning logger dc p o)
             |> FSharpAux.PSeq.withDegreeOfParallelism c
             |> Array.ofSeq
             |> ignore
@@ -166,7 +166,7 @@ module console1 =
                 else 
                     [|for i = 0 to i.Length-1 do yield quantFiles.[i], alignFiles.[i], alignQuantFiles.[i]|]
             matchedFiles
-            |> FSharpAux.PSeq.map (fun (matchedFile) -> assignScoreAndQValue matchedFile [|l.[0], ll.[0], lll.[0]|] logger dc o)
+            |> FSharpAux.PSeq.map (fun (matchedFile) -> assignScoreAndQValue matchedFile [|l.[0], ll.[0], lll.[0]|] logger dc p o)
             |> FSharpAux.PSeq.withDegreeOfParallelism c
             |> Array.ofSeq
             |> ignore
@@ -207,7 +207,7 @@ module console1 =
                         )
                 else 
                     [|for i = 0 to i.Length-1 do yield quantFilesLearning.[i], alignFilesLearning.[i], alignQuantFilesLearning.[i]|]
-            assignScoreAndQValue (i.[0], ii.[0], iii.[0]) matchedFilesLearning logger dc o
+            assignScoreAndQValue (i.[0], ii.[0], iii.[0]) matchedFilesLearning logger dc p o
             |> ignore
         else
             failwith "The given path to the instrument output is neither a valid file path nor a valid directory path."
