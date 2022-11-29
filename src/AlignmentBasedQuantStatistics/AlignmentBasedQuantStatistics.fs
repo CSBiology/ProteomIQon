@@ -248,11 +248,11 @@ module AlignmentBasedQuantStatistics =
                             abs (quantMap.QuantHeavy.[rk] - s.GetAs<float>("Quant_Heavy")) < (quantMap.QuantHeavy.[rk] * (alignScoreParams.PositiveQuantCutoff)) then
                             Some (toPeptideForLearning true s)
                         elif
-                            abs (quantMap.QuantMzHeavy.[rk] - s.GetAs<float>("QuantMz_Heavy")) > (quantMap.QuantMzHeavy.[rk] * (1. - alignScoreParams.NegativeQuantMzCutoff)) &&
+                            abs (quantMap.QuantMzHeavy.[rk] - s.GetAs<float>("QuantMz_Heavy")) > (quantMap.QuantMzHeavy.[rk] * (1. - alignScoreParams.NegativeQuantMzCutoff)) ||
                             abs (quantMap.QuantHeavy.[rk] - s.GetAs<float>("Quant_Heavy")) > (quantMap.QuantHeavy.[rk] * (1. - alignScoreParams.NegativeQuantCutoff)) then
                             Some (toPeptideForLearning false s)
                         else
-                            None
+                            Some (toPeptideForLearning false s)
                     | None -> None
                 else
                     let originalQuant = 
@@ -265,11 +265,11 @@ module AlignmentBasedQuantStatistics =
                             abs (quantMap.QuantLight.[rk] - s.GetAs<float>("Quant_Light")) < (quantMap.QuantLight.[rk] * (alignScoreParams.PositiveQuantCutoff)) then
                             Some (toPeptideForLearning true s)
                         elif
-                            abs (quantMap.QuantMzLight.[rk] - s.GetAs<float>("QuantMz_Light")) > (quantMap.QuantMzLight.[rk] * (1. - alignScoreParams.NegativeQuantMzCutoff)) &&
+                            abs (quantMap.QuantMzLight.[rk] - s.GetAs<float>("QuantMz_Light")) > (quantMap.QuantMzLight.[rk] * (1. - alignScoreParams.NegativeQuantMzCutoff)) ||
                             abs (quantMap.QuantLight.[rk] - s.GetAs<float>("Quant_Light")) > (quantMap.QuantLight.[rk] * (1. - alignScoreParams.NegativeQuantCutoff)) then
                             Some (toPeptideForLearning false s)
                         else
-                            None
+                            Some (toPeptideForLearning false s)
                     | None -> None
             )
             |> Series.values
