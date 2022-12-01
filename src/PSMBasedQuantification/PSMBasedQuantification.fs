@@ -498,7 +498,7 @@ module PSMBasedQuantification =
         }
        
     ///
-    let quantifyPeptides diagCharts (processParams:Domain.QuantificationParams) (outputDir:string) (cn:SQLiteConnection) (instrumentOutput:string) (scoredPSMs:string)  =
+    let quantifyPeptides diagCharts zipCharts (processParams:Domain.QuantificationParams) (outputDir:string) (cn:SQLiteConnection) (instrumentOutput:string) (scoredPSMs:string)  =
         let logger = Logging.createLogger (Path.GetFileNameWithoutExtension scoredPSMs)
         logger.Trace (sprintf "Input file: %s" instrumentOutput)
         logger.Trace (sprintf "Output directory: %s" outputDir)
@@ -1141,6 +1141,21 @@ module PSMBasedQuantification =
         filteredResults 
         |> SeqIO'.csv "\t" true false
         |> FSharpAux.IO.SeqIO.Seq.writeOrAppend (outFilePath)
+        if zipCharts then
+            plotDirectory
+            |> Zipping.zipDirectory "*.html" logger
+            |> fun zipped ->
+                match zipped with
+                | Ok byteArr ->
+                    byteArr
+                    |> Zipping.saveZippedDirectory outFilePath logger (Path.GetFileName instrumentOutput)
+                    |> fun saved ->
+                        match saved with
+                        | Ok save -> 
+                            save
+                            Directory.Delete plotDirectory
+                        | Error ex -> logger.Trace (sprintf "Error saving zipped directory: %A" ex)
+                | Error ex -> logger.Trace (sprintf "Error zipping directory: %A" ex)
         inTr.Commit()
         inTr.Dispose()
         inReader.Dispose()
