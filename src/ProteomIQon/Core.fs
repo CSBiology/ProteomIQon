@@ -169,3 +169,41 @@ module Core =
         let parsePaths (getFiles: string -> string[]) (fileOrDirectoryPaths:seq<string>) =
             fileOrDirectoryPaths
             |> Seq.collect (parsePath getFiles)
+
+    module Zipping =
+    
+        open System.IO
+        open System.IO.Compression
+
+        let zipDirectory (globPattern) (logger: NLog.Logger) (directoryName: string) =
+            let files = Directory.GetFiles(directoryName, globPattern)
+            try
+                use ms = new MemoryStream()
+                (
+                    use archive = new ZipArchive(ms, ZipArchiveMode.Create)
+                    files
+                    |> Array.iter (fun fileName ->
+                        let data = File.ReadAllBytes fileName
+                        let entry = archive.CreateEntry(Path.GetFileName fileName)
+                        use entryStream = entry.Open()
+                        use bw = new BinaryWriter(entryStream)
+                        bw.Write(data)
+                    )
+                )
+                Ok (ms.ToArray())
+            with e ->
+                Error <| logger.Trace (sprintf "Cannot zip stream %s: %s" directoryName e.Message)
+
+        let saveZippedDirectory path (logger: NLog.Logger) fileName (data: byte []) =
+            try
+                let path = Path.Combine(path, fileName + ".zip")
+                if File.Exists path then
+                    use fs = File.Open(Path.Combine(path), FileMode.Append)
+                    fs.Write(data, 0, data.Length)
+                    Ok ()
+                else
+                    use fs = File.Open(Path.Combine(path), FileMode.OpenOrCreate)
+                    fs.Write(data, 0, data.Length)
+                    Ok ()
+            with e ->
+                Error <| logger.Trace (sprintf "Cannot save directory %s: %s" fileName e.Message)
