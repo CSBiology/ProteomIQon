@@ -26,6 +26,7 @@ module console1 =
         let d = results.GetResult PeptideDataBase  |> getPathRelativeToDir
         let mf = results.Contains MatchFiles
         let dc = results.Contains DiagnosticCharts
+        let z = results.Contains ZipCharts
         Logging.generateConfig o
         let logger = Logging.createLogger "PSMBasedQuantification"
         logger.Info (sprintf "InputFilePath -i = %A" i)
