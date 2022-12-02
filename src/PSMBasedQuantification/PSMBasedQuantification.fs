@@ -1148,12 +1148,12 @@ module PSMBasedQuantification =
                 match zipped with
                 | Ok byteArr ->
                     byteArr
-                    |> Zipping.saveZippedDirectory outFilePath logger (Path.GetFileName instrumentOutput)
+                    |> Zipping.saveZippedDirectory outputDir logger ((Path.GetFileNameWithoutExtension instrumentOutput) + "_plots")
                     |> fun saved ->
                         match saved with
                         | Ok save -> 
                             save
-                            Directory.Delete plotDirectory
+                            Directory.Delete (plotDirectory, true)
                         | Error ex -> logger.Trace (sprintf "Error saving zipped directory: %A" ex)
                 | Error ex -> logger.Trace (sprintf "Error zipping directory: %A" ex)
         inTr.Commit()
