@@ -119,6 +119,8 @@ module JoinQuantPepIonsWithProteins =
             RtTrace_Heavy                               = s.GetAs<float[]>("RtTrace_Heavy",[||]) 
             IntensityTrace_Observed_Heavy               = s.GetAs<float[]>("IntensityTrace_Observed_Heavy",[||]) 
             IntensityTrace_Corrected_Heavy              = s.GetAs<float[]>("IntensityTrace_Corrected_Heavy",[||]) 
+            AlignmentScore                              = s.GetAs<float>("AlignmentScore")
+            AlignmentQValue                             = s.GetAs<float>("AlignmentQValue")
             }
             )
         |> Series.values
