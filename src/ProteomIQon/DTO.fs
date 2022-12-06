@@ -822,6 +822,10 @@ module Dto =
         IntensityTrace_Observed_Heavy               : float []
         [<FieldAttribute(42)>][<TraceConverter>]
         IntensityTrace_Corrected_Heavy              : float []
+        [<FieldAttribute(43)>]
+        AlignmentScore                              : float
+        [<FieldAttribute(44)>]
+        AlignmentQValue                             : float
         }
 
     module QuantificationResult = 
@@ -1234,6 +1238,10 @@ module Dto =
         IntensityTrace_Observed_Heavy               : float []
         [<FieldAttribute(45)>][<TraceConverter>]
         IntensityTrace_Corrected_Heavy              : float []
+        [<FieldAttribute(46)>]
+        AlignmentScore                              : float
+        [<FieldAttribute(47)>]
+        AlignmentQValue                             : float
         }
 
     type TableSortParams =
@@ -1312,6 +1320,24 @@ module Dto =
                 AggregatePeptideChargeStatesParams      = dtoTableSortParams.AggregatePeptideChargeStatesParams |> Option.map Common.LabelFreeQuantification.AggregationParams.toDomain 
                 AggregateModifiedPeptidesParams         = dtoTableSortParams.AggregateModifiedPeptidesParams    |> Option.map Common.LabelFreeQuantification.AggregationParams.toDomain
                 AggregateToProteinGroupsParams          = dtoTableSortParams.AggregateToProteinGroupsParams     |> Common.LabelFreeQuantification.AggregationParams.toDomain 
+            }
+
+    type AlignmentBasedQuantStatisticsParams =
+        {
+            PositiveQuantMzCutoff: float
+            NegativeQuantMzCutoff: float
+            PositiveQuantCutoff: float
+            NegativeQuantCutoff: float
+        }
+        
+    module AlignmentBasedQuantStatisticsParams =
+        
+        let inline toDomain (dtoAlignmentBasedQuantStatisticsParams) : Domain.AlignmentBasedQuantStatisticsParams =
+            {
+                PositiveQuantMzCutoff = dtoAlignmentBasedQuantStatisticsParams.PositiveQuantMzCutoff
+                NegativeQuantMzCutoff = dtoAlignmentBasedQuantStatisticsParams.NegativeQuantMzCutoff
+                PositiveQuantCutoff = dtoAlignmentBasedQuantStatisticsParams.PositiveQuantCutoff
+                NegativeQuantCutoff = dtoAlignmentBasedQuantStatisticsParams.NegativeQuantCutoff
             }
             
     type SpectralLibraryParams =

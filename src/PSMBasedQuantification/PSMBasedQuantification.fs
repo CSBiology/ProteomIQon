@@ -498,7 +498,7 @@ module PSMBasedQuantification =
         }
        
     ///
-    let quantifyPeptides diagCharts (processParams:Domain.QuantificationParams) (outputDir:string) (cn:SQLiteConnection) (instrumentOutput:string) (scoredPSMs:string)  =
+    let quantifyPeptides diagCharts zipCharts (processParams:Domain.QuantificationParams) (outputDir:string) (cn:SQLiteConnection) (instrumentOutput:string) (scoredPSMs:string)  =
         let logger = Logging.createLogger (Path.GetFileNameWithoutExtension scoredPSMs)
         logger.Trace (sprintf "Input file: %s" instrumentOutput)
         logger.Trace (sprintf "Output directory: %s" outputDir)
@@ -807,6 +807,8 @@ module PSMBasedQuantification =
                     RtTrace_Heavy                               = successfulQuant.X_Xic 
                     IntensityTrace_Observed_Heavy               = successfulQuant.Y_Xic_uncorrected
                     IntensityTrace_Corrected_Heavy              = successfulQuant.Y_Xic
+                    AlignmentScore                              = nan
+                    AlignmentQValue                             = nan
                     }
                     |> Option.Some
                 | None -> 
@@ -857,6 +859,8 @@ module PSMBasedQuantification =
                     RtTrace_Heavy                               = [||]
                     IntensityTrace_Observed_Heavy               = [||]
                     IntensityTrace_Corrected_Heavy              = [||]
+                    AlignmentScore                              = nan
+                    AlignmentQValue                             = nan
                     }
                     |> Option.Some
             else
@@ -948,6 +952,8 @@ module PSMBasedQuantification =
                     RtTrace_Heavy                               = averagePSM.X_Xic 
                     IntensityTrace_Observed_Heavy               = averagePSM.Y_Xic_uncorrected
                     IntensityTrace_Corrected_Heavy              = averagePSM.Y_Xic
+                    AlignmentScore                              = nan
+                    AlignmentQValue                             = nan
                     }
                     |> Option.Some
                 | None ->
@@ -998,6 +1004,8 @@ module PSMBasedQuantification =
                     RtTrace_Heavy                               = averagePSM.X_Xic 
                     IntensityTrace_Observed_Heavy               = averagePSM.Y_Xic_uncorrected
                     IntensityTrace_Corrected_Heavy              = averagePSM.Y_Xic
+                    AlignmentScore                              = nan
+                    AlignmentQValue                             = nan
                     }
                     |> Option.Some
             with
@@ -1078,6 +1086,8 @@ module PSMBasedQuantification =
             RtTrace_Heavy                               = [||]
             IntensityTrace_Observed_Heavy               = [||]
             IntensityTrace_Corrected_Heavy              = [||]
+            AlignmentScore                              = nan
+            AlignmentQValue                             = nan
             }
             |> Option.Some
             with
@@ -1131,6 +1141,21 @@ module PSMBasedQuantification =
         filteredResults 
         |> SeqIO'.csv "\t" true false
         |> FSharpAux.IO.SeqIO.Seq.writeOrAppend (outFilePath)
+        if zipCharts then
+            plotDirectory
+            |> Zipping.zipDirectory "*.html" logger
+            |> fun zipped ->
+                match zipped with
+                | Ok byteArr ->
+                    byteArr
+                    |> Zipping.saveZippedDirectory outputDir logger ((Path.GetFileNameWithoutExtension instrumentOutput) + "_plots")
+                    |> fun saved ->
+                        match saved with
+                        | Ok save -> 
+                            save
+                            Directory.Delete (plotDirectory, true)
+                        | Error ex -> logger.Trace (sprintf "Error saving zipped directory: %A" ex)
+                | Error ex -> logger.Trace (sprintf "Error zipping directory: %A" ex)
         inTr.Commit()
         inTr.Dispose()
         inReader.Dispose()
