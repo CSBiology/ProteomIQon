@@ -39,7 +39,7 @@ module console1 =
         logger.Info (sprintf "AlignFilePath -ii = %A" ii)
         logger.Info (sprintf "AlignedQuantFilePath -iii = %A" iii)
         logger.Info (sprintf "QuantFilePathForLearning -l = %A" l)
-        logger.Info (sprintf "AlignFilePathForLearning -l = %A" ll)
+        logger.Info (sprintf "AlignFilePathForLearning -ll = %A" ll)
         logger.Info (sprintf "AlignedQuantFilePathForLearning -lll = %A" lll)
         logger.Info (sprintf "OutputFilePath -o = %s" o)
         logger.Info (sprintf "ParamFilePath -p = %s" p)
@@ -48,9 +48,11 @@ module console1 =
             Json.ReadAndDeserialize<Dto.AlignmentBasedQuantStatisticsParams> p
             |> Dto.AlignmentBasedQuantStatisticsParams.toDomain
         if i.Length = 1 && File.Exists i.[0] && l.Length = 1 && File.Exists l.[0] then
-            assignScoreAndQValue (i.[0], ii.[0], iii.[0]) [|l.[0], ll.[0], lll.[0]|] logger dc p o
+            logger.Trace "Single file"
+            assignScoreAndQValue (i.[0], ii.[0], iii.[0]) [|l.[0], ll.[0], lll.[0]|] dc p o
             |> ignore
         elif ((i.Length = 1 && Directory.Exists i.[0]) || i.Length > 1) && ((l.Length = 1 && Directory.Exists i.[0]) || l.Length > 1) then
+            logger.Trace "Multiple files"
             let quantFiles =
                 if i.Length = 1 then
                     Directory.GetFiles(i.[0],("*.quant"))
@@ -87,6 +89,12 @@ module console1 =
                 else
                     lll
                     |> Array.ofList
+            logger.Trace $"Quant Files: {quantFiles}"
+            logger.Trace $"Alignment Files: {alignFiles}"
+            logger.Trace $"Aligned Quant Files: {alignQuantFiles}"
+            logger.Trace $"Quant Files Learning: {quantFilesLearning}"
+            logger.Trace $"Alignment Files Learning: {alignFilesLearning}"
+            logger.Trace $"Aligned Quant Files Learning: {alignQuantFilesLearning}"
             let matchedFiles =
                 if mf then 
                     quantFiles
@@ -124,11 +132,12 @@ module console1 =
                 else 
                     [|for i = 0 to i.Length-1 do yield quantFilesLearning.[i], alignFilesLearning.[i], alignQuantFilesLearning.[i]|]
             matchedFiles
-            |> FSharpAux.PSeq.map (fun (matchedFile) -> assignScoreAndQValue matchedFile matchedFilesLearning logger dc p o)
+            |> FSharpAux.PSeq.map (fun (matchedFile) -> assignScoreAndQValue matchedFile matchedFilesLearning dc p o)
             |> FSharpAux.PSeq.withDegreeOfParallelism c
             |> Array.ofSeq
             |> ignore
         elif ((i.Length = 1 && Directory.Exists i.[0]) || i.Length > 1) && (l.Length = 1 && File.Exists l.[0]) then
+            logger.Trace "Multiple files with single file for learning"
             let quantFiles =
                 if i.Length = 1 then
                     Directory.GetFiles(i.[0],("*.quant"))
@@ -147,6 +156,9 @@ module console1 =
                 else
                     iii
                     |> Array.ofList
+            logger.Trace $"Quant Files: {quantFiles}"
+            logger.Trace $"Alignment Files: {alignFiles}"
+            logger.Trace $"Aligned Quant Files: {alignQuantFiles}"
             let matchedFiles =
                 if mf then 
                     quantFiles
@@ -166,11 +178,12 @@ module console1 =
                 else 
                     [|for i = 0 to i.Length-1 do yield quantFiles.[i], alignFiles.[i], alignQuantFiles.[i]|]
             matchedFiles
-            |> FSharpAux.PSeq.map (fun (matchedFile) -> assignScoreAndQValue matchedFile [|l.[0], ll.[0], lll.[0]|] logger dc p o)
+            |> FSharpAux.PSeq.map (fun (matchedFile) -> assignScoreAndQValue matchedFile [|l.[0], ll.[0], lll.[0]|] dc p o)
             |> FSharpAux.PSeq.withDegreeOfParallelism c
             |> Array.ofSeq
             |> ignore
         elif ((i.Length = 1 && File.Exists i.[0]) || i.Length > 1) && ((l.Length = 1 && Directory.Exists i.[0]) || l.Length > 1) then
+            logger.Trace "Single file with multiple files for learning"
             let quantFilesLearning =
                 if l.Length = 1 then
                     Directory.GetFiles(l.[0],("*.quant"))
@@ -189,6 +202,9 @@ module console1 =
                 else
                     lll
                     |> Array.ofList
+            logger.Trace $"Quant Files Learning: {quantFilesLearning}"
+            logger.Trace $"Alignment Files Learning: {alignFilesLearning}"
+            logger.Trace $"Aligned Quant Files Learning: {alignQuantFilesLearning}"
             let matchedFilesLearning =
                 if mf then 
                     quantFilesLearning
@@ -207,7 +223,7 @@ module console1 =
                         )
                 else 
                     [|for i = 0 to i.Length-1 do yield quantFilesLearning.[i], alignFilesLearning.[i], alignQuantFilesLearning.[i]|]
-            assignScoreAndQValue (i.[0], ii.[0], iii.[0]) matchedFilesLearning logger dc p o
+            assignScoreAndQValue (i.[0], ii.[0], iii.[0]) matchedFilesLearning dc p o
             |> ignore
         else
             failwith "The given path to the instrument output is neither a valid file path nor a valid directory path."

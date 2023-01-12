@@ -277,7 +277,9 @@ module AlignmentBasedQuantStatistics =
     
         trainingSet
         
-    let assignScoreAndQValue ((quantFile,alignFile,alignQuantFile): (string*string*string)) (matchedFilesLearning: (string*string*string)[]) (logger: NLog.Logger) diagnosticCharts (alignScoreParams: Domain.AlignmentBasedQuantStatisticsParams) outputDirectory =
+    let assignScoreAndQValue ((quantFile,alignFile,alignQuantFile): (string*string*string)) (matchedFilesLearning: (string*string*string)[]) diagnosticCharts (alignScoreParams: Domain.AlignmentBasedQuantStatisticsParams) outputDirectory =
+
+        let logger = Logging.createLogger (System.IO.Path.GetFileNameWithoutExtension quantFile)
         let trainingsData =
             matchedFilesLearning
             |> Array.map (fun (quantFilePath,alignfilePath,alignQuantFilePath) -> createTrainingsData quantFilePath alignfilePath alignQuantFilePath alignScoreParams)
@@ -417,7 +419,8 @@ module AlignmentBasedQuantStatistics =
             |> Frame.addCol "AlignmentQValue" qValSeries
         |> Frame.merge quants
         |> fun frame ->
-            logger.Trace $"{frame.RowCount}"
+            logger.Trace $"Original Count: {quants.RowCount}"
+            logger.Trace $"New Count: {frame.RowCount}"
             frame.SaveCsv(System.IO.Path.Combine(outputDirectory, quantFile |> System.IO.Path.GetFileName), includeRowKeys = false, separator = '\t')
     
             
