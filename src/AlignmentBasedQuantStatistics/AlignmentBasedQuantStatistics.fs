@@ -418,6 +418,14 @@ module AlignmentBasedQuantStatistics =
             |> Frame.addCol "AlignmentScore" scoreSeries
             |> Frame.addCol "AlignmentQValue" qValSeries
         |> Frame.merge quants
+        |> Frame.mapValues (fun (v: obj) -> 
+            if v :? System.Double [] then
+                v :?> System.Double []
+                |> Array.map string
+                |> String.concat ";"
+            else
+                string v
+        )
         |> fun frame ->
             logger.Trace $"Original Count: {quants.RowCount}"
             logger.Trace $"New Count: {frame.RowCount}"
