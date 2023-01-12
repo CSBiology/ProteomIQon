@@ -112,7 +112,7 @@ module console1 =
                             None
                         )
                 else 
-                    [|for i = 0 to i.Length-1 do yield quantFiles.[i], alignFiles.[i], alignQuantFiles.[i]|]
+                    [|for i = 0 to quantFiles.Length-1 do yield quantFiles.[i], alignFiles.[i], alignQuantFiles.[i]|]
             let matchedFilesLearning =
                 if mf then 
                     quantFilesLearning
@@ -130,7 +130,7 @@ module console1 =
                             None
                         )
                 else 
-                    [|for i = 0 to i.Length-1 do yield quantFilesLearning.[i], alignFilesLearning.[i], alignQuantFilesLearning.[i]|]
+                    [|for i = 0 to quantFiles.Length-1 do yield quantFilesLearning.[i], alignFilesLearning.[i], alignQuantFilesLearning.[i]|]
             matchedFiles
             |> FSharpAux.PSeq.map (fun (matchedFile) -> assignScoreAndQValue matchedFile matchedFilesLearning dc p o)
             |> FSharpAux.PSeq.withDegreeOfParallelism c
@@ -176,7 +176,7 @@ module console1 =
                             None
                         )
                 else 
-                    [|for i = 0 to i.Length-1 do yield quantFiles.[i], alignFiles.[i], alignQuantFiles.[i]|]
+                    [|for i = 0 to quantFiles.Length-1 do yield quantFiles.[i], alignFiles.[i], alignQuantFiles.[i]|]
             matchedFiles
             |> FSharpAux.PSeq.map (fun (matchedFile) -> assignScoreAndQValue matchedFile [|l.[0], ll.[0], lll.[0]|] dc p o)
             |> FSharpAux.PSeq.withDegreeOfParallelism c
@@ -222,7 +222,7 @@ module console1 =
                             None
                         )
                 else 
-                    [|for i = 0 to i.Length-1 do yield quantFilesLearning.[i], alignFilesLearning.[i], alignQuantFilesLearning.[i]|]
+                    [|for i = 0 to quantFilesLearning.Length-1 do yield quantFilesLearning.[i], alignFilesLearning.[i], alignQuantFilesLearning.[i]|]
             assignScoreAndQValue (i.[0], ii.[0], iii.[0]) matchedFilesLearning dc p o
             |> ignore
         else
