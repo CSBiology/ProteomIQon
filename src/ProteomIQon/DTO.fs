@@ -725,7 +725,7 @@ module Dto =
         inherit ConverterAttribute()
         override this.convertToObj = 
             Converter.Single(fun (str : string) -> 
-                let tmp = (str |> String.filter (fun x -> x <> '|' && x <> '[' && x <> ']' )).Trim() 
+                let tmp = (str |> String.filter (fun x -> x <> '|' && x <> '[' && x <> ']' && x <> '"' )).Trim() 
                 if tmp = "" then 
                     [||]
                 else
