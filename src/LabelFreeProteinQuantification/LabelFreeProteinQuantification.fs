@@ -120,7 +120,14 @@ module LabelFreeProteinQuantification =
                         |> Array.filter (fun x -> x.GlobalMod = 0)
                         |> Array.filter modPepFilter
                         |> Frame.ofRecords
-                        |> Core.indexWithColumnValues keyCols 
+                        |> Core.indexWithColumnValues keyCols
+                        |> Frame.sliceCols
+                            [|
+                                "Quant_Light"
+                                "ProteinGroup_QValue"
+                                "AlignmentQValue"
+                                "QuantificationSource"
+                            |]
                     logger.Trace (sprintf "QuantAndProt file with name:%s contributes %i quantifications" (System.IO.Path.GetFileNameWithoutExtension fp) (peptidesAndProteinsIndexed'.RowCount))
                     peptidesAndProteinsIndexed'
                 )
