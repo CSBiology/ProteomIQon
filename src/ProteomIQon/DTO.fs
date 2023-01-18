@@ -1285,6 +1285,7 @@ module Dto =
     type LabeledQuantificationParams = 
         {
         Correlation_Light_Heavy_Threshold    : float option
+        Alignment_QValue                     : float option
         ModificationFilter                   : UseModifiedPeptides 
         AggregateGlobalModificationsParams   : LabeledProteinQuantification.AggregationParams
         AggregatePeptideChargeStatesParams   : LabeledProteinQuantification.AggregationParams option
@@ -1296,7 +1297,8 @@ module Dto =
     
         let inline toDomain (dtoTableSortParams: LabeledQuantificationParams): Domain.LabeledQuantificationParams = 
             {
-                Correlation_Light_Heavy_Threshold       = dtoTableSortParams.Correlation_Light_Heavy_Threshold 
+                Correlation_Light_Heavy_Threshold       = dtoTableSortParams.Correlation_Light_Heavy_Threshold
+                Alignment_QValue                        = dtoTableSortParams.Alignment_QValue
                 ModificationFilter                      = dtoTableSortParams.ModificationFilter |> UseModifiedPeptides.toDomain              
                 AggregateGlobalModificationsParams      = dtoTableSortParams.AggregateGlobalModificationsParams |> LabeledProteinQuantification.AggregationParams.toDomain
                 AggregatePeptideChargeStatesParams      = dtoTableSortParams.AggregatePeptideChargeStatesParams |> Option.map LabeledProteinQuantification.AggregationParams.toDomain
@@ -1306,6 +1308,7 @@ module Dto =
     
     type LabelFreeQuantificationParams = 
         {
+        Alignment_QValue                     : float option
         ModificationFilter                   : UseModifiedPeptides 
         AggregatePeptideChargeStatesParams   : LabelFreeQuantification.AggregationParams option
         AggregateModifiedPeptidesParams      : LabelFreeQuantification.AggregationParams option
@@ -1316,6 +1319,7 @@ module Dto =
     
         let inline toDomain (dtoTableSortParams: LabelFreeQuantificationParams): Domain.LabelFreeQuantificationParams = 
             {
+                Alignment_QValue                        = dtoTableSortParams.Alignment_QValue
                 ModificationFilter                      = dtoTableSortParams.ModificationFilter |> UseModifiedPeptides.toDomain              
                 AggregatePeptideChargeStatesParams      = dtoTableSortParams.AggregatePeptideChargeStatesParams |> Option.map Common.LabelFreeQuantification.AggregationParams.toDomain 
                 AggregateModifiedPeptidesParams         = dtoTableSortParams.AggregateModifiedPeptidesParams    |> Option.map Common.LabelFreeQuantification.AggregationParams.toDomain

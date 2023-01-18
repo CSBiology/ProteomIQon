@@ -19,11 +19,12 @@ module LabeledProteinQuantification =
         | Some x -> x 
         | None -> nan 
 
-    let performGlobalModAggregation (transformParams:LabeledTransforms) (singleFilters:LabeledSingleFilters) (groupFilters:LabeledGroupFilters) (aggregations:LabeledAggregations) correlation_Light_Heavy_Threshold modifyKeyColumns keyColumns peptidesAndProteinsIndexed =
-            let light       = peptidesAndProteinsIndexed |> Core.getColumn<float>"Quant_Light"
-            let heavy       = peptidesAndProteinsIndexed |> Core.getColumn<float>"Quant_Heavy"
-            let correlation = peptidesAndProteinsIndexed |> Core.getColumn<float>"Correlation_Light_Heavy"
-            let proteinQVal = peptidesAndProteinsIndexed |> Core.getColumn<float>"ProteinGroup_QValue"
+    let performGlobalModAggregation (transformParams:LabeledTransforms) (singleFilters:LabeledSingleFilters) (groupFilters:LabeledGroupFilters) (aggregations:LabeledAggregations) correlation_Light_Heavy_Threshold alignment_QValue modifyKeyColumns keyColumns peptidesAndProteinsIndexed =
+            let light         = peptidesAndProteinsIndexed |> Core.getColumn<float>"Quant_Light"
+            let heavy         = peptidesAndProteinsIndexed |> Core.getColumn<float>"Quant_Heavy"
+            let correlation   = peptidesAndProteinsIndexed |> Core.getColumn<float>"Correlation_Light_Heavy"
+            let proteinQVal   = peptidesAndProteinsIndexed |> Core.getColumn<float>"ProteinGroup_QValue"
+            let alignmentQVal = peptidesAndProteinsIndexed |> Core.getColumn<float>"AlignmentQValue"
             /// Zipped
             let n14ByN15 = Core.zip (fun x y -> x / y) light heavy 
             /// Transformed 
@@ -39,12 +40,20 @@ module LabeledProteinQuantification =
                 match correlation_Light_Heavy_Threshold with 
                 | Some c -> Core.createFilter (fun x -> x > c ) correlation
                 | None -> Core.createFilter (fun x -> true ) correlation
+            /// Alignment QValue Filter
+            let alignmentQvalF = 
+                match alignment_QValue with 
+                | Some a -> 
+                    Core.createFilter (fun x -> 
+                        x < a || isNan x
+                    ) alignmentQVal
+                | None -> Core.createFilter (fun x -> true ) alignmentQVal
             /// GroupFilters = 
             let lightGF = groupFilters.Light |> Seq.map (fun f -> Core.createGroupFilter f modifyKeyColumns keyColumns lightT)
             let heavyGF = groupFilters.Heavy |> Seq.map (fun f -> Core.createGroupFilter f modifyKeyColumns keyColumns heavyT) 
             let n14ByN15GF = groupFilters.Ratio |> Seq.map (fun f -> Core.createGroupFilter f modifyKeyColumns keyColumns n14ByN15T)       
             /// CombinedFilters 
-            let cf = correlationF::([lightTF;heavyTF;n14ByN15TF;lightGF;heavyGF;n14ByN15GF] |> Seq.concat |> List.ofSeq) 
+            let cf = alignmentQvalF::correlationF::([lightTF;heavyTF;n14ByN15TF;lightGF;heavyGF;n14ByN15GF] |> Seq.concat |> List.ofSeq) 
             /// Aggregated
             let light_agg :Series<_,float> = Core.aggregate aggregations.Light modifyKeyColumns keyColumns cf lightT 
             let heavy_agg :Series<_,float> = Core.aggregate aggregations.Heavy modifyKeyColumns keyColumns cf heavyT 
@@ -205,7 +214,7 @@ module LabeledProteinQuantification =
         let globalModAggregated =
             let gParams = labeledQuantificationParams.AggregateGlobalModificationsParams
             performGlobalModAggregation 
-                gParams.LabeledTransform gParams.LabeledSingleFilters gParams.LabeledGroupFilters gParams.LabeledAggregation labeledQuantificationParams.Correlation_Light_Heavy_Threshold 
+                gParams.LabeledTransform gParams.LabeledSingleFilters gParams.LabeledGroupFilters gParams.LabeledAggregation labeledQuantificationParams.Correlation_Light_Heavy_Threshold labeledQuantificationParams.Alignment_QValue
                     Core.dropKeyColumns ["GlobalMod";"ModSequenceID"] peptidesAndProteinsIndexed
         logger.Trace (sprintf "Global Modification aggregation yields %i quantifications" (globalModAggregated.RowCount))   
         /// Step 2: Aggregate Charges

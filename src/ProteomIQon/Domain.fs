@@ -305,6 +305,7 @@ module Domain =
     type LabeledQuantificationParams = 
         {
             Correlation_Light_Heavy_Threshold: float option
+            Alignment_QValue: float option
             ModificationFilter : string -> bool 
             AggregateGlobalModificationsParams   : LabeledProteinQuantification.AggregationParams
             AggregatePeptideChargeStatesParams   : LabeledProteinQuantification.AggregationParams option
@@ -345,6 +346,7 @@ module Domain =
 
     type LabelFreeQuantificationParams = 
         {
+            Alignment_QValue: float option
             ModificationFilter : string -> bool 
             AggregatePeptideChargeStatesParams   : LabelFreeQuantification.AggregationParams option
             AggregateModifiedPeptidesParams      : LabelFreeQuantification.AggregationParams option

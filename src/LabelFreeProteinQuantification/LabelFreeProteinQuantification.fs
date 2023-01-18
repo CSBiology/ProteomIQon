@@ -19,17 +19,26 @@ module LabelFreeProteinQuantification =
         | Some x -> x 
         | None -> nan 
 
-    let performChargeOrModAggregation (transformParams:Transforms) (singleFilters:SingleFilters) (groupFilters:GroupFilters) (aggregations:Aggregations) modifyKeyColumns keyColumns peptidesAndProteinsIndexed =
+    let performChargeOrModAggregation (transformParams:Transforms) (singleFilters:SingleFilters) (groupFilters:GroupFilters) (aggregations:Aggregations) alignment_QValue modifyKeyColumns keyColumns peptidesAndProteinsIndexed =
             let light       = peptidesAndProteinsIndexed |> Core.getColumn<float>"Quant_Light"
             let proteinQVal = peptidesAndProteinsIndexed |> Core.getColumn<float>"ProteinGroup_QValue"
+            let alignmentQVal = peptidesAndProteinsIndexed |> Core.getColumn<float>"AlignmentQValue"
             /// Transformed 
             let lightT       = light    |> Core.transform transformParams.Light
             /// ThresholdFilters
             let lightTF = singleFilters.Light |> Seq.map (fun f -> Core.createFilter f lightT)
-           /// GroupFilters = 
+            /// Alignment QValue Filter
+            let alignmentQvalF = 
+                match alignment_QValue with 
+                | Some a -> 
+                    Core.createFilter (fun x -> 
+                        x < a || isNan x
+                    ) alignmentQVal
+                | None -> Core.createFilter (fun x -> true ) alignmentQVal
+            /// GroupFilters = 
             let lightGF = groupFilters.Light |> Seq.map (fun f -> Core.createGroupFilter f modifyKeyColumns keyColumns lightT)
             /// CombinedFilters 
-            let cf = ([lightTF;lightGF] |> Seq.concat |> List.ofSeq) 
+            let cf = alignmentQvalF::([lightTF;lightGF] |> Seq.concat |> List.ofSeq) 
             /// Aggregated
             let light_agg :Series<_,float> = Core.aggregate aggregations.Light modifyKeyColumns keyColumns cf lightT 
             let proteinQVal :Series<_,float> = Core.aggregate tryGetQVal modifyKeyColumns keyColumns cf proteinQVal 
@@ -42,21 +51,30 @@ module LabelFreeProteinQuantification =
                     ]
             assembeled
 
-    let performPeptideToProteinAggregation (transformParams:Transforms) (singleFilters:SingleFilters) (groupFilters:GroupFilters) (aggregations:Aggregations) modifyKeyColumns keyColumns peptidesAndProteinsIndexed =
+    let performPeptideToProteinAggregation (transformParams:Transforms) (singleFilters:SingleFilters) (groupFilters:GroupFilters) (aggregations:Aggregations) alignment_QValue modifyKeyColumns keyColumns peptidesAndProteinsIndexed =
             let sem (x:seq<float>) =
                 let stDev = Seq.stDev x
                 stDev / (sqrt (x |> Seq.length |> float))
             let light       = peptidesAndProteinsIndexed |> Core.getColumn<float>"Quant_Light"
             let proteinQVal = peptidesAndProteinsIndexed |> Core.getColumn<float>"ProteinGroup_QValue"
+            let alignmentQVal = peptidesAndProteinsIndexed |> Core.getColumn<float>"AlignmentQValue"
             /// Transformed 
             let lightT       = light    |> Core.transform transformParams.Light
             /// 
             /// ThresholdFilters
             let lightTF = singleFilters.Light |> Seq.map (fun f -> Core.createFilter f lightT)
+            /// Alignment QValue Filter
+            let alignmentQvalF = 
+                match alignment_QValue with 
+                | Some a -> 
+                    Core.createFilter (fun x -> 
+                        x < a || isNan x
+                    ) alignmentQVal
+                | None -> Core.createFilter (fun x -> true ) alignmentQVal
             /// GroupFilters = 
             let lightGF = groupFilters.Light |> Seq.map (fun f -> Core.createGroupFilter f modifyKeyColumns keyColumns lightT)
             /// CombinedFilters 
-            let cf = ([lightTF;lightGF] |> Seq.concat |> List.ofSeq) 
+            let cf = alignmentQvalF::([lightTF;lightGF] |> Seq.concat |> List.ofSeq) 
             /// Aggregated
             /// Light
             let light_agg :Series<_,float> = Core.aggregate aggregations.Light modifyKeyColumns keyColumns cf lightT 
@@ -78,11 +96,11 @@ module LabelFreeProteinQuantification =
                     ]
             assembeled
             
-    let labelFreeQuantification (labeledQuantificationParams:Domain.LabelFreeQuantificationParams) (outputDir:string) (instrumentOutput:string[]) =
+    let labelFreeQuantification (labelfreeQuantificationParams:Domain.LabelFreeQuantificationParams) (outputDir:string) (instrumentOutput:string[]) =
         let logger = Logging.createLogger "LabeledQuantification"
         logger.Trace (sprintf "Input files: %A" instrumentOutput)
         logger.Trace (sprintf "Output directory: %s" outputDir)
-        let modPepFilter (p:ProteinAssignedQuantifiedIon) = p.StringSequence |> labeledQuantificationParams.ModificationFilter
+        let modPepFilter (p:ProteinAssignedQuantifiedIon) = p.StringSequence |> labelfreeQuantificationParams.ModificationFilter
         let keyCols =         
             [|
                 "FileName"      
@@ -111,11 +129,11 @@ module LabelFreeProteinQuantification =
       /// Step 1: Aggregate Charges
         ///  
         let chargesAggregated = 
-            match labeledQuantificationParams.AggregatePeptideChargeStatesParams with 
+            match labelfreeQuantificationParams.AggregatePeptideChargeStatesParams with 
             | Some chParams ->
                 let res = 
                     performChargeOrModAggregation 
-                        chParams.Transform chParams.SingleFilters chParams.GroupFilters chParams.Aggregation 
+                        chParams.Transform chParams.SingleFilters chParams.GroupFilters chParams.Aggregation labelfreeQuantificationParams.Alignment_QValue
                             Core.dropKeyColumns ["Charge";"GlobalMod"] peptidesAndProteinsIndexed
                 logger.Trace (sprintf "Charge State to modified peptide sequence aggregation yields %i quantifications." (res.RowCount))
                 res  
@@ -124,11 +142,11 @@ module LabelFreeProteinQuantification =
                 peptidesAndProteinsIndexed       
         /// Step 2: Aggregate Modifications
         let modificationsAggregated = 
-            match labeledQuantificationParams.AggregateModifiedPeptidesParams with
+            match labelfreeQuantificationParams.AggregateModifiedPeptidesParams with
             | Some modParams ->
                 let res = 
                     performChargeOrModAggregation 
-                        modParams.Transform modParams.SingleFilters modParams.GroupFilters modParams.Aggregation 
+                        modParams.Transform modParams.SingleFilters modParams.GroupFilters modParams.Aggregation labelfreeQuantificationParams.Alignment_QValue
                             Core.dropKeyColumns ["StringSequence";"ModSequenceID"] chargesAggregated
                 logger.Trace (sprintf "Modified peptide sequence to peptide Sequence aggregation yields %i quantifications." (res.RowCount)) 
                 res
@@ -137,10 +155,10 @@ module LabelFreeProteinQuantification =
                 chargesAggregated
         /// Step 3: Aggregate To Proteins
         let proteins = 
-            let pParams = labeledQuantificationParams.AggregateToProteinGroupsParams
+            let pParams = labelfreeQuantificationParams.AggregateToProteinGroupsParams
             let res = 
                 performPeptideToProteinAggregation
-                    pParams.Transform pParams.SingleFilters pParams.GroupFilters pParams.Aggregation 
+                    pParams.Transform pParams.SingleFilters pParams.GroupFilters pParams.Aggregation labelfreeQuantificationParams.Alignment_QValue
                                  Core.dropAllKeyColumnsBut ["FileName";"ProteinGroup"] modificationsAggregated
             logger.Trace (sprintf "Peptide to Protein Group aggregation yields %i quantifications." (res.RowCount))                
             res
@@ -151,12 +169,12 @@ module LabelFreeProteinQuantification =
            |> Core.rowKeyToColumns 
         logger.Trace (sprintf "Finally, %i Protein Groups are reported across all files. %i of all protein groups were quantified across all samples." (proteinsPivoted.RowCount) (proteinsPivoted.DropSparseRows().RowCount))           
         
-        if labeledQuantificationParams.AggregatePeptideChargeStatesParams.IsSome then 
+        if labelfreeQuantificationParams.AggregatePeptideChargeStatesParams.IsSome then 
             let outFilePathC =
                let fileName = "ChargeAggregation.txt"
                Path.Combine [|outputDir;fileName|]
             (chargesAggregated |> Core.rowKeyToColumns).SaveCsv(outFilePathC,separator='\t',includeRowKeys=false)
-        if labeledQuantificationParams.AggregateModifiedPeptidesParams.IsSome then 
+        if labelfreeQuantificationParams.AggregateModifiedPeptidesParams.IsSome then 
             let outFilePathM =
                let fileName = "ModificationAggregation.txt"
                Path.Combine [|outputDir;fileName|]
