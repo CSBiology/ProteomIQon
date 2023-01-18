@@ -203,7 +203,17 @@ module LabeledProteinQuantification =
                         |> Array.ofSeq
                         |> Array.filter modPepFilter
                         |> Frame.ofRecords
-                        |> Core.indexWithColumnValues keyCols 
+                        |> Core.indexWithColumnValues keyCols
+                        |> Frame.sliceCols
+                            [|
+                                "Quant_Light"
+                                "Quant_Heavy"
+                                "Ratio_LightByHeavy"
+                                "Correlation_Light_Heavy"
+                                "ProteinGroup_QValue"
+                                "AlignmentQValue"
+                                "QuantificationSource"
+                            |]
                     logger.Trace (sprintf "QuantAndProt file with name:%s contributes %i quantifications" (System.IO.Path.GetFileNameWithoutExtension fp) (peptidesAndProteinsIndexed'.RowCount))
                     peptidesAndProteinsIndexed'
                 )
