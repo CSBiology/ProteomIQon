@@ -126,7 +126,6 @@ module LabelFreeProteinQuantification =
                                 "Quant_Light"
                                 "ProteinGroup_QValue"
                                 "AlignmentQValue"
-                                "QuantificationSource"
                             |]
                     logger.Trace (sprintf "QuantAndProt file with name:%s contributes %i quantifications" (System.IO.Path.GetFileNameWithoutExtension fp) (peptidesAndProteinsIndexed'.RowCount))
                     peptidesAndProteinsIndexed'
