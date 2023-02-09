@@ -47,6 +47,7 @@ module LabeledProteinQuantification =
                     Core.createFilter (fun x -> 
                         x < a || isNan x
                     ) alignmentQVal
+                    |> Series.fillMissingWith true
                 | None -> Core.createFilter (fun x -> true ) alignmentQVal
             /// GroupFilters = 
             let lightGF = groupFilters.Light |> Seq.map (fun f -> Core.createGroupFilter f modifyKeyColumns keyColumns lightT)
