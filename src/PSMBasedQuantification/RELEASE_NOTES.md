@@ -1,3 +1,6 @@
+#### 0.0.9 - Monday, February 13, 2023
+* Add Alignment Score fields to quantification results
+
 #### 0.0.8 - Tuesday, April 26, 2022
 * Constrain delta to be < 0.1 for mz error correction
 
