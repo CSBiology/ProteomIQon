@@ -693,7 +693,7 @@ module Dto =
 
     type QuantificationParams =
         {
-            PerformLabeledQuantification : bool
+            PerformLabeledQuantification : Labeling
             XicExtraction                : XicExtraction
             //10 6 0.05
             BaseLineCorrection           : BaseLineCorrection option

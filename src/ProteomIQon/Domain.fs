@@ -156,9 +156,15 @@ module Domain =
             P                            : float 
         }
 
+    
+    type Labeling =
+        | Unlabeled
+        | N15Labeling
+        | N15LabelingOnly
+
     type QuantificationParams = 
         {
-            PerformLabeledQuantification : bool
+            PerformLabeledQuantification : Labeling
             XicExtraction                : XicExtraction
             BaseLineCorrection           : BaseLineCorrection option
         }
