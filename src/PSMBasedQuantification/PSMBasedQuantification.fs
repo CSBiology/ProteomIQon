@@ -1122,20 +1122,22 @@ module PSMBasedQuantification =
             |> Array.mapi (fun i (pepIon,psms) -> 
                 if i % 100 = 0 then logger.Trace (sprintf "%i peptides quantified" i)
                 
-                if processParams.PerformLabeledQuantification then 
-                    labledQuantification pepIon psms
-                else
-                    lableFreeQuantification pepIon psms
+                match processParams.PerformLabeledQuantification with 
+                |Domain.Labeling.N15Labeling | Domain.Labeling.N15LabelingOnly -> labledQuantification pepIon psms
+                |Domain.Labeling.Unlabeled -> lableFreeQuantification pepIon psms
                 )
             |> Array.choose id
                     
         let filteredResults = 
-            if processParams.PerformLabeledQuantification then 
+            match processParams.PerformLabeledQuantification with 
+            |Domain.Labeling.N15Labeling ->
                 quantResults
                 |> heavyQualityFilter -2. 2.
-                //|> lightQualityFilter -2. 2.
-                
-            else
+                |> lightQualityFilter -2. 2.
+            |Domain.Labeling.N15LabelingOnly ->
+                quantResults
+                |> heavyQualityFilter -2. 2.
+            |Domain.Labeling.Unlabeled ->
                 quantResults
                 |> lightQualityFilter -2. 2.
         filteredResults 

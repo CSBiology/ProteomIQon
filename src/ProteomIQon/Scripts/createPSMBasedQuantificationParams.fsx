@@ -3,6 +3,7 @@
 #r @"../../../bin\ProteomIQon\netstandard2.0\ProteomIQon.dll"
 #r @"../../../bin\psmbasedquantification\net5.0\BioFSharp.Mz.dll"
 #r @"../../../bin\psmbasedquantification\net5.0\FSharpAux.IO.dll"
+#r "nuget: Newtonsoft.Json, 13.0.3"
 
 open FSharp.Stats
 open FSharp.Stats.Signal
@@ -44,7 +45,7 @@ let defaultPreprocessingParams :Dto.QuantificationParams =
         }
 
     {
-        PerformLabeledQuantification = true
+        PerformLabeledQuantification = Labeling.N15Labeling
         XicExtraction                = XicExtraction
         BaseLineCorrection           = Some BaseLineCorrection
     }
