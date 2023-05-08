@@ -1123,7 +1123,7 @@ module PSMBasedQuantification =
                 if i % 100 = 0 then logger.Trace (sprintf "%i peptides quantified" i)
                 
                 match processParams.PerformLabeledQuantification with 
-                |Domain.Labeling.N15Labeling | Domain.Labeling.N15LabelingOnly -> labledQuantification pepIon psms
+                |Domain.Labeling.N15Labeling | Domain.Labeling.N15LabelingOnly | Domain.Labeling.Labelshift-> labledQuantification pepIon psms
                 |Domain.Labeling.Unlabeled -> lableFreeQuantification pepIon psms
                 )
             |> Array.choose id
