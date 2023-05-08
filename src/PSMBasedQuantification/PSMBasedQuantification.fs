@@ -1140,6 +1140,8 @@ module PSMBasedQuantification =
             |Domain.Labeling.Unlabeled ->
                 quantResults
                 |> lightQualityFilter -2. 2.
+            |Domain.Labeling.Labelshift ->
+                quantResults
         filteredResults 
         |> SeqIO'.csv "\t" true false
         |> FSharpAux.IO.SeqIO.Seq.writeOrAppend (outFilePath)
