@@ -102,6 +102,10 @@ Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "AddDeducedPeptides", "src\A
 EndProject
 Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "AlignmentBasedQuantStatistics", "src\AlignmentBasedQuantStatistics\AlignmentBasedQuantStatistics.fsproj", "{96ACA5F1-71C2-4673-A1C5-548D07089DFB}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{7B4DC16D-0767-4385-9776-AE3F0F756611}"
+EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "LabelEfficiencyCalculator", "src\LabelEfficiencyCalculator\LabelEfficiencyCalculator.fsproj", "{79B70F9A-651C-4147-84D2-700166C77E6A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -204,12 +208,17 @@ Global
 		{96ACA5F1-71C2-4673-A1C5-548D07089DFB}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{96ACA5F1-71C2-4673-A1C5-548D07089DFB}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{96ACA5F1-71C2-4673-A1C5-548D07089DFB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{79B70F9A-651C-4147-84D2-700166C77E6A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{79B70F9A-651C-4147-84D2-700166C77E6A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{79B70F9A-651C-4147-84D2-700166C77E6A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{79B70F9A-651C-4147-84D2-700166C77E6A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{57D972AD-99A0-4354-9DDF-7E0938497454} = {ED8079DD-2B06-4030-9F0F-DC548F98E1C4}
+		{79B70F9A-651C-4147-84D2-700166C77E6A} = {7B4DC16D-0767-4385-9776-AE3F0F756611}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {D55EAFC0-7966-48AB-9DF6-8CFA23ABABB1}
