@@ -158,6 +158,7 @@ module Domain =
 
     
     type Labeling =
+        | Labelshift
         | Unlabeled
         | N15Labeling
         | N15LabelingOnly
