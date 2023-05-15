@@ -28,7 +28,7 @@
   </PropertyGroup>
   <ItemGroup>
     <None Include="App.config" />
-    <Compile Include="Library.fs" />
+    <Compile Include="LabelEfficiencyCalculator.fs" />
     <Compile Include="CLIArgumentParsing.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
