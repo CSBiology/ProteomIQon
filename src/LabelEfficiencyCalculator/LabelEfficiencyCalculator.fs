@@ -114,13 +114,13 @@ module LabelEfficiencyCalculator =
             mzsAndintensities |> Seq.minBy fst |> fst,
             mzsAndintensities |> Seq.maxBy fst |> fst
         Seq.map (fun (x,y) -> 
-            Chart.Line([x;x],[0.;y], ShowLegend = false, Opacity = 0.5)
+            Chart.Line([x;x],[0.;y], Showlegend = false, Opacity = 0.5)
             |> Chart.withLineStyle (Width = 7.)
         ) mzsAndintensities
-        |> Chart.combine
-        |> Chart.withMarkerStyle(Size=0,Color = Color.fromHex (FSharpAux.Colors.toWebColor color))
-        |> Chart.withXAxisStyle ("m/z", MinMax = (min - 1., max + 1.))
-        |> Chart.withYAxisStyle "relative Intensity"
+        |> Chart.Combine
+        |> Chart.withMarkerStyle(Size=0,Color = Colors.fromHex (FSharpAux.Colors.toWebColor color))
+        |> Chart.withX_AxisStyle ("m/z", MinMax = (min - 1., max + 1.))
+        |> Chart.withY_AxisStyle "relative Intensity"
 
     let normBySum (a:seq<float*float>) =
         let s = Seq.sumBy snd a 
@@ -156,11 +156,11 @@ module LabelEfficiencyCalculator =
             |> normBySum
         [
             plotIsotopicPattern FSharpAux.Colors.Table.Office.blue measured.Pattern
-            |> Chart.withTraceInfo "Measured"
+            |> Chart.withTraceName "Measured"
             plotIsotopicPattern FSharpAux.Colors.Table.Office.orange patternSim
-            |> Chart.withTraceInfo "Simulated"
+            |> Chart.withTraceName "Simulated"
         ]
-        |> Chart.combine
+        |> Chart.Combine
 
     let calcKL extractedIsoPattern peptideSequence charge lableEfficiency = 
         let sim = simulateFrom peptideSequence charge lableEfficiency
@@ -211,7 +211,7 @@ module LabelEfficiencyCalculator =
                             extractedPattern
                             (simulateFrom k.StringSequence k.Charge labelEfficiency.Value)
                         |> Chart.withTitle $"{k.StringSequence}; Charge: {k.Charge}; LabelEfficiency: {labelEfficiency.Value}"
-                        |> Chart.saveHtml (Path.Combine [|plotDir; $"{replaceAsterisk}_{k.Charge}.html"|])
+                        |> Chart.SaveHtmlAs (Path.Combine [|plotDir; $"{replaceAsterisk}_{k.Charge}.html"|])
                     match labelEfficiency with
                     | Some le ->
                         (le, (calcKL extractedPattern k.StringSequence k.Charge le))
@@ -226,11 +226,11 @@ module LabelEfficiencyCalculator =
         frame
         |> Frame.getCol "LabelEfficiency"
         |> Series.values
-        |> fun (x: seq<float>) -> Chart.BoxPlot (X = x)
-        |> Chart.withTraceInfo ("")
-        |> Chart.withXAxisStyle ("Label Efficiency", MinMax = (0.9, 1.0))
+        |> fun (x: seq<float>) -> Chart.BoxPlot (x=x)
+        |> Chart.withTraceName ("")
+        |> Chart.withX_AxisStyle ("Label Efficiency", MinMax = (0.9, 1.0))
         |> Chart.withTitle $"{path |> System.IO.Path.GetFileNameWithoutExtension}"
-        |> Chart.saveHtml (path + ".html")
+        |> Chart.SaveHtmlAs (path + ".html")
 
     let addLE (expectedLELower,expectedLEUpper) (charts: bool) (path: string) =
         let frame =
