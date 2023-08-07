@@ -162,7 +162,7 @@ module MzMLToMzLiteIonMobility =
             |> Map.iter(fun bin peaks ->
                 let outFile = Path.Combine(outputDirectory, $"binned_spectra_%.3f{bin}.mzlite")
                 if spectrumMap.ContainsKey(outFile) then
-                    spectrumMap[outFile].Add(spectrum, peaks)
+                    spectrumMap.[outFile].Add(spectrum, peaks)
                 else
                     spectrumMap.Add(outFile, new ResizeArray<MzIO.Model.MassSpectrum * MzIO.Binary.Peak1DArray>([spectrum, peaks]))
             )
@@ -196,6 +196,13 @@ module MzMLToMzLiteIonMobility =
         | _ ->
             failwith "Only mass spectra of level 1 and 2 are supported."
 
+    /// Returns the default runID used by manufacturers
+    let getDefaultRunID (mzReader:IMzIODataReader) = 
+        match mzReader with
+        | :? MzSQL as r                 -> "sample=0"
+        | :? MzML.MzMLReader as r       -> "sample=0"
+        | :? MzMLReaderMIRIM as r       -> "sample=0"
+
     let processFile (processParams:MzMLtoMzLiteParams) (outputDir:string) (instrumentOutput:string) =
 
         let logger = Logging.createLogger (Path.GetFileNameWithoutExtension instrumentOutput)
@@ -205,7 +212,7 @@ module MzMLToMzLiteIonMobility =
         logger.Trace (sprintf "Parameters: %A" processParams)
 
         let inReaderMS = new MzMLReaderMIRIM(instrumentOutput)
-        let inRunID  = Core.MzIO.Reader.getDefaultRunID inReaderMS
+        let inRunID  = getDefaultRunID inReaderMS
         let inTrMS = inReaderMS.BeginTransaction()
 
         let ms1PeakPicking = initPeakPicking logger processParams.MS1PeakPicking
@@ -245,7 +252,7 @@ module MzMLToMzLiteIonMobility =
             logger.Trace $"Writing [{counter}/{spectrumMap.Count}]: {outFile}"
             let spectra = x.Value
             let outReader = new MzSQL(outFile)
-            let outRunID  = Core.MzIO.Reader.getDefaultRunID outReader
+            let outRunID  = getDefaultRunID outReader
             let _ = outReader.Open()
             let outTr = outReader.BeginTransaction()
             logger.Trace "Try inserting Model."
@@ -256,7 +263,7 @@ module MzMLToMzLiteIonMobility =
             | ex -> logger.Trace $"Inserting model failed: {ex}"
             logger.Trace "Start inserting spectra"
             for (spectrumMetadata, peaks) in spectra do
-                insertSpectrum processParams.Compress outReader outRunID ms1PeakPicking ms2PeakPicking (changeScanTimeToMinutes spectrumMetadata) peaks
+                insertSpectrum processParams.Compress outReader outRunID ms1PeakPicking ms2PeakPicking (changeScanTimeToMinutes (fixSpectrum spectrumMetadata)) peaks
             logger.Trace "Done insertingSpectra"
             counter <- counter + 1
             outTr.Commit()
