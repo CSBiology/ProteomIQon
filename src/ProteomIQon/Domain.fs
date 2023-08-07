@@ -170,6 +170,12 @@ module Domain =
             BaseLineCorrection           : BaseLineCorrection option
         }
 
+    type LabelEfficiencyCalculationParams =
+        {
+            LowerBound: float
+            UpperBound: float
+        }
+
     type AlignmentBasedQuantificationParams = 
         {
             PerformLabeledQuantification : bool

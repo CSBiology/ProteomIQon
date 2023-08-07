@@ -958,6 +958,22 @@ module Dto =
                 |> Some
             with
             | _ -> None
+    
+    ///
+    type LabelEfficiencyCalculationParams =
+        {
+            LowerBound: float
+            UpperBound: float
+        }
+
+    module LabelEfficiencyCalculationParams =
+    
+        let toDomain (dtoLabelEfficiencyParams: LabelEfficiencyCalculationParams ): Domain.LabelEfficiencyCalculationParams =
+            {
+                LowerBound = dtoLabelEfficiencyParams.LowerBound
+                UpperBound = dtoLabelEfficiencyParams.UpperBound
+            }
+        
     ///
     type AlignmentParams = {
         Placeholder : bool 
