@@ -115,7 +115,7 @@ module LabelEfficiencyCalculator =
             mzsAndintensities |> Seq.maxBy fst |> fst
         Seq.map (fun (x,y) -> 
             Chart.Line([x;x],[0.;y], ShowLegend = false, Opacity = 0.5)
-            |> Chart.withLineStyle (Width = 7)
+            |> Chart.withLineStyle (Width = 7.)
         ) mzsAndintensities
         |> Chart.combine
         |> Chart.withMarkerStyle(Size=0,Color = Color.fromHex (FSharpAux.Colors.toWebColor color))
