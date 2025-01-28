@@ -19,6 +19,8 @@ open MzIO.IO
 open MzIO.MzSQL
 open MzIO.IO.MzML
 open ProteomIQon.Core.MzIO.Processing
+open ProteomIQon.Dto
+open ProteomIQon.Domain
 
 
     ///
@@ -154,25 +156,6 @@ let createBinnedPeaks (copyMirim: bool) (binSize: float) (peakArray: MzIO.Binary
                 |> Array.ofSeq
         pa
     )
-        
-let createSpectraMap (*(logger: NLog.Logger)*) (inReaderMS: MzMLReaderMIRIM) (outputDirectory:string) (spectra: MzIO.Model.MassSpectrum array) =
-    let spectrumMap = new Dictionary<string,ResizeArray<MzIO.Model.MassSpectrum * MzIO.Binary.Peak1DArray>>()
-    spectra
-    |> Array.iteri (fun i spectrum ->
-        //if i%1000 = 0 then
-            //logger.Trace $"binning spectrum {i}"
-        let data = inReaderMS.getSpecificPeak1DArraySequentialWithMIRIM(spectrum.ID)
-        let binResult = createBinnedPeaks false 0.002 data
-        binResult
-        |> Map.iter(fun bin peaks ->
-            let outFile = Path.Combine(outputDirectory, $"binned_spectra_%.3f{bin}.mzlite")
-            if spectrumMap.ContainsKey(outFile) then
-                spectrumMap.[outFile].Add(spectrum, peaks)
-            else
-                spectrumMap.Add(outFile, new ResizeArray<MzIO.Model.MassSpectrum * MzIO.Binary.Peak1DArray>([spectrum, peaks]))
-        )
-    )
-    spectrumMap
 
 let insertSpectrum (compress:BinaryDataCompressionType) (outReader: MzSQL.MzSQL) (runID:string)
     (ms1PeakPicking: Peak1DArray -> float [] * float []) (ms2PeakPicking: Peak1DArray -> float [] * float [])
@@ -216,6 +199,10 @@ let processFile (processParams:MzMLtoMzLiteParams) (outputDir:string) (instrumen
     //logger.Trace (sprintf "Output directory: %s" outputDir)
     //logger.Trace (sprintf "Parameters: %A" processParams)
 
+    
+    //let tmp = File.ReadAllText instrumentOutput
+    //File.WriteAllText(instrumentOutput, tmp.Replace("&quot;", ""))
+
     let inReaderMS = new MzMLReaderMIRIM(instrumentOutput)
     let inRunID  = getDefaultRunID inReaderMS
     let inTrMS = inReaderMS.BeginTransaction()
@@ -243,34 +230,40 @@ let processFile (processParams:MzMLtoMzLiteParams) (outputDir:string) (instrumen
     inReaderMS.ResetReader()
         
     //logger.Trace "Done reading model"
-    //logger.Trace "Start creating spectrum map"
-        
-    let spectrumMap = createSpectraMap (*logger*) inReaderMS outDirPath spectra
-        
-    //logger.Trace "Done creating spectrum map"
 
     //logger.Trace $"Start writing binned mzlite files"
     //logger.Trace $"Total number of binned files: {spectrumMap.Count}"
-    let mutable counter = 1
-    for x in spectrumMap do
-        let outFile = x.Key
-        //logger.Trace $"Writing [{counter}/{spectrumMap.Count}]: {outFile}"
-        let spectra = x.Value
-        let outReader = new MzSQL(outFile)
-        let outRunID  = getDefaultRunID outReader
-        let _ = outReader.Open()
-        let outTr = outReader.BeginTransaction()
-        //logger.Trace "Try inserting Model."
-        try
-            outReader.InsertModel model
-            //logger.Trace "Model inserted."
-        with
-        | ex -> failwith $"Inserting model failed: {ex}"
-        //logger.Trace "Start inserting spectra"
-        for (spectrumMetadata, peaks) in spectra do
-            insertSpectrum processParams.Compress outReader outRunID ms1PeakPicking ms2PeakPicking (changeScanTimeToMinutes (fixSpectrum spectrumMetadata)) peaks
-        //logger.Trace "Done insertingSpectra"
-        counter <- counter + 1
+    let connectionMap = new Dictionary<string, MzSQL.MzSQL*System.Data.SQLite.SQLiteTransaction>()
+    spectra
+    |> Array.iteri (fun i spectrum ->
+        if i % 1000 = 0 then
+            printf "Processing spectrum %d of %d" i spectra.Length
+        let data = inReaderMS.getSpecificPeak1DArraySequentialWithMIRIM(spectrum.ID)
+        let binResult = createBinnedPeaks false 0.002 data
+        binResult
+        |> Map.iter(fun bin peaks ->
+            let outFile = Path.Combine(outputDir, $"binned_spectra_%.3f{bin}.mzlite")
+            let outReader,outTr =
+                if connectionMap.ContainsKey(outFile) then
+                    connectionMap.[outFile]
+                else
+                    let outReader = new MzSQL(outFile)
+                    let _ = outReader.Open()
+                    let outTr = outReader.BeginTransaction()
+                    try
+                        outReader.InsertModel model
+                        //logger.Trace "Model inserted."
+                    with
+                        | ex -> failwith $"Inserting model failed: {ex}"
+                    connectionMap.Add(outFile, (outReader, outTr))
+                    outReader, outTr
+            let outRunID  = getDefaultRunID outReader
+            insertSpectrum processParams.Compress outReader outRunID ms1PeakPicking ms2PeakPicking (changeScanTimeToMinutes (fixSpectrum spectrum)) peaks
+        )
+    )
+    for x in connectionMap do
+        let outReader = fst x.Value
+        let outTr = snd x.Value
         outTr.Commit()
         outTr.Dispose()
         outReader.Dispose()
@@ -279,3 +272,41 @@ let processFile (processParams:MzMLtoMzLiteParams) (outputDir:string) (instrumen
     inReaderMS.Dispose()
     //logger.Trace "Done."
 
+let deserialized = 
+    System.IO.File.ReadAllText(@"C:\Users\jonat\source\repos\ProteomIQon\src\ProteomIQon\defaultParams\TIMsMzMLtoMzLiteParams.json")
+    |> Json.deserialize<Dto.MzMLtoMzLiteParams>
+    |> PreprocessingParams.toDomain
+#time
+processFile deserialized @"C:\Users\jonat\OneDrive\Doktor\TIMsDataWrapper\outTest" "C:\Users\jonat\OneDrive\Doktor\TIMsDataWrapper\Ara_60min_wTrap_Aurora_DDA_Slot1-4_113.mzML"
+
+
+
+//let reader = new MzMLReaderMIRIM("C:\Users\jonat\OneDrive\Doktor\TIMsDataWrapper\Ara_60min_wTrap_Aurora_DDA_Slot1-4_113.mzML")
+//let inTrMS = reader.BeginTransaction()
+//let spectra = reader.ReadMassSpectra("sample=0") |> Array.ofSeq
+
+//spectra.[0].ID
+//reader.ResetReader()
+//let data = reader.getSpecificPeak1DArraySequentialWithMIRIM(spectra.[50].ID)
+//data.Peaks.Length
+//(data?Mirim :?> float array).Length
+
+//let binResult = createBinnedPeaks false 0.002 data
+
+//let mz,intensity = data.Peaks |> Core.MzIO.Peaks.unzipIMzliteArray
+//let ionMobility = (data?Mirim :?> float array)
+//let a = Array.zip3 mz intensity ionMobility
+//open Plotly.NET
+//1
+//Chart.Scatter3d(a, StyleParam.Mode.Markers)
+//|> Chart.withX_AxisStyle "m/z"
+//|> Chart.withY_AxisStyle "Intensity"
+//|> Chart.withZ_AxisStyle "Voltage"
+//|> Chart.withSize (1200., 900.)
+//|> Chart.Show
+
+//Chart.Point(mz,intensity)
+//|> Chart.withX_AxisStyle "m/z"
+//|> Chart.withY_AxisStyle "Intensity"
+//|> Chart.withSize (1200., 900.)
+//|> Chart.Show
