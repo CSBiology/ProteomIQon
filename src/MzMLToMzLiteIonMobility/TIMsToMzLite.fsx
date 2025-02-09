@@ -681,9 +681,23 @@ let deserialized =
     |> Json.deserialize<Dto.MzMLtoMzLiteParams>
     |> PreprocessingParams.toDomain
 #time
-processFile deserialized @"C:\Users\jonat\OneDrive\Doktor\TIMsDataWrapper\outTest" "C:\Users\jonat\OneDrive\Doktor\TIMsDataWrapper\Ara_60min_wTrap_Aurora_DDA_Slot1-4_113.d"
+//processFile deserialized @"C:\Users\jonat\OneDrive\Doktor\TIMsDataWrapper\outTest" "C:\Users\jonat\OneDrive\Doktor\TIMsDataWrapper\Ara_60min_wTrap_Aurora_DDA_Slot1-4_113.d"
 
-//let reader = new MzMLReaderMIRIM("C:\Users\jonat\OneDrive\Doktor\TIMsDataWrapper\Ara_60min_wTrap_Aurora_DDA_Slot1-4_113.mzML")
+
+
+let reader = new TimsData("C:\Users\jonat\OneDrive\Doktor\TIMsDataWrapper\Ara_60min_wTrap_Aurora_DDA_Slot1-4_113.d")
+
+[|1 .. 10000|]
+|> Array.map (fun i ->
+    if i % 1000 = 0 then
+        printfn "Processing spectrum %i" (i)
+    //let scanCount = 
+    //    //executeSQLiteQueryFloat(reader.Conn, $"SELECT NumScans FROM Frames WHERE Id={i}")
+    //    |> List.head
+    reader.ReadScans(int64 (i), 0u, uint32 944)
+
+)
+1
 //let inTrMS = reader.BeginTransaction()
 //let spectra = reader.ReadMassSpectra("sample=0") |> Array.ofSeq
 

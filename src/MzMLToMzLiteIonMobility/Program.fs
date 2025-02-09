@@ -7,6 +7,7 @@ open Argu
 open System.Reflection
 open ProteomIQon.Core.InputPaths
 open ProteomIQon.Core
+open ProteomIQon
 
 module console1 =
 
@@ -38,7 +39,7 @@ module console1 =
         if files.Length = 1  then
             logger.Info "single file"
             logger.Trace (sprintf "Preprocessing %s" files.[0])
-            MzMLToMzLiteIonMobility.processFile processParams o files.[0]
+            MzMLIonMobilityToMzLite.processFile processParams o files.[0]
         else
             logger.Info "multiple files"
             logger.Trace (sprintf "Preprocessing multiple files: %A" files)
@@ -51,7 +52,7 @@ module console1 =
             let partitionedFiles =
                 files
                 |> Array.splitInto c
-            [for i in partitionedFiles do yield async { return i |> Array.map (MzMLToMzLiteIonMobility.processFile processParams o)}]
+            [for i in partitionedFiles do yield async { return i |> Array.map (MzMLIonMobilityToMzLite.processFile processParams o)}]
             |> Async.Parallel
             |> Async.RunSynchronously
             |> ignore

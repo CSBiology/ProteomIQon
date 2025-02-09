@@ -203,8 +203,10 @@ let processFile (processParams:MzMLtoMzLiteParams) (outputDir:string) (instrumen
     //File.WriteAllText(instrumentOutput, tmp.Replace("&quot;", ""))
 
     let inReaderMS = new MzMLReaderMIRIM(instrumentOutput)
+    let inReaderPeaks = new MzMLReaderMIRIM(instrumentOutput)
     let inRunID  = getDefaultRunID inReaderMS
     let inTrMS = inReaderMS.BeginTransaction()
+    let inTrPeaks = inReaderPeaks.BeginTransaction()
 
     let ms1PeakPicking = initPeakPicking (*logger*) processParams.MS1PeakPicking
     let ms2PeakPicking = initPeakPicking (*logger*) processParams.MS2PeakPicking
@@ -219,8 +221,8 @@ let processFile (processParams:MzMLtoMzLiteParams) (outputDir:string) (instrumen
 
     //logger.Trace $"Reading spectra from {instrumentOutput}"
 
-    let spectra = inReaderMS.ReadMassSpectra(inRunID) 
-    inReaderMS.ResetReader()
+    let spectra = inReaderMS.ReadMassSpectra(inRunID)
+    //inReaderMS.ResetReader()
 
     //logger.Trace "Done reading spectra"
     //logger.Trace $"Reading model from {instrumentOutput}"
@@ -234,11 +236,10 @@ let processFile (processParams:MzMLtoMzLiteParams) (outputDir:string) (instrumen
     //logger.Trace $"Total number of binned files: {spectrumMap.Count}"
     let connectionMap = new Dictionary<string, MzSQL.MzSQL*System.Data.SQLite.SQLiteTransaction>()
     spectra
+    |> Seq.take 10000
     |> Seq.iteri (fun i spectrum ->
-        if i % 1000 = 0 then
-            printf "Processing spectrum %i" i
-        inReaderMS.ResetReader()
-        let data = inReaderMS.getSpecificPeak1DArraySequentialWithMIRIM(spectrum.ID)
+        if i % 1000 = 0 then printfn "%i" i
+        let data = inReaderPeaks.getSpecificPeak1DArraySequentialWithMIRIM(spectrum.ID)
         let binResult = createBinnedPeaks false 0.002 data
         binResult
         |> Seq.iter(fun (bin, peaks) ->
@@ -267,9 +268,12 @@ let processFile (processParams:MzMLtoMzLiteParams) (outputDir:string) (instrumen
         outTr.Commit()
         outTr.Dispose()
         outReader.Dispose()
+    inTrPeaks.Commit()
+    inTrPeaks.Dispose()
     inTrMS.Commit()
     inTrMS.Dispose()
     inReaderMS.Dispose()
+    inReaderPeaks.Dispose()
     //logger.Trace "Done."
 
 let deserialized = 
@@ -279,9 +283,21 @@ let deserialized =
 #time
 processFile deserialized @"C:\Users\jonat\OneDrive\Doktor\TIMsDataWrapper\outTest" "C:\Users\jonat\OneDrive\Doktor\TIMsDataWrapper\Ara_60min_wTrap_Aurora_DDA_Slot1-4_113.mzML"
 
-//let reader = new MzMLReaderMIRIM("C:\Users\jonat\OneDrive\Doktor\TIMsDataWrapper\Ara_60min_wTrap_Aurora_DDA_Slot1-4_113.mzML")
-//let inTrMS = reader.BeginTransaction()
-//let spectra = reader.ReadMassSpectra("sample=0") |> Array.ofSeq
+let reader = new MzMLReaderMIRIM("C:\Users\jonat\OneDrive\Doktor\TIMsDataWrapper\Ara_60min_wTrap_Aurora_DDA_Slot1-4_113.mzML")
+//let reader2 = new MzMLReaderMIRIM("C:\Users\jonat\OneDrive\Doktor\TIMsDataWrapper\Ara_60min_wTrap_Aurora_DDA_Slot1-4_113.mzML")
+
+let inTrMS = reader.BeginTransaction()
+reader.Model
+//let inTrMS2 = reader.BeginTransaction()
+let spectra = reader.ReadMassSpectra("sample=0")
+spectra |> Array.ofSeq
+//reader.ResetReader()
+//spectra
+//|> Seq.mapi (fun i s -> 
+//    if i % 1000 = 0 then printfn "%i" i
+//    reader2.getSpecificPeak1DArraySequentialWithMIRIM(s.ID)
+//)
+//|> Array.ofSeq
 
 //spectra.[0].ID
 //reader.ResetReader()

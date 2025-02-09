@@ -28,8 +28,8 @@
   </PropertyGroup>
   <ItemGroup>
     <None Include="Test.fsx" />
-    <Compile Include="TIMsToMzLite.fsx" />
-    <Compile Include="MzMLToMzLiteIonMobility.fsx" />
+    <None Include="TIMsToMzLite.fsx" />
+    <None Include="MzMLToMzLiteIonMobility.fsx" />
     <Compile Include="MzMLToMzLiteIonMobility.fs" />
     <Compile Include="CLIArgumentParsing.fs" />
     <Compile Include="Program.fs" />

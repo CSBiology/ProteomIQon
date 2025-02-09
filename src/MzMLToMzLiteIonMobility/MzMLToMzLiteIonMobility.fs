@@ -1,7 +1,7 @@
 namespace ProteomIQon
 
-open Domain
-open Core
+open ProteomIQon.Domain
+open ProteomIQon.Core
 open System.IO
 open System.Collections.Generic
 open BioFSharp.Mz
@@ -13,10 +13,12 @@ open MzIO.IO
 open MzIO.MzSQL
 open MzIO.IO.MzML
 open ProteomIQon.Core.MzIO.Processing
+open ProteomIQon.Dto
+open ProteomIQon.Domain
 
-module MzMLToMzLiteIonMobility =
 
-        ///
+module MzMLIonMobilityToMzLite =
+    ///
     let private initPeakPicking (logger: NLog.Logger) (peakPickingParams:PeakPicking) (peaks: Peak1DArray) =
 
         match peakPickingParams with
@@ -54,7 +56,6 @@ module MzMLToMzLiteIonMobility =
                         SignalDetection.Padding.paddDataBy paddingParams mzData intensityData
                     BioFSharp.Mz.SignalDetection.Wavelet.toCentroidWithRicker2D waveletParameters paddedMz paddedIntensity
                 | YThreshold.MinSpectrumIntensity ->
-                    logger.Trace (sprintf "ms2Centroidization with: %A" waveletParams)
                     let mzData, intensityData =
                         peaks.Peaks
                         |> Core.MzIO.Peaks.unzipIMzliteArray
@@ -76,7 +77,6 @@ module MzMLToMzLiteIonMobility =
                         waveletParams.SumIntensities
                 match waveletParams.YThreshold with
                 | YThreshold.Fixed yThreshold ->
-                    logger.Trace (sprintf "ms1Centroidization with: %A" waveletParams)
                     let waveletParameters = initwaveletParameters yThreshold
                     let mzData, intensityData =
                         peaks.Peaks
@@ -106,8 +106,7 @@ module MzMLToMzLiteIonMobility =
                 else
                     ((k + 1.) * bandwidth) - halfBw, values)
             |> Seq.sortBy fst
-        tmp    
-        |> Map.ofSeq
+        tmp
 
     let fixSpectrum (m:MzIO.Model.MassSpectrum) =
         if isNull(m.Precursors) then
@@ -134,7 +133,7 @@ module MzMLToMzLiteIonMobility =
             |> binBy (fun (mirim, peak) -> mirim) binSize
 
         binnedPeakData
-        |> Map.map(fun bin binnedData ->
+        |> Seq.map(fun (bin, binnedData) ->
             let pa = createPeak1DArrayCopy peakArray
             pa.Peaks <-
                 MzIO.Commons.Arrays.ArrayWrapper(
@@ -147,27 +146,8 @@ module MzMLToMzLiteIonMobility =
                     binnedData
                     |> Seq.map fst
                     |> Array.ofSeq
-            pa
+            bin,pa
         )
-        
-    let createSpectraMap (logger: NLog.Logger) (inReaderMS: MzMLReaderMIRIM) (outputDirectory:string) (spectra: MzIO.Model.MassSpectrum array) =
-        let spectrumMap = new Dictionary<string,ResizeArray<MzIO.Model.MassSpectrum * MzIO.Binary.Peak1DArray>>()
-        spectra
-        |> Array.iteri (fun i spectrum ->
-            if i%1000 = 0 then
-                logger.Trace $"binning spectrum {i}"
-            let data = inReaderMS.getSpecificPeak1DArraySequentialWithMIRIM(spectrum.ID)
-            let binResult = createBinnedPeaks false 0.002 data
-            binResult
-            |> Map.iter(fun bin peaks ->
-                let outFile = Path.Combine(outputDirectory, $"binned_spectra_%.3f{bin}.mzlite")
-                if spectrumMap.ContainsKey(outFile) then
-                    spectrumMap.[outFile].Add(spectrum, peaks)
-                else
-                    spectrumMap.Add(outFile, new ResizeArray<MzIO.Model.MassSpectrum * MzIO.Binary.Peak1DArray>([spectrum, peaks]))
-            )
-        )
-        spectrumMap
 
     let insertSpectrum (compress:BinaryDataCompressionType) (outReader: MzSQL.MzSQL) (runID:string)
         (ms1PeakPicking: Peak1DArray -> float [] * float []) (ms2PeakPicking: Peak1DArray -> float [] * float [])
@@ -211,9 +191,15 @@ module MzMLToMzLiteIonMobility =
         logger.Trace (sprintf "Output directory: %s" outputDir)
         logger.Trace (sprintf "Parameters: %A" processParams)
 
+    
+        //let tmp = File.ReadAllText instrumentOutput
+        //File.WriteAllText(instrumentOutput, tmp.Replace("&quot;", ""))
+
         let inReaderMS = new MzMLReaderMIRIM(instrumentOutput)
+        let inReaderPeaks = new MzMLReaderMIRIM(instrumentOutput)
         let inRunID  = getDefaultRunID inReaderMS
         let inTrMS = inReaderMS.BeginTransaction()
+        let inTrPeaks = inReaderPeaks.BeginTransaction()
 
         let ms1PeakPicking = initPeakPicking logger processParams.MS1PeakPicking
         let ms2PeakPicking = initPeakPicking logger processParams.MS2PeakPicking
@@ -226,51 +212,57 @@ module MzMLToMzLiteIonMobility =
         
         Directory.CreateDirectory outDirPath |> ignore
 
-        logger.Trace $"Reading spectra from {instrumentOutput}"
-
-        let spectra = inReaderMS.ReadMassSpectra(inRunID) |> Array.ofSeq
-        inReaderMS.ResetReader()
-
-        logger.Trace "Done reading spectra"
         logger.Trace $"Reading model from {instrumentOutput}"
-        
+
         let model = inReaderMS.Model
         inReaderMS.ResetReader()
-        
+
         logger.Trace "Done reading model"
-        logger.Trace "Start creating spectrum map"
-        
-        let spectrumMap = createSpectraMap logger inReaderMS outDirPath spectra
-        
-        logger.Trace "Done creating spectrum map"
+
+        logger.Trace $"Reading spectra from {instrumentOutput}"
+
+        let spectra = inReaderMS.ReadMassSpectra(inRunID)
+
+        logger.Trace "Done reading spectra"
 
         logger.Trace $"Start writing binned mzlite files"
-        logger.Trace $"Total number of binned files: {spectrumMap.Count}"
-        let mutable counter = 1
-        for x in spectrumMap do
-            let outFile = x.Key
-            logger.Trace $"Writing [{counter}/{spectrumMap.Count}]: {outFile}"
-            let spectra = x.Value
-            let outReader = new MzSQL(outFile)
-            let outRunID  = getDefaultRunID outReader
-            let _ = outReader.Open()
-            let outTr = outReader.BeginTransaction()
-            logger.Trace "Try inserting Model."
+        let connectionMap = new Dictionary<string, MzSQL.MzSQL*System.Data.SQLite.SQLiteTransaction>()
+        spectra
+        |> Seq.iteri (fun i spectrum ->
+            if i % 1000 = 0 then logger.Trace $"{i}"
+            let data = inReaderPeaks.getSpecificPeak1DArraySequentialWithMIRIM(spectrum.ID)
+            let binResult = createBinnedPeaks false 0.05 data
+            binResult
+            |> Seq.iter(fun (bin, peaks) ->
+                let outFile = Path.Combine(outDirPath, $"binned_spectra_%.3f{bin}.mzlite")
+                let outReader,outTr =
+                    if connectionMap.ContainsKey(outFile) then
+                        connectionMap.[outFile]
+                    else
+                        let outReader = new MzSQL(outFile)
+                        let _ = outReader.Open()
+                        let outTr = outReader.BeginTransaction()
+                        connectionMap.Add(outFile, (outReader, outTr))
+                        outReader, outTr
+                let outRunID  = getDefaultRunID outReader
+                insertSpectrum processParams.Compress outReader outRunID ms1PeakPicking ms2PeakPicking (changeScanTimeToMinutes (fixSpectrum spectrum)) peaks
+            )
+        )
+        for x in connectionMap do
+            let outReader = fst x.Value
+            let outTr = snd x.Value
             try
                 outReader.InsertModel model
-                logger.Trace "Model inserted."
+                logger.Trace $"Model inserted for {x.Key}."
             with
-            | ex -> logger.Trace $"Inserting model failed: {ex}"
-            logger.Trace "Start inserting spectra"
-            for (spectrumMetadata, peaks) in spectra do
-                insertSpectrum processParams.Compress outReader outRunID ms1PeakPicking ms2PeakPicking (changeScanTimeToMinutes (fixSpectrum spectrumMetadata)) peaks
-            logger.Trace "Done insertingSpectra"
-            counter <- counter + 1
+                | ex -> failwith $"Inserting model failed: {ex}"
             outTr.Commit()
             outTr.Dispose()
             outReader.Dispose()
+        inTrPeaks.Commit()
+        inTrPeaks.Dispose()
         inTrMS.Commit()
         inTrMS.Dispose()
         inReaderMS.Dispose()
+        inReaderPeaks.Dispose()
         logger.Trace "Done."
-
