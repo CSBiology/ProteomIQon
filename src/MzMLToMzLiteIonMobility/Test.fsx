@@ -160,9 +160,8 @@ let createSpectraMap (*(logger: NLog.Logger)*) (inReaderMS: MzMLReaderMIRIM) (ou
     let spectrumMap = new Dictionary<string,ResizeArray<MzIO.Model.MassSpectrum * MzIO.Binary.Peak1DArray>>()
     spectra
     |> Seq.iteri (fun i spectrum ->
-        //if i%1000 = 0 then
-            //logger.Trace $"binning spectrum {i}"
-        inReaderMS.ResetReader()
+        if i%1000 = 0 then
+            printfn "%A" $"binning spectrum {i}"
         let data = inReaderMS.getSpecificPeak1DArraySequentialWithMIRIM(spectrum.ID)
         let binResult = createBinnedPeaks false 0.002 data
         binResult
@@ -219,8 +218,10 @@ let processFile (processParams:MzMLtoMzLiteParams) (outputDir:string) (instrumen
     //logger.Trace (sprintf "Parameters: %A" processParams)
 
     let inReaderMS = new MzMLReaderMIRIM(instrumentOutput)
+    let inReaderPeaks = new MzMLReaderMIRIM(instrumentOutput)
     let inRunID  = getDefaultRunID inReaderMS
     let inTrMS = inReaderMS.BeginTransaction()
+    let inTrPeaks = inReaderPeaks.BeginTransaction()
 
     let ms1PeakPicking = initPeakPicking (*logger*) processParams.MS1PeakPicking
     let ms2PeakPicking = initPeakPicking (*logger*) processParams.MS2PeakPicking
@@ -235,7 +236,7 @@ let processFile (processParams:MzMLtoMzLiteParams) (outputDir:string) (instrumen
 
     //logger.Trace $"Reading spectra from {instrumentOutput}"
 
-    let spectra = inReaderMS.ReadMassSpectra(inRunID)
+    let spectra = inReaderMS.ReadMassSpectra(inRunID) |> Seq.take 100000
     inReaderMS.ResetReader()
 
     //logger.Trace "Done reading spectra"
@@ -247,15 +248,15 @@ let processFile (processParams:MzMLtoMzLiteParams) (outputDir:string) (instrumen
     //logger.Trace "Done reading model"
     //logger.Trace "Start creating spectrum map"
         
-    let spectrumMap = createSpectraMap (*logger*) inReaderMS outDirPath spectra
-        
+    let spectrumMap = createSpectraMap (*logger*) inReaderPeaks outDirPath spectra
+    spectrumMap
     //logger.Trace "Done creating spectrum map"
 
     //logger.Trace $"Start writing binned mzlite files"
     //logger.Trace $"Total number of binned files: {spectrumMap.Count}"
     let mutable counter = 1
     for x in spectrumMap do
-        if counter % 1000 = 0 then printfn "%A" counter
+        printfn "%A" counter
         let outFile = x.Key
         //logger.Trace $"Writing [{counter}/{spectrumMap.Count}]: {outFile}"
         let spectra = x.Value
@@ -277,13 +278,16 @@ let processFile (processParams:MzMLtoMzLiteParams) (outputDir:string) (instrumen
         outTr.Commit()
         outTr.Dispose()
         outReader.Dispose()
+    inTrPeaks.Commit()
+    inTrPeaks.Dispose()
     inTrMS.Commit()
     inTrMS.Dispose()
     inReaderMS.Dispose()
+    inReaderPeaks.Dispose()
     //logger.Trace "Done."
 
 let deserialized = 
-    System.IO.File.ReadAllText(@"C:\Users\jonat\source\repos\ProteomIQon\src\ProteomIQon\defaultParams\TIMsMzMLtoMzLiteParams.json")
+    System.IO.File.ReadAllText(@"C:\Users\jonat\source\repos\ProteomIQon\src\ProteomIQon\defaultParams\MzMLtoMzLiteParams.json")
     |> Json.deserialize<Dto.MzMLtoMzLiteParams>
     |> PreprocessingParams.toDomain
 #time
