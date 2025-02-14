@@ -15,7 +15,7 @@ open MzIO.Processing
 open BioFSharp.Mz.SearchDB
 open SearchDB'
 
-module PSMBasedQuantification =
+module PSMBasedQuantificationTIMs =
     module Query = 
         open System
         open System.Collections.Generic
@@ -70,27 +70,6 @@ module PSMBasedQuantification =
         Y_Xic         = yXic
         Y_Xic_uncorrected= yXic_uncorrected
         }
-
-    type PSMStatisticsResultRequired = {
-        // a combination of the spectrum ID in the rawFile, the ascending ms2 id and the chargeState in the search space separated by '_'
-        PSMId                        : string
-        PepSequenceID                : int
-        ModSequenceID                : int
-        GlobalMod                    : int
-        ScanTime                     : float
-        Charge                       : int
-        PrecursorMZ                  : float
-        TheoMass                     : float
-        AbsDeltaMass                 : float
-        PeptideLength                : int
-        MissCleavages                : int
-        Expect                       : float
-        Score                        : float
-        TopXScore                    : float
-        PEPValue                     : float
-        StringSequence               : string
-        ProteinNames                 : string
-    }
 
 
     type PeakComparison = {
@@ -283,11 +262,11 @@ module PSMBasedQuantification =
         sum / n
         
     ///
-    let average getXic scanTimeToMzCorrection theoMz (psms:(PSMStatisticsResultRequired*float) []) =
+    let average getXic scanTimeToMzCorrection theoMz (psms:(PSMStatisticsResultFragpipe*float) []) =
             //let meanPrecMz   = psms |> Seq.meanBy (fun (psm,m) -> psm.PrecursorMZ)
             
             let meanScanTime = psms |> Seq.meanBy (fun (psm,m) -> psm.ScanTime)
-            let meanScore = psms |> Seq.averageBy (fun (psm,m) -> psm.Score)
+            let meanScore = psms |> Seq.averageBy (fun (psm,m) -> psm.Hyperscore)
             let psms' = 
                 let tmp = Array.sortByDescending (fun (psm,m) -> m) psms
                 if tmp.Length > 3 then tmp.[..2] else tmp 
@@ -555,7 +534,7 @@ module PSMBasedQuantification =
         inReader.Connection.Open()
         let inRunID  = Core.MzIO.Reader.getDefaultRunID inReader       
         let inTr = inReader.BeginTransaction()
-        let countMatchedMasses (peptide: LookUpResult<AminoAcids.AminoAcid>)(psms: PSMStatisticsResultRequired []) =
+        let countMatchedMasses (peptide: LookUpResult<AminoAcids.AminoAcid>)(psms: PSMStatisticsResultFragpipe []) =
             let frag = 
                 let ionSeries = (calcIonSeries peptide.BioSequence).TargetMasses
                 [1. .. 2.]
@@ -594,54 +573,8 @@ module PSMBasedQuantification =
         logger.Trace "Read scored PSMs"
         ///
         let qpsms =
-            if processParams.FragPipe then
-                Csv.CsvReader<PSMStatisticsResultFragpipe>(SchemaMode=Csv.Fill).ReadFile(scoredPSMs,'\t',false,1)
-                |> Array.ofSeq
-                |> Array.map (fun x ->
-                    {
-                        PSMId          = x.PSMId
-                        PepSequenceID  = x.PepSequenceID
-                        ModSequenceID  = x.ModSequenceID
-                        GlobalMod      = x.GlobalMod
-                        ScanTime       = x.ScanTime
-                        Charge         = x.Charge
-                        PrecursorMZ    = x.PrecursorMZ
-                        TheoMass       = x.TheoMass
-                        AbsDeltaMass   = x.AbsDeltaMass
-                        PeptideLength  = x.PeptideLength
-                        MissCleavages  = x.MissCleavages
-                        Expect         = x.Expectscore
-                        Score          = x.Hyperscore
-                        TopXScore      = x.Hyperscore
-                        PEPValue       = -1.
-                        StringSequence = x.StringSequence
-                        ProteinNames   = x.ProteinNames
-                    }
-                )
-            else
-                Csv.CsvReader<PSMStatisticsResult>(SchemaMode=Csv.Fill).ReadFile(scoredPSMs,'\t',false,1)
-                |> Array.ofSeq
-                |> Array.map (fun x ->
-                    {
-                        PSMId          = x.PSMId
-                        PepSequenceID  = x.PepSequenceID
-                        ModSequenceID  = x.ModSequenceID
-                        GlobalMod      = x.GlobalMod
-                        ScanTime       = x.ScanTime
-                        Charge         = x.Charge
-                        PrecursorMZ    = x.PrecursorMZ
-                        TheoMass       = x.TheoMass
-                        AbsDeltaMass   = x.AbsDeltaMass
-                        PeptideLength  = x.PeptideLength
-                        MissCleavages  = x.MissCleavages
-                        Expect         = x.QValue
-                        Score          = x.ModelScore
-                        TopXScore      = x.SequestScore
-                        PEPValue       = x.PEPValue
-                        StringSequence = x.StringSequence
-                        ProteinNames   = x.ProteinNames
-                    }
-                )
+            Csv.CsvReader<PSMStatisticsResultFragpipe>(SchemaMode=Csv.Fill).ReadFile(scoredPSMs,'\t',false,1)
+            |> Array.ofSeq
         logger.Trace "Read scored PSMs:finished"
         
         logger.Trace "Estimate precursor mz standard deviation and mz correction."
@@ -758,9 +691,9 @@ module PSMBasedQuantification =
         
         logger.Trace "init quantification functions"
         ///
-        let labledQuantification (pepIon:PeptideIon) (psms:PSMStatisticsResultRequired []) = 
+        let labledQuantification (pepIon:PeptideIon) (psms:PSMStatisticsResultFragpipe []) = 
             try
-            let bestQValue,bestPepValue,prots = psms |> Array.minBy (fun x -> x.Expect) |> fun x -> x.Expect, x.PEPValue,x.ProteinNames
+            let bestQValue,prots = psms |> Array.minBy (fun x -> x.Expectscore) |> fun x -> x.Expectscore,x.ProteinNames
             let unlabledPeptide = peptideLookUp pepIon.Sequence 0
             let labeledPeptide  = peptideLookUp pepIon.Sequence 1
             let targetPeptide = if pepIon.GlobalMod = 0 then unlabledPeptide else labeledPeptide            
@@ -842,7 +775,7 @@ module PSMBasedQuantification =
                     AbsDeltaMass                                = abs(avgMass-unlabledPeptide.Mass)
                     MeanPercolatorScore                         = averagePSM.MeanScore
                     QValue                                      = bestQValue
-                    PEPValue                                    = bestPepValue
+                    PEPValue                                    = nan
                     ProteinNames                                = prots
                     QuantMz_Light                               = averagePSM.MeanPrecMz
                     Quant_Light                                 = quantP.Area
@@ -894,7 +827,7 @@ module PSMBasedQuantification =
                     AbsDeltaMass                                = abs(avgMass-unlabledPeptide.Mass)
                     MeanPercolatorScore                         = averagePSM.MeanScore
                     QValue                                      = bestQValue
-                    PEPValue                                    = bestPepValue
+                    PEPValue                                    = nan
                     ProteinNames                                = prots
                     QuantMz_Light                               = averagePSM.MeanPrecMz
                     Quant_Light                                 = quantP.Area
@@ -987,7 +920,7 @@ module PSMBasedQuantification =
                     AbsDeltaMass                                = abs(avgMass-labeledPeptide.Mass)
                     MeanPercolatorScore                         = averagePSM.MeanScore
                     QValue                                      = bestQValue
-                    PEPValue                                    = bestPepValue
+                    PEPValue                                    = nan
                     ProteinNames                                = prots
                     QuantMz_Light                               = mzLight
                     Quant_Light                                 = successfulQuant.Area
@@ -1039,7 +972,7 @@ module PSMBasedQuantification =
                     AbsDeltaMass                                = abs(avgMass-labeledPeptide.Mass)
                     MeanPercolatorScore                         = averagePSM.MeanScore
                     QValue                                      = bestQValue
-                    PEPValue                                    = bestPepValue
+                    PEPValue                                    = nan
                     ProteinNames                                = prots
                     QuantMz_Light                               = mzLight
                     Quant_Light                                 = nan
@@ -1080,11 +1013,11 @@ module PSMBasedQuantification =
                 logger.Trace (sprintf "Quantfailed: %A" ex)
                 Option.None
 
-        let lableFreeQuantification (pepIon:PeptideIon)  (psms:PSMStatisticsResultRequired []) = 
+        let lableFreeQuantification (pepIon:PeptideIon)  (psms:PSMStatisticsResultFragpipe []) = 
             try
             if pepIon.GlobalMod <> 0 then None 
             else
-            let bestQValue,bestPepValue,prots = psms |> Array.minBy (fun x -> x.Expect) |> fun x -> x.Expect, x.PEPValue,x.ProteinNames
+            let bestQValue,prots = psms |> Array.minBy (fun x -> x.Expectscore) |> fun x -> x.Expectscore,x.ProteinNames
             let unlabledPeptide = peptideLookUp pepIon.Sequence 0
             let psmsWithMatchedSums = countMatchedMasses unlabledPeptide psms 
             let ms2s = psmsWithMatchedSums |> Array.map (fun (psm,m) -> psm.ScanTime,m)
@@ -1121,7 +1054,7 @@ module PSMBasedQuantification =
             AbsDeltaMass                                = abs(avgMass-unlabledPeptide.Mass)
             MeanPercolatorScore                         = averagePSM.MeanScore
             QValue                                      = bestQValue
-            PEPValue                                    = bestPepValue
+            PEPValue                                    = nan
             ProteinNames                                = prots
             QuantMz_Light                               = averagePSM.MeanPrecMz
             Quant_Light                                 = quantP.Area
@@ -1180,7 +1113,7 @@ module PSMBasedQuantification =
                     | Some x when psms.Length > x -> 
                         pepIon,
                         psms
-                        |> Array.sortByDescending (fun x -> x.TopXScore)
+                        |> Array.sortByDescending (fun x -> x.Hyperscore)
                         |> Array.take x
                     | _ -> 
                         pepIon,
