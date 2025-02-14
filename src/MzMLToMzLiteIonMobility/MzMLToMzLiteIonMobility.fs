@@ -138,7 +138,7 @@ module MzMLIonMobilityToMzLite =
             pa.Peaks <-
                 MzIO.Commons.Arrays.ArrayWrapper(
                     binnedData
-                    |> Seq.map snd
+                    |> Seq.map (fun (ionMobility,peak) -> Peak1D(peak.Intensity,peak.Mz,ionMobility))
                     |> Seq.toArray
                 )
             if copyMirim then
@@ -149,30 +149,55 @@ module MzMLIonMobilityToMzLite =
             bin,pa
         )
 
+    let unzipIonMobilityMzliteArray (a:Commons.Arrays.IMzIOArray<Peak1D>) = 
+        let mzData = Array.zeroCreate a.Length
+        let intensityData = Array.zeroCreate a.Length
+        let ionMobilityData = Array.zeroCreate a.Length
+        for i = 0 to a.Length-1 do 
+            let peak = a.[i]
+            mzData.[i] <- peak.Mz
+            intensityData.[i] <- peak.Intensity
+            ionMobilityData.[i] <- peak.IonMobility.Value
+        mzData,intensityData,ionMobilityData
+
+    /// Creates Peak1DArray of mzData array and intensityData Array
+    let createPeak1DArray compression mzBinaryDataType intensityBinaryDataType ionMobilityDataType (mzData:float []) (intensityData:float []) (ionMobilityData:float []) =
+        let zipedData = Array.map3 (fun mz intz im -> Peak1D(intz,mz,im)) mzData intensityData ionMobilityData
+        let newPeakA = Commons.Arrays.MzIOArray.ToMzIOArray zipedData
+        let peak1DArray = new Peak1DArray(compression,intensityBinaryDataType, mzBinaryDataType,newPeakA, ionMobilityDataType)
+        peak1DArray
+
     let insertSpectrum (compress:BinaryDataCompressionType) (outReader: MzSQL.MzSQL) (runID:string)
         (ms1PeakPicking: Peak1DArray -> float [] * float []) (ms2PeakPicking: Peak1DArray -> float [] * float [])
             (spectrum: MassSpectrum) (peaks: Peak1DArray) =
         match MassSpectrum.getMsLevel spectrum with
         | 1 ->
-            let mzData,intensityData =
-                try
-                ms1PeakPicking peaks
-                with
-                | _ -> [||],[||]
-            if Array.isEmpty mzData || Array.isEmpty intensityData then ()
-            else
-                let peaks' = PeakArray.createPeak1DArray compress BinaryDataType.Float64 BinaryDataType.Float64 mzData intensityData 
-                outReader.Insert (runID, spectrum, peaks')
+            //let mzData,intensityData =
+            //    try
+            //    ms1PeakPicking peaks
+            //    with
+            //    | _ -> [||],[||]
+            //if Array.isEmpty mzData || Array.isEmpty intensityData then ()
+
+            let mzData, intensityData, ionMobilityData =
+                unzipIonMobilityMzliteArray peaks.Peaks
+
+            //else
+            let peaks' = createPeak1DArray compress BinaryDataType.Float64 BinaryDataType.Float64 BinaryDataType.Float64 mzData intensityData ionMobilityData
+            outReader.Insert (runID, spectrum, peaks')
         | 2 ->
-            let mzData,intensityData =
-                try
-                ms2PeakPicking peaks
-                with
-                | _ -> [||],[||]
-            if Array.isEmpty mzData || Array.isEmpty intensityData then ()
-            else
-                let peaks' = PeakArray.createPeak1DArray compress BinaryDataType.Float64 BinaryDataType.Float64 mzData intensityData
-                outReader.Insert (runID, spectrum, peaks')
+            //let mzData,intensityData =
+            //    try
+            //    ms2PeakPicking peaks
+            //    with
+            //    | _ -> [||],[||]
+            //if Array.isEmpty mzData || Array.isEmpty intensityData then ()
+            //else
+            let mzData, intensityData, ionMobilityData =
+                unzipIonMobilityMzliteArray peaks.Peaks
+
+            let peaks' = createPeak1DArray compress BinaryDataType.Float64 BinaryDataType.Float64 BinaryDataType.Float64 mzData intensityData ionMobilityData
+            outReader.Insert (runID, spectrum, peaks')
         | _ ->
             failwith "Only mass spectra of level 1 and 2 are supported."
 
@@ -231,7 +256,7 @@ module MzMLIonMobilityToMzLite =
         |> Seq.iteri (fun i spectrum ->
             if i % 1000 = 0 then logger.Trace $"{i}"
             let data = inReaderPeaks.getSpecificPeak1DArraySequentialWithMIRIM(spectrum.ID)
-            let binResult = createBinnedPeaks false 0.05 data
+            let binResult = createBinnedPeaks false 2. data
             binResult
             |> Seq.iter(fun (bin, peaks) ->
                 let outFile = Path.Combine(outDirPath, $"binned_spectra_%.3f{bin}.mzlite")
