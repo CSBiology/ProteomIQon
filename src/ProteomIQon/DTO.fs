@@ -743,7 +743,6 @@ module Dto =
         let toDomain (dtoQuantificationParams: QuantificationParams ): Domain.QuantificationParams =
             {
                 PerformLabeledQuantification = dtoQuantificationParams.PerformLabeledQuantification
-                FragPipe                     = dtoQuantificationParams.FragPipe
                 XicExtraction                = dtoQuantificationParams.XicExtraction
                 BaseLineCorrection           = dtoQuantificationParams.BaseLineCorrection
             }
