@@ -27,16 +27,20 @@ module PSMBasedQuantificationTIMs =
         /// Extract a rt profile for specified target mass and rt range.
         /// Mz range peak aggregation is closest lock mz.
         /// Profile array with index corresponding to continous mass spectra over rt range and mz range given.
-        let initRTProfile (readspecPeaks:string -> Peak1DArray)  (rtIndex: IMzIOArray<RtIndexEntry>) (rtRange: RangeQuery) (mzRange: RangeQuery) =
+        let initRTProfile (readspecPeaks:string -> Peak1DArray)  (rtIndex: IMzIOArray<RtIndexEntry>) (rtRange: RangeQuery) (mzRange: RangeQuery) (ionMobilityRange: RangeQuery)=
             let entries = RtIndexEntry.Search(rtIndex, rtRange).ToArray()
             //printfn "RtProfile %i" entries.Length
             let profile = Array.zeroCreate<Peak2D> entries.Length
             for rtIdx = 0 to entries.Length-1 do
                 let entry = entries.[rtIdx]
                 let peaks = (readspecPeaks entry.SpectrumID).Peaks
-                let p = (RtIndexEntry.MzSearch (peaks, mzRange)).DefaultIfEmpty(Peak1D(0., mzRange.LockValue))
-                        |> fun x -> RtIndexEntry.ClosestMz (x, mzRange.LockValue)
-                        |> fun x -> RtIndexEntry.AsPeak2D (x, entry.Rt)
+                let p = 
+                    (RtIndexEntry.MzSearch (peaks, mzRange)).DefaultIfEmpty(new Peak1D(0., mzRange.LockValue, ionMobilityRange.LockValue))
+                    |> fun x -> 
+                        (RtIndexEntry.IonMobilitySearch (MzIOArray.ToMzIOArray (x |> Seq.toArray), ionMobilityRange))
+                            .DefaultIfEmpty(new Peak1D(0., mzRange.LockValue, ionMobilityRange.LockValue))
+                    |> fun x -> RtIndexEntry.ClosestMz (x, mzRange.LockValue)
+                    |> fun x -> RtIndexEntry.AsPeak2D (x, entry.Rt)
                 profile.[rtIdx] <- p
             profile
 
@@ -54,6 +58,7 @@ module PSMBasedQuantificationTIMs =
         MeanPrecMz   : float
         MeanScanTime : float
         WeightedAvgScanTime:float
+        WeightedAvgIM:float
         MeanScore   : float
         X_Xic         : float []
         Y_Xic         : float []
@@ -61,10 +66,11 @@ module PSMBasedQuantificationTIMs =
         }
 
     ///
-    let createAveragePSM meanPrecMz meanScanTime weightedAvgScanTime meanScore xXic yXic yXic_uncorrected = {
+    let createAveragePSM meanPrecMz meanScanTime weightedAvgScanTime weightedAvgIM meanScore xXic yXic yXic_uncorrected = {
         MeanPrecMz    = meanPrecMz
         MeanScanTime  = meanScanTime
         WeightedAvgScanTime= weightedAvgScanTime
+        WeightedAvgIM = weightedAvgIM
         MeanScore = meanScore
         X_Xic         = xXic
         Y_Xic         = yXic
@@ -207,12 +213,13 @@ module PSMBasedQuantificationTIMs =
                        ) yData baseLine
 
     ///
-    let initGetProcessedXIC logger (baseLineCorrection:Domain.BaseLineCorrection option) getPeaks idx scanTimeWindow mzWindow_Da meanScanTime meanPrecMz =
+    let initGetProcessedXIC logger (baseLineCorrection:Domain.BaseLineCorrection option) getPeaks idx scanTimeWindow mzWindow_Da imWindow meanScanTime meanPrecMz meanIM =
         let rtQuery = Query.createRangeQuery meanScanTime scanTimeWindow
         let mzQuery = Query.createRangeQuery meanPrecMz mzWindow_Da
+        let imQuery = Query.createRangeQuery meanIM imWindow
         let retData',itzData' =
             let tmp =
-                getPeaks idx rtQuery mzQuery
+                getPeaks idx rtQuery mzQuery imQuery
                 |> Array.map (fun (p:MzIO.Binary.Peak2D) -> p.Rt , p.Intensity)
             tmp
             |> Array.mapi (fun i (rt,intensity) ->
@@ -274,9 +281,13 @@ module PSMBasedQuantificationTIMs =
                 let scanTimes = psms' |> Array.map (fun (psm,m) -> psm.ScanTime)
                 let weights = psms' |> Array.map snd
                 weightedMean weights scanTimes
+            let weightedAvgIM =
+                let ims = psms' |> Array.map (fun (psm,m) -> psm.IonMobility)
+                let weights = psms' |> Array.map snd
+                weightedMean weights ims
             let correctedMz = scanTimeToMzCorrection weightedAvgScanTime + theoMz
-            let (retData,itzDataCorrected,ItzDataUncorrected) = getXic weightedAvgScanTime correctedMz
-            createAveragePSM correctedMz meanScanTime weightedAvgScanTime meanScore retData itzDataCorrected ItzDataUncorrected
+            let (retData,itzDataCorrected,ItzDataUncorrected) = getXic weightedAvgScanTime correctedMz weightedAvgIM
+            createAveragePSM correctedMz meanScanTime weightedAvgScanTime weightedAvgIM meanScore retData itzDataCorrected ItzDataUncorrected
 
 
 
@@ -286,9 +297,9 @@ module PSMBasedQuantificationTIMs =
         Y_Xic_uncorrected           :float[]
         }
     
-    let getInferredXic getXic targetScanTime targetMz =
+    let getInferredXic getXic targetScanTime targetMz targetIM =
         let (retData,itzData,uncorrectedItzData)   =
-                getXic targetScanTime targetMz 
+                getXic targetScanTime targetMz targetIM
         {
         X_Xic               = retData
         Y_Xic               = itzData
@@ -683,8 +694,7 @@ module PSMBasedQuantificationTIMs =
         let readSpecPeaksWithMem = FSharpAux.Memoization.memoize inReader.ReadSpectrumPeaks
         ///
         let getPeaks = Query.initRTProfile readSpecPeaksWithMem
-        let getXIC = initGetProcessedXIC logger processParams.BaseLineCorrection getPeaks retTimeIdxed processParams.XicExtraction.ScanTimeWindow mzWindow    
-        
+        let getXIC = initGetProcessedXIC logger processParams.BaseLineCorrection getPeaks retTimeIdxed processParams.XicExtraction.ScanTimeWindow mzWindow 0.05        
         ///
         let identifyPeaks = initIdentifyPeaks processParams.XicExtraction.XicProcessing
         logger.Trace "init lookup functions:finished"
@@ -724,7 +734,7 @@ module PSMBasedQuantificationTIMs =
                     let correctedMz = scanTimeToMzCorrection inferredScanTime + mz
                     correctedMz 
                 let inferredQuant = 
-                    let inferredXicHeavy = getInferredXic getXIC averagePSM.WeightedAvgScanTime mzHeavy    
+                    let inferredXicHeavy = getInferredXic getXIC averagePSM.WeightedAvgScanTime mzHeavy averagePSM.WeightedAvgIM
                     let inferredPeaksHeavy = identifyPeaks inferredXicHeavy.X_Xic inferredXicHeavy.Y_Xic
                     if Array.isEmpty inferredPeaksHeavy then 
                         if diagCharts then saveErrorChart inferredXicHeavy.X_Xic inferredXicHeavy.Y_Xic pepIon "noInferredPeaks" plotDirectory
@@ -869,7 +879,7 @@ module PSMBasedQuantificationTIMs =
                     let correctedMz = scanTimeToMzCorrection inferredScanTime + mz
                     correctedMz   
                 let inferredQuant = 
-                    let inferredXicLight = getInferredXic getXIC averagePSM.WeightedAvgScanTime mzLight    
+                    let inferredXicLight = getInferredXic getXIC averagePSM.WeightedAvgScanTime mzLight averagePSM.WeightedAvgIM
                     let inferredPeaksLight = identifyPeaks inferredXicLight.X_Xic inferredXicLight.Y_Xic
                     if Array.isEmpty inferredPeaksLight then 
                         if diagCharts then saveErrorChart inferredXicLight.X_Xic inferredXicLight.Y_Xic pepIon "noInferredPeaks" plotDirectory
