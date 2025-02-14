@@ -108,6 +108,8 @@ Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "LabelEfficiencyCalculator",
 EndProject
 Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "MzMLToMzLiteIonMobility", "src\MzMLToMzLiteIonMobility\MzMLToMzLiteIonMobility.fsproj", "{B5A24C93-841B-4B56-A258-60D28D4C29E3}"
 EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "PSMBasedQuantificationTIMs", "src\PSMBasedQuantificationTIMs\PSMBasedQuantificationTIMs.fsproj", "{46535DE8-EBC1-BE17-13BA-4C8F18AF15DF}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -218,6 +220,10 @@ Global
 		{B5A24C93-841B-4B56-A258-60D28D4C29E3}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B5A24C93-841B-4B56-A258-60D28D4C29E3}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B5A24C93-841B-4B56-A258-60D28D4C29E3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{46535DE8-EBC1-BE17-13BA-4C8F18AF15DF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{46535DE8-EBC1-BE17-13BA-4C8F18AF15DF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{46535DE8-EBC1-BE17-13BA-4C8F18AF15DF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{46535DE8-EBC1-BE17-13BA-4C8F18AF15DF}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
