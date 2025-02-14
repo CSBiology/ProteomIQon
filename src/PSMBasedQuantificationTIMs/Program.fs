@@ -4,7 +4,7 @@ open System
 open System.IO
 open CLIArgumentParsing
 open Argu
-open PSMBasedQuantification
+open PSMBasedQuantificationTIMs
 open System.Reflection
 open ProteomIQon.Core
 open ProteomIQon.Core.InputPaths
