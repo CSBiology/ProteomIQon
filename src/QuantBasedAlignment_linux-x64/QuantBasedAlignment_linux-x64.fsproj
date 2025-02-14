@@ -17,7 +17,7 @@
     <InvariantGlobalization>true</InvariantGlobalization>
   </PropertyGroup>
   <PropertyGroup>
-    <Authors>David Zimmer, Jonathan Ott, Heinrich Lukas Weil, Timo Muehlhaus</Authors>
+    <Authors>David Zimmer, Caroline Ott, Heinrich Lukas Weil, Timo Muehlhaus</Authors>
     <Description>ProteomIQon.QuantBasedAlignment_linux_x64 - computational proteomics</Description>
     <Summary>ProteomIQon.QuantBasedAlignment_linux_x64 - computational proteomics</Summary>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
