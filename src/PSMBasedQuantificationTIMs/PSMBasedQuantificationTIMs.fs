@@ -35,12 +35,16 @@ module PSMBasedQuantificationTIMs =
                 let entry = entries.[rtIdx]
                 let peaks = (readspecPeaks entry.SpectrumID).Peaks
                 let p = 
-                    (RtIndexEntry.MzSearch (peaks, mzRange)).DefaultIfEmpty(new Peak1D(0., mzRange.LockValue, ionMobilityRange.LockValue))
-                    |> fun x -> 
-                        (RtIndexEntry.IonMobilitySearch (MzIOArray.ToMzIOArray (x |> Seq.toArray), ionMobilityRange))
-                            .DefaultIfEmpty(new Peak1D(0., mzRange.LockValue, ionMobilityRange.LockValue))
-                    |> fun x -> RtIndexEntry.ClosestMz (x, mzRange.LockValue)
-                    |> fun x -> RtIndexEntry.AsPeak2D (x, entry.Rt)
+                        (RtIndexEntry.IonMobilitySearch (peaks, ionMobilityRange)).DefaultIfEmpty(new Peak1D(0., mzRange.LockValue, ionMobilityRange.LockValue))
+                        |> Seq.filter (fun x -> x.Mz < mzRange.HighValue && x.Mz > mzRange.LowValue)
+                        |> Seq.groupBy (fun x -> x.Mz)
+                        |> Seq.map (fun (mz,peaks) -> 
+                            let i = peaks |> Seq.sumBy (fun x -> x.Intensity)
+                            new Peak1D(i, mz)
+                        )
+                        |> fun x -> 
+                            RtIndexEntry.ClosestMz (x, mzRange.LockValue)
+                        |> fun x -> RtIndexEntry.AsPeak2D (x, entry.Rt)
                 profile.[rtIdx] <- p
             profile
 
