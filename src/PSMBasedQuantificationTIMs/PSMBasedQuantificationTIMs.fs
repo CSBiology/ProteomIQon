@@ -28,25 +28,32 @@ module PSMBasedQuantificationTIMs =
         /// Mz range peak aggregation is closest lock mz.
         /// Profile array with index corresponding to continous mass spectra over rt range and mz range given.
         let initRTProfile (readspecPeaks:string -> Peak1DArray)  (rtIndex: IMzIOArray<RtIndexEntry>) (rtRange: RangeQuery) (mzRange: RangeQuery) (ionMobilityRange: RangeQuery)=
-            let entries = RtIndexEntry.Search(rtIndex, rtRange).ToArray()
-            //printfn "RtProfile %i" entries.Length
-            let profile = Array.zeroCreate<Peak2D> entries.Length
-            for rtIdx = 0 to entries.Length-1 do
-                let entry = entries.[rtIdx]
+            let entries = RtIndexEntry.Search(rtIndex, rtRange)
+            entries
+            |>Seq.map (fun entry ->
                 let peaks = (readspecPeaks entry.SpectrumID).Peaks
                 let p = 
-                        (RtIndexEntry.IonMobilitySearch (peaks, ionMobilityRange)).DefaultIfEmpty(new Peak1D(0., mzRange.LockValue, ionMobilityRange.LockValue))
-                        |> Seq.filter (fun x -> x.Mz < mzRange.HighValue && x.Mz > mzRange.LowValue)
-                        |> Seq.groupBy (fun x -> x.Mz)
-                        |> Seq.map (fun (mz,peaks) -> 
-                            let i = peaks |> Seq.sumBy (fun x -> x.Intensity)
-                            new Peak1D(i, mz)
-                        )
-                        |> fun x -> 
-                            RtIndexEntry.ClosestMz (x, mzRange.LockValue)
-                        |> fun x -> RtIndexEntry.AsPeak2D (x, entry.Rt)
-                profile.[rtIdx] <- p
-            profile
+                    peaks
+                    |> Seq.filter (fun x ->
+                        x.IonMobility.Value < ionMobilityRange.HighValue && x.IonMobility.Value > ionMobilityRange.LowValue &&
+                        x.Mz < mzRange.HighValue && x.Mz > mzRange.LowValue
+                    )
+                    |> fun s ->
+                        if (s |> Seq.tryHead).IsNone then
+                            RtIndexEntry.AsPeak2D ((new Peak1D(0., mzRange.LockValue, ionMobilityRange.LockValue)),entry.Rt)
+                        else
+                            s
+                            |> Seq.groupBy (fun x -> x.Mz)
+                            |> Seq.map (fun (mz,peaks) -> 
+                                let i = peaks |> Seq.sumBy (fun x -> x.Intensity)
+                                new Peak1D(i, mz)
+                            )
+                            |> fun x -> 
+                                RtIndexEntry.ClosestMz (x, mzRange.LockValue)
+                            |> fun x -> RtIndexEntry.AsPeak2D (x, entry.Rt)
+                p
+            )
+            |> Array.ofSeq
 
 
     type PeptideIon = 
