@@ -1,7 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFrameworks>net47</TargetFrameworks>
+    <TargetFrameworks>net8.0</TargetFrameworks>
     <RootNamespace>Preprocessing</RootNamespace>
     <AssemblyName>ProteomIQon.Preprocessing</AssemblyName>
     <Name>ProteomIQon.Preprocessing</Name>
@@ -12,10 +12,10 @@
     <InvariantGlobalization>true</InvariantGlobalization>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net47|AnyCPU'">
+  <!--<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net47|AnyCPU'">
     <PlatformTarget>AnyCPU</PlatformTarget>
     <Prefer32Bit>true</Prefer32Bit>
-  </PropertyGroup>
+  </PropertyGroup>-->
   <PropertyGroup>
     <Authors>David Zimmer, Caroline Ott, Heinrich Lukas Weil, Timo Muehlhaus</Authors>
     <Description>ProteomIQon.Preprocessing - computational proteomics</Description>
@@ -40,10 +40,10 @@
   <ItemGroup>
     <PackageReference Include="Argu" Version="6.1.1" />
     <PackageReference Include="NLog" Version="4.7.8" />
-    <PackageReference Include="MzIO" Version="0.1.1" />
-    <PackageReference Include="MzIO.Processing" Version="0.1.1" />
-    <PackageReference Include="MzIO.SQL" Version="0.1.1" />
-    <PackageReference Include="MzIO.MzML" Version="0.1.1" />
+    <PackageReference Include="MzIO" Version="[0.1.4]" />
+    <PackageReference Include="MzIO.Processing" Version="[0.1.4]" />
+    <PackageReference Include="MzIO.SQL" Version="[0.1.6]" />
+    <PackageReference Include="MzIO.MzML" Version="[0.1.7]" />
     <PackageReference Include="MzIO.Wiff" Version="0.1.1" />
     <PackageReference Include="MzIO.Bruker" Version="0.1.1" />
     <PackageReference Include="MzIO.Thermo" Version="0.1.1" />

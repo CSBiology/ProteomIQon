@@ -70,8 +70,6 @@ Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "MzTAB", "src\MzTAB\MzTAB.fs
 EndProject
 Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "MzMLToMzLite", "src\MzMLToMzLite\MzMLToMzLite.fsproj", "{03B7477E-A891-4AEC-B142-3170B1FF21DE}"
 EndProject
-Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "ProteomIQon.Tests", "tests\ProteomIQon.Tests\ProteomIQon.Tests.fsproj", "{57D972AD-99A0-4354-9DDF-7E0938497454}"
-EndProject
 Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "JoinQuantPepIonsWithProteins", "src\JoinQuantPepIonsWithProteins\JoinQuantPepIonsWithProteins.fsproj", "{1260503B-4EF4-4786-AE09-BDE64A7DE193}"
 EndProject
 Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "LabeledProteinQuantification", "src\LabeledProteinQuantification\LabeledProteinQuantification.fsproj", "{EB95FF6C-6FF0-49EE-BDFC-C480016DA787}"
@@ -176,10 +174,6 @@ Global
 		{03B7477E-A891-4AEC-B142-3170B1FF21DE}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{03B7477E-A891-4AEC-B142-3170B1FF21DE}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{03B7477E-A891-4AEC-B142-3170B1FF21DE}.Release|Any CPU.Build.0 = Release|Any CPU
-		{57D972AD-99A0-4354-9DDF-7E0938497454}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{57D972AD-99A0-4354-9DDF-7E0938497454}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{57D972AD-99A0-4354-9DDF-7E0938497454}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{57D972AD-99A0-4354-9DDF-7E0938497454}.Release|Any CPU.Build.0 = Release|Any CPU
 		{1260503B-4EF4-4786-AE09-BDE64A7DE193}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{1260503B-4EF4-4786-AE09-BDE64A7DE193}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1260503B-4EF4-4786-AE09-BDE64A7DE193}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -227,9 +221,6 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
-	EndGlobalSection
-	GlobalSection(NestedProjects) = preSolution
-		{57D972AD-99A0-4354-9DDF-7E0938497454} = {ED8079DD-2B06-4030-9F0F-DC548F98E1C4}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {D55EAFC0-7966-48AB-9DF6-8CFA23ABABB1}

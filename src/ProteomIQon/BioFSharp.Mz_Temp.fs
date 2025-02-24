@@ -1798,7 +1798,7 @@ module Drafo =
                 )  
 
         ///
-        let readFrame fp = Frame.ReadCsv(fp,hasHeaders=true,inferTypes=false,separators="\t")
+        let readFrame (fp:string) = Frame.ReadCsv(fp,hasHeaders=true,inferTypes=false,separators="\t")
           
         ///
         let readAndIndexFrame keyCols fp = 
