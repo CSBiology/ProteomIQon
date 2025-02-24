@@ -632,6 +632,44 @@ module Dto =
                 KeepTemporaryFiles  = dtoPSMStatisticsParams.KeepTemporaryFiles
             }
 
+    type PSMStatisticsResultFragpipe = {
+        // a combination of the spectrum ID in the rawFile, the ascending ms2 id and the chargeState in the search space separated by '_'
+        [<FieldAttribute(0)>]
+        PSMId                        : string
+        [<FieldAttribute(1)>]
+        PepSequenceID                : int
+        [<FieldAttribute(2)>]
+        ModSequenceID                : int
+        [<FieldAttribute(3)>]
+        ScanTime                     : float
+        [<FieldAttribute(4)>]
+        Charge                       : int
+        [<FieldAttribute(5)>]
+        PrecursorMZ                  : float
+        [<FieldAttribute(6)>]
+        TheoMass                     : float
+        [<FieldAttribute(7)>]
+        AbsDeltaMass                 : float
+        [<FieldAttribute(8)>]
+        IonMobility                  : float
+        [<FieldAttribute(9)>]
+        PeptideLength                : int
+        [<FieldAttribute(10)>]
+        MissCleavages                : int
+        [<FieldAttribute(11)>]
+        Expectscore                  : float
+        [<FieldAttribute(12)>]
+        Hyperscore                   : float
+        [<FieldAttribute(13)>]
+        Probability                  : float
+        [<FieldAttribute(14)>]
+        StringSequence               : string
+        [<FieldAttribute(15)>]
+        ProteinNames                 : string
+        [<FieldAttribute(16)>]
+        GlobalMod                    : int
+    }
+
     type PSMStatisticsResult = {
         // a combination of the spectrum ID in the rawFile, the ascending ms2 id and the chargeState in the search space seperated by '_'
         [<FieldAttribute(0)>]
@@ -694,6 +732,7 @@ module Dto =
     type QuantificationParams =
         {
             PerformLabeledQuantification : Labeling
+            FragPipe                     : bool
             XicExtraction                : XicExtraction
             //10 6 0.05
             BaseLineCorrection           : BaseLineCorrection option
