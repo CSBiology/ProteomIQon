@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFrameworks>net5.0</TargetFrameworks>
+    <TargetFrameworks>net8.0</TargetFrameworks>
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>proteomiqon-mzmltomzlite</ToolCommandName>
     <RootNamespace>MzMLToMzLite</RootNamespace>
@@ -37,7 +37,7 @@
   <ItemGroup>
     <PackageReference Include="Argu" Version="6.1.1" />
     <PackageReference Include="NLog" Version="4.7.8" />
-    <PackageReference Include="MzIO" Version="0.1.1" />
+    <PackageReference Include="MzIO" Version="[0.1.4]" />
     <PackageReference Include="MzIO.Processing" Version="0.1.2" />
     <PackageReference Include="MzIO.SQL" Version="0.1.4" />
     <PackageReference Include="MzIO.MzML" Version="0.1.4" />

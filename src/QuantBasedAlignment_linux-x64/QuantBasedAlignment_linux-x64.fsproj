@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net5.0</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
     <!-- <GeneratePackageOnBuild>true</GeneratePackageOnBuild> -->
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>proteomiqon-quantbasedalignment</ToolCommandName>
@@ -30,7 +30,6 @@
     <FsDocsReleaseNotesLink>https://github.com/CSBiology/ProteomIQon/blob/master/RELEASE_NOTES.md</FsDocsReleaseNotesLink>
   </PropertyGroup>
   <ItemGroup>
-    <None Include="App.config" />
     <Compile Include="Program.fs" />
   </ItemGroup>
   <ItemGroup>
@@ -46,36 +45,36 @@
     <PackageReference Include="FSharpAux.IO" Version="1.0.0" />
     <PackageReference Include="Plotly.NET" Version="2.0.0-alpha5" />
     <PackageReference Include="MKL.NET" Version="1.3.2" />
-    <PackageReference Include="MKL.NET.linux-x64" Version="2021.4.0.640" >
+    <PackageReference Include="MKL.NET.linux-x64" Version="2021.4.0.640">
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
   </ItemGroup>
   <Target Name="Delete_libmkl_tbb_thread" AfterTargets="Build">
-      <Message Text="Deleting $(OutDir)/runtimes/linux-x64/native/libmkl_tbb_thread.so.1"/>
+      <Message Text="Deleting $(OutDir)/runtimes/linux-x64/native/libmkl_tbb_thread.so.1" />
       <Delete Files="$(OutDir)/runtimes/linux-x64/native/libmkl_tbb_thread.so.1" />
   </Target>
   <Target Name="Delete_libmkl_pgi_thread" AfterTargets="Build">
-      <Message Text="Deleting $(OutDir)/runtimes/linux-x64/native/libmkl_pgi_thread.so.1"/>
+      <Message Text="Deleting $(OutDir)/runtimes/linux-x64/native/libmkl_pgi_thread.so.1" />
       <Delete Files="$(OutDir)/runtimes/linux-x64/native/libmkl_pgi_thread.so.1" />
   </Target>
   <Target Name="Delete_libmkl_gnu_thread" AfterTargets="Build">
-      <Message Text="Deleting $(OutDir)/runtimes/linux-x64/native/libmkl_gnu_thread.so.1"/>
+      <Message Text="Deleting $(OutDir)/runtimes/linux-x64/native/libmkl_gnu_thread.so.1" />
       <Delete Files="$(OutDir)/runtimes/linux-x64/native/libmkl_gnu_thread.so.1" />
   </Target>
   <Target Name="Delete_libmkl_sequential" AfterTargets="Build">
-      <Message Text="Deleting $(OutDir)/runtimes/linux-x64/native/libmkl_sequential.so.1"/>
+      <Message Text="Deleting $(OutDir)/runtimes/linux-x64/native/libmkl_sequential.so.1" />
       <Delete Files="$(OutDir)/runtimes/linux-x64/native/libmkl_sequential.so.1" />
   </Target>
   <Target Name="CopyMKLDLL" AfterTargets="Build">
-      <Message Text="Copy MKL DLL"/>
-      <Copy SourceFiles="$(OutDir)/runtimes/linux-x64\lib\netstandard2.0\MKL.NET.dll" DestinationFolder="$(OutDir)/"/>
+      <Message Text="Copy MKL DLL" />
+      <Copy SourceFiles="$(OutDir)/runtimes/linux-x64\lib\netstandard2.0\MKL.NET.dll" DestinationFolder="$(OutDir)/" />
   </Target>
   <ItemGroup>
       <Content Include="bin/Release/$(TargetFramework)/runtimes/linux-x64/native/*.so" Exclude="bin/Release/$(TargetFramework)/runtimes/linux-x64/native/MKL.NET.Native.so">
         <Pack>true</Pack>
         <PackagePath>\tools\$(TargetFramework)\any\</PackagePath>
       </Content>
-      <Content Include="bin/Release/$(TargetFramework)/runtimes/linux-x64/native/*.so.1" >
+      <Content Include="bin/Release/$(TargetFramework)/runtimes/linux-x64/native/*.so.1">
         <Pack>true</Pack>
         <PackagePath>\tools\$(TargetFramework)\any\</PackagePath>
       </Content>
