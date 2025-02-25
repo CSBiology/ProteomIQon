@@ -36,7 +36,7 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Argu" Version="6.1.1" />
-    <PackageReference Include="NLog" Version="4.7.8" />
+    <PackageReference Include="NLog" Version="4.7.11" />
     <PackageReference Include="Deedle" Version="2.3.0" />
     <PackageReference Include="BioFSharp" Version="2.0.0-beta4" />
     <PackageReference Include="FSharp.Stats" Version="0.4.0" />
