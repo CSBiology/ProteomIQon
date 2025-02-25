@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFrameworks>net5.0</TargetFrameworks>
+    <TargetFrameworks>net8.0</TargetFrameworks>
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>proteomiqon-joinquantpepionswithproteins</ToolCommandName>
     <RootNamespace>JoinQuantPepIonsWithProteins</RootNamespace>
@@ -38,10 +38,10 @@
   <ItemGroup>
     <PackageReference Include="Argu" Version="6.1.1" />
     <PackageReference Include="NLog" Version="4.7.8" />
-    <PackageReference Include="MzIO" Version="0.1.1" />
-    <PackageReference Include="MzIO.Processing" Version="0.1.1" />
-    <PackageReference Include="MzIO.SQL" Version="0.1.1" />
-    <PackageReference Include="MzIO.MzML" Version="0.1.1" />
+    <PackageReference Include="MzIO" Version="[0.1.4]" />
+    <PackageReference Include="MzIO.Processing" Version="[0.1.4]" />
+    <PackageReference Include="MzIO.SQL" Version="[0.1.6]" />
+    <PackageReference Include="MzIO.MzML" Version="[0.1.7]" />
     <PackageReference Include="BioFSharp" Version="2.0.0-beta4" />
     <PackageReference Include="BioFSharp.Mz" Version="0.1.5-beta" />
     <PackageReference Include="FSharpAux" Version="1.0.0" />
