@@ -34,7 +34,7 @@
   <ItemGroup>
     <ProjectReference Include="..\ProteomIQon\ProteomIQon.fsproj" />
     <PackageReference Include="Argu" Version="6.1.1" />
-    <PackageReference Include="NLog" Version="4.7.8" />
+    <PackageReference Include="NLog" Version="4.7.11" />
     <PackageReference Include="BioFSharp.Mz" Version="0.1.5-beta" />
   </ItemGroup>
 </Project>
