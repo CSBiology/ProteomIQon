@@ -39,10 +39,10 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Argu" Version="6.1.1" />
-    <PackageReference Include="MzIO" Version="[0.1.4]" />
-    <PackageReference Include="MzIO.Processing" Version="[0.1.4]" />
-    <PackageReference Include="MzIO.SQL" Version="[0.1.6]" />
-    <PackageReference Include="MzIO.MzML" Version="[0.1.7]" />
+    <PackageReference Include="MzIO" Version="[0.1.7]" />
+    <PackageReference Include="MzIO.Processing" Version="[0.1.7]" />
+    <PackageReference Include="MzIO.SQL" Version="[0.1.9]" />
+    <PackageReference Include="MzIO.MzML" Version="[0.1.10]" />
     <PackageReference Include="FSharpAux" Version="1.0.0" />
     <PackageReference Include="FSharpAux.IO" Version="1.0.0" />
     <PackageReference Include="FSharp.Stats" Version="0.4.0" />
