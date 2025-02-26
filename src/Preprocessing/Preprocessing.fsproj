@@ -40,10 +40,10 @@
   <ItemGroup>
     <PackageReference Include="Argu" Version="6.1.1" />
     <PackageReference Include="NLog" Version="4.7.11" />
-    <PackageReference Include="MzIO" Version="[0.1.4]" />
-    <PackageReference Include="MzIO.Processing" Version="[0.1.4]" />
-    <PackageReference Include="MzIO.SQL" Version="[0.1.6]" />
-    <PackageReference Include="MzIO.MzML" Version="[0.1.7]" />
+    <PackageReference Include="MzIO" Version="[0.1.7]" />
+    <PackageReference Include="MzIO.Processing" Version="[0.1.7]" />
+    <PackageReference Include="MzIO.SQL" Version="[0.1.9]" />
+    <PackageReference Include="MzIO.MzML" Version="[0.1.10]" />
     <PackageReference Include="MzIO.Wiff" Version="0.1.1" />
     <PackageReference Include="MzIO.Bruker" Version="0.1.1" />
     <PackageReference Include="MzIO.Thermo" Version="0.1.1" />
