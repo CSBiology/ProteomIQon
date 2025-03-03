@@ -280,6 +280,10 @@ module AlignmentBasedQuantStatistics =
     let assignScoreAndQValue ((quantFile,alignFile,alignQuantFile): (string*string*string)) (matchedFilesLearning: (string*string*string)[]) diagnosticCharts (alignScoreParams: Domain.AlignmentBasedQuantStatisticsParams) outputDirectory =
 
         let logger = Logging.createLogger (System.IO.Path.GetFileNameWithoutExtension quantFile)
+
+        let chartDirectory = System.IO.Path.Combine(outputDirectory, System.IO.Path.GetFileNameWithoutExtension quantFile)
+        System.IO.Directory.CreateDirectory(chartDirectory) |> ignore
+
         let trainingsData =
             matchedFilesLearning
             |> Array.map (fun (quantFilePath,alignfilePath,alignQuantFilePath) -> createTrainingsData quantFilePath alignfilePath alignQuantFilePath alignScoreParams)
@@ -363,7 +367,7 @@ module AlignmentBasedQuantStatistics =
             |> Chart.Combine
             |> Chart.withX_AxisStyle("Probability")
             |> Chart.withY_AxisStyle("Count")
-            |> Chart.SaveHtmlAs (System.IO.Path.Combine(outputDirectory,"ProbabilityHistogram"))
+            |> Chart.SaveHtmlAs (System.IO.Path.Combine(chartDirectory,"ProbabilityHistogram"))
 
             let positiveQVal =
                 setPositive
@@ -386,7 +390,7 @@ module AlignmentBasedQuantStatistics =
             |> Chart.Combine
             |> Chart.withX_AxisStyle("Q-Value")
             |> Chart.withY_AxisStyle("Count")
-            |> Chart.SaveHtmlAs (System.IO.Path.Combine(outputDirectory,"QValueDistribution"))
+            |> Chart.SaveHtmlAs (System.IO.Path.Combine(chartDirectory,"QValueDistribution"))
 
         alignedQuants
         |> Frame.filterRows (fun rk s ->
