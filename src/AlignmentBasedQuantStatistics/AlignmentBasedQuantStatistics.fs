@@ -241,36 +241,44 @@ module AlignmentBasedQuantStatistics =
                     let originalQuant = 
                         quantMap.QuantHeavy
                         |> Map.tryFind rk
-                    match originalQuant with
-                    | Some o ->
+                    let originalQuantMz = 
+                        quantMap.QuantMzHeavy
+                        |> Map.tryFind rk
+                    match originalQuant, originalQuantMz with
+                    | Some oQ, Some oMZ ->
                         if 
-                            abs (quantMap.QuantMzHeavy.[rk] - s.GetAs<float>("QuantMz_Heavy")) < (quantMap.QuantMzHeavy.[rk] * (alignScoreParams.PositiveQuantMzCutoff)) &&
-                            abs (quantMap.QuantHeavy.[rk] - s.GetAs<float>("Quant_Heavy")) < (quantMap.QuantHeavy.[rk] * (alignScoreParams.PositiveQuantCutoff)) then
+                            abs (oMZ - s.GetAs<float>("QuantMz_Heavy")) < (oMZ * (alignScoreParams.PositiveQuantMzCutoff)) &&
+                            abs (oQ - s.GetAs<float>("Quant_Heavy")) < (oQ * (alignScoreParams.PositiveQuantCutoff)) then
                             Some (toPeptideForLearning true s)
                         elif
-                            abs (quantMap.QuantMzHeavy.[rk] - s.GetAs<float>("QuantMz_Heavy")) > (quantMap.QuantMzHeavy.[rk] * (1. - alignScoreParams.NegativeQuantMzCutoff)) ||
-                            abs (quantMap.QuantHeavy.[rk] - s.GetAs<float>("Quant_Heavy")) > (quantMap.QuantHeavy.[rk] * (1. - alignScoreParams.NegativeQuantCutoff)) then
+                            abs (oMZ - s.GetAs<float>("QuantMz_Heavy")) > (oMZ * (1. - alignScoreParams.NegativeQuantMzCutoff)) ||
+                            abs (oQ - s.GetAs<float>("Quant_Heavy")) > (oQ * (1. - alignScoreParams.NegativeQuantCutoff)) then
                             Some (toPeptideForLearning false s)
                         else
                             Some (toPeptideForLearning false s)
-                    | None -> None
+                    | _,None -> None
+                    | None,_ -> None
                 else
                     let originalQuant = 
                         quantMap.QuantLight
                         |> Map.tryFind rk
-                    match originalQuant with
-                    | Some o ->
+                    let originalQuantMz = 
+                        quantMap.QuantMzLight
+                        |> Map.tryFind rk
+                    match originalQuant,originalQuantMz with
+                    | Some oQ, Some oMZ ->
                         if
-                            abs (quantMap.QuantMzLight.[rk] - s.GetAs<float>("QuantMz_Light")) < (quantMap.QuantMzLight.[rk] * (alignScoreParams.PositiveQuantMzCutoff)) &&
-                            abs (quantMap.QuantLight.[rk] - s.GetAs<float>("Quant_Light")) < (quantMap.QuantLight.[rk] * (alignScoreParams.PositiveQuantCutoff)) then
+                            abs (oMZ - s.GetAs<float>("QuantMz_Light")) < (oMZ * (alignScoreParams.PositiveQuantMzCutoff)) &&
+                            abs (oQ - s.GetAs<float>("Quant_Light")) < (oQ * (alignScoreParams.PositiveQuantCutoff)) then
                             Some (toPeptideForLearning true s)
                         elif
-                            abs (quantMap.QuantMzLight.[rk] - s.GetAs<float>("QuantMz_Light")) > (quantMap.QuantMzLight.[rk] * (1. - alignScoreParams.NegativeQuantMzCutoff)) ||
-                            abs (quantMap.QuantLight.[rk] - s.GetAs<float>("Quant_Light")) > (quantMap.QuantLight.[rk] * (1. - alignScoreParams.NegativeQuantCutoff)) then
+                            abs (oMZ - s.GetAs<float>("QuantMz_Light")) > (oMZ * (1. - alignScoreParams.NegativeQuantMzCutoff)) ||
+                            abs (oQ - s.GetAs<float>("Quant_Light")) > (oQ * (1. - alignScoreParams.NegativeQuantCutoff)) then
                             Some (toPeptideForLearning false s)
                         else
                             Some (toPeptideForLearning false s)
-                    | None -> None
+                    | _,None -> None
+                    | None,_ -> None
             )
             |> Series.values
             |> Seq.choose id
