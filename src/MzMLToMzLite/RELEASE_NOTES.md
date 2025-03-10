@@ -1,3 +1,7 @@
+#### 0.0.9 - Monday, March 10, 2025
+* Update to .NET 8
+* Add option to fix mzml files converted with "&quot"
+
 #### 0.0.8 - Tuesday, April 26, 2022
 * Check scan time unit during conversion and convert it to minutes
 

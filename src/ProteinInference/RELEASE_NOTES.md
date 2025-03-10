@@ -1,3 +1,6 @@
+#### 0.0.8 - Monday, March 10, 2025
+* Update to .NET 8
+
 #### 0.0.7 - Wednesday, July 14, 2021
 * Reworked Regex parsing to a common pattern. 
 

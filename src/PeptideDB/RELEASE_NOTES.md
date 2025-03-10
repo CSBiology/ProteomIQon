@@ -1,3 +1,6 @@
+#### 0.0.8 - Monday, March 10, 2025
+* Update to .NET 8
+
 #### 0.0.7 - Friday July 2, 2021
 * Add support for additional isotopic modifications.
 * Add support for additional proteases

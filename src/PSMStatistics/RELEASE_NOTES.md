@@ -1,3 +1,6 @@
+#### 0.0.9 - Monday, March 10, 2025
+* Update to .NET 8
+
 #### 0.0.8 - Thursday, August 2, 2022
 * susbtitute PEP value calculation with iterative reweighted least squares based method
 
