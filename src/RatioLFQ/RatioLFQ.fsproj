@@ -3,10 +3,10 @@
   <PropertyGroup>
     <TargetFrameworks>net8.0</TargetFrameworks>
     <PackAsTool>true</PackAsTool>
-    <ToolCommandName>proteomiqon-mzmltomzliteionmobility</ToolCommandName>
-    <RootNamespace>MzMLToMzLiteIonMobility</RootNamespace>
-    <AssemblyName>ProteomIQon.MzMLToMzLiteIonMobility</AssemblyName>
-    <Name>ProteomIQon.MzMLToMzLiteIonMobility</Name>
+    <ToolCommandName>proteomiqon-ratiolfq</ToolCommandName>
+    <RootNamespace>RatioLFQ</RootNamespace>
+    <AssemblyName>ProteomIQon.RatioLFQ</AssemblyName>
+    <Name>ProteomIQon.RatioLFQ</Name>
     <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
@@ -15,8 +15,8 @@
   </PropertyGroup>
   <PropertyGroup>
     <Authors>David Zimmer, Caroline Ott, Kevin Schneider, Timo Muehlhaus</Authors>
-    <Description>ProteomIQon.MzMLToMzLiteIonMobility - computational proteomics</Description>
-    <Summary>ProteomIQon.MzMLToMzLiteIonMobility - computational proteomics</Summary>
+    <Description>ProteomIQon.RatioLFQ - computational proteomics</Description>
+    <Summary>ProteomIQon.RatioLFQ - computational proteomics</Summary>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageProjectUrl>https://csbiology.github.io/ProteomIQon/</PackageProjectUrl>
     <!--<PackageIconUrl>https://github.com/CSBiology/ProteomIQon</PackageIconUrl>-->
@@ -27,10 +27,7 @@
     <FsDocsReleaseNotesLink>https://github.com/CSBiology/ProteomIQon/blob/master/RELEASE_NOTES.md</FsDocsReleaseNotesLink>
   </PropertyGroup>
   <ItemGroup>
-    <None Include="Test.fsx" />
-    <None Include="TIMsToMzLite.fsx" />
-    <None Include="MzMLToMzLiteIonMobility.fsx" />
-    <Compile Include="MzMLToMzLiteIonMobility.fs" />
+    <Compile Include="RatioLFQ.fs" />
     <Compile Include="CLIArgumentParsing.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
@@ -41,12 +38,6 @@
   <ItemGroup>
     <PackageReference Include="Argu" Version="[6.1.1]" />
     <PackageReference Include="NLog" Version="[4.7.8]" />
-    <PackageReference Include="MzIO" Version="[0.1.7]" />
-    <PackageReference Include="MzIO.Processing" Version="[0.1.7]" />
-    <PackageReference Include="MzIO.SQL" Version="[0.1.9]" />
-    <PackageReference Include="MzIO.MzML" Version="[0.1.10]" />
-    <PackageReference Include="BioFSharp.Mz" Version="[0.1.5-beta]" />
     <PackageReference Include="FSharp.Stats" Version="[0.4.0]" />
-    <PackageReference Include="System.Data.SQLite.Core" Version="[1.0.113.7]" />
   </ItemGroup>
 </Project>
