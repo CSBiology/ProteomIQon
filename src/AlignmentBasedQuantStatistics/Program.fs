@@ -89,12 +89,12 @@ module console1 =
                 else
                     lll
                     |> Array.ofList
-            logger.Trace $"Quant Files: {quantFiles}"
-            logger.Trace $"Alignment Files: {alignFiles}"
-            logger.Trace $"Aligned Quant Files: {alignQuantFiles}"
-            logger.Trace $"Quant Files Learning: {quantFilesLearning}"
-            logger.Trace $"Alignment Files Learning: {alignFilesLearning}"
-            logger.Trace $"Aligned Quant Files Learning: {alignQuantFilesLearning}"
+            logger.Trace (sprintf"Quant Files: %A" quantFiles)
+            logger.Trace (sprintf"Alignment Files: %A" alignFiles)
+            logger.Trace (sprintf"Aligned Quant Files: %A" alignQuantFiles)
+            logger.Trace (sprintf"Quant Files Learning: %A" quantFilesLearning)
+            logger.Trace (sprintf"Alignment Files Learning: %A" alignFilesLearning)
+            logger.Trace (sprintf"Aligned Quant Files Learning: %A" alignQuantFilesLearning)
             let matchedFiles =
                 if mf then 
                     quantFiles
