@@ -1,293 +1,161 @@
 namespace ProteomIQon
 
-open ProteomIQon.Domain
-open ProteomIQon.Core
-open System.IO
-open System.Collections.Generic
-open BioFSharp.Mz
-open MzIO
-open MzIO.Binary
-open MzIO.Model
-open MzIO.Processing
-open MzIO.IO
-open MzIO.MzSQL
-open MzIO.IO.MzML
-open ProteomIQon.Core.MzIO.Processing
-open ProteomIQon.Dto
-open ProteomIQon.Domain
+open ProteomIQon
+open FSharp.Stats
+open Deedle
+open FSharpAux
 
+module RatioLFQ =
 
-module MzMLIonMobilityToMzLite =
-    ///
-    let private initPeakPicking (logger: NLog.Logger) (peakPickingParams:PeakPicking) (peaks: Peak1DArray) =
-
-        match peakPickingParams with
-        | PeakPicking.ProfilePeaks ->
-            peaks.Peaks
-            |> Core.MzIO.Peaks.unzipIMzliteArray
-        | PeakPicking.Centroid (CentroidizationMode.Wavelet waveletParams) ->
-            match waveletParams.PaddingParams with
-            | Some pParams ->
-                let initPaddingParameters yThreshold =
-                    SignalDetection.Padding.createPaddingParameters
-                        yThreshold
-                        pParams.MaximumPaddingPoints
-                        pParams.Padding_MzTolerance
-                        pParams.WindowSize
-                        pParams.SpacingPerc
-
-                let initwaveletParameters yThreshold =
-                    SignalDetection.Wavelet.createWaveletParameters
-                        waveletParams.NumberOfScales
-                        yThreshold
-                        waveletParams.Centroid_MzTolerance
-                        waveletParams.SNRS_Percentile
-                        waveletParams.MinSNR
-                        waveletParams.RefineMZ
-                        waveletParams.SumIntensities
-                match waveletParams.YThreshold with
-                | YThreshold.Fixed yThreshold ->
-                    let paddingParams = initPaddingParameters yThreshold
-                    let waveletParameters = initwaveletParameters yThreshold
-                    let mzData, intensityData =
-                        peaks.Peaks
-                        |> Core.MzIO.Peaks.unzipIMzliteArray
-                    let paddedMz,paddedIntensity =
-                        SignalDetection.Padding.paddDataBy paddingParams mzData intensityData
-                    BioFSharp.Mz.SignalDetection.Wavelet.toCentroidWithRicker2D waveletParameters paddedMz paddedIntensity
-                | YThreshold.MinSpectrumIntensity ->
-                    let mzData, intensityData =
-                        peaks.Peaks
-                        |> Core.MzIO.Peaks.unzipIMzliteArray
-                    let yThreshold = Array.min intensityData
-                    let paddedMz,paddedIntensity =
-                        let paddingParams = initPaddingParameters yThreshold
-                        SignalDetection.Padding.paddDataBy paddingParams mzData intensityData
-                    let waveletParameters = initwaveletParameters yThreshold
-                    BioFSharp.Mz.SignalDetection.Wavelet.toCentroidWithRicker2D waveletParameters paddedMz paddedIntensity
-            | None ->
-                let initwaveletParameters yThreshold =
-                    SignalDetection.Wavelet.createWaveletParameters
-                        waveletParams.NumberOfScales
-                        yThreshold
-                        waveletParams.Centroid_MzTolerance
-                        waveletParams.SNRS_Percentile
-                        waveletParams.MinSNR
-                        waveletParams.RefineMZ
-                        waveletParams.SumIntensities
-                match waveletParams.YThreshold with
-                | YThreshold.Fixed yThreshold ->
-                    let waveletParameters = initwaveletParameters yThreshold
-                    let mzData, intensityData =
-                        peaks.Peaks
-                        |> Core.MzIO.Peaks.unzipIMzliteArray
-                    BioFSharp.Mz.SignalDetection.Wavelet.toCentroidWithRicker2D waveletParameters mzData intensityData
-                | YThreshold.MinSpectrumIntensity ->
-                    let mzData, intensityData =
-                        peaks.Peaks
-                        |> Core.MzIO.Peaks.unzipIMzliteArray
-                    let yThreshold = Array.min intensityData
-                    let waveletParameters = initwaveletParameters yThreshold
-                    BioFSharp.Mz.SignalDetection.Wavelet.toCentroidWithRicker2D waveletParameters mzData intensityData
-        | PeakPicking.Centroid CentroidizationMode.Manufacturer ->
-            failwith "Manufacturer peak picking is only supported for .baf (Bruker) files."
-    
-    let binBy (projection: 'a -> float) bandwidth (data: seq<'a>) =
-        if bandwidth = 0. then raise (System.DivideByZeroException("Bandwidth cannot be 0."))
-        let halfBw = bandwidth / 2.0
-        let decBandwidth = decimal bandwidth
-        let tmp = 
-            data
-            |> Seq.groupBy (fun x -> (decimal (projection x) / decBandwidth) |> float |> floor) 
-            |> Seq.map (fun (k,values) -> 
-                let count = (Seq.length(values)) |> float
-                if k < 0. then
-                    ((k  * bandwidth) + halfBw, values)   
-                else
-                    ((k + 1.) * bandwidth) - halfBw, values)
-            |> Seq.sortBy fst
-        tmp
-
-    let fixSpectrum (m:MzIO.Model.MassSpectrum) =
-        if isNull(m.Precursors) then
-            m.Precursors <- new MzIO.Model.PrecursorList()
-        if isNull(m.Scans) then
-            m.Scans <- new MzIO.Model.ScanList()
-        if isNull(m.Products) then
-            m.Products <- new MzIO.Model.ProductList()
-        m
-
-    let createPeak1DArrayCopy (source: MzIO.Binary.Peak1DArray) =
-        let pa = MzIO.Binary.Peak1DArray()
-        pa.CompressionType <- source.CompressionType
-        pa.IntensityDataType <- source.IntensityDataType
-        pa.MzDataType <- source.MzDataType
-        pa
-
-    let createBinnedPeaks (copyMirim: bool) (binSize: float) (peakArray: MzIO.Binary.Peak1DArray) = 
-
-        let zippedPeaks = peakArray.Peaks |> Seq.zip (peakArray?Mirim |> unbox<float array>)
-
-        let binnedPeakData =
-            zippedPeaks
-            |> binBy (fun (mirim, peak) -> mirim) binSize
-
-        binnedPeakData
-        |> Seq.map(fun (bin, binnedData) ->
-            let pa = createPeak1DArrayCopy peakArray
-            pa.Peaks <-
-                MzIO.Commons.Arrays.ArrayWrapper(
-                    binnedData
-                    |> Seq.map (fun (ionMobility,peak) -> Peak1D(peak.Intensity,peak.Mz,ionMobility))
-                    |> Seq.toArray
+    let equalityConstrainedLS sumOfB (m:matrix) (b:vector) = 
+        let mTm = (Matrix.scale 2. m.Transpose) * m  
+        let leftM = 
+            let tmp = Matrix.init (mTm.NumRows+1) (mTm.NumCols+1) (fun m n  -> 1.)
+            tmp
+            |> Matrix.mapi (fun m n v -> 
+                if m < mTm.NumRows && n < mTm.NumCols then
+                    mTm.[m,n]
+                elif m = tmp.NumRows-1 && n = tmp.NumCols-1 then 
+                    0.
+                else 
+                    v
                 )
-            if copyMirim then
-                pa?Mirim <-
-                    binnedData
-                    |> Seq.map fst
-                    |> Array.ofSeq
-            bin,pa
-        )
+        let rightM = 
+            let tmp = (m.Transpose |> Matrix.scale 2.) * b
+            Vector.init (tmp.Length+1) (fun i -> if i < tmp.Length then tmp.[i] else sumOfB)
+        FSharp.Stats.Algebra.LinearAlgebra.LeastSquares leftM rightM     
 
-    let unzipIonMobilityMzliteArray (a:Commons.Arrays.IMzIOArray<Peak1D>) = 
-        let mzData = Array.zeroCreate a.Length
-        let intensityData = Array.zeroCreate a.Length
-        let ionMobilityData = Array.zeroCreate a.Length
-        for i = 0 to a.Length-1 do 
-            let peak = a.[i]
-            mzData.[i] <- peak.Mz
-            intensityData.[i] <- peak.Intensity
-            ionMobilityData.[i] <- peak.IonMobility.Value
-        mzData,intensityData,ionMobilityData
 
-    /// Creates Peak1DArray of mzData array and intensityData Array
-    let createPeak1DArray compression mzBinaryDataType intensityBinaryDataType ionMobilityDataType (mzData:float []) (intensityData:float []) (ionMobilityData:float []) =
-        let zipedData = Array.map3 (fun mz intz im -> Peak1D(intz,mz,im)) mzData intensityData ionMobilityData
-        let newPeakA = Commons.Arrays.MzIOArray.ToMzIOArray zipedData
-        let peak1DArray = new Peak1DArray(compression,intensityBinaryDataType, mzBinaryDataType,newPeakA, ionMobilityDataType)
-        peak1DArray
-
-    let insertSpectrum (compress:BinaryDataCompressionType) (outReader: MzSQL.MzSQL) (runID:string)
-        (ms1PeakPicking: Peak1DArray -> float [] * float []) (ms2PeakPicking: Peak1DArray -> float [] * float [])
-            (spectrum: MassSpectrum) (peaks: Peak1DArray) =
-        match MassSpectrum.getMsLevel spectrum with
-        | 1 ->
-            //let mzData,intensityData =
-            //    try
-            //    ms1PeakPicking peaks
-            //    with
-            //    | _ -> [||],[||]
-            //if Array.isEmpty mzData || Array.isEmpty intensityData then ()
-
-            let mzData, intensityData, ionMobilityData =
-                unzipIonMobilityMzliteArray peaks.Peaks
-
-            //else
-            let peaks' = createPeak1DArray compress BinaryDataType.Float64 BinaryDataType.Float64 BinaryDataType.Float64 mzData intensityData ionMobilityData
-            outReader.Insert (runID, spectrum, peaks')
-        | 2 ->
-            //let mzData,intensityData =
-            //    try
-            //    ms2PeakPicking peaks
-            //    with
-            //    | _ -> [||],[||]
-            //if Array.isEmpty mzData || Array.isEmpty intensityData then ()
-            //else
-            let mzData, intensityData, ionMobilityData =
-                unzipIonMobilityMzliteArray peaks.Peaks
-
-            let peaks' = createPeak1DArray compress BinaryDataType.Float64 BinaryDataType.Float64 BinaryDataType.Float64 mzData intensityData ionMobilityData
-            outReader.Insert (runID, spectrum, peaks')
-        | _ ->
-            failwith "Only mass spectra of level 1 and 2 are supported."
-
-    /// Returns the default runID used by manufacturers
-    let getDefaultRunID (mzReader:IMzIODataReader) = 
-        match mzReader with
-        | :? MzSQL as r                 -> "sample=0"
-        | :? MzML.MzMLReader as r       -> "sample=0"
-        | :? MzMLReaderMIRIM as r       -> "sample=0"
-
-    let processFile (processParams:MzMLtoMzLiteParams) (outputDir:string) (instrumentOutput:string) =
-
-        let logger = Logging.createLogger (Path.GetFileNameWithoutExtension instrumentOutput)
-
-        logger.Trace (sprintf "Input file: %s" instrumentOutput)
-        logger.Trace (sprintf "Output directory: %s" outputDir)
-        logger.Trace (sprintf "Parameters: %A" processParams)
-
-    
-        //let tmp = File.ReadAllText instrumentOutput
-        //File.WriteAllText(instrumentOutput, tmp.Replace("&quot;", ""))
-
-        let inReaderMS = new MzMLReaderMIRIM(instrumentOutput)
-        let inReaderPeaks = new MzMLReaderMIRIM(instrumentOutput)
-        let inRunID  = getDefaultRunID inReaderMS
-        let inTrMS = inReaderMS.BeginTransaction()
-        let inTrPeaks = inReaderPeaks.BeginTransaction()
-
-        let ms1PeakPicking = initPeakPicking logger processParams.MS1PeakPicking
-        let ms2PeakPicking = initPeakPicking logger processParams.MS2PeakPicking
-
-        let outDirPath =
-            let fileName = Path.GetFileNameWithoutExtension instrumentOutput
-            Path.Combine(outputDir, fileName)
-            
-        logger.Trace $"Creating directory {outDirPath} for binned results of {instrumentOutput}"
+    let computeLFQProt (proteinName: string) (protMedianMap: Map<string,float>) allPepsOfProtein = 
+        let loggedA = 
+            allPepsOfProtein
         
-        Directory.CreateDirectory outDirPath |> ignore
+        let loggedAFiltered =
+            loggedA
+            |> Array.choose id
+        if loggedAFiltered.Length = 1 then None
+        else
+            let indexArray =
+                loggedA
+                |> Array.foldi (fun i acc x -> 
+                    match x with
+                    | Some _ -> i::acc
+                    | None -> acc
+                ) []
+                |> List.rev
+                |> Array.ofList
+            // Matrix for peptides. Since proteins are only one row in matrix, can be reworked for lists. Should work either way.
+            let ratioMatrix: Matrix<float> = 
+                [|loggedAFiltered|]
+                |> Matrix.ofJaggedArray
+                |> FSharp.Stats.Correlation.Matrix.columnWiseCorrelationMatrix 
+                    (fun peps1 peps2 -> 
+                        Seq.zip peps1 peps2
+                        |> Seq.map (fun (pep1,pep2) -> 
+                            pep2 - pep1
+                        )
+                        |> Seq.median
+                    )
 
-        logger.Trace $"Reading model from {instrumentOutput}"
+            // let A,b :matrix*vector= 
+            let numberOfComparisons = (FSharp.Stats.SpecialFunctions.Binomial.coeffcient (ratioMatrix.NumCols) 2) |> round 0 |> int
+            let A = Matrix.create numberOfComparisons ratioMatrix.NumCols 0.
+            let b = Vector.create numberOfComparisons 0.
+            let mutable nB = 0
+            for i = 1 to ratioMatrix.NumRows-1 do
+                for j = 0 to i-1 do 
+                    let rIJ = ratioMatrix.[i,j]
+                    // hier
+                    b.[nB] <- rIJ
+                    A.[nB,j] <- -1.
+                    A.[nB,i] <- 1.
+                    nB <- nB + 1
+            // don't take avg of ratios. Take median of medianOfRatios normalized N15 quants and median norm N15 quants.
+            // Compare output matrix with input matrix. Should only deviate slightly.
+            // average of runs where the protein was quantified multiplied by the number of runs
+            let avgSumI =  
+                match protMedianMap.TryFind proteinName with
+                | Some name -> protMedianMap.[proteinName] * (float loggedAFiltered.Length)
+                | None -> failwith proteinName
 
-        let model = inReaderMS.Model
-        inReaderMS.ResetReader()
+            let myLFQsRel = equalityConstrainedLS avgSumI A b
+    
+            let myLFQsRelExp = 
+                myLFQsRel
+                |> Vector.map (fun x -> 2.**x)
+                |> Vector.toArray
+                |> Array.take (ratioMatrix.NumCols)
 
-        logger.Trace "Done reading model"
+            let finalRatioMatrix = 
+                myLFQsRelExp
+                |> Array.map (fun i ->  
+                    myLFQsRelExp
+                    |> Array.map (fun j -> i / j)
+                    )
+                |> Matrix.ofJaggedArray
+        
+            let myLFQsRelExpFilled =
+                let arr = Array.zeroCreate loggedA.Length
+                Array.map2 (fun i value ->
+                    arr.[i] <- value
+                ) indexArray myLFQsRelExp
+                |> ignore
+                arr
+    
+            (myLFQsRelExpFilled,finalRatioMatrix,avgSumI)
+            |> Some
 
-        logger.Trace $"Reading spectra from {instrumentOutput}"
-
-        let spectra = inReaderMS.ReadMassSpectra(inRunID)
-
-        logger.Trace "Done reading spectra"
-
-        logger.Trace $"Start writing binned mzlite files"
-        let connectionMap = new Dictionary<string, MzSQL.MzSQL*System.Data.SQLite.SQLiteTransaction>()
-        spectra
-        |> Seq.iteri (fun i spectrum ->
-            if i % 1000 = 0 then logger.Trace $"{i}"
-            let data = inReaderPeaks.getSpecificPeak1DArraySequentialWithMIRIM(spectrum.ID)
-            let binResult = createBinnedPeaks false 2. data
-            binResult
-            |> Seq.iter(fun (bin, peaks) ->
-                let outFile = Path.Combine(outDirPath, $"binned_spectra_%.3f{bin}.mzlite")
-                let outReader,outTr =
-                    if connectionMap.ContainsKey(outFile) then
-                        connectionMap.[outFile]
-                    else
-                        let outReader = new MzSQL(outFile)
-                        let _ = outReader.Open()
-                        let outTr = outReader.BeginTransaction()
-                        connectionMap.Add(outFile, (outReader, outTr))
-                        outReader, outTr
-                let outRunID  = getDefaultRunID outReader
-                insertSpectrum processParams.Compress outReader outRunID ms1PeakPicking ms2PeakPicking (changeScanTimeToMinutes (fixSpectrum spectrum)) peaks
+    let readQuantResult (path: string) (proteinColumn: string) = 
+        let data: Frame<_,string> =
+            Frame.ReadCsv(path, separators="\t")
+            |> Frame.indexRowsUsing (fun s ->
+                s.GetAs<string>(proteinColumn)
             )
+        data
+
+    let combinedRatio (path: string) (proteinColumn: string) (ratioColumnEnding: string) =
+        readQuantResult path proteinColumn
+        |> Frame.filterCols (fun ck os -> ck.EndsWith(ratioColumnEnding))
+        |> Frame.fillMissingWith nan
+        |> Frame.mapValues log2
+        |> Frame.filterRows (fun rk s -> isNan (Stats.mean s) |> not)
+
+    let combinedOriginal (path: string) (proteinColumn: string) (referenceColumnEnding: string) =
+        readQuantResult path proteinColumn
+        |> Frame.filterCols (fun ck os -> ck.EndsWith(referenceColumnEnding))
+        |> Frame.fillMissingWith nan
+        |> Frame.mapValues log2
+        |> Frame.mapRows (fun rk s -> Stats.mean s)
+        |> Series.observations
+        |> Map.ofSeq
+
+    let lfq (inputPath: string) (outputPath: string) (proteinColumn: string) (ratioColumnEnding: string) (referenceColumnEnding: string) =
+        let combinedRatioRead = combinedRatio inputPath proteinColumn ratioColumnEnding
+        let combinedOriginalRead = combinedOriginal inputPath proteinColumn referenceColumnEnding
+        let ck = 
+            combinedRatioRead.ColumnKeys
+            |> Array.ofSeq
+            |> Array.map (fun ck -> ck + "_LFQ")
+        combinedRatioRead
+        |> Frame.mapRows(fun k f -> 
+            k,
+            f 
+            |> Series.valuesAll
+            |> Array.ofSeq
+            |> Array.map (fun x -> 
+                match x with
+                | Some value -> Some (value :?> float)
+                | None -> None
+            )
+            |> computeLFQProt k combinedOriginalRead
         )
-        for x in connectionMap do
-            let outReader = fst x.Value
-            let outTr = snd x.Value
-            try
-                outReader.InsertModel model
-                logger.Trace $"Model inserted for {x.Key}."
-            with
-                | ex -> failwith $"Inserting model failed: {ex}"
-            outTr.Commit()
-            outTr.Dispose()
-            outReader.Dispose()
-        inTrPeaks.Commit()
-        inTrPeaks.Dispose()
-        inTrMS.Commit()
-        inTrMS.Dispose()
-        inReaderMS.Dispose()
-        inReaderPeaks.Dispose()
-        logger.Trace "Done."
+        |> Series.values
+        |> Array.ofSeq
+        |> Array.map (fun (prot,result) ->
+            match result with
+            | Some (lfq,ratioMatrix,scalingFactor) -> Some (prot,Array.zip ck lfq |> Series.ofObservations)
+            | None -> None
+        )
+        |> Array.choose id
+        |> Frame.ofRows
+        |> fun f -> f.SaveCsv(outputPath, true, separator = '\t')

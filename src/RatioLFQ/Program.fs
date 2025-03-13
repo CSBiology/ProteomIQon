@@ -18,45 +18,20 @@ module console1 =
         let directory = Environment.CurrentDirectory
         let getPathRelativeToDir = getRelativePath directory
         let results = parser.Parse argv
-        let i = results.GetResult InstrumentOutput |> List.map getPathRelativeToDir
-        let o = results.GetResult OutputDirectory  |> getPathRelativeToDir
-        let p = results.GetResult ParamFile        |> getPathRelativeToDir
-        Directory.CreateDirectory(o) |> ignore
+        let i = results.GetResult InputFile   |> getPathRelativeToDir
+        let o = results.GetResult OutputFile  |> getPathRelativeToDir
+        let pc = results.GetResult ProteinColumn
+        let rac = results.GetResult RatioColumnEnding
+        let rfc = results.GetResult ReferenceColumnEnding
+        let resultDirectory = 
+            (Directory.GetParent o).FullName
+            |> getPathRelativeToDir
+        Directory.CreateDirectory(resultDirectory) |> ignore
         Logging.generateConfig o
         let logger = Logging.createLogger "MzMLToMzLite"
         logger.Info (sprintf "InputFilePath -i = %A" i)
         logger.Info (sprintf "OutputFilePath -o = %s" o)
-        logger.Info (sprintf "ParamFilePath -p = %s" p)
         logger.Trace (sprintf "CLIArguments: %A" results)
-        let processParams =
-            Json.ReadAndDeserialize<Dto.PreprocessingParams> p
-            |> Dto.PreprocessingParams.toDomain
-
-        let files = 
-            parsePaths (fun path -> MzIO.Reader.getMzMLFiles path) i
-            |> Array.ofSeq
-
-        if files.Length = 1  then
-            logger.Info "single file"
-            logger.Trace (sprintf "Preprocessing %s" files.[0])
-            MzMLIonMobilityToMzLite.processFile processParams o files.[0]
-        else
-            logger.Info "multiple files"
-            logger.Trace (sprintf "Preprocessing multiple files: %A" files)
-            let c =
-                match results.TryGetResult Parallelism_Level with
-                | Some c    -> c
-                | None      -> 1
-            logger.Trace (sprintf "Program is running on %i cores" c)
-            try
-            let partitionedFiles =
-                files
-                |> Array.splitInto c
-            [for i in partitionedFiles do yield async { return i |> Array.map (MzMLIonMobilityToMzLite.processFile processParams o)}]
-            |> Async.Parallel
-            |> Async.RunSynchronously
-            |> ignore
-            with
-            | ex -> printfn "%A" ex
+        RatioLFQ.lfq i o pc rac rfc
         logger.Info "Done"
         0
