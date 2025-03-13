@@ -158,4 +158,4 @@ module RatioLFQ =
         )
         |> Array.choose id
         |> Frame.ofRows
-        |> fun f -> f.SaveCsv(outputPath, true, separator = '\t')
+        |> fun f -> f.SaveCsv(outputPath, true, ["ProteinGroup"], separator = '\t')

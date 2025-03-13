@@ -23,15 +23,5 @@ module console1 =
         let pc = results.GetResult ProteinColumn
         let rac = results.GetResult RatioColumnEnding
         let rfc = results.GetResult ReferenceColumnEnding
-        let resultDirectory = 
-            (Directory.GetParent o).FullName
-            |> getPathRelativeToDir
-        Directory.CreateDirectory(resultDirectory) |> ignore
-        Logging.generateConfig o
-        let logger = Logging.createLogger "MzMLToMzLite"
-        logger.Info (sprintf "InputFilePath -i = %A" i)
-        logger.Info (sprintf "OutputFilePath -o = %s" o)
-        logger.Trace (sprintf "CLIArguments: %A" results)
         RatioLFQ.lfq i o pc rac rfc
-        logger.Info "Done"
         0
