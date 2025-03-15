@@ -159,7 +159,7 @@ module AlignmentBasedQuantStatistics =
     
         alignedQuant, quant |> Frame.mapColKeys (fun ck -> ck |> String.replace"quant_" ""), pepForLearningToTakeMap
 
-    let createTrainingsData fullQuant align alignQuant (alignScoreParams: Domain.AlignmentBasedQuantStatisticsParams) =
+    let createTrainingsData fullQuant align alignQuant (returnTestSet: bool) (alignScoreParams: Domain.AlignmentBasedQuantStatisticsParams) =
         let quant =
             Csv.CsvReader<Dto.QuantificationResult>(SchemaMode=Csv.Fill).ReadFile(fullQuant,'\t',false,1)
             |> Array.ofSeq
@@ -234,6 +234,8 @@ module AlignmentBasedQuantStatistics =
         let overlapSet =
             Frame.join JoinKind.Inner overlap alignedQuant
 
+        let traininSetDict = new System.Collections.Generic.Dictionary<string*bool*int*int*int,PeptideForLearning>()
+
         let trainingSet = 
             overlapSet
             |> Frame.mapRows (fun rk s ->
@@ -249,13 +251,19 @@ module AlignmentBasedQuantStatistics =
                         if 
                             abs (oMZ - s.GetAs<float>("QuantMz_Heavy")) < (oMZ * (alignScoreParams.PositiveQuantMzCutoff)) &&
                             abs (oQ - s.GetAs<float>("Quant_Heavy")) < (oQ * (alignScoreParams.PositiveQuantCutoff)) then
-                            Some (toPeptideForLearning true s)
+                            let peptideForLearning = toPeptideForLearning true s
+                            if returnTestSet then traininSetDict.Add(rk,peptideForLearning)
+                            Some peptideForLearning
                         elif
                             abs (oMZ - s.GetAs<float>("QuantMz_Heavy")) > (oMZ * (1. - alignScoreParams.NegativeQuantMzCutoff)) ||
                             abs (oQ - s.GetAs<float>("Quant_Heavy")) > (oQ * (1. - alignScoreParams.NegativeQuantCutoff)) then
-                            Some (toPeptideForLearning false s)
+                            let peptideForLearning = toPeptideForLearning false s
+                            if returnTestSet then traininSetDict.Add(rk,peptideForLearning)
+                            Some peptideForLearning
                         else
-                            Some (toPeptideForLearning false s)
+                            let peptideForLearning = toPeptideForLearning false s
+                            if returnTestSet then traininSetDict.Add(rk,peptideForLearning)
+                            Some peptideForLearning
                     | _,None -> None
                     | None,_ -> None
                 else
@@ -270,31 +278,38 @@ module AlignmentBasedQuantStatistics =
                         if
                             abs (oMZ - s.GetAs<float>("QuantMz_Light")) < (oMZ * (alignScoreParams.PositiveQuantMzCutoff)) &&
                             abs (oQ - s.GetAs<float>("Quant_Light")) < (oQ * (alignScoreParams.PositiveQuantCutoff)) then
-                            Some (toPeptideForLearning true s)
+                            let peptideForLearning = toPeptideForLearning true s
+                            if returnTestSet then traininSetDict.Add(rk,peptideForLearning)
+                            Some peptideForLearning
                         elif
                             abs (oMZ - s.GetAs<float>("QuantMz_Light")) > (oMZ * (1. - alignScoreParams.NegativeQuantMzCutoff)) ||
                             abs (oQ - s.GetAs<float>("Quant_Light")) > (oQ * (1. - alignScoreParams.NegativeQuantCutoff)) then
-                            Some (toPeptideForLearning false s)
+                            let peptideForLearning = toPeptideForLearning false s
+                            if returnTestSet then traininSetDict.Add(rk,peptideForLearning)
+                            Some peptideForLearning
                         else
-                            Some (toPeptideForLearning false s)
+                            let peptideForLearning = toPeptideForLearning false s
+                            if returnTestSet then traininSetDict.Add(rk,peptideForLearning)
+                            Some peptideForLearning
                     | _,None -> None
                     | None,_ -> None
             )
             |> Series.values
             |> Seq.choose id
     
-        trainingSet
+        trainingSet,traininSetDict
         
-    let assignScoreAndQValue ((quantFile,alignFile,alignQuantFile): (string*string*string)) (matchedFilesLearning: (string*string*string)[]) diagnosticCharts (alignScoreParams: Domain.AlignmentBasedQuantStatisticsParams) outputDirectory =
+    let assignScoreAndQValue ((quantFile,alignFile,alignQuantFile): (string*string*string)) (matchedFilesLearning: (string*string*string)[]) diagnosticCharts (returnTestSet: bool) (alignScoreParams: Domain.AlignmentBasedQuantStatisticsParams) outputDirectory =
 
         let logger = Logging.createLogger (System.IO.Path.GetFileNameWithoutExtension quantFile)
 
         let chartDirectory = System.IO.Path.Combine(outputDirectory, System.IO.Path.GetFileNameWithoutExtension quantFile)
         System.IO.Directory.CreateDirectory(chartDirectory) |> ignore
 
-        let trainingsData =
+        let trainingsData, trainingPepInfo =
             matchedFilesLearning
-            |> Array.map (fun (quantFilePath,alignfilePath,alignQuantFilePath) -> createTrainingsData quantFilePath alignfilePath alignQuantFilePath alignScoreParams)
+            |> Array.map (fun (quantFilePath,alignfilePath,alignQuantFilePath) -> createTrainingsData quantFilePath alignfilePath alignQuantFilePath returnTestSet alignScoreParams)
+            |> Array.unzip
 
         let alignedQuants, quants, pepForLearningToTakeMap =
             createDataToScore quantFile alignFile alignQuantFile
@@ -399,6 +414,59 @@ module AlignmentBasedQuantStatistics =
             |> Chart.withX_AxisStyle("Q-Value")
             |> Chart.withY_AxisStyle("Count")
             |> Chart.SaveHtmlAs (System.IO.Path.Combine(chartDirectory,"QValueDistribution"))
+
+        if returnTestSet then
+            let index =
+                let originalFileName = quantFile |> System.IO.Path.GetFileNameWithoutExtension
+                matchedFilesLearning
+                |> Array.tryFindIndex (fun (q,_,_) -> (System.IO.Path.GetFileNameWithoutExtension q) = originalFileName)
+            match index with
+            | Some i -> 
+                alignedQuants
+                |> Frame.filterRows (fun rk s ->
+                    trainingPepInfo.[i].ContainsKey rk
+                )
+                |> fun frame ->
+                    let scoreSeries =
+                        frame
+                        |> Frame.mapRows (fun rk s ->
+                            let prediction =
+                                (trainingPepInfo.[i].[rk])
+                                |> predict
+                            float prediction.Score
+                        )
+                    let qValSeries =
+                        scoreSeries
+                        |> Series.map (fun rk v ->
+                            let qValue =
+                                v
+                                |> float
+                                |> qValueStorey
+                            qValue
+                        )
+                    let isPositiveSeries =
+                        scoreSeries
+                        |> Series.map (fun rk v ->
+                            trainingPepInfo.[i].[rk].Label
+                        )
+                    frame
+                    |> Frame.dropCol "AlignmentScore"
+                    |> Frame.dropCol "AlignmentQValue"
+                    |> Frame.addCol "AlignmentScore" scoreSeries
+                    |> Frame.addCol "AlignmentQValue" qValSeries
+                    |> Frame.addCol "WasPositiveSet" isPositiveSeries
+                |> Frame.mapValues (fun (v: obj) -> 
+                    if v :? System.Double [] then
+                        v :?> System.Double []
+                        |> Array.map string
+                        |> String.concat ";"
+                    else
+                        string v
+                )
+                |> fun frame ->
+                    frame.SaveCsv(System.IO.Path.Combine(outputDirectory, (quantFile |> System.IO.Path.GetFileName) + "testset"), includeRowKeys = false, separator = '\t')
+            | None -> ()
+            
 
         alignedQuants
         |> Frame.filterRows (fun rk s ->
