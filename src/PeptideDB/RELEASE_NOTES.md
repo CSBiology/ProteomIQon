@@ -1,3 +1,6 @@
+#### 0.0.9 - Tuesday, March 18, 2025
+* Add additional modification options
+
 #### 0.0.8 - Monday, March 10, 2025
 * Update to .NET 8
 
