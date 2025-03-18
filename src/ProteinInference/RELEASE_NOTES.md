@@ -1,3 +1,6 @@
+#### 0.0.9 - Monday, March 10, 2025
+* Don't bin with no qvalue alculation
+
 #### 0.0.8 - Monday, March 10, 2025
 * Update to .NET 8
 

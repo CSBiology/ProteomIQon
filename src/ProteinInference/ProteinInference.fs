@@ -332,15 +332,18 @@ module ProteinInference =
             let combWithReverse = Array.append combinedScoredClasses reverseNoMatch
 
             let bandwidth =
-                let data = 
-                    combWithReverse
-                    |> Array.map (fun x ->
-                        if x.DecoyBigger then
-                            x.DecoyScore
-                        else
-                            x.TargetScore
-                    )
-                FSharp.Stats.Distributions.Bandwidth.nrd0 data
+                match qValMethod with
+                | NoQValue -> 0.
+                | _ ->
+                    let data = 
+                        combWithReverse
+                        |> Array.map (fun x ->
+                            if x.DecoyBigger then
+                                x.DecoyScore
+                            else
+                                x.TargetScore
+                        )
+                    FSharp.Stats.Distributions.Bandwidth.nrd0 data
 
             // Assign q values to each protein
             let combinedScoredClassesQVal =
@@ -449,15 +452,18 @@ module ProteinInference =
                 let combWithReverse = Array.append inferenceResultScored reverseNoMatch
 
                 let bandwidth =
-                    let data = 
-                        combWithReverse
-                        |> Array.map (fun x ->
-                            if x.DecoyBigger then
-                                x.DecoyScore
-                            else
-                                x.TargetScore
-                        )
-                    FSharp.Stats.Distributions.Bandwidth.nrd0 data
+                    match qValMethod with
+                    | NoQValue -> 0.
+                    | _ ->
+                        let data = 
+                            combWithReverse
+                            |> Array.map (fun x ->
+                                if x.DecoyBigger then
+                                    x.DecoyScore
+                                else
+                                    x.TargetScore
+                            )
+                        FSharp.Stats.Distributions.Bandwidth.nrd0 data
 
                 // Assign q values to each protein
                 let inferenceResultScoredQVal =
