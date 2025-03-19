@@ -112,6 +112,8 @@ Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "build", "build\build.fsproj
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "RatioLFQ", "src\RatioLFQ\RatioLFQ.fsproj", "{4BA17C15-13F6-E331-B983-CC838BA81687}"
 EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "MsFraggerToPSM", "src\MsFraggerToPSM\MsFraggerToPSM.fsproj", "{45CB73EE-C1E0-E628-802E-B72FC85DE670}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -230,6 +232,10 @@ Global
 		{4BA17C15-13F6-E331-B983-CC838BA81687}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4BA17C15-13F6-E331-B983-CC838BA81687}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{4BA17C15-13F6-E331-B983-CC838BA81687}.Release|Any CPU.Build.0 = Release|Any CPU
+		{45CB73EE-C1E0-E628-802E-B72FC85DE670}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{45CB73EE-C1E0-E628-802E-B72FC85DE670}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{45CB73EE-C1E0-E628-802E-B72FC85DE670}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{45CB73EE-C1E0-E628-802E-B72FC85DE670}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
