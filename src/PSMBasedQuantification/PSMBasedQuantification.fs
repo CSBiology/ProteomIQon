@@ -809,6 +809,7 @@ module PSMBasedQuantification =
                     IntensityTrace_Corrected_Heavy              = successfulQuant.Y_Xic
                     AlignmentScore                              = nan
                     AlignmentQValue                             = nan
+                    IonMobility                                 = nan
                     }
                     |> Option.Some
                 | None -> 
@@ -861,6 +862,7 @@ module PSMBasedQuantification =
                     IntensityTrace_Corrected_Heavy              = [||]
                     AlignmentScore                              = nan
                     AlignmentQValue                             = nan
+                    IonMobility                                 = nan
                     }
                     |> Option.Some
             else
@@ -954,6 +956,7 @@ module PSMBasedQuantification =
                     IntensityTrace_Corrected_Heavy              = averagePSM.Y_Xic
                     AlignmentScore                              = nan
                     AlignmentQValue                             = nan
+                    IonMobility                                 = nan
                     }
                     |> Option.Some
                 | None ->
@@ -1006,6 +1009,7 @@ module PSMBasedQuantification =
                     IntensityTrace_Corrected_Heavy              = averagePSM.Y_Xic
                     AlignmentScore                              = nan
                     AlignmentQValue                             = nan
+                    IonMobility                                 = nan
                     }
                     |> Option.Some
             with
@@ -1088,6 +1092,7 @@ module PSMBasedQuantification =
             IntensityTrace_Corrected_Heavy              = [||]
             AlignmentScore                              = nan
             AlignmentQValue                             = nan
+            IonMobility                                 = nan
             }
             |> Option.Some
             with

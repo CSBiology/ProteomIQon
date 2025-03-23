@@ -830,6 +830,7 @@ module PSMBasedQuantificationTIMs =
                     IntensityTrace_Corrected_Heavy              = successfulQuant.Y_Xic
                     AlignmentScore                              = nan
                     AlignmentQValue                             = nan
+                    IonMobility                                 = averagePSM.WeightedAvgIM
                     }
                     |> Option.Some
                 | None -> 
@@ -882,6 +883,7 @@ module PSMBasedQuantificationTIMs =
                     IntensityTrace_Corrected_Heavy              = [||]
                     AlignmentScore                              = nan
                     AlignmentQValue                             = nan
+                    IonMobility                                 = averagePSM.WeightedAvgIM
                     }
                     |> Option.Some
             else
@@ -975,6 +977,7 @@ module PSMBasedQuantificationTIMs =
                     IntensityTrace_Corrected_Heavy              = averagePSM.Y_Xic
                     AlignmentScore                              = nan
                     AlignmentQValue                             = nan
+                    IonMobility                                 = averagePSM.WeightedAvgIM
                     }
                     |> Option.Some
                 | None ->
@@ -1027,6 +1030,7 @@ module PSMBasedQuantificationTIMs =
                     IntensityTrace_Corrected_Heavy              = averagePSM.Y_Xic
                     AlignmentScore                              = nan
                     AlignmentQValue                             = nan
+                    IonMobility                                 = averagePSM.WeightedAvgIM
                     }
                     |> Option.Some
             with
@@ -1109,6 +1113,7 @@ module PSMBasedQuantificationTIMs =
             IntensityTrace_Corrected_Heavy              = [||]
             AlignmentScore                              = nan
             AlignmentQValue                             = nan
+            IonMobility                                 = averagePSM.WeightedAvgIM
             }
             |> Option.Some
             with

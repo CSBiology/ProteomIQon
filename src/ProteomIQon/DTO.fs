@@ -895,6 +895,8 @@ module Dto =
         AlignmentScore                              : float
         [<FieldAttribute(44)>]
         AlignmentQValue                             : float
+        [<FieldAttribute(45)>]
+        IonMobility                                 : float
         }
 
     module QuantificationResult = 
@@ -1078,9 +1080,11 @@ module Dto =
             [<FieldAttribute(12)>][<TraceConverter>]
             IntensityTrace_SourceFile    : float []
             [<FieldAttribute(13)>][<TraceConverter>]
-            IsotopicPatternMz_SourceFile                    : float []            
+            IsotopicPatternMz_SourceFile                    : float []
             [<FieldAttribute(14)>][<TraceConverter>]
-            IsotopicPatternIntensity_Observed_SourceFile    : float []       
+            IsotopicPatternIntensity_Observed_SourceFile    : float []
+            [<FieldAttribute(15)>]
+            IonMobility                  : float
         } 
 
     /////
@@ -1152,7 +1156,9 @@ module Dto =
            [<FieldAttribute(20)>] [<TraceConverter>]
            Y_IntensityTrace                     : float []
            [<FieldAttribute(21)>]
-           DtwDistanceBefore                    : float 
+           DtwDistanceBefore                    : float
+           [<FieldAttribute(22)>]
+           IonMobility                          : float
        }
 
     type AlignmentBasedQuantificationParams =
@@ -1327,6 +1333,8 @@ module Dto =
         AlignmentScore                              : float
         [<FieldAttribute(47)>]
         AlignmentQValue                             : float
+        [<FieldAttribute(48)>]
+        IonMobility                                 : float
         }
 
     type TableSortParams =

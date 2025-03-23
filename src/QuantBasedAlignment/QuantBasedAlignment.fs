@@ -449,6 +449,7 @@ module QuantBasedAlignment =
             IsotopicPatternMz_TargetFile                    : float []         
             // [<ColumnName("IsotopicPatternIntensity_Observed_TargetFile")>]
             IsotopicPatternIntensity_Observed_TargetFile    : float []
+            IonMobility                  : float32
         }
 
     /////
@@ -487,6 +488,7 @@ module QuantBasedAlignment =
                 IsotopicPatternIntensity_Observed_SourceFile    = getIsotopicPatternIntensity_Observed sourcePep
                 IsotopicPatternMz_TargetFile                    = getIsotopicPatternMz tP  
                 IsotopicPatternIntensity_Observed_TargetFile    = getIsotopicPatternIntensity_Observed tP
+                IonMobility                                     = sourcePep.IonMobility |> float32
             }
         | None -> 
             {
@@ -518,6 +520,7 @@ module QuantBasedAlignment =
                 IsotopicPatternIntensity_Observed_SourceFile    = getIsotopicPatternIntensity_Observed sourcePep
                 IsotopicPatternMz_TargetFile                    = [||]
                 IsotopicPatternIntensity_Observed_TargetFile    = [||]
+                IonMobility                                     = sourcePep.IonMobility |> float32
             }
 
     ///
@@ -608,6 +611,7 @@ module QuantBasedAlignment =
             IntensityTrace_SourceFile                       = getTargetIntensityTrace quantifiedPeptide
             IsotopicPatternMz_SourceFile                    = getIsotopicPatternMz quantifiedPeptide       
             IsotopicPatternIntensity_Observed_SourceFile    = getIsotopicPatternIntensity_Observed quantifiedPeptide       
+            IonMobility                                     = quantifiedPeptide.IonMobility
         }   
 
 
@@ -636,6 +640,7 @@ module QuantBasedAlignment =
         Y_RtTrace                           : float [][]
         Y_IntensityTrace                    : float [][]
         DtwDistanceBefore                   : float []
+        IonMobility                         : float []
         }
 
 
@@ -753,6 +758,7 @@ module QuantBasedAlignment =
                         Y_RtTrace                            = metrics.Y_RtTrace.[i]
                         Y_IntensityTrace                     = metrics.Y_IntensityTrace.[i]   
                         DtwDistanceBefore                    = metrics.DtwDistanceBefore.[i]
+                        IonMobility                          = metrics.IonMobility.[i]
                     }
             |]
         if System.IO.File.Exists outFilePath then 
@@ -843,6 +849,7 @@ module QuantBasedAlignment =
             let charge        = testComp |> Seq.map (fun x -> x.Charge)         |> Array.ofSeq
             let pepSequenceID = testComp |> Seq.map (fun x -> x.PepSequenceID)  |> Array.ofSeq
             let modSequenceID = testComp |> Seq.map (fun x -> x.ModSequenceID)  |> Array.ofSeq
+            let ionMobility   = testComp |> Seq.map (fun x -> float x.IonMobility) |> Array.ofSeq
             let i             =  testComp |> Seq.map (fun x -> float x.SourceIntensity)  |> Array.ofSeq
             let std           =  testComp |> Seq.map (fun x -> float x.SourceStabw)      |> Array.ofSeq
             let x             =  testComp |> Seq.map (fun x -> float x.SourceScanTime)   |> Array.ofSeq
@@ -898,6 +905,7 @@ module QuantBasedAlignment =
                 Y_RtTrace                           = xTarget
                 Y_IntensityTrace                    = yTarget
                 DtwDistanceBefore                   = dtwDistanceBefore
+                IonMobility                         = ionMobility
             }
 
         // Spline
