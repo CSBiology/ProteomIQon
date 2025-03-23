@@ -111,7 +111,7 @@ module MsFraggerToPSM =
 
         let psms = readFragegrPsms inputFileMsFragger
 
-        let outputPath = Path.Combine(outputDir, Path.GetFileNameWithoutExtension(inputFileMsFragger) + ".qpsm")
+        let outputPath = Path.Combine(outputDir, Path.GetFileNameWithoutExtension(inputFileMzLite) + ".qpsm")
 
         let memoryDB = SearchDB.copyDBIntoMemory cn
         let pepDBTr = memoryDB.BeginTransaction()

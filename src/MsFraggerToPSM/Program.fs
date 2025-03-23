@@ -45,7 +45,7 @@ module console1 =
             |> Array.ofSeq
 
         let mzLiteFiles = 
-            parsePaths (fun path -> MzIO.Reader.getMzMLFiles path) i
+            parsePaths (fun path -> Directory.GetFiles(path,("*.mzlite"))) ii
             |> Array.ofSeq
 
         if mzLiteFiles.Length = 1  then
