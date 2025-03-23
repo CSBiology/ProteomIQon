@@ -4,6 +4,7 @@ open System.IO
 open FSharpAux.IO.SchemaReader
 open FSharpAux.IO.SchemaReader.Attribute
 open Deedle
+open System.Data
 open BioFSharp.Mz
 open BioFSharp.Mz.SearchDB
 open System.Data.SQLite
@@ -106,14 +107,13 @@ module MsFraggerToPSM =
         numbers
         |> Array.minBy (fun (t,mz,_) -> abs ((t) - targetT) + abs ((mz) - targetMz))
 
-    let convertToPSM (inputFileMsFragger: string) (inputFileMzLite: string) (outputDir: string) (dbPath: string) =
+    let convertToPSM (inputFileMsFragger: string) (inputFileMzLite: string) (outputDir: string) (cn: SQLite.SQLiteConnection) =
 
         let psms = readFragegrPsms inputFileMsFragger
 
         let outputPath = Path.Combine(outputDir, Path.GetFileNameWithoutExtension(inputFileMsFragger) + ".qpsm")
 
-        let cn = SearchDB.getDBConnection dbPath
-        let memoryDB = SearchDB.copyDBIntoMemory cn 
+        let memoryDB = SearchDB.copyDBIntoMemory cn
         let pepDBTr = memoryDB.BeginTransaction()
 
         let modSeqLookup = initModSeqLookup memoryDB pepDBTr

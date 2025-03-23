@@ -6,9 +6,10 @@ module CLIArgumentParsing =
     open System.IO
   
     type CLIArguments =
-        | [<AltCommandLine("-i")>] InstrumentOutput of path:string list
-        | [<AltCommandLine("-o")>] OutputDirectory  of path:string 
-        | [<AltCommandLine("-p")>] ParamFile of path:string
+        | [<Mandatory>] [<AltCommandLine("-i")>] MSFraggerOutput of path:string list
+        | [<Mandatory>] [<AltCommandLine("-ii")>] MzLiteOutput of path:string list
+        | [<Mandatory>] [<AltCommandLine("-o")>] OutputDirectory  of path:string 
+        | [<Mandatory>] [<AltCommandLine("-d")>] PeptideDataBase of path:string 
         | [<Unique>] [<AltCommandLine("-c")>] Parallelism_Level of level:int
         | [<AltCommandLine("-l")>] Log_Level of level:int
         | [<AltCommandLine("-v")>] Verbosity_Level of level:int
@@ -16,9 +17,10 @@ module CLIArgumentParsing =
         interface IArgParserTemplate with
             member s.Usage =
                 match s with
-                | InstrumentOutput _ -> "specify mass spectrometry Output"
+                | MSFraggerOutput _  -> "specify validated psm Output"
+                | MzLiteOutput _     -> "specify mass spectrometry Output"
                 | OutputDirectory  _ -> "specify output directory"
-                | ParamFile _        -> "specify param file For centroidization"
+                | PeptideDataBase  _ -> "specify the path to the database"
                 | Log_Level _        -> "set the log level."
                 | Verbosity_Level _  -> "set the verbosity level."
                 | Parallelism_Level _-> "Set the number of cores the programm can use. Parallelization occurs on file level. This flag is only of effect if a input directory (-i) is specified."

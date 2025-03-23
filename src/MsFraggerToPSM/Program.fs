@@ -8,6 +8,8 @@ open System.Reflection
 open ProteomIQon.Core.InputPaths
 open ProteomIQon.Core
 open ProteomIQon
+open MsFraggerToPSM
+open BioFSharp.Mz
 
 module console1 =
 
@@ -18,31 +20,41 @@ module console1 =
         let directory = Environment.CurrentDirectory
         let getPathRelativeToDir = getRelativePath directory
         let results = parser.Parse argv
-        let i = results.GetResult InstrumentOutput |> List.map getPathRelativeToDir
+        let i = results.GetResult MSFraggerOutput  |> List.map getPathRelativeToDir
+        let ii = results.GetResult MzLiteOutput     |> List.map getPathRelativeToDir
         let o = results.GetResult OutputDirectory  |> getPathRelativeToDir
-        let p = results.GetResult ParamFile        |> getPathRelativeToDir
+        let d = results.GetResult PeptideDataBase        |> getPathRelativeToDir
         Directory.CreateDirectory(o) |> ignore
         Logging.generateConfig o
-        let logger = Logging.createLogger "MzMLToMzLite"
-        logger.Info (sprintf "InputFilePath -i = %A" i)
-        logger.Info (sprintf "OutputFilePath -o = %s" o)
-        logger.Info (sprintf "ParamFilePath -p = %s" p)
+        let logger = Logging.createLogger "MSFraggerToPSM"
+        logger.Info (sprintf "MSFraggerOutput -i = %A" i)
+        logger.Info (sprintf "MzLiteOutput -i = %A" ii)
+        logger.Info (sprintf "OutputFolderPath -o = %s" o)
+        logger.Info (sprintf "DBPath -p = %s" d)
         logger.Trace (sprintf "CLIArguments: %A" results)
-        let processParams =
-            Json.ReadAndDeserialize<Dto.PreprocessingParams> p
-            |> Dto.PreprocessingParams.toDomain
 
-        let files = 
+        let dbConnection =
+            if File.Exists d then
+                logger.Trace (sprintf "Database found at given location (%s)" d)
+                SearchDB.getDBConnection d
+            else
+                failwith "The given path to the instrument output is neither a valid file path nor a valid directory path."
+
+        let msFraggerValidatedFiles = 
+            parsePaths (fun path -> Directory.GetFiles(path,("*.tsv"))) i
+            |> Array.ofSeq
+
+        let mzLiteFiles = 
             parsePaths (fun path -> MzIO.Reader.getMzMLFiles path) i
             |> Array.ofSeq
 
-        if files.Length = 1  then
+        if mzLiteFiles.Length = 1  then
             logger.Info "single file"
-            logger.Trace (sprintf "Preprocessing %s" files.[0])
-            MzMLIonMobilityToMzLite.processFile processParams o files.[0]
+            logger.Trace (sprintf "processing %s" mzLiteFiles.[0])
+            convertToPSM msFraggerValidatedFiles.[0] mzLiteFiles.[0] o dbConnection
         else
             logger.Info "multiple files"
-            logger.Trace (sprintf "Preprocessing multiple files: %A" files)
+            logger.Trace (sprintf "processing multiple files: %A" mzLiteFiles)
             let c =
                 match results.TryGetResult Parallelism_Level with
                 | Some c    -> c
@@ -50,9 +62,9 @@ module console1 =
             logger.Trace (sprintf "Program is running on %i cores" c)
             try
             let partitionedFiles =
-                files
+                Array.zip msFraggerValidatedFiles mzLiteFiles
                 |> Array.splitInto c
-            [for i in partitionedFiles do yield async { return i |> Array.map (MzMLIonMobilityToMzLite.processFile processParams o)}]
+            [for i in partitionedFiles do yield async { return i |> Array.map (fun (msFragger, mzLite) -> (convertToPSM msFragger mzLite o dbConnection))}]
             |> Async.Parallel
             |> Async.RunSynchronously
             |> ignore

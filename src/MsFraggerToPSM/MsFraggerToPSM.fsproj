@@ -14,7 +14,7 @@
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
   <PropertyGroup>
-    <Authors>David Zimmer, Caroline Ott, Kevin Schneider, Timo Muehlhaus</Authors>
+    <Authors>David Zimmer, Caroline Ott, Timo Muehlhaus</Authors>
     <Description>ProteomIQon.MsFraggerToPSM - computational proteomics</Description>
     <Summary>ProteomIQon.MsFraggerToPSM - computational proteomics</Summary>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
