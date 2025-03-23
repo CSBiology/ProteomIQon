@@ -1,20 +1,22 @@
 namespace ProteomIQon
 
-open ProteomIQon.Domain
-open ProteomIQon.Core
 open System.IO
-open System.Collections.Generic
+open FSharpAux.IO.SchemaReader
+open FSharpAux.IO.SchemaReader.Attribute
+open Deedle
 open BioFSharp.Mz
-open ProteomIQon.Core.MzIO.Processing
+open BioFSharp.Mz.SearchDB
+open System.Data.SQLite
+open ProteomIQon
+open MzIO.Processing
 open ProteomIQon.Dto
 open ProteomIQon.Domain
-open Deedle
 
 
 module MsFraggerToPSM =
 
-    let psms =
-        Frame.ReadCsv("C:\Users\jonat\OneDrive\Desktop\psm.tsv", true, separators = "\t")
+    let readFragegrPsms (path: string) =
+        Frame.ReadCsv(path, true, separators = "\t")
         |> Frame.mapRows (fun k row ->
             let assignedModifications =
                 row.GetAs<string>("Assigned Modifications").Split(',')
@@ -44,7 +46,9 @@ module MsFraggerToPSM =
                     | "nTermAcetylation" ->
                         acc.[0] <- "[ac]" + acc.[0]
                         acc
-            
+                    | m ->
+                        printfn "Modification %s is not yet implemented" m
+                        Array.append acc [|"UnknownMod"|]
                 ) stringSequence
                 |> String.concat ""
             {
@@ -68,12 +72,7 @@ module MsFraggerToPSM =
             }
         )
         |> Series.values
-
-
-
-    let cn = SearchDB.getDBConnection @"C:\Users\jonat\OneDrive\Desktop\ChlamyTest.db"
-    let memoryDB = SearchDB.copyDBIntoMemory cn 
-    let pepDBTr = memoryDB.BeginTransaction()
+        |> Seq.filter (fun x -> x. StringSequence.Contains "UnknownMod" |> not)
 
     /// Prepares statement to select a ModSequence entry by Sequence
     let prepareSelectModsequenceBySequence (cn:SQLiteConnection) (tr) =
@@ -103,85 +102,62 @@ module MsFraggerToPSM =
         let selectModsequenceBySequence = prepareSelectModsequenceBySequence cn tr
         selectModsequenceBySequence
 
-    let modSeqLookup = initModSeqLookup memoryDB pepDBTr
-
-    let binBy (projection: 'a -> float) bandwidth (data: seq<'a>) =
-        if bandwidth = 0. then raise (System.DivideByZeroException("Bandwidth cannot be 0."))
-        let halfBw = bandwidth / 2.0
-        let decBandwidth = decimal bandwidth
-        let tmp = 
-            data
-            |> Seq.groupBy (fun x -> (decimal (projection x) / decBandwidth) |> float |> floor) 
-            |> Seq.map (fun (k,values) -> 
-                let count = (Seq.length(values)) |> float
-                if k < 0. then
-                    ((k  * bandwidth) + halfBw, values)   
-                else
-                    ((k + 1.) * bandwidth) - halfBw, values)
-            |> Seq.sortBy fst
-        tmp
-
-    let idPSMs = 
-        psms
-        |> Seq.map (fun v -> 
-            let res = modSeqLookup v.StringSequence 0
-            if res.IsSome then
-                {
-                    v with
-                        ModSequenceID = res.Value.ID
-                        PepSequenceID = res.Value.PepSequenceID
-                }
-                |> Some
-            else None
-        )
-        |> Seq.choose id
-
-    let binnedPSMs =
-        binBy (fun (x: PSMStatisticsResultFragpipe) -> x.IonMobility) 0.05 idPSMs
-        |> Seq.toArray
-
-    let mzliteFiles =
-        System.IO.Directory.GetFiles(@"C:\Users\jonat\OneDrive\Desktop\Testfiles", "*.mzlite")
-
     let findClosest (targetT,targetMz) (numbers: (float*float*string) []) =
         numbers
         |> Array.minBy (fun (t,mz,_) -> abs ((t) - targetT) + abs ((mz) - targetMz))
 
-    let inReader = Core.MzIO.Reader.getReader @"D:\Testfiles\binned_spectra_1.000.mzlite"
-    Core.MzIO.Reader.openConnection inReader
-    let inTr = inReader.BeginTransaction()
-    let inRunID  = Core.MzIO.Reader.getDefaultRunID inReader
+    let convertToPSM (inputFileMsFragger: string) (inputFileMzLite: string) (outputDir: string) (dbPath: string) =
+
+        let psms = readFragegrPsms inputFileMsFragger
+
+        let outputPath = Path.Combine(outputDir, Path.GetFileNameWithoutExtension(inputFileMsFragger) + ".qpsm")
+
+        let cn = SearchDB.getDBConnection dbPath
+        let memoryDB = SearchDB.copyDBIntoMemory cn 
+        let pepDBTr = memoryDB.BeginTransaction()
+
+        let modSeqLookup = initModSeqLookup memoryDB pepDBTr
+
+        let idPSMs = 
+            psms
+            |> Seq.map (fun v -> 
+                let res = modSeqLookup v.StringSequence 0
+                if res.IsSome then
+                    {
+                        v with
+                            ModSequenceID = res.Value.ID
+                            PepSequenceID = res.Value.PepSequenceID
+                    }
+                    |> Some
+                else None
+            )
+            |> Seq.choose id
+
+        let inReader = Core.MzIO.Reader.getReader inputFileMzLite
+        Core.MzIO.Reader.openConnection inReader
+        let inTr = inReader.BeginTransaction()
+        let inRunID  = Core.MzIO.Reader.getDefaultRunID inReader
 
 
-    let ms = 
-        inReader.ReadMassSpectra(inRunID)
-        |> Seq.toArray
-        |> Array.filter (fun x -> MassSpectrum.getMsLevel x = 2)
-    1
-    let lookupMap =
-        ms
-        |> Array.map (fun x -> MassSpectrum.getScanTime x, MassSpectrum.getPrecursorMZ x, x.ID)
-    lookupMap |>Array.last
-    let psmsWithSpecID =
-        //binnedPSMs.[0..1]
-        idPSMs
-        |> Array.ofSeq
-        |> Array.mapi (fun i (psms) ->
-            //psms
-            //|> Array.ofSeq
-            //|> Array.mapi (fun i psm ->
-            if i%1000 = 0 then printfn "%A" i 
-            //    let closest = findClosest psm.ScanTime ms
-            //    {
-            //        psm with
-            //            PSMId = (closest |> snd)
-            //    }
-            //)
-            let closest = findClosest (psms.ScanTime,psms.PrecursorMZ) lookupMap
-            {
-                psms with
-                    PSMId = (closest |> fun (_,_,a) -> a)
-            }
-        )
+        let ms = 
+            inReader.ReadMassSpectra(inRunID)
+            |> Seq.toArray
+            |> Array.filter (fun x -> MassSpectrum.getMsLevel x = 2)
+        let lookupMap =
+            ms
+            |> Array.map (fun x -> MassSpectrum.getScanTime x, MassSpectrum.getPrecursorMZ x, x.ID)
+
+        let psmsWithSpecID =
+            idPSMs
+            |> Array.ofSeq
+            |> Array.mapi (fun i (psms) ->
+                let closest = findClosest (psms.ScanTime,psms.PrecursorMZ) lookupMap
+                {
+                    psms with
+                        PSMId = (closest |> fun (_,_,a) -> a)
+                }
+            )
+
+        psmsWithSpecID
         |> SeqIO'.csv "\t" true false
-        |> FSharpAux.IO.SeqIO.Seq.writeOrAppend (@"D:\Testfiles\binned_spectra_1.000.mzlite" + ".qpsm")
+        |> FSharpAux.IO.SeqIO.Seq.writeOrAppend (outputPath)
