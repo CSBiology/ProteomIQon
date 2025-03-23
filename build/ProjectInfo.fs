@@ -57,8 +57,9 @@ let projects =
         // add relative paths (from project root) to your projects here, including individual reslease notes files
         // e.g. ProjectInfo.create("MyProject", "src/MyProject/MyProject.fsproj", "src/MyProject/RELEASE_NOTES.md")
         CoreProject
-        ProjectInfo.create("MzMLToMzLite", "src/MzMLToMzLite/MzMLToMzLite.fsproj", "src/MzMLToMzLite/RELEASE_NOTES.md")
+        ProjectInfo.create("MSFraggerToPSM", "src/MSFraggerToPSM/MSFraggerToPSM.fsproj", "src/MSFraggerToPSM/RELEASE_NOTES.md")
         ProjectInfo.create("MzMLToMzLiteIonMobility", "src/MzMLToMzLiteIonMobility/MzMLToMzLiteIonMobility.fsproj", "src/MzMLToMzLiteIonMobility/RELEASE_NOTES.md")
+        ProjectInfo.create("MzMLToMzLite", "src/MzMLToMzLite/MzMLToMzLite.fsproj", "src/MzMLToMzLite/RELEASE_NOTES.md")
         ProjectInfo.create("PeptideDB", "src/PeptideDB/PeptideDB.fsproj", "src/PeptideDB/RELEASE_NOTES.md")
         ProjectInfo.create("PeptideSpectrumMatching", "src/PeptideSpectrumMatching/PeptideSpectrumMatching.fsproj", "src/PeptideSpectrumMatching/RELEASE_NOTES.md")
         ProjectInfo.create("PSMStatistics", "src/PSMStatistics/PSMStatistics.fsproj", "src/PSMStatistics/RELEASE_NOTES.md")
