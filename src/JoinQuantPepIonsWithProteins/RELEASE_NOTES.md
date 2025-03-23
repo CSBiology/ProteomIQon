@@ -1,3 +1,6 @@
+#### 0.0.4 - Sunday, March 23, 2025
+* Add Ion Mobility to output type
+
 #### 0.0.3 - Monday, March 10, 2025
 * Update to .NET 8
 

@@ -1,3 +1,7 @@
+#### 0.0.9 - Sunday, March 23, 2025
+* Upgrade to .NET 8
+* Add Ion Mobility to relevant output types
+
 #### 0.0.8 - Monday, February 13, 2023
 * Add Alignment Score fields to quantification results
 
