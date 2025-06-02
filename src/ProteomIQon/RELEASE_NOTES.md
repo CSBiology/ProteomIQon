@@ -1,3 +1,6 @@
+#### 0.0.10 - Monday, June 02, 2025
+* Fix transform for edge cases in pep value calculation (by @paulineHans)
+
 #### 0.0.9 - Sunday, March 23, 2025
 * Upgrade to .NET 8
 * Add Ion Mobility to relevant output types
