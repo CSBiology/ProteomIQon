@@ -69,20 +69,26 @@
       <Message Text="Copy MKL DLL"/>
       <Copy SourceFiles="$(OutDir)/runtimes/linux-x64\lib\netstandard2.0\MKL.NET.dll" DestinationFolder="$(OutDir)/"/>
   </Target>
-  <ItemGroup>
-      <Content Include="bin/Release/$(TargetFramework)/runtimes/linux-x64/native/*.so" Exclude="bin/Release/$(TargetFramework)/runtimes/linux-x64/native/MKL.NET.Native.so">
-        <Pack>true</Pack>
-        <PackagePath>\tools\$(TargetFramework)\any\</PackagePath>
+  <ItemGroup Condition="Exists('$(OutputPath)runtimes/linux-x64/native')">
+      <Content Include="$(OutputPath)runtimes/linux-x64/native/*.so" Exclude="$(OutputPath)runtimes/linux-x64/native/MKL.NET.Native.so">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+        <Link>%(Filename)%(Extension)</Link>
+        <Pack>false</Pack>
       </Content>
-      <Content Include="bin/Release/$(TargetFramework)/runtimes/linux-x64/native/*.so.1" >
-        <Pack>true</Pack>
-        <PackagePath>\tools\$(TargetFramework)\any\</PackagePath>
+      <Content Include="$(OutputPath)runtimes/linux-x64/native/*.so.*">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+        <Link>%(Filename)%(Extension)</Link>
+        <Pack>false</Pack>
       </Content>
   </ItemGroup>
-  <ItemGroup>
-      <Content Include="bin/Release/$(TargetFramework)/runtimes/linux-x64/lib/netstandard2.0/MKL.NET.dll">
-        <Pack>true</Pack>
-        <PackagePath>\tools\$(TargetFramework)\any\</PackagePath>
+  <ItemGroup Condition="Exists('$(OutputPath)runtimes/linux-x64/lib/netstandard2.0')">
+      <Content Include="$(OutputPath)runtimes/linux-x64/lib/netstandard2.0/MKL.NET.dll">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+        <Link>MKL.NET.dll</Link>
+        <Pack>false</Pack>
       </Content>
   </ItemGroup>
 </Project>
