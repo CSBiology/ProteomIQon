@@ -1,3 +1,6 @@
+#### 0.0.4 - Wednesday, November 19, 2025
+* Update to .NET 8
+
 #### 0.0.3 - Monday, February 13, 2023
 * Add Alignment Score fields to quantification results
 
