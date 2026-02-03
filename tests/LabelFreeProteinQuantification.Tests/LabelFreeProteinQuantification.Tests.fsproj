@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+    <GenerateProgramFile>false</GenerateProgramFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Include the tool's source files directly -->
+    <Compile Include="..\..\src\LabelFreeProteinQuantification\LabelFreeProteinQuantification.fs" />
+    <Compile Include="..\..\src\LabelFreeProteinQuantification\CLIArgumentParsing.fs" />
+    <!-- Include test files after source files -->
+    <Compile Include="Tests.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Test framework packages -->
+    <PackageReference Include="Expecto" Version="10.*" />
+    <PackageReference Include="YoloDev.Expecto.TestSdk" Version="0.*" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.*" />
+    
+    <!-- Tool dependencies -->
+    <PackageReference Include="Argu" Version="6.1.1" />
+    <PackageReference Include="NLog" Version="4.7.11" />
+    <PackageReference Include="MzIO" Version="[0.1.7]" />
+    <PackageReference Include="MzIO.Processing" Version="[0.1.7]" />
+    <PackageReference Include="MzIO.SQL" Version="[0.1.9]" />
+    <PackageReference Include="MzIO.MzML" Version="[0.1.10]" />
+    <PackageReference Include="BioFSharp" Version="2.0.0-beta4" />
+    <PackageReference Include="BioFSharp.Mz" Version="0.1.5-beta" />
+    <PackageReference Include="FSharpAux" Version="1.0.0" />
+    <PackageReference Include="FSharpAux.IO" Version="1.0.0" />
+    <PackageReference Include="Plotly.NET" Version="2.0.0-alpha5" />
+    <PackageReference Include="DynamicObj" Version="0.0.3" />
+    <PackageReference Include="FSharp.Stats" Version="0.4.0" />
+    <PackageReference Include="Deedle" Version="2.3.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Reference to ProteomIQon core library -->
+    <ProjectReference Include="..\..\src\ProteomIQon\ProteomIQon.fsproj" />
+  </ItemGroup>
+</Project>
