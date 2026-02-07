@@ -30,32 +30,37 @@ module PSMBasedQuantificationTIMs =
         let initRTProfile (readspecPeaks:string -> Peak1DArray)  (rtIndex: IMzIOArray<RtIndexEntry>) (rtRange: RangeQuery) (mzRange: RangeQuery) (ionMobilityRange: RangeQuery)=
             let entries = RtIndexEntry.Search(rtIndex, rtRange).ToArray()
             let profile = Array.zeroCreate<Peak2D> entries.Length
-            let summedByMz = Dictionary<float,float>()
+            let mzLow = mzRange.LowValue
+            let mzHigh = mzRange.HighValue
+            let mzLock = mzRange.LockValue
+            let imLow = ionMobilityRange.LowValue
+            let imHigh = ionMobilityRange.HighValue
+            let imLock = ionMobilityRange.LockValue
             for rtIdx = 0 to entries.Length - 1 do
-                summedByMz.Clear()
                 let entry = entries.[rtIdx]
                 let peaks = (readspecPeaks entry.SpectrumID).Peaks
                 let mutable bestMz = 0.
                 let mutable bestDelta = System.Double.PositiveInfinity
                 for i = 0 to peaks.Length - 1 do
                     let peak = peaks.[i]
-                    let ionMobility = peak.IonMobility.Value
-                    if ionMobility < ionMobilityRange.HighValue && ionMobility > ionMobilityRange.LowValue &&
-                       peak.Mz < mzRange.HighValue && peak.Mz > mzRange.LowValue then
-                        let mutable currentIntensity = 0.
-                        if summedByMz.TryGetValue(peak.Mz, &currentIntensity) then
-                            summedByMz.[peak.Mz] <- currentIntensity + peak.Intensity
-                        else
-                            summedByMz.Add(peak.Mz, peak.Intensity)
-                            let delta = abs (peak.Mz - mzRange.LockValue)
+                    if peak.Mz < mzHigh && peak.Mz > mzLow then
+                        let ionMobility = peak.IonMobility.Value
+                        if ionMobility < imHigh && ionMobility > imLow then
+                            let delta = abs (peak.Mz - mzLock)
                             if delta < bestDelta then
                                 bestDelta <- delta
                                 bestMz <- peak.Mz
-                if summedByMz.Count = 0 then
-                    profile.[rtIdx] <- RtIndexEntry.AsPeak2D ((new Peak1D(0., mzRange.LockValue, ionMobilityRange.LockValue)), entry.Rt)
+                if System.Double.IsPositiveInfinity bestDelta then
+                    profile.[rtIdx] <- new Peak2D(0., mzLock, entry.Rt, imLock)
                 else
-                    let bestIntensity = summedByMz.[bestMz]
-                    profile.[rtIdx] <- RtIndexEntry.AsPeak2D(new Peak1D(bestIntensity, bestMz), entry.Rt)
+                    let mutable bestIntensity = 0.
+                    for i = 0 to peaks.Length - 1 do
+                        let peak = peaks.[i]
+                        if peak.Mz < mzHigh && peak.Mz > mzLow && peak.Mz = bestMz then
+                            let ionMobility = peak.IonMobility.Value
+                            if ionMobility < imHigh && ionMobility > imLow then
+                                bestIntensity <- bestIntensity + peak.Intensity
+                    profile.[rtIdx] <- new Peak2D(bestIntensity, bestMz, entry.Rt)
             profile
 
 
@@ -250,13 +255,15 @@ module PSMBasedQuantificationTIMs =
         let imQuery = Query.createRangeQuery meanIM imWindow
         let retData',itzData' =
             let tmp: MzIO.Binary.Peak2D[] = getPeaks idx rtQuery mzQuery imQuery
-            let rtData = ResizeArray<float>(tmp.Length)
-            let itzData = ResizeArray<float>(tmp.Length)
-            for i = 0 to tmp.Length - 1 do
+            let n = tmp.Length
+            let rtData = Array.zeroCreate<float> n
+            let itzData = Array.zeroCreate<float> n
+            let mutable outCount = 0
+            for i = 0 to n - 1 do
                 let p = tmp.[i]
                 let intensity = p.Intensity
                 let keep =
-                    if i = 0 || i = tmp.Length - 1 || intensity > 0. then
+                    if i = 0 || i = n - 1 || intensity > 0. then
                         true
                     else
                         let prevIntensity = tmp.[i-1].Intensity
@@ -267,9 +274,13 @@ module PSMBasedQuantificationTIMs =
                         else
                             true
                 if keep then
-                    rtData.Add p.Rt
-                    itzData.Add intensity
-            rtData.ToArray(), itzData.ToArray()
+                    rtData.[outCount] <- p.Rt
+                    itzData.[outCount] <- intensity
+                    outCount <- outCount + 1
+            if outCount = n then
+                rtData, itzData
+            else
+                rtData.[.. outCount - 1], itzData.[.. outCount - 1]
         match baseLineCorrection with
         | Some baseLineParams ->
             retData', substractBaseLine logger baseLineParams itzData', itzData'
