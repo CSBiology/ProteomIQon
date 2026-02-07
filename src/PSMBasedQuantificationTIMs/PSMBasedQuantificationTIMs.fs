@@ -28,32 +28,35 @@ module PSMBasedQuantificationTIMs =
         /// Mz range peak aggregation is closest lock mz.
         /// Profile array with index corresponding to continous mass spectra over rt range and mz range given.
         let initRTProfile (readspecPeaks:string -> Peak1DArray)  (rtIndex: IMzIOArray<RtIndexEntry>) (rtRange: RangeQuery) (mzRange: RangeQuery) (ionMobilityRange: RangeQuery)=
-            let entries = RtIndexEntry.Search(rtIndex, rtRange)
-            entries
-            |>Seq.map (fun entry ->
+            let entries = RtIndexEntry.Search(rtIndex, rtRange).ToArray()
+            let profile = Array.zeroCreate<Peak2D> entries.Length
+            let summedByMz = Dictionary<float,float>()
+            for rtIdx = 0 to entries.Length - 1 do
+                summedByMz.Clear()
+                let entry = entries.[rtIdx]
                 let peaks = (readspecPeaks entry.SpectrumID).Peaks
-                let p = 
-                    peaks
-                    |> Seq.filter (fun x ->
-                        x.IonMobility.Value < ionMobilityRange.HighValue && x.IonMobility.Value > ionMobilityRange.LowValue &&
-                        x.Mz < mzRange.HighValue && x.Mz > mzRange.LowValue
-                    )
-                    |> fun s ->
-                        if (s |> Seq.tryHead).IsNone then
-                            RtIndexEntry.AsPeak2D ((new Peak1D(0., mzRange.LockValue, ionMobilityRange.LockValue)),entry.Rt)
+                let mutable bestMz = 0.
+                let mutable bestDelta = System.Double.PositiveInfinity
+                for i = 0 to peaks.Length - 1 do
+                    let peak = peaks.[i]
+                    let ionMobility = peak.IonMobility.Value
+                    if ionMobility < ionMobilityRange.HighValue && ionMobility > ionMobilityRange.LowValue &&
+                       peak.Mz < mzRange.HighValue && peak.Mz > mzRange.LowValue then
+                        let mutable currentIntensity = 0.
+                        if summedByMz.TryGetValue(peak.Mz, &currentIntensity) then
+                            summedByMz.[peak.Mz] <- currentIntensity + peak.Intensity
                         else
-                            s
-                            |> Seq.groupBy (fun x -> x.Mz)
-                            |> Seq.map (fun (mz,peaks) -> 
-                                let i = peaks |> Seq.sumBy (fun x -> x.Intensity)
-                                new Peak1D(i, mz)
-                            )
-                            |> fun x -> 
-                                RtIndexEntry.ClosestMz (x, mzRange.LockValue)
-                            |> fun x -> RtIndexEntry.AsPeak2D (x, entry.Rt)
-                p
-            )
-            |> Array.ofSeq
+                            summedByMz.Add(peak.Mz, peak.Intensity)
+                            let delta = abs (peak.Mz - mzRange.LockValue)
+                            if delta < bestDelta then
+                                bestDelta <- delta
+                                bestMz <- peak.Mz
+                if summedByMz.Count = 0 then
+                    profile.[rtIdx] <- RtIndexEntry.AsPeak2D ((new Peak1D(0., mzRange.LockValue, ionMobilityRange.LockValue)), entry.Rt)
+                else
+                    let bestIntensity = summedByMz.[bestMz]
+                    profile.[rtIdx] <- RtIndexEntry.AsPeak2D(new Peak1D(bestIntensity, bestMz), entry.Rt)
+            profile
 
 
     type PeptideIon = 
@@ -153,14 +156,29 @@ module PSMBasedQuantificationTIMs =
         yUncorr - y
        
     ///
-    let getClosestMs1 (ms1s: (float*MzIO.Model.MassSpectrum) []) scanTime = 
-         ms1s
-         |> Array.minBy (fun ms -> abs (fst ms - scanTime))
-         |> snd
+    let getClosestMs1 (ms1s: (float*string) []) scanTime = 
+        if Array.isEmpty ms1s then
+            invalidArg "ms1s" "ms1 index must not be empty"
+        elif scanTime <= fst ms1s.[0] then
+            snd ms1s.[0]
+        elif scanTime >= fst ms1s.[ms1s.Length - 1] then
+            snd ms1s.[ms1s.Length - 1]
+        else
+            let mutable lo = 0
+            let mutable hi = ms1s.Length - 1
+            while hi - lo > 1 do
+                let mid = lo + ((hi - lo) >>> 1)
+                if fst ms1s.[mid] <= scanTime then
+                    lo <- mid
+                else
+                    hi <- mid
+            let rtLo,idLo = ms1s.[lo]
+            let rtHi,idHi = ms1s.[hi]
+            if abs (scanTime - rtLo) <= abs (rtHi - scanTime) then idLo else idHi
 
     ///
-    let getSpec (reader:MzIO.IO.IMzIODataReader) (ms1: MzIO.Model.MassSpectrum)  =
-        Peaks.unzipIMzliteArray (reader.ReadSpectrumPeaks(ms1.ID).Peaks)
+    let getSpec (readSpecPeaks: string -> MzIO.Binary.Peak1DArray) (ms1SpectrumID: string)  =
+        Peaks.unzipIMzliteArray (readSpecPeaks ms1SpectrumID).Peaks
         |> fun (mzData,intensityData) -> PeakArray.zip mzData intensityData
     
     ///
@@ -216,6 +234,8 @@ module PSMBasedQuantificationTIMs =
     let substractBaseLine (logger: NLog.Logger) (baseLineParams:Domain.BaseLineCorrection) (yData:float []) =
         if yData.Length > 500 then
             yData
+        elif yData |> Array.forall (fun y -> y = 0.) then
+            yData
         else
             let baseLine = FSharp.Stats.Signal.Baseline.baselineAls' baseLineParams.MaxIterations baseLineParams.Lambda baseLineParams.P yData |> Array.ofSeq
             Array.map2 (fun y b ->
@@ -229,24 +249,27 @@ module PSMBasedQuantificationTIMs =
         let mzQuery = Query.createRangeQuery meanPrecMz mzWindow_Da
         let imQuery = Query.createRangeQuery meanIM imWindow
         let retData',itzData' =
-            let tmp =
-                getPeaks idx rtQuery mzQuery imQuery
-                |> Array.map (fun (p:MzIO.Binary.Peak2D) -> p.Rt , p.Intensity)
-            tmp
-            |> Array.mapi (fun i (rt,intensity) ->
-                            if i = 0 || i = tmp.Length-1 || intensity > 0. then
-                                Some (rt,intensity)
-                            else
-                                let rt',intensity' = tmp.[i-1]
-                                if intensity' = 0. then
-                                    Some (rt,intensity)
-                                elif intensity' > (100. * (intensity+1.)) then
-                                    None
-                                else
-                                    Some (rt,intensity)
-                          )
-            |> Array.choose id
-            |> Array.unzip
+            let tmp: MzIO.Binary.Peak2D[] = getPeaks idx rtQuery mzQuery imQuery
+            let rtData = ResizeArray<float>(tmp.Length)
+            let itzData = ResizeArray<float>(tmp.Length)
+            for i = 0 to tmp.Length - 1 do
+                let p = tmp.[i]
+                let intensity = p.Intensity
+                let keep =
+                    if i = 0 || i = tmp.Length - 1 || intensity > 0. then
+                        true
+                    else
+                        let prevIntensity = tmp.[i-1].Intensity
+                        if prevIntensity = 0. then
+                            true
+                        elif prevIntensity > (100. * (intensity + 1.)) then
+                            false
+                        else
+                            true
+                if keep then
+                    rtData.Add p.Rt
+                    itzData.Add intensity
+            rtData.ToArray(), itzData.ToArray()
         match baseLineCorrection with
         | Some baseLineParams ->
             retData', substractBaseLine logger baseLineParams itzData', itzData'
@@ -475,14 +498,14 @@ module PSMBasedQuantificationTIMs =
         |> Array.ofList
 
     ///
-    let initComparePredictedAndMeasuredIsotopicCluster inReader ms1s ms1AccuracyEstimate (x_Xic:float[]) (y_Xic:float[]) y_Xic_uncorrected ch peptideSequence tarRt tarMz =    
+    let initComparePredictedAndMeasuredIsotopicCluster getPredictedIsotopicPattern readSpecPeaks ms1s ms1AccuracyEstimate (x_Xic:float[]) (y_Xic:float[]) y_Xic_uncorrected ch peptideSequence tarRt tarMz =    
         /// IsotopicCluster
         let targetIsotopicPattern_predicted = 
-            generateIsotopicDistributionOfFormulaBySum ch peptideSequence
+            getPredictedIsotopicPattern ch peptideSequence
         let baseLineCorrectionF = getBaseLineCorrectionOffsetAt tarRt x_Xic y_Xic y_Xic_uncorrected
-        let closestMS1 = getClosestMs1 ms1s tarRt
+        let closestMS1SpectrumID = getClosestMs1 ms1s tarRt
         let peaks' = 
-            getSpec inReader closestMS1
+            getSpec readSpecPeaks closestMS1SpectrumID
             |> Array.filter (fun x -> x.Mz < tarMz + 1. && x.Mz > tarMz - 0.6)
         let recordedVsPredictedPattern = 
             targetIsotopicPattern_predicted
@@ -522,6 +545,17 @@ module PSMBasedQuantificationTIMs =
     ///
     let quantifyPeptides diagCharts zipCharts (processParams:Domain.QuantificationParams) (outputDir:string) (cn:SQLiteConnection) (instrumentOutput:string) (scoredPSMs:string)  =
         let logger = Logging.createLogger (Path.GetFileNameWithoutExtension scoredPSMs)
+        let swOverall = System.Diagnostics.Stopwatch.StartNew()
+        let swSetup = System.Diagnostics.Stopwatch.StartNew()
+        let mutable stageCountMatchedMassesMs = 0L
+        let mutable stageXicExtractionMs = 0L
+        let mutable stageIsotopicCompareMs = 0L
+        let mutable readSpectrumPeaksDbReads = 0L
+        let mutable peakSpectrumCacheHits = 0L
+        let mutable peakSpectrumCacheMisses = 0L
+        let mutable peakSpectrumCacheEvictions = 0L
+        let mutable isotopicPatternCacheHits = 0L
+        let mutable isotopicPatternCacheMisses = 0L
         logger.Trace (sprintf "Input file: %s" instrumentOutput)
         logger.Trace (sprintf "Output directory: %s" outputDir)
         logger.Trace (sprintf "Parameters: %A" processParams)
@@ -556,39 +590,145 @@ module PSMBasedQuantificationTIMs =
         inReader.Connection.Open()
         let inRunID  = Core.MzIO.Reader.getDefaultRunID inReader       
         let inTr = inReader.BeginTransaction()
+        let readSpectrumPeaksCounted spectrumID =
+            System.Threading.Interlocked.Increment(&readSpectrumPeaksDbReads) |> ignore
+            inReader.ReadSpectrumPeaks spectrumID
+        let peakSpectrumCacheMax =
+            match System.Environment.GetEnvironmentVariable "PQ_TIMS_PEAK_CACHE_MAX" with
+            | null | "" -> 700
+            | raw ->
+                match System.Int32.TryParse raw with
+                | true, parsed when parsed > 0 -> parsed
+                | _ ->
+                    logger.Trace (sprintf "Invalid PQ_TIMS_PEAK_CACHE_MAX='%s'. Using default 700." raw)
+                    700
+        let peakSpectrumCacheMode = System.Environment.GetEnvironmentVariable "PQ_TIMS_PEAK_CACHE_MODE"
+        let readSpecPeaksWithMem, peakSpectrumCacheModeUsed =
+            if System.String.Equals(peakSpectrumCacheMode, "unbounded", System.StringComparison.OrdinalIgnoreCase) then
+                logger.Trace "Peak spectrum cache mode: unbounded memoize"
+                FSharpAux.Memoization.memoize readSpectrumPeaksCounted, "unbounded"
+            else
+                logger.Trace (sprintf "Peak spectrum cache mode: bounded_lru (max=%d)" peakSpectrumCacheMax)
+                let lruList = System.Collections.Generic.LinkedList<string * MzIO.Binary.Peak1DArray>()
+                let cacheMap = System.Collections.Generic.Dictionary<string, System.Collections.Generic.LinkedListNode<string * MzIO.Binary.Peak1DArray>>(System.StringComparer.Ordinal)
+                let readSpecPeaksWithLru spectrumID =
+                    let mutable node = Unchecked.defaultof<System.Collections.Generic.LinkedListNode<string * MzIO.Binary.Peak1DArray>>
+                    if cacheMap.TryGetValue(spectrumID, &node) then
+                        peakSpectrumCacheHits <- peakSpectrumCacheHits + 1L
+                        lruList.Remove(node)
+                        lruList.AddFirst(node)
+                        snd node.Value
+                    else
+                        peakSpectrumCacheMisses <- peakSpectrumCacheMisses + 1L
+                        let loaded = readSpectrumPeaksCounted spectrumID
+                        let newNode = System.Collections.Generic.LinkedListNode<string * MzIO.Binary.Peak1DArray>((spectrumID, loaded))
+                        lruList.AddFirst(newNode)
+                        cacheMap.[spectrumID] <- newNode
+                        if cacheMap.Count > peakSpectrumCacheMax then
+                            let tailNode = lruList.Last
+                            if not (obj.ReferenceEquals(tailNode, null)) then
+                                lruList.RemoveLast()
+                                cacheMap.Remove(fst tailNode.Value) |> ignore
+                                peakSpectrumCacheEvictions <- peakSpectrumCacheEvictions + 1L
+                        loaded
+                readSpecPeaksWithLru, "bounded_lru"
+        let fragmentMatchMode = System.Environment.GetEnvironmentVariable "PQ_TIMS_FRAGMENT_MATCH_MODE"
+        let useLegacyFragmentMatch = System.String.Equals(fragmentMatchMode, "legacy", System.StringComparison.OrdinalIgnoreCase)
+        if useLegacyFragmentMatch then
+            logger.Trace "Fragment match mode: legacy"
+        else
+            logger.Trace "Fragment match mode: optimized_binary_search"
+        let isotopicPatternCacheMode = System.Environment.GetEnvironmentVariable "PQ_TIMS_ISO_CACHE_MODE"
+        let useIsotopicPatternCache = System.String.Equals(isotopicPatternCacheMode, "on", System.StringComparison.OrdinalIgnoreCase)
+        if useIsotopicPatternCache then
+            logger.Trace "Isotopic pattern cache mode: enabled"
+        else
+            logger.Trace "Isotopic pattern cache mode: disabled"
+        let isotopicPatternCache: System.Collections.Generic.Dictionary<int * (AminoAcids.AminoAcid list), (float * float)[]> =
+            System.Collections.Generic.Dictionary<int * (AminoAcids.AminoAcid list), (float * float)[]>()
+        let getPredictedIsotopicPattern (ch:int) (peptideSequence:AminoAcids.AminoAcid list) =
+            if useIsotopicPatternCache then
+                let key = ch, peptideSequence
+                let mutable cached = Unchecked.defaultof<(float * float)[]>
+                if isotopicPatternCache.TryGetValue(key, &cached) then
+                    isotopicPatternCacheHits <- isotopicPatternCacheHits + 1L
+                    cached
+                else
+                    let generated = generateIsotopicDistributionOfFormulaBySum ch peptideSequence
+                    isotopicPatternCacheMisses <- isotopicPatternCacheMisses + 1L
+                    isotopicPatternCache.Add(key, generated)
+                    generated
+            else
+                let generated = generateIsotopicDistributionOfFormulaBySum ch peptideSequence
+                isotopicPatternCacheMisses <- isotopicPatternCacheMisses + 1L
+                generated
+        let hasFragmentMatchWithinPpm100 (sortedFragments: float[]) peakMz =
+            if sortedFragments.Length = 0 then
+                false
+            else
+                let tolerance = Mass.deltaMassByPpm 100. peakMz
+                let searchResult = System.Array.BinarySearch(sortedFragments, peakMz)
+                if searchResult >= 0 then
+                    true
+                else
+                    let insertionIdx = ~~~searchResult
+                    let mutable leftIdx = insertionIdx - 1
+                    let mutable rightIdx = insertionIdx
+                    let mutable found = false
+                    while not found && leftIdx >= 0 && peakMz - sortedFragments.[leftIdx] <= tolerance do
+                        if abs (sortedFragments.[leftIdx] - peakMz) <= tolerance then
+                            found <- true
+                        leftIdx <- leftIdx - 1
+                    while not found && rightIdx < sortedFragments.Length && sortedFragments.[rightIdx] - peakMz <= tolerance do
+                        if abs (sortedFragments.[rightIdx] - peakMz) <= tolerance then
+                            found <- true
+                        rightIdx <- rightIdx + 1
+                    found
         let countMatchedMasses (peptide: LookUpResult<AminoAcids.AminoAcid>)(psms: PSMStatisticsResultFragpipe []) =
-            let frag = 
-                let ionSeries = (calcIonSeries peptide.BioSequence).TargetMasses
-                [1. .. 2.]
-                |> List.collect (fun ch -> 
-                    ionSeries 
-                    |> List.map (fun x -> Mass.toMZ x.MainPeak.Mass ch)
-                )                  
-            psms
-            |> Array.map (fun psm -> 
-                let spec = inReader.ReadSpectrumPeaks psm.PSMId
-                let sum = 
-                    spec.Peaks 
-                    |> Seq.filter (fun peak -> 
-                        frag
-                        |> List.exists (fun ion -> abs (ion - peak.Mz) <= (Mass.deltaMassByPpm 100. peak.Mz))
+            let sw = System.Diagnostics.Stopwatch.StartNew()
+            let result =
+                let fragList = 
+                    let ionSeries = (calcIonSeries peptide.BioSequence).TargetMasses
+                    [1. .. 2.]
+                    |> List.collect (fun ch -> 
+                        ionSeries 
+                        |> List.map (fun x -> Mass.toMZ x.MainPeak.Mass ch)
                     )
-                    |> Seq.sumBy (fun x -> x.Intensity)
-                psm,sum
-            )
+                psms
+                |> Array.map (fun psm -> 
+                    let spec = readSpecPeaksWithMem psm.PSMId
+                    let sum = 
+                        if useLegacyFragmentMatch then
+                            spec.Peaks 
+                            |> Seq.filter (fun peak -> 
+                                fragList
+                                |> List.exists (fun ion -> abs (ion - peak.Mz) <= (Mass.deltaMassByPpm 100. peak.Mz))
+                            )
+                            |> Seq.sumBy (fun x -> x.Intensity)
+                        else
+                            let frag = fragList |> Array.ofList
+                            Array.sortInPlace frag
+                            let peaks = spec.Peaks
+                            let mutable intensitySum = 0.
+                            for i = 0 to peaks.Length - 1 do
+                                let peak = peaks.[i]
+                                if hasFragmentMatchWithinPpm100 frag peak.Mz then
+                                    intensitySum <- intensitySum + peak.Intensity
+                            intensitySum
+                    psm,sum
+                )
+            sw.Stop()
+            stageCountMatchedMassesMs <- stageCountMatchedMassesMs + sw.ElapsedMilliseconds
+            result
         logger.Trace "Create RetentionTime index"
         let retTimeIdxed = Query.getMS1RTIdx inReader inRunID
         logger.Trace "Create RetentionTime index:finished"
         
         logger.Trace "Read and sort ms1s"
-        /// Returns a Sequence containing all MassSpectra of a single MS-run
-        let massSpectra = inReader.ReadMassSpectra(inRunID)
-        /// Returns a Array that contains all MS1s sorted by their scanTime
+        /// Build sorted ms1 index directly from rt index entries to avoid a second full metadata read.
         let ms1SortedByScanTime =
-            massSpectra
-            |> Seq.filter (fun ms -> MassSpectrum.getMsLevel ms = 1)
-            |> Seq.map (fun ms -> MassSpectrum.getScanTime ms, ms)
-            |> Seq.sortBy fst
+            retTimeIdxed
+            |> Seq.map (fun entry -> entry.Rt, entry.SpectrumID)
             |> Array.ofSeq
         logger.Trace "Read and sort ms1s:finished"
         
@@ -692,7 +832,13 @@ module PSMBasedQuantificationTIMs =
            
         logger.Trace "init lookup functions"        
         ///
-        let comparePredictedAndMeasuredIsotopicCluster = initComparePredictedAndMeasuredIsotopicCluster inReader ms1SortedByScanTime ms1AccuracyEstimate     
+        let comparePredictedAndMeasuredIsotopicClusterRaw = initComparePredictedAndMeasuredIsotopicCluster getPredictedIsotopicPattern readSpecPeaksWithMem ms1SortedByScanTime ms1AccuracyEstimate
+        let comparePredictedAndMeasuredIsotopicCluster xXic yXic yXicUncorrected ch peptideSequence tarRt tarMz =
+            let sw = System.Diagnostics.Stopwatch.StartNew()
+            let result = comparePredictedAndMeasuredIsotopicClusterRaw xXic yXic yXicUncorrected ch peptideSequence tarRt tarMz
+            sw.Stop()
+            stageIsotopicCompareMs <- stageIsotopicCompareMs + sw.ElapsedMilliseconds
+            result
         
         let mzWindow = 
             match processParams.XicExtraction.MzWindow_Da with 
@@ -702,10 +848,15 @@ module PSMBasedQuantificationTIMs =
                 logger.Trace (sprintf "optimal mz Window for XIC look up found by estimation :%f Da" mzW)  
                 mzW
 
-        let readSpecPeaksWithMem = FSharpAux.Memoization.memoize inReader.ReadSpectrumPeaks
         ///
         let getPeaks = Query.initRTProfile readSpecPeaksWithMem
-        let getXIC = initGetProcessedXIC logger processParams.BaseLineCorrection getPeaks retTimeIdxed processParams.XicExtraction.ScanTimeWindow mzWindow 0.05        
+        let getXICRaw = initGetProcessedXIC logger processParams.BaseLineCorrection getPeaks retTimeIdxed processParams.XicExtraction.ScanTimeWindow mzWindow 0.05
+        let getXIC meanScanTime meanPrecMz meanIM =
+            let sw = System.Diagnostics.Stopwatch.StartNew()
+            let result = getXICRaw meanScanTime meanPrecMz meanIM
+            sw.Stop()
+            stageXicExtractionMs <- stageXicExtractionMs + sw.ElapsedMilliseconds
+            result
         ///
         let identifyPeaks = initIdentifyPeaks processParams.XicExtraction.XicProcessing
         logger.Trace "init lookup functions:finished"
@@ -1121,8 +1272,11 @@ module PSMBasedQuantificationTIMs =
                 logger.Trace (sprintf "Quantfailed: %A" ex)
                 Option.None
         logger.Trace "init quantification functions:finished"
+        swSetup.Stop()
+        logger.Trace (sprintf "Perf: setupMs=%d" swSetup.ElapsedMilliseconds)
         
         logger.Trace "executing quantification"
+        let swQuantLoop = System.Diagnostics.Stopwatch.StartNew()
         let quantResults = 
             qpsmsMzRefined 
             |> Array.groupBy (fun x -> 
@@ -1146,7 +1300,21 @@ module PSMBasedQuantificationTIMs =
                         psms                  
                 )
             |> Array.mapi (fun i (pepIon,psms) -> 
-                if i % 100 = 0 then logger.Trace (sprintf "%i peptides quantified" i)
+                if i % 100 = 0 then
+                    logger.Trace (sprintf "%i peptides quantified" i)
+                    logger.Trace (
+                        sprintf
+                            "PerfProgress peptides=%d quantLoopMs=%d countMatchedMassesMs=%d xicExtractionMs=%d isotopicCompareMs=%d readSpectrumPeaksDbReads=%d peakCacheHits=%d peakCacheMisses=%d peakCacheEvictions=%d"
+                            i
+                            swQuantLoop.ElapsedMilliseconds
+                            stageCountMatchedMassesMs
+                            stageXicExtractionMs
+                            stageIsotopicCompareMs
+                            readSpectrumPeaksDbReads
+                            peakSpectrumCacheHits
+                            peakSpectrumCacheMisses
+                            peakSpectrumCacheEvictions
+                    )
                 
                 match processParams.PerformLabeledQuantification with 
                 |Domain.Labeling.N15Labeling | Domain.Labeling.N15LabelingOnly | Domain.Labeling.Labelshift-> labledQuantification pepIon psms
@@ -1190,5 +1358,28 @@ module PSMBasedQuantificationTIMs =
         inTr.Dispose()
         inReader.Dispose()
         memoryDB.Dispose()
+        swOverall.Stop()
+        logger.Trace (
+            sprintf
+                "PerfSummary totalMs=%d setupMs=%d countMatchedMassesMs=%d xicExtractionMs=%d isotopicCompareMs=%d readSpectrumPeaksDbReads=%d"
+                swOverall.ElapsedMilliseconds
+                swSetup.ElapsedMilliseconds
+                stageCountMatchedMassesMs
+                stageXicExtractionMs
+                stageIsotopicCompareMs
+                readSpectrumPeaksDbReads
+        )
+        logger.Trace (
+            sprintf
+                "PerfCaches peakSpectrumCacheMode=%s peakSpectrumCacheMax=%d peakSpectrumCacheHits=%d peakSpectrumCacheMisses=%d peakSpectrumCacheEvictions=%d isotopicPatternCacheHits=%d isotopicPatternCacheMisses=%d isotopicPatternCacheCount=%d"
+                peakSpectrumCacheModeUsed
+                peakSpectrumCacheMax
+                peakSpectrumCacheHits
+                peakSpectrumCacheMisses
+                peakSpectrumCacheEvictions
+                isotopicPatternCacheHits
+                isotopicPatternCacheMisses
+                isotopicPatternCache.Count
+        )
         logger.Trace "executing quantification:finished"
         

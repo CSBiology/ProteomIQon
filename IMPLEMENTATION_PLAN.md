@@ -8,6 +8,71 @@ Deliver measurable runtime improvements in `src/PSMBasedQuantificationTIMs/PSMBa
 2. P1 target: additional 15-30% improvement over P0.
 3. Output requirement: numerical equivalence within defined tolerance.
 
+## 1.1 Execution Tracker (Updated 2026-02-07)
+
+| Task | Status | Code Evidence | Validation Status | Next Gate |
+|---|---|---|---|---|
+| P0-0 Stage timing + read counters | Implemented | `src/PSMBasedQuantificationTIMs/PSMBasedQuantificationTIMs.fs:541`, `src/PSMBasedQuantificationTIMs/PSMBasedQuantificationTIMs.fs:588`, `src/PSMBasedQuantificationTIMs/PSMBasedQuantificationTIMs.fs:1359` | Build passes (`dotnet build ... -c Release`), dataset-level equivalence not yet run | Run baseline/candidate benchmark and output diff |
+| P0-1 Memoized reads in `countMatchedMasses` | Implemented | `src/PSMBasedQuantificationTIMs/PSMBasedQuantificationTIMs.fs:602`, `src/PSMBasedQuantificationTIMs/PSMBasedQuantificationTIMs.fs:685` | Build passes, runtime delta pending benchmark | Measure `countMatchedMassesMs` and read count delta |
+| P0-2 Memoized reads in isotopic compare path | Implemented | `src/PSMBasedQuantificationTIMs/PSMBasedQuantificationTIMs.fs:181`, `src/PSMBasedQuantificationTIMs/PSMBasedQuantificationTIMs.fs:497`, `src/PSMBasedQuantificationTIMs/PSMBasedQuantificationTIMs.fs:833` | Build passes, output parity pending benchmark | Compare isotopic stage timing and quant equivalence |
+| P0-3 Binary closest-MS1 + remove duplicate MS metadata pass | Implemented | `src/PSMBasedQuantificationTIMs/PSMBasedQuantificationTIMs.fs:160`, `src/PSMBasedQuantificationTIMs/PSMBasedQuantificationTIMs.fs:727` | Build passes, closest-id parity spot-check pending | Add sampled closest-ID parity check script/run |
+| P0-4 Low-allocation 3D `initRTProfile` rewrite | Implemented | `src/PSMBasedQuantificationTIMs/PSMBasedQuantificationTIMs.fs:30` | Build passes, numerical equivalence pending benchmark | Validate full `.quant` parity on reference dataset |
+| P1-1 Fragment matching algorithm optimization | Implemented (code), validation pending | `src/PSMBasedQuantificationTIMs/PSMBasedQuantificationTIMs.fs:663`, `src/PSMBasedQuantificationTIMs/PSMBasedQuantificationTIMs.fs:685` | Build passes, equivalence/perf run pending | Execute P1 benchmark and compare to P0 baseline |
+| P1-2 Bounded peak cache | Implemented (code), partial validation complete | `src/PSMBasedQuantificationTIMs/PSMBasedQuantificationTIMs.fs:597`, `src/PSMBasedQuantificationTIMs/PSMBasedQuantificationTIMs.fs:611`, `src/PSMBasedQuantificationTIMs/PSMBasedQuantificationTIMs.fs:1374` | Build passes; tuned under memory-safe probes, full-run parity still pending | Keep default bounded LRU with max=700; run full benchmark + `.quant` comparison |
+| P1-3 Isotopic distribution memoization | Implemented (code), validation pending | `src/PSMBasedQuantificationTIMs/PSMBasedQuantificationTIMs.fs:647`, `src/PSMBasedQuantificationTIMs/PSMBasedQuantificationTIMs.fs:833`, `src/PSMBasedQuantificationTIMs/PSMBasedQuantificationTIMs.fs:1369` | Build passes, cache hit/miss behavior and output parity pending benchmark | Run benchmark and inspect `PerfCaches` metrics + `.quant` diff |
+| P1-4 Controlled parallelization | Not started | - | - | Add feature-flagged worker model |
+
+Execution notes:
+
+1. Current implementation progress is code-first; runtime benchmark and output-diff gates are blocked on selecting and running the fixed reference dataset contract in section 4.
+2. Multiple successful compilation checks were run after each P0/P1 edit block: `dotnet build src/PSMBasedQuantificationTIMs/PSMBasedQuantificationTIMs.fsproj -c Release`.
+3. TIMs runtime smoke test was attempted with legacy non-TIMS minimal data (`testsOld/ProteomIQon.Tests/data/PSMBasedQuantification`), but this dataset is not a valid benchmark gate.
+4. Legacy params file is schema-incompatible for current parser (`Unexpected property 'XicExtraction'`).
+5. Current default params run reaches quantification but exits on empty result sequence in CSV writer for this dataset.
+6. Remaining performance and correctness gates require a real TIMs reference dataset that yields non-empty quant output.
+7. TIMs benchmark dataset provided by user was executed on 2026-02-06 and compared to legacy benchmark log from 2025-02-17 using timestamp milestones:
+8. Setup path improved strongly:
+9. `Create RetentionTime index`: 1420.742s (old) -> 379.664s (current), ~3.74x faster.
+10. `rt_start -> quant_start`: 1861.599s (old) -> 381.244s (current), ~4.88x faster.
+11. Quantification loop is currently slower in this run window:
+12. `quant_start -> 4400 peptides quantified`: 182.366s (old) vs 1478.821s (current), ~8.11x slower to same marker.
+13. Current run did not reach `executing quantification:finished` before external timeout/abort; old run finished at 1532.772s after quant start.
+14. Immediate follow-up hypothesis: default bounded peak cache policy (`bounded_lru`, max 1000) and/or fragment matching refactor introduced throughput regression in quant loop on this dataset.
+15. Important comparability caveat: old log (`binned_spectra_1.000_log_old.txt`) runs with `PerformLabeledQuantification = Unlabeled`, while current benchmark params are `N15Labeling`; direct quant-loop speed comparison is therefore not strictly apples-to-apples.
+16. Quant-loop A/B probes (all stopped after `500 peptides quantified`, same N15 params, same machine) were executed to isolate regressions:
+17. `probe_default_newcode_20260206_153406`: `sec_to_100=109.088`, `sec_to_500=136.993`.
+18. `probe_legacyFrag_20260206_150828`: `sec_to_100=104.337`, `sec_to_500=128.853`.
+19. `probe_isoOff_20260206_151755`: `sec_to_100=95.062`, `sec_to_500=118.621`.
+20. `probe_legacyFrag_isoOff_20260206_152558`: `sec_to_100=98.601`, `sec_to_500=121.983`.
+21. `probe_default_afterIsoDefaultOff_20260206_154320`: `sec_to_100=108.085`, `sec_to_500=135.265`.
+22. `probe_isoOff_rep2_20260206_155238`: `sec_to_100=114.427`, `sec_to_500=140.866`.
+23. Interpretation: quant-loop benchmark noise is substantial (likely driven by random wavelet padding and run heterogeneity), but this probe matrix is sufficient to justify keeping new P1 optimizations behind toggles and prioritizing quant-loop-safe defaults.
+24. Implemented quant-loop feature toggles for controlled rollout and isolation:
+25. `PQ_TIMS_FRAGMENT_MATCH_MODE=legacy` enables legacy fragment matching.
+26. `PQ_TIMS_ISO_CACHE_MODE=on` enables isotopic pattern memoization (default is disabled).
+27. Existing `PQ_TIMS_PEAK_CACHE_MODE` and `PQ_TIMS_PEAK_CACHE_MAX` remain active for peak-read cache tuning.
+28. Memory-safe benchmarking protocol now in use: short probes stopped at 100 or 500 peptides and cache cap kept at <=1000 to avoid RAM pressure.
+29. Added in-loop stage progress logging every 100 peptides via `PerfProgress` to allow hotspot diagnosis without full-run completion.
+30. Confirmed hotspot at 100 peptides (`probe_perfProgress100_20260206_160241`): `xicExtractionMs=95735` dominated quant loop (`quantLoopMs=104966`) while `countMatchedMassesMs` and isotopic compare were minor.
+31. After low-allocation `initRTProfile` update and memory-safe defaults, matching 100-peptide probe (`probe_safe100_cache1000_20260207_101024`) showed improved quant-loop stage timing:
+32. `quantLoopMs`: 104966 -> 93559 (~10.9% faster), `xicExtractionMs`: 95735 -> 85723 (~10.5% faster), with stable `readSpectrumPeaksDbReads=7742`.
+33. Remaining priority is further XIC-path optimization under strict memory constraints; do not increase cache size beyond validated limits on this workstation.
+34. Additional XIC/internal experiments were run and kept/reverted strictly by measured effect:
+35. Kept: low-allocation `initGetProcessedXIC` rewrite (`src/PSMBasedQuantificationTIMs/PSMBasedQuantificationTIMs.fs:247`) and all-zero short-circuit in baseline subtraction (`src/PSMBasedQuantificationTIMs/PSMBasedQuantificationTIMs.fs:234`).
+36. Reverted: one-pass no-dictionary 3D aggregation variant (regression in probe), `MzSearch`-first IM variant (regression in probe), bounded FIFO cache mode (regression in probe).
+37. Added quant-loop progress cache counters for evidence-driven tuning:
+38. `PerfProgress` now logs `peakCacheHits`, `peakCacheMisses`, `peakCacheEvictions` (`src/PSMBasedQuantificationTIMs/PSMBasedQuantificationTIMs.fs:1307`).
+39. Cache-churn evidence at 100 peptides (cache 1000): `peakCacheHits=40004`, `peakCacheMisses=7742`, `peakCacheEvictions=6742` (`probe_safe100_cacheStats_20260207_111723`).
+40. Cache size sweep (memory-safe, stop at 100 peptides):
+41. cache 600 -> `quantLoopMs=105360` (`probe_safe100_cache600_20260207_121320`) [worse]
+42. cache 700 -> `quantLoopMs=84045` and `93205` replicates; default-mode recheck `85510` (`probe_safe100_default700_20260207_120545`) [best overall]
+43. cache 1000 -> around `94313` to `95771` typical in current branch
+44. cache 1200 -> `96914`; cache 1500 -> `98263` [worse]
+45. Decision: default `PQ_TIMS_PEAK_CACHE_MAX` changed from 1000 to 700 for better quant-loop throughput and lower memory footprint (`src/PSMBasedQuantificationTIMs/PSMBasedQuantificationTIMs.fs:597`).
+46. Longer-loop confirmation with new default:
+47. `probe_safe500_default700_20260207_122157` reached 500 peptides at `quantLoopMs=117370` (~117.37s), with `xicExtractionMs=102861`.
+48. Compared to earlier reference probe (`probe_default_newcode_20260206_153406`, 500 peptides in ~136.99s), this is an additional ~14.3% quant-loop improvement at the 500-peptide marker.
+
 ## 2. Scope
 
 Primary code scope:
@@ -488,3 +553,5 @@ Go to release candidate only if:
 2. Correctness checks pass.
 3. No new runtime instability.
 4. Parallel mode remains off by default unless fully validated.
+
+
