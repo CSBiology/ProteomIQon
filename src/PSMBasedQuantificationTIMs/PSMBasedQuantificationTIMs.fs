@@ -565,6 +565,8 @@ module PSMBasedQuantificationTIMs =
         let mutable peakSpectrumCacheHits = 0L
         let mutable peakSpectrumCacheMisses = 0L
         let mutable peakSpectrumCacheEvictions = 0L
+        let mutable peakSpectrumCacheResidentPeaks = 0L
+        let mutable peakSpectrumCacheResidentSpectra = 0L
         let mutable isotopicPatternCacheHits = 0L
         let mutable isotopicPatternCacheMisses = 0L
         logger.Trace (sprintf "Input file: %s" instrumentOutput)
@@ -586,13 +588,26 @@ module PSMBasedQuantificationTIMs =
                 System.IO.Directory.CreateDirectory path |> ignore
                 path
         logger.Trace (sprintf "plotDirectory:%s" plotDirectory)
-        logger.Trace "Copy peptide DB into Memory"
-        let memoryDB = SearchDB.copyDBIntoMemory cn
-        logger.Trace "Copy peptide DB into Memory: finished"
+        let peptideDbMode = System.Environment.GetEnvironmentVariable "PQ_TIMS_PEPTIDE_DB_MODE"
+        let useMemoryDbCopy =
+            System.String.Equals(peptideDbMode, "memory", System.StringComparison.OrdinalIgnoreCase)
+            || System.String.Equals(peptideDbMode, "memory_copy", System.StringComparison.OrdinalIgnoreCase)
+        let peptideDB =
+            if useMemoryDbCopy then
+                logger.Trace "Peptide DB mode: memory_copy"
+                logger.Trace "Copy peptide DB into Memory"
+                let memoryDb = SearchDB.copyDBIntoMemory cn
+                logger.Trace "Copy peptide DB into Memory: finished"
+                memoryDb
+            else
+                logger.Trace "Peptide DB mode: file_backed"
+                let fileDb = new SQLiteConnection(cn.ConnectionString)
+                fileDb.Open()
+                fileDb
         logger.Trace "Get peptide lookUp function"
-        let dBParams     = getSDBParams memoryDB
-        //let massLookUp = prepareSelectMassByModSequenceAndGlobalMod memoryDB
-        let peptideLookUp = getThreadSafePeptideLookUpFromFileBySequenceAndGMod memoryDB dBParams
+        let dBParams     = getSDBParams peptideDB
+        //let massLookUp = prepareSelectMassByModSequenceAndGlobalMod peptideDB
+        let peptideLookUp = getThreadSafePeptideLookUpFromFileBySequenceAndGMod peptideDB dBParams
         let calcIonSeries aal = Fragmentation.Series.fragmentMasses Fragmentation.Series.bOfBioList Fragmentation.Series.yOfBioList dBParams.MassFunction aal
         logger.Trace "Get peptide lookUp function: finished"
         // initialize Reader and Transaction
@@ -613,13 +628,26 @@ module PSMBasedQuantificationTIMs =
                 | _ ->
                     logger.Trace (sprintf "Invalid PQ_TIMS_PEAK_CACHE_MAX='%s'. Using default 700." raw)
                     700
+        let peakSpectrumCacheMaxPeaksOpt =
+            match System.Environment.GetEnvironmentVariable "PQ_TIMS_PEAK_CACHE_MAX_PEAKS" with
+            | null | "" -> None
+            | raw ->
+                match System.Int64.TryParse raw with
+                | true, parsed when parsed > 0L -> Some parsed
+                | _ ->
+                    logger.Trace (sprintf "Invalid PQ_TIMS_PEAK_CACHE_MAX_PEAKS='%s'. Using unbounded peak count." raw)
+                    None
+        let peakSpectrumCacheMaxPeaksLabel =
+            match peakSpectrumCacheMaxPeaksOpt with
+            | Some maxPeaks -> maxPeaks.ToString()
+            | None -> "unbounded"
         let peakSpectrumCacheMode = System.Environment.GetEnvironmentVariable "PQ_TIMS_PEAK_CACHE_MODE"
         let readSpecPeaksWithMem, peakSpectrumCacheModeUsed =
             if System.String.Equals(peakSpectrumCacheMode, "unbounded", System.StringComparison.OrdinalIgnoreCase) then
                 logger.Trace "Peak spectrum cache mode: unbounded memoize"
                 FSharpAux.Memoization.memoize readSpectrumPeaksCounted, "unbounded"
             else
-                logger.Trace (sprintf "Peak spectrum cache mode: bounded_lru (max=%d)" peakSpectrumCacheMax)
+                logger.Trace (sprintf "Peak spectrum cache mode: bounded_lru (maxSpectra=%d, maxPeaks=%s)" peakSpectrumCacheMax peakSpectrumCacheMaxPeaksLabel)
                 let lruList = System.Collections.Generic.LinkedList<string * MzIO.Binary.Peak1DArray>()
                 let cacheMap = System.Collections.Generic.Dictionary<string, System.Collections.Generic.LinkedListNode<string * MzIO.Binary.Peak1DArray>>(System.StringComparer.Ordinal)
                 let readSpecPeaksWithLru spectrumID =
@@ -632,15 +660,28 @@ module PSMBasedQuantificationTIMs =
                     else
                         peakSpectrumCacheMisses <- peakSpectrumCacheMisses + 1L
                         let loaded = readSpectrumPeaksCounted spectrumID
+                        peakSpectrumCacheResidentPeaks <- peakSpectrumCacheResidentPeaks + (loaded.Peaks.Length |> int64)
                         let newNode = System.Collections.Generic.LinkedListNode<string * MzIO.Binary.Peak1DArray>((spectrumID, loaded))
                         lruList.AddFirst(newNode)
                         cacheMap.[spectrumID] <- newNode
-                        if cacheMap.Count > peakSpectrumCacheMax then
+                        let shouldEvictByPeaks =
+                            match peakSpectrumCacheMaxPeaksOpt with
+                            | Some maxPeaks -> peakSpectrumCacheResidentPeaks > maxPeaks
+                            | None -> false
+                        let mutable shouldEvict = cacheMap.Count > peakSpectrumCacheMax || shouldEvictByPeaks
+                        while shouldEvict do
                             let tailNode = lruList.Last
                             if not (obj.ReferenceEquals(tailNode, null)) then
                                 lruList.RemoveLast()
+                                peakSpectrumCacheResidentPeaks <- peakSpectrumCacheResidentPeaks - ((snd tailNode.Value).Peaks.Length |> int64)
                                 cacheMap.Remove(fst tailNode.Value) |> ignore
                                 peakSpectrumCacheEvictions <- peakSpectrumCacheEvictions + 1L
+                            let shouldEvictByPeaks' =
+                                match peakSpectrumCacheMaxPeaksOpt with
+                                | Some maxPeaks -> peakSpectrumCacheResidentPeaks > maxPeaks
+                                | None -> false
+                            shouldEvict <- cacheMap.Count > peakSpectrumCacheMax || shouldEvictByPeaks'
+                        peakSpectrumCacheResidentSpectra <- cacheMap.Count |> int64
                         loaded
                 readSpecPeaksWithLru, "bounded_lru"
         let fragmentMatchMode = System.Environment.GetEnvironmentVariable "PQ_TIMS_FRAGMENT_MATCH_MODE"
@@ -1312,10 +1353,17 @@ module PSMBasedQuantificationTIMs =
                 )
             |> Array.mapi (fun i (pepIon,psms) -> 
                 if i % 100 = 0 then
+                    let proc = System.Diagnostics.Process.GetCurrentProcess()
+                    let workingSetMB = proc.WorkingSet64 / (1024L * 1024L)
+                    let privateBytesMB = proc.PrivateMemorySize64 / (1024L * 1024L)
+                    let managedHeapMB = System.GC.GetTotalMemory(false) / (1024L * 1024L)
+                    let gc0 = System.GC.CollectionCount 0
+                    let gc1 = System.GC.CollectionCount 1
+                    let gc2 = System.GC.CollectionCount 2
                     logger.Trace (sprintf "%i peptides quantified" i)
                     logger.Trace (
                         sprintf
-                            "PerfProgress peptides=%d quantLoopMs=%d countMatchedMassesMs=%d xicExtractionMs=%d isotopicCompareMs=%d readSpectrumPeaksDbReads=%d peakCacheHits=%d peakCacheMisses=%d peakCacheEvictions=%d"
+                            "PerfProgress peptides=%d quantLoopMs=%d countMatchedMassesMs=%d xicExtractionMs=%d isotopicCompareMs=%d readSpectrumPeaksDbReads=%d peakCacheHits=%d peakCacheMisses=%d peakCacheEvictions=%d peakCacheResidentSpectra=%d peakCacheResidentPeaks=%d managedHeapMB=%d workingSetMB=%d privateBytesMB=%d gc0=%d gc1=%d gc2=%d"
                             i
                             swQuantLoop.ElapsedMilliseconds
                             stageCountMatchedMassesMs
@@ -1325,6 +1373,14 @@ module PSMBasedQuantificationTIMs =
                             peakSpectrumCacheHits
                             peakSpectrumCacheMisses
                             peakSpectrumCacheEvictions
+                            peakSpectrumCacheResidentSpectra
+                            peakSpectrumCacheResidentPeaks
+                            managedHeapMB
+                            workingSetMB
+                            privateBytesMB
+                            gc0
+                            gc1
+                            gc2
                     )
                 
                 match processParams.PerformLabeledQuantification with 
@@ -1368,23 +1424,27 @@ module PSMBasedQuantificationTIMs =
         inTr.Commit()
         inTr.Dispose()
         inReader.Dispose()
-        memoryDB.Dispose()
+        peptideDB.Dispose()
         swOverall.Stop()
         logger.Trace (
             sprintf
-                "PerfSummary totalMs=%d setupMs=%d countMatchedMassesMs=%d xicExtractionMs=%d isotopicCompareMs=%d readSpectrumPeaksDbReads=%d"
+                "PerfSummary totalMs=%d setupMs=%d countMatchedMassesMs=%d xicExtractionMs=%d isotopicCompareMs=%d readSpectrumPeaksDbReads=%d peakCacheResidentSpectra=%d peakCacheResidentPeaks=%d managedHeapMB=%d"
                 swOverall.ElapsedMilliseconds
                 swSetup.ElapsedMilliseconds
                 stageCountMatchedMassesMs
                 stageXicExtractionMs
                 stageIsotopicCompareMs
                 readSpectrumPeaksDbReads
+                peakSpectrumCacheResidentSpectra
+                peakSpectrumCacheResidentPeaks
+                (System.GC.GetTotalMemory(false) / (1024L * 1024L))
         )
         logger.Trace (
             sprintf
-                "PerfCaches peakSpectrumCacheMode=%s peakSpectrumCacheMax=%d peakSpectrumCacheHits=%d peakSpectrumCacheMisses=%d peakSpectrumCacheEvictions=%d isotopicPatternCacheHits=%d isotopicPatternCacheMisses=%d isotopicPatternCacheCount=%d"
+                "PerfCaches peakSpectrumCacheMode=%s peakSpectrumCacheMax=%d peakSpectrumCacheMaxPeaks=%s peakSpectrumCacheHits=%d peakSpectrumCacheMisses=%d peakSpectrumCacheEvictions=%d isotopicPatternCacheHits=%d isotopicPatternCacheMisses=%d isotopicPatternCacheCount=%d"
                 peakSpectrumCacheModeUsed
                 peakSpectrumCacheMax
+                peakSpectrumCacheMaxPeaksLabel
                 peakSpectrumCacheHits
                 peakSpectrumCacheMisses
                 peakSpectrumCacheEvictions
