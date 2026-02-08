@@ -8,6 +8,32 @@ Deliver measurable runtime improvements in `src/PSMBasedQuantificationTIMs/PSMBa
 2. P1 target: additional 15-30% improvement over P0.
 3. Output requirement: numerical equivalence within defined tolerance.
 
+## 1.0 Latest Status Snapshot (Updated 2026-02-08)
+
+Completed high-impact code changes now on branch:
+
+1. XIC hot path m/z-first + allocation reductions in 3D profile lookup (`src/PSMBasedQuantificationTIMs/PSMBasedQuantificationTIMs.fs:30`).
+2. Isotopic compare path avoids full-spectrum unzip/rezip materialization (`src/PSMBasedQuantificationTIMs/PSMBasedQuantificationTIMs.fs:639`).
+3. Streamed SQL RT-index builder is default with legacy fallback (`src/PSMBasedQuantificationTIMs/PSMBasedQuantificationTIMs.fs:1000`).
+4. New direct RT/intensity extraction path removes `Peak2D` object creation in XIC pipeline (`src/PSMBasedQuantificationTIMs/PSMBasedQuantificationTIMs.fs:65`, `src/PSMBasedQuantificationTIMs/PSMBasedQuantificationTIMs.fs:380`, `src/PSMBasedQuantificationTIMs/PSMBasedQuantificationTIMs.fs:1139`).
+5. Runtime tuning is available via CLI parameters (env vars remain fallback only) (`src/PSMBasedQuantificationTIMs/CLIArgumentParsing.fs:48`, `src/PSMBasedQuantificationTIMs/Program.fs:30`).
+
+Most recent benchmark checkpoints (same dataset/params, N15 labeling):
+
+| Probe | Cache Peak Cap | Setup ms | QuantLoop ms @800 | QuantLoop ms @1200 | Max WS MB observed | Notes |
+|---|---:|---:|---:|---:|---:|---|
+| `probe_cli_peakcap20M_20260207_233054` | 20M | 63938 | 144061 | - | 7169 | Earlier baseline on new branch |
+| `probe_rtIntensity_noPeak2D_20M_20260208_105938` | 20M | 63036 | 105263 | - | 6697 | Faster early loop, then cache-thrash spike after ~900 peptides |
+| `probe_rtIntensity_noPeak2D_60M_20260208_110505` | 60M | 61095 | 105554 | 189133 | 11940 | Stable memory/perf balance, moderate slowdown vs uncapped |
+| `probe_rtIntensity_noPeak2D_80M_20260208_111647` | 80M | 59706 | 109500 | 150968 | 14516 | Better throughput than 60M, lower memory than uncapped |
+| `probe_rtIntensity_noPeak2D_noCap_20260208_111112` | unbounded | 62295 | 106274 | 145394 | 21689 | Fastest, but highest RAM footprint |
+
+Current recommendation from measured data:
+
+1. Performance-first profile: `--runtime-peak-cache-max 700` and no peak-count cap.
+2. Balanced profile: `--runtime-peak-cache-max 700 --runtime-peak-cache-max-peaks 80000000`.
+3. Avoid `20000000` peak cap for full runs; it repeatedly caused late quant-loop cache-thrash.
+
 ## 1.1 Execution Tracker (Updated 2026-02-07)
 
 | Task | Status | Code Evidence | Validation Status | Next Gate |
@@ -15,10 +41,11 @@ Deliver measurable runtime improvements in `src/PSMBasedQuantificationTIMs/PSMBa
 | P0-0 Stage timing + read counters | Implemented | `src/PSMBasedQuantificationTIMs/PSMBasedQuantificationTIMs.fs:541`, `src/PSMBasedQuantificationTIMs/PSMBasedQuantificationTIMs.fs:588`, `src/PSMBasedQuantificationTIMs/PSMBasedQuantificationTIMs.fs:1359` | Build passes (`dotnet build ... -c Release`), dataset-level equivalence not yet run | Run baseline/candidate benchmark and output diff |
 | P0-1 Memoized reads in `countMatchedMasses` | Implemented | `src/PSMBasedQuantificationTIMs/PSMBasedQuantificationTIMs.fs:602`, `src/PSMBasedQuantificationTIMs/PSMBasedQuantificationTIMs.fs:685` | Build passes, runtime delta pending benchmark | Measure `countMatchedMassesMs` and read count delta |
 | P0-2 Memoized reads in isotopic compare path | Implemented | `src/PSMBasedQuantificationTIMs/PSMBasedQuantificationTIMs.fs:181`, `src/PSMBasedQuantificationTIMs/PSMBasedQuantificationTIMs.fs:497`, `src/PSMBasedQuantificationTIMs/PSMBasedQuantificationTIMs.fs:833` | Build passes, output parity pending benchmark | Compare isotopic stage timing and quant equivalence |
-| P0-3 Binary closest-MS1 + remove duplicate MS metadata pass | Implemented | `src/PSMBasedQuantificationTIMs/PSMBasedQuantificationTIMs.fs:160`, `src/PSMBasedQuantificationTIMs/PSMBasedQuantificationTIMs.fs:727` | Build passes, closest-id parity spot-check pending | Add sampled closest-ID parity check script/run |
+| P0-3 Binary closest-MS1 + remove duplicate MS metadata pass | Implemented + extended | `src/PSMBasedQuantificationTIMs/PSMBasedQuantificationTIMs.fs:180`, `src/PSMBasedQuantificationTIMs/PSMBasedQuantificationTIMs.fs:260`, `src/PSMBasedQuantificationTIMs/PSMBasedQuantificationTIMs.fs:937` | Build passes; `stream_sql` RT index mode benchmarked against legacy (major setup RAM/time improvement) | Keep `stream_sql` default with legacy rollback option |
 | P0-4 Low-allocation 3D `initRTProfile` rewrite | Implemented | `src/PSMBasedQuantificationTIMs/PSMBasedQuantificationTIMs.fs:30` | Build passes; bounded probes show additional quant-loop gains, full `.quant` parity still pending | Complete full-run parity once memory gate is addressed |
+| P0-5 Direct RT/intensity XIC path (remove Peak2D hot-loop allocations) | Implemented | `src/PSMBasedQuantificationTIMs/PSMBasedQuantificationTIMs.fs:65`, `src/PSMBasedQuantificationTIMs/PSMBasedQuantificationTIMs.fs:380`, `src/PSMBasedQuantificationTIMs/PSMBasedQuantificationTIMs.fs:1139` | Build passes; additional quant-loop gain confirmed (e.g. `latest_60M` at 1200 peptides: `189133 ms` vs pre-change `222176 ms`) | Validate long-run parity + settle default peak-cap profile |
 | P1-1 Fragment matching algorithm optimization | Implemented (code), validation pending | `src/PSMBasedQuantificationTIMs/PSMBasedQuantificationTIMs.fs:663`, `src/PSMBasedQuantificationTIMs/PSMBasedQuantificationTIMs.fs:685` | Build passes, equivalence/perf run pending | Execute P1 benchmark and compare to P0 baseline |
-| P1-2 Bounded peak cache | Implemented (code), partial validation complete | `src/PSMBasedQuantificationTIMs/PSMBasedQuantificationTIMs.fs:597`, `src/PSMBasedQuantificationTIMs/PSMBasedQuantificationTIMs.fs:611`, `src/PSMBasedQuantificationTIMs/PSMBasedQuantificationTIMs.fs:623`, `src/PSMBasedQuantificationTIMs/PSMBasedQuantificationTIMs.fs:1374` | Build passes; added optional `PQ_TIMS_PEAK_CACHE_MAX_PEAKS` and validated tradeoff envelopes (20M/60M caps reduce RAM but can regress throughput) | Keep default `max=700` and unbounded peak count; use peak cap only as host-memory safeguard |
+| P1-2 Bounded peak cache | Implemented (code), partial validation complete | `src/PSMBasedQuantificationTIMs/PSMBasedQuantificationTIMs.fs:845`, `src/PSMBasedQuantificationTIMs/PSMBasedQuantificationTIMs.fs:860`, `src/PSMBasedQuantificationTIMs/PSMBasedQuantificationTIMs.fs:1679`, `src/PSMBasedQuantificationTIMs/CLIArgumentParsing.fs:45` | Build passes; validated envelopes on latest hot path (`20M` thrash, `60M` stable, `80M` faster with moderate RAM) | Use profile-based defaults in runs: performance=`unbounded`, balanced=`80M` |
 | P1-3 Isotopic distribution memoization | Implemented (code), validation pending | `src/PSMBasedQuantificationTIMs/PSMBasedQuantificationTIMs.fs:647`, `src/PSMBasedQuantificationTIMs/PSMBasedQuantificationTIMs.fs:833`, `src/PSMBasedQuantificationTIMs/PSMBasedQuantificationTIMs.fs:1369` | Build passes, cache hit/miss behavior and output parity pending benchmark | Run benchmark and inspect `PerfCaches` metrics + `.quant` diff |
 | P1-4 Controlled parallelization | Not started | - | - | Add feature-flagged worker model |
 
@@ -96,6 +123,17 @@ Execution notes:
 70. Tested `cache_ms1_only` policy (bypass caching for non-MS1 IDs) in `probe_ms1cacheOnly_noCap_20260207_220707`; effect was neutral-to-slightly-worse and this experiment was reverted.
 71. Current recommendation: keep default as `PQ_TIMS_PEAK_CACHE_MAX=700` with unbounded peak count; use `PQ_TIMS_PEAK_CACHE_MAX_PEAKS` only as an emergency memory guard on constrained hosts, expecting potential throughput penalties.
 72. Next memory phase should prioritize algorithmic containment (streamed result materialization and reduced in-memory trace retention) over stricter cache caps, to avoid quant-loop regressions.
+73. Added explicit runtime CLI parameters (no env var requirement for normal use) and threaded them to `quantifyPeptides` as `RuntimeTuning`:
+74. `--runtime-peptide-db-mode`, `--runtime-peak-cache-mode`, `--runtime-peak-cache-max`, `--runtime-peak-cache-max-peaks`, `--runtime-fragment-match-mode`, `--runtime-iso-cache-mode`, `--runtime-rt-index-mode` (`src/PSMBasedQuantificationTIMs/CLIArgumentParsing.fs`, `src/PSMBasedQuantificationTIMs/Program.fs`).
+75. Environment variables are retained only as fallback compatibility when runtime parameters are not supplied.
+76. Implemented a non-cache memory optimization for setup: `stream_sql` RT index builder that streams `SpectrumID, Description` rows from mzLite and extracts only `MS:1000511` (ms level) + `MS:1000016` (scan start time), avoiding full `MassSpectrum` object materialization (`src/PSMBasedQuantificationTIMs/PSMBasedQuantificationTIMs.fs`).
+77. `stream_sql` vs `legacy` setup comparison on same dataset:
+78. `stream_sql`: setup `62043 ms` (`probe_rtidx_streamsql_20260207_230010`) and `62300 ms` (`probe_rtidx_streamsql_rep2_20260207_231956`), with `rows=586385`, `ms1Entries=6863`.
+79. `legacy`: setup `361183 ms` (`probe_rtidx_legacy_20260207_230959`).
+80. Setup-phase speedup is about `5.8x` and setup RAM at peptide 0 dropped from about `13.9 GB` (`legacy`) to about `0.5 GB` (`stream_sql`).
+81. Quant-loop timing under `stream_sql` showed a modest slowdown in these probes (~6-8% at 100-500 peptides vs one legacy run), but total time-to-1000-peptides is still substantially better due setup savings.
+82. Decision: keep `stream_sql` as default with automatic fallback to legacy on parse/empty-index failure; keep `--runtime-rt-index-mode legacy` for explicit rollback/testing.
+83. CLI-parameter path validated end-to-end (`probe_cli_peakcap20M_20260207_233054`): runtime parameters correctly drove cache/DB/RT-index behavior without requiring environment variables.
 
 ## 2. Scope
 

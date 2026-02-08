@@ -17,6 +17,13 @@ module CLIArgumentParsing =
         | [<Unique>]    [<AltCommandLine("-c")>]  Parallelism_Level of level:int
         | [<Unique>]    [<AltCommandLine("-l")>]  Log_Level of level:int
         | [<Unique>]    [<AltCommandLine("-v")>]  Verbosity_Level of level:int
+        | [<Unique>]    [<AltCommandLine("-pdbm")>]  Runtime_Peptide_DB_Mode of mode:string
+        | [<Unique>]    [<AltCommandLine("-pcmode")>] Runtime_Peak_Cache_Mode of mode:string
+        | [<Unique>]    [<AltCommandLine("-pcmax")>] Runtime_Peak_Cache_Max of max:int
+        | [<Unique>]    [<AltCommandLine("-pcmaxp")>] Runtime_Peak_Cache_Max_Peaks of max:int64
+        | [<Unique>]    [<AltCommandLine("-fmmode")>] Runtime_Fragment_Match_Mode of mode:string
+        | [<Unique>]    [<AltCommandLine("-isocache")>] Runtime_Iso_Cache_Mode of mode:string
+        | [<Unique>]    [<AltCommandLine("-rtidx")>] Runtime_RT_Index_Mode of mode:string
     with
         interface IArgParserTemplate with
             member s.Usage =
@@ -32,3 +39,10 @@ module CLIArgumentParsing =
                 | Parallelism_Level _   -> "Set the number of cores the programm can use. Parallelization occurs on file level. This flag is only of effect if a input directory (-i) is specified."
                 | Log_Level _           -> "Set the log level."
                 | Verbosity_Level _     -> "Set the verbosity level."
+                | Runtime_Peptide_DB_Mode _      -> "Peptide DB mode: file_backed (default) or memory_copy."
+                | Runtime_Peak_Cache_Mode _      -> "Peak cache mode: bounded_lru (default) or unbounded."
+                | Runtime_Peak_Cache_Max _       -> "Peak cache max spectra for bounded_lru. Default: 700."
+                | Runtime_Peak_Cache_Max_Peaks _ -> "Peak cache max resident peak count for bounded_lru. Disabled by default."
+                | Runtime_Fragment_Match_Mode _  -> "Fragment match mode: optimized_binary_search (default) or legacy."
+                | Runtime_Iso_Cache_Mode _       -> "Isotopic pattern cache mode: off (default) or on."
+                | Runtime_RT_Index_Mode _        -> "RT index mode: stream_sql (default) or legacy."

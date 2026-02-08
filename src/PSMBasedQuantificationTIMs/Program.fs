@@ -27,12 +27,23 @@ module console1 =
         let mf = results.Contains MatchFiles
         let dc = results.Contains DiagnosticCharts
         let z = results.Contains ZipCharts
+        let runtimeTuning : RuntimeTuning =
+            {
+                PeptideDbMode            = results.TryGetResult Runtime_Peptide_DB_Mode
+                PeakCacheMode            = results.TryGetResult Runtime_Peak_Cache_Mode
+                PeakCacheMax             = results.TryGetResult Runtime_Peak_Cache_Max
+                PeakCacheMaxPeaks        = results.TryGetResult Runtime_Peak_Cache_Max_Peaks
+                FragmentMatchMode        = results.TryGetResult Runtime_Fragment_Match_Mode
+                IsotopicPatternCacheMode = results.TryGetResult Runtime_Iso_Cache_Mode
+                RtIndexMode              = results.TryGetResult Runtime_RT_Index_Mode
+            }
         Logging.generateConfig o
         let logger = Logging.createLogger "PSMBasedQuantification"
         logger.Info (sprintf "InputFilePath -i = %A" i)
         logger.Info (sprintf "ScoredPSMsPath -ii = %A" ii)
         logger.Info (sprintf "OutputFilePath -o = %s" o)
         logger.Info (sprintf "ParamFilePath -p = %s" p)
+        logger.Trace (sprintf "RuntimeTuning = %A" runtimeTuning)
         logger.Trace (sprintf "CLIArguments: %A" results)
         Directory.CreateDirectory(o) |> ignore
         let p =
@@ -57,7 +68,7 @@ module console1 =
             logger.Info "single file"
             logger.Trace (sprintf "mz files : %A" mzfiles)
             logger.Trace (sprintf "PEP files : %A" pepfiles)
-            quantifyPeptides dc z p o dbConnection mzfiles.[0] pepfiles.[0]
+            quantifyPeptides dc z p runtimeTuning o dbConnection mzfiles.[0] pepfiles.[0]
         else
             logger.Info "multiple files"
             logger.Trace (sprintf "mz files : %A" mzfiles)
@@ -83,7 +94,7 @@ module console1 =
             logger.Trace (sprintf "Program is running on %i cores" c)
             mzFilesAndPepFiles
             |> FSharpAux.PSeq.withDegreeOfParallelism c
-            |> FSharpAux.PSeq.iter (fun (i,ii) -> quantifyPeptides dc z p o dbConnection i ii)
+            |> FSharpAux.PSeq.iter (fun (i,ii) -> quantifyPeptides dc z p runtimeTuning o dbConnection i ii)
         dbConnection.Dispose()
 
         logger.Info "Done"
