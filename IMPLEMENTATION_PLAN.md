@@ -8,7 +8,7 @@ Deliver measurable runtime improvements in `src/PSMBasedQuantificationTIMs/PSMBa
 2. P1 target: additional 15-30% improvement over P0.
 3. Output requirement: numerical equivalence within defined tolerance.
 
-## 1.0 Latest Status Snapshot (Updated 2026-02-08)
+## 1.0 Latest Status Snapshot (Updated 2026-02-08, 17:30)
 
 Completed high-impact code changes now on branch:
 
@@ -16,23 +16,25 @@ Completed high-impact code changes now on branch:
 2. Isotopic compare path avoids full-spectrum unzip/rezip materialization (`src/PSMBasedQuantificationTIMs/PSMBasedQuantificationTIMs.fs:639`).
 3. Streamed SQL RT-index builder is default with legacy fallback (`src/PSMBasedQuantificationTIMs/PSMBasedQuantificationTIMs.fs:1000`).
 4. New direct RT/intensity extraction path removes `Peak2D` object creation in XIC pipeline (`src/PSMBasedQuantificationTIMs/PSMBasedQuantificationTIMs.fs:65`, `src/PSMBasedQuantificationTIMs/PSMBasedQuantificationTIMs.fs:380`, `src/PSMBasedQuantificationTIMs/PSMBasedQuantificationTIMs.fs:1139`).
-5. Runtime tuning is available via CLI parameters (env vars remain fallback only) (`src/PSMBasedQuantificationTIMs/CLIArgumentParsing.fs:48`, `src/PSMBasedQuantificationTIMs/Program.fs:30`).
+5. Runtime tuning is available via CLI parameters (`src/PSMBasedQuantificationTIMs/CLIArgumentParsing.fs:48`, `src/PSMBasedQuantificationTIMs/Program.fs:30`).
+6. Environment-variable runtime tuning fallback removed from quantification code path (`src/PSMBasedQuantificationTIMs/PSMBasedQuantificationTIMs.fs`).
 
-Most recent benchmark checkpoints (same dataset/params, N15 labeling):
+Latest full-run benchmark results (same dataset/params, N15 labeling):
 
-| Probe | Cache Peak Cap | Setup ms | QuantLoop ms @800 | QuantLoop ms @1200 | Max WS MB observed | Notes |
-|---|---:|---:|---:|---:|---:|---|
-| `probe_cli_peakcap20M_20260207_233054` | 20M | 63938 | 144061 | - | 7169 | Earlier baseline on new branch |
-| `probe_rtIntensity_noPeak2D_20M_20260208_105938` | 20M | 63036 | 105263 | - | 6697 | Faster early loop, then cache-thrash spike after ~900 peptides |
-| `probe_rtIntensity_noPeak2D_60M_20260208_110505` | 60M | 61095 | 105554 | 189133 | 11940 | Stable memory/perf balance, moderate slowdown vs uncapped |
-| `probe_rtIntensity_noPeak2D_80M_20260208_111647` | 80M | 59706 | 109500 | 150968 | 14516 | Better throughput than 60M, lower memory than uncapped |
-| `probe_rtIntensity_noPeak2D_noCap_20260208_111112` | unbounded | 62295 | 106274 | 145394 | 21689 | Fastest, but highest RAM footprint |
+| Run | Cache Peak Cap | Setup ms | QuantLoop ms @49300 | Total ms | Max WS MB | Max Heap MB | Notes |
+|---|---:|---:|---:|---:|---:|---:|---|
+| `full_latest_noCap_noenv_20260208_125529` | unbounded | 61781 | 2845563 | 2909738 | 23826 | 17469 | Fastest validated full run; highest RAM |
+| `full_latest_80M_noenv_keepawake_20260208_161940` | 80M | 63513 | 3546352 | 3612353 | 15838 | 13348 | Balanced profile; ~7.99 GB lower max WS than no-cap |
+| `full_latest_80M_noenv_20260208_115053` | 80M | 63826 | 3361870 | 3427782 | 16670 | 15344 | Earlier balanced full run (same code family) |
+| `full_latest_80M_noenv_20260208_134422` | 80M | 64475 | 9110743 | 9177546 | 16400 | 14746 | Invalid for speed comparison: host sleep/pause artifact between 1100 and 1200 peptides |
 
 Current recommendation from measured data:
 
 1. Performance-first profile: `--runtime-peak-cache-max 700` and no peak-count cap.
 2. Balanced profile: `--runtime-peak-cache-max 700 --runtime-peak-cache-max-peaks 80000000`.
-3. Avoid `20000000` peak cap for full runs; it repeatedly caused late quant-loop cache-thrash.
+3. Measured tradeoff (`no-cap` vs `80M keepawake`): about `1.25x` faster quant loop and `1.24x` faster total runtime, at cost of about `+50.4%` max working set.
+4. Avoid `20000000` peak cap for full runs; it repeatedly caused late quant-loop cache-thrash.
+5. For long benchmarks, keep host awake to avoid invalid timing data from standby/sleep gaps.
 
 ## 1.1 Execution Tracker (Updated 2026-02-07)
 
@@ -45,7 +47,7 @@ Current recommendation from measured data:
 | P0-4 Low-allocation 3D `initRTProfile` rewrite | Implemented | `src/PSMBasedQuantificationTIMs/PSMBasedQuantificationTIMs.fs:30` | Build passes; bounded probes show additional quant-loop gains, full `.quant` parity still pending | Complete full-run parity once memory gate is addressed |
 | P0-5 Direct RT/intensity XIC path (remove Peak2D hot-loop allocations) | Implemented | `src/PSMBasedQuantificationTIMs/PSMBasedQuantificationTIMs.fs:65`, `src/PSMBasedQuantificationTIMs/PSMBasedQuantificationTIMs.fs:380`, `src/PSMBasedQuantificationTIMs/PSMBasedQuantificationTIMs.fs:1139` | Build passes; additional quant-loop gain confirmed (e.g. `latest_60M` at 1200 peptides: `189133 ms` vs pre-change `222176 ms`) | Validate long-run parity + settle default peak-cap profile |
 | P1-1 Fragment matching algorithm optimization | Implemented (code), validation pending | `src/PSMBasedQuantificationTIMs/PSMBasedQuantificationTIMs.fs:663`, `src/PSMBasedQuantificationTIMs/PSMBasedQuantificationTIMs.fs:685` | Build passes, equivalence/perf run pending | Execute P1 benchmark and compare to P0 baseline |
-| P1-2 Bounded peak cache | Implemented (code), partial validation complete | `src/PSMBasedQuantificationTIMs/PSMBasedQuantificationTIMs.fs:845`, `src/PSMBasedQuantificationTIMs/PSMBasedQuantificationTIMs.fs:860`, `src/PSMBasedQuantificationTIMs/PSMBasedQuantificationTIMs.fs:1679`, `src/PSMBasedQuantificationTIMs/CLIArgumentParsing.fs:45` | Build passes; validated envelopes on latest hot path (`20M` thrash, `60M` stable, `80M` faster with moderate RAM) | Use profile-based defaults in runs: performance=`unbounded`, balanced=`80M` |
+| P1-2 Bounded peak cache | Implemented (code), full-run validation complete | `src/PSMBasedQuantificationTIMs/PSMBasedQuantificationTIMs.fs:845`, `src/PSMBasedQuantificationTIMs/PSMBasedQuantificationTIMs.fs:860`, `src/PSMBasedQuantificationTIMs/PSMBasedQuantificationTIMs.fs:1679`, `src/PSMBasedQuantificationTIMs/CLIArgumentParsing.fs:45` | Build passes; full-run tradeoff validated (`no-cap` fastest, `80M` reduced memory) | Keep dual-profile guidance: performance=`unbounded`, balanced=`80M` |
 | P1-3 Isotopic distribution memoization | Implemented (code), validation pending | `src/PSMBasedQuantificationTIMs/PSMBasedQuantificationTIMs.fs:647`, `src/PSMBasedQuantificationTIMs/PSMBasedQuantificationTIMs.fs:833`, `src/PSMBasedQuantificationTIMs/PSMBasedQuantificationTIMs.fs:1369` | Build passes, cache hit/miss behavior and output parity pending benchmark | Run benchmark and inspect `PerfCaches` metrics + `.quant` diff |
 | P1-4 Controlled parallelization | Not started | - | - | Add feature-flagged worker model |
 
@@ -125,7 +127,7 @@ Execution notes:
 72. Next memory phase should prioritize algorithmic containment (streamed result materialization and reduced in-memory trace retention) over stricter cache caps, to avoid quant-loop regressions.
 73. Added explicit runtime CLI parameters (no env var requirement for normal use) and threaded them to `quantifyPeptides` as `RuntimeTuning`:
 74. `--runtime-peptide-db-mode`, `--runtime-peak-cache-mode`, `--runtime-peak-cache-max`, `--runtime-peak-cache-max-peaks`, `--runtime-fragment-match-mode`, `--runtime-iso-cache-mode`, `--runtime-rt-index-mode` (`src/PSMBasedQuantificationTIMs/CLIArgumentParsing.fs`, `src/PSMBasedQuantificationTIMs/Program.fs`).
-75. Environment variables are retained only as fallback compatibility when runtime parameters are not supplied.
+75. Environment variables were removed from runtime tuning in this module; runtime behavior is configured through CLI parameters only.
 76. Implemented a non-cache memory optimization for setup: `stream_sql` RT index builder that streams `SpectrumID, Description` rows from mzLite and extracts only `MS:1000511` (ms level) + `MS:1000016` (scan start time), avoiding full `MassSpectrum` object materialization (`src/PSMBasedQuantificationTIMs/PSMBasedQuantificationTIMs.fs`).
 77. `stream_sql` vs `legacy` setup comparison on same dataset:
 78. `stream_sql`: setup `62043 ms` (`probe_rtidx_streamsql_20260207_230010`) and `62300 ms` (`probe_rtidx_streamsql_rep2_20260207_231956`), with `rows=586385`, `ms1Entries=6863`.
@@ -465,7 +467,7 @@ Files:
 Steps:
 
 1. Introduce bounded cache wrapper for peak reads (LRU or segmented FIFO with lock).
-2. Expose capacity via environment variable for tuning, e.g. `PQ_TIMS_PEAK_CACHE_MAX`.
+2. Expose capacity via CLI runtime parameter for tuning, e.g. `--runtime-peak-cache-max`.
 3. Keep default conservative value (for example 500-1000 spectra) and allow override.
 4. Add cache metrics logging:
    - hits
@@ -481,7 +483,7 @@ Validation:
 
 Rollback:
 
-1. Keep fallback path to unbounded memoization behind env switch.
+1. Keep fallback path to unbounded memoization behind a runtime CLI mode switch.
 
 Exit criteria:
 
@@ -539,7 +541,7 @@ Design constraints:
 
 Steps:
 
-1. Add feature toggle and degree-of-parallelism setting (env var or CLI arg).
+1. Add feature toggle and degree-of-parallelism setting via CLI argument(s).
 2. Implement worker context factory:
    - one reader per worker
    - one cache per worker (or read-only shared immutable structures where safe)
