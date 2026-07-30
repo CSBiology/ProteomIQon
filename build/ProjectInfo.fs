@@ -57,7 +57,7 @@ let projects =
         // add relative paths (from project root) to your projects here, including individual reslease notes files
         // e.g. ProjectInfo.create("MyProject", "src/MyProject/MyProject.fsproj", "src/MyProject/RELEASE_NOTES.md")
         CoreProject
-        ProjectInfo.create("MSFraggerToPSM", "src/MSFraggerToPSM/MSFraggerToPSM.fsproj", "src/MSFraggerToPSM/RELEASE_NOTES.md")
+        ProjectInfo.create("MsFraggerToPSM", "src/MsFraggerToPSM/MsFraggerToPSM.fsproj", "src/MsFraggerToPSM/RELEASE_NOTES.md")
         ProjectInfo.create("MzMLToMzLiteIonMobility", "src/MzMLToMzLiteIonMobility/MzMLToMzLiteIonMobility.fsproj", "src/MzMLToMzLiteIonMobility/RELEASE_NOTES.md")
         ProjectInfo.create("MzMLToMzLite", "src/MzMLToMzLite/MzMLToMzLite.fsproj", "src/MzMLToMzLite/RELEASE_NOTES.md")
         ProjectInfo.create("PeptideDB", "src/PeptideDB/PeptideDB.fsproj", "src/PeptideDB/RELEASE_NOTES.md")
@@ -79,7 +79,7 @@ let projects =
         ProjectInfo.create("LabelFreeProteinQuantification", "src/LabelFreeProteinQuantification/LabelFreeProteinQuantification.fsproj", "src/LabelFreeProteinQuantification/RELEASE_NOTES.md")
         //ProjectInfo.create("MzliteToMzML", "src/MzliteToMzML/MzliteToMzML.fsproj", "src/MzliteToMzML/RELEASE_NOTES.md")
         //ProjectInfo.create("MzTAB", "src/MzTAB/MzTAB.fsproj", "src/MzTAB/RELEASE_NOTES.md")
-        ProjectInfo.create("Preprocessing", "src/Preprocessing/Preprocessing.fsproj", "src/Preprocessing/RELEASE_NOTES.md")
+        //ProjectInfo.create("Preprocessing", "src/Preprocessing/Preprocessing.fsproj", "src/Preprocessing/RELEASE_NOTES.md")
         ProjectInfo.create("ProteinInference", "src/ProteinInference/ProteinInference.fsproj", "src/ProteinInference/RELEASE_NOTES.md")
         //ProjectInfo.create("SpectralLibrary", "src/SpectralLibrary/SpectralLibrary.fsproj", "src/SpectralLibrary/RELEASE_NOTES.md")
         //ProjectInfo.create("SWATHAnalysis", "src/SWATHAnalysis/SWATHAnalysis.fsproj", "src/SWATHAnalysis/RELEASE_NOTES.md")

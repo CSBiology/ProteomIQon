@@ -48,5 +48,6 @@
     <PackageReference Include="FSharpAux.IO" Version="1.0.0" />
     <PackageReference Include="System.Data.SQLite.Core" Version="1.0.119" />
     <PackageReference Include="Plotly.NET" Version="2.0.0-alpha5" />
+    <PackageReference Include="Gabor3D.algorithm" Version="0.0.2" />
   </ItemGroup>
 </Project>

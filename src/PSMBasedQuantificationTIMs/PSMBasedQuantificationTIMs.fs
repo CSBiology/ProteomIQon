@@ -14,6 +14,7 @@ open BioFSharp
 open MzIO.Processing
 open BioFSharp.Mz.SearchDB
 open SearchDB'
+open Gabor3D.algorithm
 
 module PSMBasedQuantificationTIMs =
     module Query = 
@@ -421,12 +422,16 @@ module PSMBasedQuantificationTIMs =
         | Domain.WindowSize.Fixed w  -> fun yData -> w
         | Domain.WindowSize.EstimateUsingAutoCorrelation noiseAutoCorr -> fun yData -> optimizeWindowWidth polynomOrder windowWidthToTest noiseAutoCorr yData
 
+    type MyStupidMSDataFormat =
+        | 1D of float [] * float []
+        | 2D of float [,]
+
     ///
     let initIdentifyPeaks (peakDetectionParams:Domain.XicProcessing) =
         match peakDetectionParams with 
         | Domain.XicProcessing.SecondDerivative parameters ->
             let getWindowWidth = initGetWindowWidth parameters.WindowSize parameters.PolynomOrder [|5 .. 2 .. 60|] 
-            (fun xData yData -> 
+            (fun [xData, yData] : MyStupidMSDataFormat.1D -> 
                 try
                 let  windowSize = getWindowWidth yData
                 FSharp.Stats.Signal.PeakDetection.SecondDerivative.getPeaks parameters.MinSNR parameters.PolynomOrder windowSize xData yData
@@ -436,9 +441,19 @@ module PSMBasedQuantificationTIMs =
                     [||]
                 )
         | Domain.XicProcessing.Wavelet parameters ->
-            (fun xData yData -> 
+            (fun (xData, yData): MyStupidMSDataFormat.1D -> 
                 try
                 FSharpStats'.Wavelet.identify parameters xData yData
+                with 
+                | ex ->
+                    // logger.Trace (sprintf "Quant failed: Peak detection failed with: %A" ex)
+                    [||]
+                )
+        | Domain.XicProcessing.Gabor3D parameters ->
+            (fun data: MyStupidMSDataFormat.2D -> 
+                try
+                    let gaborKernel = Gabor3D.algorithm.Create.createGaborWavelet2D parameters
+                    let applyKernel = Gabor3D.algorithm.Create.applyGaborWavelet2D data gaborKernel
                 with 
                 | ex ->
                     // logger.Trace (sprintf "Quant failed: Peak detection failed with: %A" ex)

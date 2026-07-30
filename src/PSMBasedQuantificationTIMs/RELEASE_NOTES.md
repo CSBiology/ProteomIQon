@@ -1,3 +1,6 @@
+#### 0.0.12 - Thursday, July 30, 2026
+* Add Gabor3D algorithm for peak detection
+
 #### 0.0.11 - Sunday, March 23, 2025
 * Add Ion Mobility to output type
 
