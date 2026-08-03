@@ -192,49 +192,114 @@ module PSMBasedQuantificationTIMs =
         Peaks.unzipIMzliteArray (reader.ReadSpectrumPeaks(ms1.ID).Peaks)
         |> fun (mzData,intensityData) -> PeakArray.zip mzData intensityData
     
-    ///
-    let lightQualityFilter lowerBorder upperBorder (quantResults:QuantificationResult[]) =
-        let medianApexIntensities = 
-            quantResults
-            |> Array.map (fun x -> x.MeasuredApex_Light)
-            |> Array.filter (fun x -> nan.Equals x |> not)
-            |> Array.median
-        let medianQuantIntensities = 
-            quantResults
-            |> Array.map (fun x -> x.Quant_Light)
-            |> Array.filter (fun x -> nan.Equals x |> not)
-            |> Array.median
-        quantResults
-        |> Array.filter (fun x -> 
-            let qualR = 
-                let apexNorm = x.MeasuredApex_Light / medianApexIntensities
-                let quantNorm =  x.Quant_Light / medianQuantIntensities
-                quantNorm / apexNorm
-                |> log2
-            (qualR > lowerBorder && qualR < upperBorder) || (nan.Equals(qualR) )
-            ) 
-
-    ///
-    let heavyQualityFilter lowerBorder upperBorder (quantResults:QuantificationResult[]) =
-        let medianApexIntensities = 
-            quantResults
-            |> Array.map (fun x -> x.MeasuredApex_Heavy)
-            |> Array.filter (fun x -> nan.Equals x |> not)
-            |> Array.median
-        let medianQuantIntensities = 
-            quantResults
-            |> Array.map (fun x -> x.Quant_Heavy)
-            |> Array.filter (fun x -> nan.Equals x |> not)
-            |> Array.median
-        quantResults
-        |> Array.filter (fun x -> 
-            let qualR = 
-                let apexNorm = x.MeasuredApex_Heavy / medianApexIntensities
-                let quantNorm =  x.Quant_Heavy / medianQuantIntensities
-                quantNorm / apexNorm
-                |> log2
-            (qualR > lowerBorder && qualR < upperBorder) || (nan.Equals(qualR) )
+    /// Returns the median of positive, finite values or None if no usable value exists.
+    let private tryMedianFinitePositive (values: float[]) =
+        let usableValues =
+            values
+            |> Array.filter (fun value ->
+                Double.IsFinite value && value > 0.0
             )
+
+        if Array.isEmpty usableValues then
+            None
+        else
+            Some (Array.median usableValues)
+
+    /// Filters light quantification results without calling Array.median on empty data
+    /// and without dividing by zero, NaN, or infinity.
+    let lightQualityFilter lowerBorder upperBorder (quantResults: QuantificationResult[]) =
+        if Array.isEmpty quantResults then
+            [||]
+        else
+            let medianApexIntensity =
+                quantResults
+                |> Array.map (fun result -> result.MeasuredApex_Light)
+                |> tryMedianFinitePositive
+
+            let medianQuantIntensity =
+                quantResults
+                |> Array.map (fun result -> result.Quant_Light)
+                |> tryMedianFinitePositive
+
+            match medianApexIntensity, medianQuantIntensity with
+            | Some apexMedian, Some quantMedian ->
+                quantResults
+                |> Array.filter (fun result ->
+                    let apex = result.MeasuredApex_Light
+                    let quant = result.Quant_Light
+
+                    if
+                        not (Double.IsFinite apex)
+                        || not (Double.IsFinite quant)
+                        || apex <= 0.0
+                        || quant <= 0.0
+                    then
+                        false
+                    else
+                        let apexNorm = apex / apexMedian
+                        let quantNorm = quant / quantMedian
+                        let ratio = quantNorm / apexNorm
+
+                        if not (Double.IsFinite ratio) || ratio <= 0.0 then
+                            false
+                        else
+                            let qualR = log2 ratio
+
+                            Double.IsFinite qualR
+                            && qualR > lowerBorder
+                            && qualR < upperBorder
+                )
+
+            | _ ->
+                [||]
+
+    /// Filters heavy quantification results without calling Array.median on empty data
+    /// and without dividing by zero, NaN, or infinity.
+    let heavyQualityFilter lowerBorder upperBorder (quantResults: QuantificationResult[]) =
+        if Array.isEmpty quantResults then
+            [||]
+        else
+            let medianApexIntensity =
+                quantResults
+                |> Array.map (fun result -> result.MeasuredApex_Heavy)
+                |> tryMedianFinitePositive
+
+            let medianQuantIntensity =
+                quantResults
+                |> Array.map (fun result -> result.Quant_Heavy)
+                |> tryMedianFinitePositive
+
+            match medianApexIntensity, medianQuantIntensity with
+            | Some apexMedian, Some quantMedian ->
+                quantResults
+                |> Array.filter (fun result ->
+                    let apex = result.MeasuredApex_Heavy
+                    let quant = result.Quant_Heavy
+
+                    if
+                        not (Double.IsFinite apex)
+                        || not (Double.IsFinite quant)
+                        || apex <= 0.0
+                        || quant <= 0.0
+                    then
+                        false
+                    else
+                        let apexNorm = apex / apexMedian
+                        let quantNorm = quant / quantMedian
+                        let ratio = quantNorm / apexNorm
+
+                        if not (Double.IsFinite ratio) || ratio <= 0.0 then
+                            false
+                        else
+                            let qualR = log2 ratio
+
+                            Double.IsFinite qualR
+                            && qualR > lowerBorder
+                            && qualR < upperBorder
+                )
+
+            | _ ->
+                [||]
     
     /// Calculates the Kullback-Leibler divergence Dkl(p||q) from q (theory, model, description, or approximation of p) 
     /// to p (the "true" distribution of data, observations, or a precisely calculated theoretical distribution).
@@ -356,16 +421,42 @@ module PSMBasedQuantificationTIMs =
     let private isUsableIntensity value =
         Double.IsFinite value && value > 0.0
 
-    let private weightedMeanOrMean (weights: float[]) (values: float[]) =
-        let weightSum =
-            Array.sum weights
-
-        if weightSum > 0.0 then
-            Array.map2 (fun weight value -> weight * value) weights values
-            |> Array.sum
-            |> fun weightedSum -> weightedSum / weightSum
+    let private tryWeightedMeanOrMean (weights: float[]) (values: float[]) =
+        if Array.isEmpty values || weights.Length <> values.Length then
+            None
         else
-            Array.average values
+            let usablePairs =
+                Array.zip weights values
+                |> Array.filter (fun (weight, value) ->
+                    Double.IsFinite weight
+                    && Double.IsFinite value
+                    && weight >= 0.0
+                )
+
+            if Array.isEmpty usablePairs then
+                None
+            else
+                let usableWeights, usableValues =
+                    Array.unzip usablePairs
+
+                let weightSum =
+                    Array.sum usableWeights
+
+                let result =
+                    if Double.IsFinite weightSum && weightSum > 0.0 then
+                        Array.map2
+                            (fun weight value -> weight * value)
+                            usableWeights
+                            usableValues
+                        |> Array.sum
+                        |> fun weightedSum -> weightedSum / weightSum
+                    else
+                        Array.average usableValues
+
+                if Double.IsFinite result then
+                    Some result
+                else
+                    None
 
     let estimateGaborTargetFromFragPipePsms
         scanTimeToMzCorrection
@@ -373,11 +464,20 @@ module PSMBasedQuantificationTIMs =
         (psms: (PSMStatisticsResultFragpipe * float)[])
         =
 
-        if Array.isEmpty psms then
+        let usablePsms =
+            psms
+            |> Array.filter (fun (psm, weight) ->
+                Double.IsFinite psm.ScanTime
+                && Double.IsFinite psm.IonMobility
+                && Double.IsFinite weight
+                && weight >= 0.0
+            )
+
+        if Array.isEmpty usablePsms || not (Double.IsFinite theoMz) then
             None
         else
             let bestPsms =
-                psms
+                usablePsms
                 |> Array.sortByDescending snd
                 |> fun sorted ->
                     if sorted.Length > 3 then sorted.[..2] else sorted
@@ -391,18 +491,26 @@ module PSMBasedQuantificationTIMs =
             let mobilities =
                 bestPsms |> Array.map (fun (psm, _) -> psm.IonMobility)
 
-            let expectedRt =
-                weightedMeanOrMean weights scanTimes
+            match
+                tryWeightedMeanOrMean weights scanTimes,
+                tryWeightedMeanOrMean weights mobilities
+            with
+            | Some expectedRt, Some expectedMobility ->
+                let expectedMz =
+                    scanTimeToMzCorrection expectedRt + theoMz
 
-            let expectedMobility =
-                weightedMeanOrMean weights mobilities
+                if Double.IsFinite expectedMz then
+                    Some
+                        {
+                            ExpectedRt = expectedRt
+                            ExpectedMz = expectedMz
+                            ExpectedMobility = expectedMobility
+                        }
+                else
+                    None
 
-            Some
-                {
-                    ExpectedRt = expectedRt
-                    ExpectedMz = scanTimeToMzCorrection expectedRt + theoMz
-                    ExpectedMobility = expectedMobility
-                }
+            | _ ->
+                None
 
     let private toRtBin rtOrigin rt =
         int (floor ((rt - rtOrigin) / rtBinWidth))
@@ -516,7 +624,28 @@ module PSMBasedQuantificationTIMs =
                     Intensities = intensities
                 }
 
+    let private validateGaborParameters (parameters: Domain.Gabor3DParams) =
+        if parameters.sizeX <= 0 then
+            invalidArg "sizeX" "Gabor sizeX must be greater than zero."
+
+        if parameters.sizeY <= 0 then
+            invalidArg "sizeY" "Gabor sizeY must be greater than zero."
+
+        if not (Double.IsFinite parameters.sigmaX) || parameters.sigmaX <= 0.0 then
+            invalidArg "sigmaX" "Gabor sigmaX must be positive and finite."
+
+        if not (Double.IsFinite parameters.sigmaY) || parameters.sigmaY <= 0.0 then
+            invalidArg "sigmaY" "Gabor sigmaY must be positive and finite."
+
+        if not (Double.IsFinite parameters.frequency) then
+            invalidArg "frequency" "Gabor frequency must be finite."
+
+        if not (Double.IsFinite parameters.theta) then
+            invalidArg "theta" "Gabor theta must be finite."
+
     let createGaborKernel (parameters: Domain.Gabor3DParams) =
+        validateGaborParameters parameters
+
         Create.createGaborWavelet2D
             parameters.sizeX
             parameters.sizeY
@@ -543,63 +672,87 @@ module PSMBasedQuantificationTIMs =
     let private originalIntensityAt (grid: GaborGrid) pixel =
         grid.Intensities.[pixel.MobilityBin].[pixel.RtBin]
 
-    let private expectedPositionSeed
+    let private tryExpectedPositionSeed
         (grid: GaborGrid)
         expectedRt
         expectedMobility
         =
 
-        let expectedRtBin =
-            expectedRt
-            |> toRtBin grid.RtOrigin
-            |> clampBin grid.RtBinCount
+        if
+            not (Double.IsFinite expectedRt)
+            || not (Double.IsFinite expectedMobility)
+            || grid.RtBinCount <= 0
+            || grid.MobilityBinCount <= 0
+        then
+            None
+        else
+            let expectedRtBin =
+                toRtBin grid.RtOrigin expectedRt
 
-        let expectedMobilityBin =
-            expectedMobility
-            |> toMobilityBin grid.MobilityOrigin
-            |> clampBin grid.MobilityBinCount
+            let expectedMobilityBin =
+                toMobilityBin grid.MobilityOrigin expectedMobility
 
-        {
-            MobilityBin = expectedMobilityBin
-            RtBin = expectedRtBin
-        }
+            let seed =
+                {
+                    MobilityBin = expectedMobilityBin
+                    RtBin = expectedRtBin
+                }
 
-    let private findHighestGaborSeedNearExpectedPosition
+            if isInsideGrid grid seed then
+                Some seed
+            else
+                None
+
+    let private tryFindHighestGaborSeedNearExpectedPosition
         (grid: GaborGrid)
         (response: Create.gaborResponse)
         expectedRt
         expectedMobility
         =
 
-        let expectedSeed =
-            expectedPositionSeed grid expectedRt expectedMobility
+        tryExpectedPositionSeed grid expectedRt expectedMobility
+        |> Option.bind (fun expectedSeed ->
+            let minRtBin =
+                expectedSeed.RtBin - gaborSeedRtSearchRadiusBins
+                |> clampBin grid.RtBinCount
 
-        let minRtBin =
-            expectedSeed.RtBin - gaborSeedRtSearchRadiusBins
-            |> clampBin grid.RtBinCount
+            let maxRtBin =
+                expectedSeed.RtBin + gaborSeedRtSearchRadiusBins
+                |> clampBin grid.RtBinCount
 
-        let maxRtBin =
-            expectedSeed.RtBin + gaborSeedRtSearchRadiusBins
-            |> clampBin grid.RtBinCount
+            let minMobilityBin =
+                expectedSeed.MobilityBin - gaborSeedMobilitySearchRadiusBins
+                |> clampBin grid.MobilityBinCount
 
-        let minMobilityBin =
-            expectedSeed.MobilityBin - gaborSeedMobilitySearchRadiusBins
-            |> clampBin grid.MobilityBinCount
+            let maxMobilityBin =
+                expectedSeed.MobilityBin + gaborSeedMobilitySearchRadiusBins
+                |> clampBin grid.MobilityBinCount
 
-        let maxMobilityBin =
-            expectedSeed.MobilityBin + gaborSeedMobilitySearchRadiusBins
-            |> clampBin grid.MobilityBinCount
+            let candidates =
+                [|
+                    for mobilityBin in minMobilityBin .. maxMobilityBin do
+                        for rtBin in minRtBin .. maxRtBin do
+                            let pixel =
+                                {
+                                    MobilityBin = mobilityBin
+                                    RtBin = rtBin
+                                }
 
-        seq {
-            for mobilityBin in minMobilityBin .. maxMobilityBin do
-                for rtBin in minRtBin .. maxRtBin do
-                    yield
-                        {
-                            MobilityBin = mobilityBin
-                            RtBin = rtBin
-                        }
-        }
-        |> Seq.maxBy (gaborMagnitudeAt response)
+                            let score =
+                                gaborMagnitudeAt response pixel
+
+                            if Double.IsFinite score then
+                                yield pixel, score
+                |]
+
+            if Array.isEmpty candidates then
+                None
+            else
+                candidates
+                |> Array.maxBy snd
+                |> fst
+                |> Some
+        )
 
     let private isInsideRegionSearchBox seed candidate =
         abs (candidate.RtBin - seed.RtBin) <= gaborMaxRtRegionRadiusBins
@@ -647,7 +800,10 @@ module PSMBasedQuantificationTIMs =
             let pixel =
                 queue.Dequeue()
 
-            if gaborMagnitudeAt response pixel >= threshold then
+            let magnitude =
+                gaborMagnitudeAt response pixel
+
+            if Double.IsFinite magnitude && magnitude >= threshold then
                 region.Add pixel
 
                 pixel
@@ -700,58 +856,116 @@ module PSMBasedQuantificationTIMs =
         if region.Length < gaborMinRegionPixels then
             None
         else
-            let rawIntensitySum =
+            let signalPixels =
                 region
-                |> Array.sumBy (originalIntensityAt grid)
+                |> Array.filter (fun pixel ->
+                    let intensity =
+                        originalIntensityAt grid pixel
 
-            if rawIntensitySum <= 0.0 then
+                    Double.IsFinite intensity && intensity > 0.0
+                )
+
+            if Array.isEmpty signalPixels then
                 None
             else
-                let volume =
-                    rawIntensitySum * rtBinWidth * mobilityBinWidth
+                let rawIntensitySum =
+                    signalPixels
+                    |> Array.sumBy (originalIntensityAt grid)
 
-                let apex =
-                    region
-                    |> Array.maxBy (originalIntensityAt grid)
+                if not (Double.IsFinite rawIntensitySum) || rawIntensitySum <= 0.0 then
+                    None
+                else
+                    let volume =
+                        rawIntensitySum * rtBinWidth * mobilityBinWidth
 
-                let apexIntensity =
-                    originalIntensityAt grid apex
+                    if not (Double.IsFinite volume) || volume <= 0.0 then
+                        None
+                    else
+                        let apex =
+                            signalPixels
+                            |> Array.maxBy (originalIntensityAt grid)
 
-                let weightedRetentionTime =
-                    region
-                    |> Array.sumBy (fun pixel ->
-                        originalIntensityAt grid pixel
-                        * rtBinCenter grid.RtOrigin pixel.RtBin
-                    )
-                    |> fun weightedSum -> weightedSum / rawIntensitySum
+                        let apexIntensity =
+                            originalIntensityAt grid apex
 
-                let weightedIonMobility =
-                    region
-                    |> Array.sumBy (fun pixel ->
-                        originalIntensityAt grid pixel
-                        * mobilityBinCenter grid.MobilityOrigin pixel.MobilityBin
-                    )
-                    |> fun weightedSum -> weightedSum / rawIntensitySum
+                        let weightedRetentionTime =
+                            signalPixels
+                            |> Array.sumBy (fun pixel ->
+                                originalIntensityAt grid pixel
+                                * rtBinCenter grid.RtOrigin pixel.RtBin
+                            )
+                            |> fun weightedSum -> weightedSum / rawIntensitySum
 
-                let projectedRetentionTimes, projectedIntensities =
-                    projectRegionToRtTrace grid region
+                        let weightedIonMobility =
+                            signalPixels
+                            |> Array.sumBy (fun pixel ->
+                                originalIntensityAt grid pixel
+                                * mobilityBinCenter grid.MobilityOrigin pixel.MobilityBin
+                            )
+                            |> fun weightedSum -> weightedSum / rawIntensitySum
 
-                Some
-                    {
-                        RawIntensitySum = rawIntensitySum
-                        Volume = volume
-                        ApexIntensity = apexIntensity
-                        ApexRetentionTime = rtBinCenter grid.RtOrigin apex.RtBin
-                        ApexIonMobility = mobilityBinCenter grid.MobilityOrigin apex.MobilityBin
-                        WeightedRetentionTime = weightedRetentionTime
-                        WeightedIonMobility = weightedIonMobility
-                        Region = region
-                        ProjectedRetentionTimes = projectedRetentionTimes
-                        ProjectedIntensities = projectedIntensities
-                        Seed = seed
-                        GaborSeedScore = gaborMagnitudeAt response seed
-                        GaborThreshold = threshold
-                    }
+                        let apexRetentionTime =
+                            rtBinCenter grid.RtOrigin apex.RtBin
+
+                        let apexIonMobility =
+                            mobilityBinCenter grid.MobilityOrigin apex.MobilityBin
+
+                        let seedScore =
+                            gaborMagnitudeAt response seed
+
+                        if
+                            not (Double.IsFinite apexIntensity)
+                            || apexIntensity <= 0.0
+                            || not (Double.IsFinite weightedRetentionTime)
+                            || not (Double.IsFinite weightedIonMobility)
+                            || not (Double.IsFinite apexRetentionTime)
+                            || not (Double.IsFinite apexIonMobility)
+                            || not (Double.IsFinite seedScore)
+                            || not (Double.IsFinite threshold)
+                            || threshold <= 0.0
+                        then
+                            None
+                        else
+                            let projectedRetentionTimes, projectedIntensities =
+                                projectRegionToRtTrace grid region
+
+                            Some
+                                {
+                                    RawIntensitySum = rawIntensitySum
+                                    Volume = volume
+                                    ApexIntensity = apexIntensity
+                                    ApexRetentionTime = apexRetentionTime
+                                    ApexIonMobility = apexIonMobility
+                                    WeightedRetentionTime = weightedRetentionTime
+                                    WeightedIonMobility = weightedIonMobility
+                                    Region = region
+                                    ProjectedRetentionTimes = projectedRetentionTimes
+                                    ProjectedIntensities = projectedIntensities
+                                    Seed = seed
+                                    GaborSeedScore = seedScore
+                                    GaborThreshold = threshold
+                                }
+
+    let private isValidGaborResponse
+        (grid: GaborGrid)
+        (response: Create.gaborResponse)
+        =
+
+        let magnitude =
+            response.Magnitude
+
+        not (isNull magnitude)
+        && magnitude.Length = grid.MobilityBinCount
+        && magnitude.Length > 0
+        && (
+            magnitude
+            |> Array.forall (fun row ->
+                not (isNull row)
+                && row.Length = grid.RtBinCount
+                && row.Length > 0
+                && (row |> Array.forall Double.IsFinite)
+            )
+        )
 
     let tryQuantifyGabor2D
         (parameters: Domain.Gabor3DParams)
@@ -766,25 +980,41 @@ module PSMBasedQuantificationTIMs =
             let response =
                 applyGaborToGrid parameters grid
 
-            let seed =
-                findHighestGaborSeedNearExpectedPosition
+            if not (isValidGaborResponse grid response) then
+                None
+            else
+                tryFindHighestGaborSeedNearExpectedPosition
                     grid
                     response
                     expectedRt
                     expectedMobility
+                |> Option.bind (fun seed ->
+                    let seedScore =
+                        gaborMagnitudeAt response seed
 
-            let threshold =
-                (gaborMagnitudeAt response seed) * gaborRelativeRegionThreshold
+                    if not (Double.IsFinite seedScore) || seedScore <= 0.0 then
+                        None
+                    else
+                        let threshold =
+                            seedScore * gaborRelativeRegionThreshold
 
-            let region =
-                findConnectedGaborRegion grid response seed threshold
+                        if not (Double.IsFinite threshold) || threshold <= 0.0 then
+                            None
+                        else
+                            let region =
+                                findConnectedGaborRegion
+                                    grid
+                                    response
+                                    seed
+                                    threshold
 
-            quantifyRegionFromOriginalSignal
-                grid
-                response
-                seed
-                threshold
-                region
+                            quantifyRegionFromOriginalSignal
+                                grid
+                                response
+                                seed
+                                threshold
+                                region
+                )
         )
 
     let initGetGabor2DQuantification
@@ -1113,7 +1343,22 @@ module PSMBasedQuantificationTIMs =
         logger.Trace "Get peptide lookUp function: finished"
         // initialize Reader and Transaction
         logger.Trace "Init connection to mass spectrum data."
-        let inReader = Core.MzIO.Reader.getReader instrumentOutput :?> MzIO.MzSQL.MzSQL
+
+        if
+            not (
+                instrumentOutput.EndsWith(
+                    ".mzlite",
+                    StringComparison.OrdinalIgnoreCase
+                )
+            )
+        then
+            invalidArg
+                "instrumentOutput"
+                "PSMBasedQuantificationTIMs currently requires an .mzlite input file."
+
+        let inReader =
+            Core.MzIO.Reader.getReader instrumentOutput
+            :?> MzIO.MzSQL.MzSQL
         inReader.Connection.Open()
         let inRunID  = Core.MzIO.Reader.getDefaultRunID inReader       
         let inTr = inReader.BeginTransaction()
