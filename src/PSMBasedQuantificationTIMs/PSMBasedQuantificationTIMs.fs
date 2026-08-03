@@ -1,5 +1,6 @@
 namespace ProteomIQon
 
+open System
 open System.IO
 open System.Data.SQLite
 open ProteomIQon.Core
@@ -56,6 +57,33 @@ module PSMBasedQuantificationTIMs =
             )
             |> Array.ofSeq
 
+        let initRTProfileGabor
+            (readSpecPeaks: string -> Peak1DArray)
+            (rtIndex: IMzIOArray<RtIndexEntry>)
+            (rtRange: RangeQuery)
+            (mzRange: RangeQuery)
+            =
+
+            let entries =
+                RtIndexEntry.Search(rtIndex, rtRange).ToArray()
+
+            [|
+                for entry in entries do
+
+                    let peaks =
+                        (readSpecPeaks entry.SpectrumID).Peaks
+
+                    yield
+                        RtIndexEntry.MzSearch(peaks, mzRange)
+                        |> Seq.choose (fun peak ->
+                            match peak.IonMobility with
+                            | Some _ ->
+                                Some (RtIndexEntry.AsPeak2D(peak, entry.Rt))
+                            | None ->
+                                None
+                        )
+                        |> Seq.toArray
+            |]
 
     type PeptideIon = 
         {
@@ -254,6 +282,536 @@ module PSMBasedQuantificationTIMs =
         | None ->
             retData',itzData',itzData'
 
+
+    [<Literal>]
+    let rtBinWidth = 0.01
+
+    [<Literal>]
+    let mobilityBinWidth = 0.0005
+
+    [<Literal>]
+    let gaborRelativeRegionThreshold = 0.25
+
+    [<Literal>]
+    let gaborSeedRtSearchRadiusBins = 50
+
+    [<Literal>]
+    let gaborSeedMobilitySearchRadiusBins = 20
+
+    [<Literal>]
+    let gaborMaxRtRegionRadiusBins = 120
+
+    [<Literal>]
+    let gaborMaxMobilityRegionRadiusBins = 60
+
+    [<Literal>]
+    let gaborMinRegionPixels = 3
+
+    type GaborObservation =
+        {
+            Rt: float
+            Mobility: float
+            Intensity: float
+        }
+
+    type GaborGrid =
+        {
+            RtOrigin: float
+            MobilityOrigin: float
+            RtBinCount: int
+            MobilityBinCount: int
+            Intensities: float[][]
+        }
+
+    type GaborPixel =
+        {
+            MobilityBin: int
+            RtBin: int
+        }
+
+    type Gabor2DQuantification =
+        {
+            RawIntensitySum: float
+            Volume: float
+            ApexIntensity: float
+            ApexRetentionTime: float
+            ApexIonMobility: float
+            WeightedRetentionTime: float
+            WeightedIonMobility: float
+            Region: GaborPixel[]
+            ProjectedRetentionTimes: float[]
+            ProjectedIntensities: float[]
+            Seed: GaborPixel
+            GaborSeedScore: float
+            GaborThreshold: float
+        }
+
+    type GaborTargetEstimate =
+        {
+            ExpectedRt: float
+            ExpectedMz: float
+            ExpectedMobility: float
+        }
+
+    let private isUsableIntensity value =
+        Double.IsFinite value && value > 0.0
+
+    let private weightedMeanOrMean (weights: float[]) (values: float[]) =
+        let weightSum =
+            Array.sum weights
+
+        if weightSum > 0.0 then
+            Array.map2 (fun weight value -> weight * value) weights values
+            |> Array.sum
+            |> fun weightedSum -> weightedSum / weightSum
+        else
+            Array.average values
+
+    let estimateGaborTargetFromFragPipePsms
+        scanTimeToMzCorrection
+        theoMz
+        (psms: (PSMStatisticsResultFragpipe * float)[])
+        =
+
+        if Array.isEmpty psms then
+            None
+        else
+            let bestPsms =
+                psms
+                |> Array.sortByDescending snd
+                |> fun sorted ->
+                    if sorted.Length > 3 then sorted.[..2] else sorted
+
+            let weights =
+                bestPsms |> Array.map snd
+
+            let scanTimes =
+                bestPsms |> Array.map (fun (psm, _) -> psm.ScanTime)
+
+            let mobilities =
+                bestPsms |> Array.map (fun (psm, _) -> psm.IonMobility)
+
+            let expectedRt =
+                weightedMeanOrMean weights scanTimes
+
+            let expectedMobility =
+                weightedMeanOrMean weights mobilities
+
+            Some
+                {
+                    ExpectedRt = expectedRt
+                    ExpectedMz = scanTimeToMzCorrection expectedRt + theoMz
+                    ExpectedMobility = expectedMobility
+                }
+
+    let private toRtBin rtOrigin rt =
+        int (floor ((rt - rtOrigin) / rtBinWidth))
+
+    let private toMobilityBin mobilityOrigin mobility =
+        int (floor ((mobility - mobilityOrigin) / mobilityBinWidth))
+
+    let private rtBinCenter rtOrigin rtBin =
+        rtOrigin + ((float rtBin + 0.5) * rtBinWidth)
+
+    let private mobilityBinCenter mobilityOrigin mobilityBin =
+        mobilityOrigin + ((float mobilityBin + 0.5) * mobilityBinWidth)
+
+    let private clamp minValue maxValue value =
+        if value < minValue then minValue
+        elif value > maxValue then maxValue
+        else value
+
+    let private clampBin binCount bin =
+        clamp 0 (binCount - 1) bin
+
+    let extractGaborObservations (peakGroups: MzIO.Binary.Peak2D[][]) =
+        peakGroups
+        |> Array.collect id
+        |> Array.choose (fun peak ->
+            match peak.IonMobility with
+            | Some mobility
+                when Double.IsFinite peak.Rt
+                  && Double.IsFinite mobility
+                  && isUsableIntensity peak.Intensity ->
+                Some
+                    {
+                        Rt = peak.Rt
+                        Mobility = mobility
+                        Intensity = peak.Intensity
+                    }
+            | _ ->
+                None
+        )
+
+    let tryCreateGaborGrid (peakGroups: MzIO.Binary.Peak2D[][]) =
+        let observations =
+            extractGaborObservations peakGroups
+
+        if Array.isEmpty observations then
+            None
+        else
+            let rtOrigin =
+                observations
+                |> Array.minBy (fun observation -> observation.Rt)
+                |> fun observation -> observation.Rt
+
+            let mobilityOrigin =
+                observations
+                |> Array.minBy (fun observation -> observation.Mobility)
+                |> fun observation -> observation.Mobility
+
+            let binnedIntensities =
+                System.Collections.Generic.Dictionary<int * int, float>()
+
+            observations
+            |> Array.iter (fun observation ->
+                let rtBin =
+                    toRtBin rtOrigin observation.Rt
+
+                let mobilityBin =
+                    toMobilityBin mobilityOrigin observation.Mobility
+
+                let key =
+                    mobilityBin, rtBin
+
+                let oldIntensity =
+                    match binnedIntensities.TryGetValue key with
+                    | true, value -> value
+                    | false, _ -> 0.0
+
+                binnedIntensities.[key] <- oldIntensity + observation.Intensity
+            )
+
+            let mobilityBinCount =
+                binnedIntensities.Keys
+                |> Seq.maxBy fst
+                |> fst
+                |> fun maxBin -> maxBin + 1
+
+            let rtBinCount =
+                binnedIntensities.Keys
+                |> Seq.maxBy snd
+                |> snd
+                |> fun maxBin -> maxBin + 1
+
+            let intensities =
+                Array.init mobilityBinCount (fun _ ->
+                    Array.zeroCreate<float> rtBinCount
+                )
+
+            binnedIntensities
+            |> Seq.iter (fun entry ->
+                let mobilityBin, rtBin =
+                    entry.Key
+
+                intensities.[mobilityBin].[rtBin] <- entry.Value
+            )
+
+            Some
+                {
+                    RtOrigin = rtOrigin
+                    MobilityOrigin = mobilityOrigin
+                    RtBinCount = rtBinCount
+                    MobilityBinCount = mobilityBinCount
+                    Intensities = intensities
+                }
+
+    let createGaborKernel (parameters: Domain.Gabor3DParams) =
+        Create.createGaborWavelet2D
+            parameters.sizeX
+            parameters.sizeY
+            parameters.sigmaX
+            parameters.sigmaY
+            parameters.frequency
+            parameters.theta
+
+    let applyGaborToGrid (parameters: Domain.Gabor3DParams) (grid: GaborGrid) =
+        let kernel =
+            createGaborKernel parameters
+
+        Create.applyGaborWavelet2D grid.Intensities kernel
+
+    let private isInsideGrid (grid: GaborGrid) pixel =
+        pixel.MobilityBin >= 0
+        && pixel.MobilityBin < grid.MobilityBinCount
+        && pixel.RtBin >= 0
+        && pixel.RtBin < grid.RtBinCount
+
+    let private gaborMagnitudeAt (response: Create.gaborResponse) pixel =
+        response.Magnitude.[pixel.MobilityBin].[pixel.RtBin]
+
+    let private originalIntensityAt (grid: GaborGrid) pixel =
+        grid.Intensities.[pixel.MobilityBin].[pixel.RtBin]
+
+    let private expectedPositionSeed
+        (grid: GaborGrid)
+        expectedRt
+        expectedMobility
+        =
+
+        let expectedRtBin =
+            expectedRt
+            |> toRtBin grid.RtOrigin
+            |> clampBin grid.RtBinCount
+
+        let expectedMobilityBin =
+            expectedMobility
+            |> toMobilityBin grid.MobilityOrigin
+            |> clampBin grid.MobilityBinCount
+
+        {
+            MobilityBin = expectedMobilityBin
+            RtBin = expectedRtBin
+        }
+
+    let private findHighestGaborSeedNearExpectedPosition
+        (grid: GaborGrid)
+        (response: Create.gaborResponse)
+        expectedRt
+        expectedMobility
+        =
+
+        let expectedSeed =
+            expectedPositionSeed grid expectedRt expectedMobility
+
+        let minRtBin =
+            expectedSeed.RtBin - gaborSeedRtSearchRadiusBins
+            |> clampBin grid.RtBinCount
+
+        let maxRtBin =
+            expectedSeed.RtBin + gaborSeedRtSearchRadiusBins
+            |> clampBin grid.RtBinCount
+
+        let minMobilityBin =
+            expectedSeed.MobilityBin - gaborSeedMobilitySearchRadiusBins
+            |> clampBin grid.MobilityBinCount
+
+        let maxMobilityBin =
+            expectedSeed.MobilityBin + gaborSeedMobilitySearchRadiusBins
+            |> clampBin grid.MobilityBinCount
+
+        seq {
+            for mobilityBin in minMobilityBin .. maxMobilityBin do
+                for rtBin in minRtBin .. maxRtBin do
+                    yield
+                        {
+                            MobilityBin = mobilityBin
+                            RtBin = rtBin
+                        }
+        }
+        |> Seq.maxBy (gaborMagnitudeAt response)
+
+    let private isInsideRegionSearchBox seed candidate =
+        abs (candidate.RtBin - seed.RtBin) <= gaborMaxRtRegionRadiusBins
+        && abs (candidate.MobilityBin - seed.MobilityBin) <= gaborMaxMobilityRegionRadiusBins
+
+    let private neighbors8 pixel =
+        [|
+            for mobilityDelta in -1 .. 1 do
+                for rtDelta in -1 .. 1 do
+                    if mobilityDelta <> 0 || rtDelta <> 0 then
+                        yield
+                            {
+                                MobilityBin = pixel.MobilityBin + mobilityDelta
+                                RtBin = pixel.RtBin + rtDelta
+                            }
+        |]
+
+    let findConnectedGaborRegion
+        (grid: GaborGrid)
+        (response: Create.gaborResponse)
+        (seed: GaborPixel)
+        threshold
+        =
+
+        let visited =
+            System.Collections.Generic.HashSet<int * int>()
+
+        let queue =
+            System.Collections.Generic.Queue<GaborPixel>()
+
+        let region =
+            ResizeArray<GaborPixel>()
+
+        let addIfNew pixel =
+            if isInsideGrid grid pixel && isInsideRegionSearchBox seed pixel then
+                let key =
+                    pixel.MobilityBin, pixel.RtBin
+
+                if visited.Add key then
+                    queue.Enqueue pixel
+
+        addIfNew seed
+
+        while queue.Count > 0 do
+            let pixel =
+                queue.Dequeue()
+
+            if gaborMagnitudeAt response pixel >= threshold then
+                region.Add pixel
+
+                pixel
+                |> neighbors8
+                |> Array.iter addIfNew
+
+        region.ToArray()
+
+    let private projectRegionToRtTrace (grid: GaborGrid) (region: GaborPixel[]) =
+        if Array.isEmpty region then
+            [||], [||]
+        else
+            let minRtBin =
+                region |> Array.minBy (fun pixel -> pixel.RtBin) |> fun pixel -> pixel.RtBin
+
+            let maxRtBin =
+                region |> Array.maxBy (fun pixel -> pixel.RtBin) |> fun pixel -> pixel.RtBin
+
+            let regionByRt =
+                System.Collections.Generic.Dictionary<int, GaborPixel[]>()
+
+            region
+            |> Array.groupBy (fun pixel -> pixel.RtBin)
+            |> Array.iter (fun (rtBin, pixels) ->
+                regionByRt.[rtBin] <- pixels
+            )
+
+            [| minRtBin .. maxRtBin |]
+            |> Array.map (fun rtBin ->
+                let intensity =
+                    match regionByRt.TryGetValue rtBin with
+                    | true, pixels ->
+                        pixels
+                        |> Array.sumBy (originalIntensityAt grid)
+                    | false, _ ->
+                        0.0
+
+                rtBinCenter grid.RtOrigin rtBin, intensity
+            )
+            |> Array.unzip
+
+    let quantifyRegionFromOriginalSignal
+        (grid: GaborGrid)
+        (response: Create.gaborResponse)
+        seed
+        threshold
+        (region: GaborPixel[])
+        =
+
+        if region.Length < gaborMinRegionPixels then
+            None
+        else
+            let rawIntensitySum =
+                region
+                |> Array.sumBy (originalIntensityAt grid)
+
+            if rawIntensitySum <= 0.0 then
+                None
+            else
+                let volume =
+                    rawIntensitySum * rtBinWidth * mobilityBinWidth
+
+                let apex =
+                    region
+                    |> Array.maxBy (originalIntensityAt grid)
+
+                let apexIntensity =
+                    originalIntensityAt grid apex
+
+                let weightedRetentionTime =
+                    region
+                    |> Array.sumBy (fun pixel ->
+                        originalIntensityAt grid pixel
+                        * rtBinCenter grid.RtOrigin pixel.RtBin
+                    )
+                    |> fun weightedSum -> weightedSum / rawIntensitySum
+
+                let weightedIonMobility =
+                    region
+                    |> Array.sumBy (fun pixel ->
+                        originalIntensityAt grid pixel
+                        * mobilityBinCenter grid.MobilityOrigin pixel.MobilityBin
+                    )
+                    |> fun weightedSum -> weightedSum / rawIntensitySum
+
+                let projectedRetentionTimes, projectedIntensities =
+                    projectRegionToRtTrace grid region
+
+                Some
+                    {
+                        RawIntensitySum = rawIntensitySum
+                        Volume = volume
+                        ApexIntensity = apexIntensity
+                        ApexRetentionTime = rtBinCenter grid.RtOrigin apex.RtBin
+                        ApexIonMobility = mobilityBinCenter grid.MobilityOrigin apex.MobilityBin
+                        WeightedRetentionTime = weightedRetentionTime
+                        WeightedIonMobility = weightedIonMobility
+                        Region = region
+                        ProjectedRetentionTimes = projectedRetentionTimes
+                        ProjectedIntensities = projectedIntensities
+                        Seed = seed
+                        GaborSeedScore = gaborMagnitudeAt response seed
+                        GaborThreshold = threshold
+                    }
+
+    let tryQuantifyGabor2D
+        (parameters: Domain.Gabor3DParams)
+        expectedRt
+        expectedMobility
+        (peakGroups: MzIO.Binary.Peak2D[][])
+        =
+
+        peakGroups
+        |> tryCreateGaborGrid
+        |> Option.bind (fun grid ->
+            let response =
+                applyGaborToGrid parameters grid
+
+            let seed =
+                findHighestGaborSeedNearExpectedPosition
+                    grid
+                    response
+                    expectedRt
+                    expectedMobility
+
+            let threshold =
+                (gaborMagnitudeAt response seed) * gaborRelativeRegionThreshold
+
+            let region =
+                findConnectedGaborRegion grid response seed threshold
+
+            quantifyRegionFromOriginalSignal
+                grid
+                response
+                seed
+                threshold
+                region
+        )
+
+    let initGetGabor2DQuantification
+        getGaborPeaks
+        idx
+        scanTimeWindow
+        mzWindow
+        =
+
+        fun
+            (parameters: Domain.Gabor3DParams)
+            expectedRt
+            expectedMz
+            expectedMobility ->
+
+            let rtQuery =
+                Query.createRangeQuery expectedRt scanTimeWindow
+
+            let mzQuery =
+                Query.createRangeQuery expectedMz mzWindow
+
+            getGaborPeaks idx rtQuery mzQuery
+            |> tryQuantifyGabor2D
+                parameters
+                expectedRt
+                expectedMobility
+        
     ///
     let initGetIsotopicEnvelope reader idx scanTimeWindow mzWindow_Da ch meanScanTime meanPrecMz =
         let rtQuery   = Query.createRangeQuery meanScanTime scanTimeWindow
@@ -276,7 +834,7 @@ module PSMBasedQuantificationTIMs =
         retData',itzData'
 
     ///
-    let weightedMean (weights:seq<'T>) (items:seq<'T>) =
+    let weightedMean (weights:seq<float>) (items:seq<float>) =
         let sum,n = Seq.fold2 (fun (sum,n) w i -> w*i+sum,n + w ) (0.,0.) weights items
         sum / n
         
@@ -422,16 +980,12 @@ module PSMBasedQuantificationTIMs =
         | Domain.WindowSize.Fixed w  -> fun yData -> w
         | Domain.WindowSize.EstimateUsingAutoCorrelation noiseAutoCorr -> fun yData -> optimizeWindowWidth polynomOrder windowWidthToTest noiseAutoCorr yData
 
-    type MyStupidMSDataFormat =
-        | 1D of float [] * float []
-        | 2D of float [,]
-
     ///
     let initIdentifyPeaks (peakDetectionParams:Domain.XicProcessing) =
         match peakDetectionParams with 
         | Domain.XicProcessing.SecondDerivative parameters ->
             let getWindowWidth = initGetWindowWidth parameters.WindowSize parameters.PolynomOrder [|5 .. 2 .. 60|] 
-            (fun [xData, yData] : MyStupidMSDataFormat.1D -> 
+            (fun xData yData -> 
                 try
                 let  windowSize = getWindowWidth yData
                 FSharp.Stats.Signal.PeakDetection.SecondDerivative.getPeaks parameters.MinSNR parameters.PolynomOrder windowSize xData yData
@@ -441,7 +995,7 @@ module PSMBasedQuantificationTIMs =
                     [||]
                 )
         | Domain.XicProcessing.Wavelet parameters ->
-            (fun (xData, yData): MyStupidMSDataFormat.1D -> 
+            (fun xData yData -> 
                 try
                 FSharpStats'.Wavelet.identify parameters xData yData
                 with 
@@ -449,16 +1003,8 @@ module PSMBasedQuantificationTIMs =
                     // logger.Trace (sprintf "Quant failed: Peak detection failed with: %A" ex)
                     [||]
                 )
-        | Domain.XicProcessing.Gabor3D parameters ->
-            (fun data: MyStupidMSDataFormat.2D -> 
-                try
-                    let gaborKernel = Gabor3D.algorithm.Create.createGaborWavelet2D parameters
-                    let applyKernel = Gabor3D.algorithm.Create.applyGaborWavelet2D data gaborKernel
-                with 
-                | ex ->
-                    // logger.Trace (sprintf "Quant failed: Peak detection failed with: %A" ex)
-                    [||]
-                )
+        | Domain.XicProcessing.Gabor3D _ ->
+            fun _ _ -> [||]
         
     ///
     let calcCorrelation (xValues:float []) (quantifiedPeak:HULQ.QuantifiedPeak) (inferredPeak:HULQ.QuantifiedPeak) = 
@@ -725,7 +1271,372 @@ module PSMBasedQuantificationTIMs =
         let identifyPeaks = initIdentifyPeaks processParams.XicExtraction.XicProcessing
         logger.Trace "init lookup functions:finished"
         
+        let getGaborPeaks =
+            Query.initRTProfileGabor readSpecPeaksWithMem
+
+        let getGabor2DQuantification =
+            initGetGabor2DQuantification
+                getGaborPeaks
+                retTimeIdxed
+                processParams.XicExtraction.ScanTimeWindow
+                mzWindow
         logger.Trace "init quantification functions"
+
+        let emptyClusterComparison =
+            {
+                PeakComparisons = [||]
+                KLDiv_UnCorrected = nan
+                KLDiv_Corrected = nan
+            }
+
+        let compareGaborIsotopicCluster
+            (quant: Gabor2DQuantification)
+            charge
+            peptideSequence
+            targetMz
+            =
+
+            try
+                if Array.isEmpty quant.ProjectedRetentionTimes || Array.isEmpty quant.ProjectedIntensities then
+                    emptyClusterComparison
+                else
+                    comparePredictedAndMeasuredIsotopicCluster
+                        quant.ProjectedRetentionTimes
+                        quant.ProjectedIntensities
+                        quant.ProjectedIntensities
+                        charge
+                        peptideSequence
+                        quant.WeightedRetentionTime
+                        targetMz
+            with
+            | ex ->
+                logger.Trace (sprintf "Gabor isotope cluster comparison failed: %A" ex)
+                emptyClusterComparison
+
+        let quantMzAtScanTime (peptide: LookUpResult<AminoAcids.AminoAcid>) charge scanTime =
+            scanTimeToMzCorrection scanTime + Mass.toMZ peptide.Mass (float charge)
+
+        let createGaborQuantSide
+            charge
+            (peptide: LookUpResult<AminoAcids.AminoAcid>)
+            expectedRt
+            quantMz
+            (quant: Gabor2DQuantification option)
+            =
+
+            match quant with
+            | Some q ->
+                let cluster =
+                    compareGaborIsotopicCluster q charge peptide.BioSequence quantMz
+
+                q.Volume,
+                q.ApexIntensity,
+                nan,
+                ([||] : float[]),
+                expectedRt - q.WeightedRetentionTime,
+                cluster,
+                q.ProjectedRetentionTimes,
+                q.ProjectedIntensities
+            | None ->
+                nan,
+                nan,
+                nan,
+                ([||] : float[]),
+                nan,
+                emptyClusterComparison,
+                ([||] : float[]),
+                ([||] : float[])
+
+        let gaborLabeledQuantification
+            (gaborParams: Domain.Gabor3DParams)
+            (pepIon: PeptideIon)
+            (psms: PSMStatisticsResultFragpipe[])
+            =
+
+            try
+                let bestQValue, prots =
+                    psms
+                    |> Array.minBy (fun x -> x.Expectscore)
+                    |> fun x -> x.Expectscore, x.ProteinNames
+
+                let unlabledPeptide =
+                    peptideLookUp pepIon.Sequence 0
+
+                let labeledPeptide =
+                    peptideLookUp pepIon.Sequence 1
+
+                let targetPeptide =
+                    if pepIon.GlobalMod = 0 then unlabledPeptide else labeledPeptide
+
+                let psmsWithMatchedSums =
+                    countMatchedMasses targetPeptide psms
+
+                let theoMz =
+                    Mass.toMZ targetPeptide.Mass (float pepIon.Charge)
+
+                match estimateGaborTargetFromFragPipePsms scanTimeToMzCorrection theoMz psmsWithMatchedSums with
+                | None ->
+                    logger.Trace (sprintf "Gabor quant failed: No FragPipe seed, Sequence:%s, GlobalMod:%s, Charge:%s" (pepIon.Sequence |> String.filter (fun x -> x <> '*')) (pepIon.GlobalMod.ToString()) (pepIon.Charge.ToString()))
+                    None
+                | Some target ->
+                    match getGabor2DQuantification gaborParams target.ExpectedRt target.ExpectedMz target.ExpectedMobility with
+                    | None ->
+                        logger.Trace (sprintf "Gabor quant failed: No 2D region, Sequence:%s, GlobalMod:%s, Charge:%s" (pepIon.Sequence |> String.filter (fun x -> x <> '*')) (pepIon.GlobalMod.ToString()) (pepIon.Charge.ToString()))
+                        None
+                    | Some targetQuant ->
+                        let meanScore =
+                            psmsWithMatchedSums
+                            |> Array.averageBy (fun (psm, _) -> psm.Hyperscore)
+
+                        if pepIon.GlobalMod = 0 then
+                            let quantMzLight =
+                                quantMzAtScanTime unlabledPeptide pepIon.Charge targetQuant.WeightedRetentionTime
+
+                            let mzHeavy =
+                                quantMzAtScanTime labeledPeptide pepIon.Charge targetQuant.WeightedRetentionTime
+
+                            let inferredHeavy =
+                                getGabor2DQuantification
+                                    gaborParams
+                                    targetQuant.WeightedRetentionTime
+                                    mzHeavy
+                                    targetQuant.WeightedIonMobility
+
+                            let qLight, apexLight, seoLight, paramsLight, diffLight, clusterLight, rtTraceLight, intensityTraceLight =
+                                createGaborQuantSide pepIon.Charge unlabledPeptide target.ExpectedRt quantMzLight (Some targetQuant)
+
+                            let qHeavy, apexHeavy, seoHeavy, paramsHeavy, diffHeavy, clusterHeavy, rtTraceHeavy, intensityTraceHeavy =
+                                createGaborQuantSide pepIon.Charge labeledPeptide targetQuant.WeightedRetentionTime mzHeavy inferredHeavy
+
+                            let avgMass =
+                                Mass.ofMZ quantMzLight (float pepIon.Charge)
+
+                            {
+                                StringSequence                              = pepIon.Sequence
+                                GlobalMod                                   = pepIon.GlobalMod
+                                Charge                                      = pepIon.Charge
+                                PepSequenceID                               = pepIon.PepSequenceID
+                                ModSequenceID                               = pepIon.ModSequenceID
+                                PrecursorMZ                                 = quantMzLight
+                                MeasuredMass                                = avgMass
+                                TheoMass                                    = unlabledPeptide.Mass
+                                AbsDeltaMass                                = abs(avgMass - unlabledPeptide.Mass)
+                                MeanPercolatorScore                         = meanScore
+                                QValue                                      = bestQValue
+                                PEPValue                                    = nan
+                                ProteinNames                                = prots
+                                QuantMz_Light                               = quantMzLight
+                                Quant_Light                                 = qLight
+                                MeasuredApex_Light                          = apexLight
+                                Seo_Light                                   = seoLight
+                                Params_Light                                = paramsLight
+                                Difference_SearchRT_FittedRT_Light          = diffLight
+                                KLDiv_Observed_Theoretical_Light            = clusterLight.KLDiv_UnCorrected
+                                KLDiv_CorrectedObserved_Theoretical_Light   = clusterLight.KLDiv_Corrected
+                                QuantMz_Heavy                               = mzHeavy
+                                Quant_Heavy                                 = qHeavy
+                                MeasuredApex_Heavy                          = apexHeavy
+                                Seo_Heavy                                   = seoHeavy
+                                Params_Heavy                                = paramsHeavy
+                                Difference_SearchRT_FittedRT_Heavy          = diffHeavy
+                                KLDiv_Observed_Theoretical_Heavy            = clusterHeavy.KLDiv_UnCorrected
+                                KLDiv_CorrectedObserved_Theoretical_Heavy   = clusterHeavy.KLDiv_Corrected
+                                Correlation_Light_Heavy                     = nan
+                                QuantificationSource                        = QuantificationSource.PSM
+                                IsotopicPatternMz_Light                     = clusterLight.PeakComparisons |> Array.map (fun x -> x.Mz)
+                                IsotopicPatternIntensity_Observed_Light     = clusterLight.PeakComparisons |> Array.map (fun x -> x.MeasuredIntensity)
+                                IsotopicPatternIntensity_Corrected_Light    = clusterLight.PeakComparisons |> Array.map (fun x -> x.MeasuredIntensityCorrected)
+                                RtTrace_Light                               = rtTraceLight
+                                IntensityTrace_Observed_Light               = intensityTraceLight
+                                IntensityTrace_Corrected_Light              = intensityTraceLight
+                                IsotopicPatternMz_Heavy                     = clusterHeavy.PeakComparisons |> Array.map (fun x -> x.Mz)
+                                IsotopicPatternIntensity_Observed_Heavy     = clusterHeavy.PeakComparisons |> Array.map (fun x -> x.MeasuredIntensity)
+                                IsotopicPatternIntensity_Corrected_Heavy    = clusterHeavy.PeakComparisons |> Array.map (fun x -> x.MeasuredIntensityCorrected)
+                                RtTrace_Heavy                               = rtTraceHeavy
+                                IntensityTrace_Observed_Heavy               = intensityTraceHeavy
+                                IntensityTrace_Corrected_Heavy              = intensityTraceHeavy
+                                AlignmentScore                              = nan
+                                AlignmentQValue                             = nan
+                                IonMobility                                 = targetQuant.WeightedIonMobility
+                            }
+                            |> Some
+                        else
+                            let quantMzHeavy =
+                                quantMzAtScanTime labeledPeptide pepIon.Charge targetQuant.WeightedRetentionTime
+
+                            let mzLight =
+                                quantMzAtScanTime unlabledPeptide pepIon.Charge targetQuant.WeightedRetentionTime
+
+                            let inferredLight =
+                                getGabor2DQuantification
+                                    gaborParams
+                                    targetQuant.WeightedRetentionTime
+                                    mzLight
+                                    targetQuant.WeightedIonMobility
+
+                            let qLight, apexLight, seoLight, paramsLight, diffLight, clusterLight, rtTraceLight, intensityTraceLight =
+                                createGaborQuantSide pepIon.Charge unlabledPeptide targetQuant.WeightedRetentionTime mzLight inferredLight
+
+                            let qHeavy, apexHeavy, seoHeavy, paramsHeavy, diffHeavy, clusterHeavy, rtTraceHeavy, intensityTraceHeavy =
+                                createGaborQuantSide pepIon.Charge labeledPeptide target.ExpectedRt quantMzHeavy (Some targetQuant)
+
+                            let avgMass =
+                                Mass.ofMZ quantMzHeavy (float pepIon.Charge)
+
+                            {
+                                StringSequence                              = pepIon.Sequence
+                                GlobalMod                                   = pepIon.GlobalMod
+                                Charge                                      = pepIon.Charge
+                                PepSequenceID                               = pepIon.PepSequenceID
+                                ModSequenceID                               = pepIon.ModSequenceID
+                                PrecursorMZ                                 = quantMzHeavy
+                                MeasuredMass                                = avgMass
+                                TheoMass                                    = labeledPeptide.Mass
+                                AbsDeltaMass                                = abs(avgMass - labeledPeptide.Mass)
+                                MeanPercolatorScore                         = meanScore
+                                QValue                                      = bestQValue
+                                PEPValue                                    = nan
+                                ProteinNames                                = prots
+                                QuantMz_Light                               = mzLight
+                                Quant_Light                                 = qLight
+                                MeasuredApex_Light                          = apexLight
+                                Seo_Light                                   = seoLight
+                                Params_Light                                = paramsLight
+                                Difference_SearchRT_FittedRT_Light          = diffLight
+                                KLDiv_Observed_Theoretical_Light            = clusterLight.KLDiv_UnCorrected
+                                KLDiv_CorrectedObserved_Theoretical_Light   = clusterLight.KLDiv_Corrected
+                                QuantMz_Heavy                               = quantMzHeavy
+                                Quant_Heavy                                 = qHeavy
+                                MeasuredApex_Heavy                          = apexHeavy
+                                Seo_Heavy                                   = seoHeavy
+                                Params_Heavy                                = paramsHeavy
+                                Difference_SearchRT_FittedRT_Heavy          = diffHeavy
+                                KLDiv_Observed_Theoretical_Heavy            = clusterHeavy.KLDiv_UnCorrected
+                                KLDiv_CorrectedObserved_Theoretical_Heavy   = clusterHeavy.KLDiv_Corrected
+                                Correlation_Light_Heavy                     = nan
+                                QuantificationSource                        = QuantificationSource.PSM
+                                IsotopicPatternMz_Light                     = clusterLight.PeakComparisons |> Array.map (fun x -> x.Mz)
+                                IsotopicPatternIntensity_Observed_Light     = clusterLight.PeakComparisons |> Array.map (fun x -> x.MeasuredIntensity)
+                                IsotopicPatternIntensity_Corrected_Light    = clusterLight.PeakComparisons |> Array.map (fun x -> x.MeasuredIntensityCorrected)
+                                RtTrace_Light                               = rtTraceLight
+                                IntensityTrace_Observed_Light               = intensityTraceLight
+                                IntensityTrace_Corrected_Light              = intensityTraceLight
+                                IsotopicPatternMz_Heavy                     = clusterHeavy.PeakComparisons |> Array.map (fun x -> x.Mz)
+                                IsotopicPatternIntensity_Observed_Heavy     = clusterHeavy.PeakComparisons |> Array.map (fun x -> x.MeasuredIntensity)
+                                IsotopicPatternIntensity_Corrected_Heavy    = clusterHeavy.PeakComparisons |> Array.map (fun x -> x.MeasuredIntensityCorrected)
+                                RtTrace_Heavy                               = rtTraceHeavy
+                                IntensityTrace_Observed_Heavy               = intensityTraceHeavy
+                                IntensityTrace_Corrected_Heavy              = intensityTraceHeavy
+                                AlignmentScore                              = nan
+                                AlignmentQValue                             = nan
+                                IonMobility                                 = targetQuant.WeightedIonMobility
+                            }
+                            |> Some
+            with
+            | ex ->
+                logger.Trace (sprintf "Gabor quantfailed: %A" ex)
+                None
+
+        let gaborLabelFreeQuantification
+            (gaborParams: Domain.Gabor3DParams)
+            (pepIon: PeptideIon)
+            (psms: PSMStatisticsResultFragpipe[])
+            =
+
+            try
+                if pepIon.GlobalMod <> 0 then
+                    None
+                else
+                    let bestQValue, prots =
+                        psms
+                        |> Array.minBy (fun x -> x.Expectscore)
+                        |> fun x -> x.Expectscore, x.ProteinNames
+
+                    let unlabledPeptide =
+                        peptideLookUp pepIon.Sequence 0
+
+                    let psmsWithMatchedSums =
+                        countMatchedMasses unlabledPeptide psms
+
+                    let theoMz =
+                        Mass.toMZ unlabledPeptide.Mass (float pepIon.Charge)
+
+                    match estimateGaborTargetFromFragPipePsms scanTimeToMzCorrection theoMz psmsWithMatchedSums with
+                    | None ->
+                        logger.Trace (sprintf "Gabor quant failed: No FragPipe seed, Sequence:%s, GlobalMod:%s, Charge:%s" (pepIon.Sequence |> String.filter (fun x -> x <> '*')) (pepIon.GlobalMod.ToString()) (pepIon.Charge.ToString()))
+                        None
+                    | Some target ->
+                        match getGabor2DQuantification gaborParams target.ExpectedRt target.ExpectedMz target.ExpectedMobility with
+                        | None ->
+                            logger.Trace (sprintf "Gabor quant failed: No 2D region, Sequence:%s, GlobalMod:%s, Charge:%s" (pepIon.Sequence |> String.filter (fun x -> x <> '*')) (pepIon.GlobalMod.ToString()) (pepIon.Charge.ToString()))
+                            None
+                        | Some targetQuant ->
+                            let meanScore =
+                                psmsWithMatchedSums
+                                |> Array.averageBy (fun (psm, _) -> psm.Hyperscore)
+
+                            let quantMzLight =
+                                quantMzAtScanTime unlabledPeptide pepIon.Charge targetQuant.WeightedRetentionTime
+
+                            let qLight, apexLight, seoLight, paramsLight, diffLight, clusterLight, rtTraceLight, intensityTraceLight =
+                                createGaborQuantSide pepIon.Charge unlabledPeptide target.ExpectedRt quantMzLight (Some targetQuant)
+
+                            let avgMass =
+                                Mass.ofMZ quantMzLight (float pepIon.Charge)
+
+                            {
+                                StringSequence                              = pepIon.Sequence
+                                GlobalMod                                   = pepIon.GlobalMod
+                                Charge                                      = pepIon.Charge
+                                PepSequenceID                               = pepIon.PepSequenceID
+                                ModSequenceID                               = pepIon.ModSequenceID
+                                PrecursorMZ                                 = quantMzLight
+                                MeasuredMass                                = avgMass
+                                TheoMass                                    = unlabledPeptide.Mass
+                                AbsDeltaMass                                = abs(avgMass - unlabledPeptide.Mass)
+                                MeanPercolatorScore                         = meanScore
+                                QValue                                      = bestQValue
+                                PEPValue                                    = nan
+                                ProteinNames                                = prots
+                                QuantMz_Light                               = quantMzLight
+                                Quant_Light                                 = qLight
+                                MeasuredApex_Light                          = apexLight
+                                Seo_Light                                   = seoLight
+                                Params_Light                                = paramsLight
+                                Difference_SearchRT_FittedRT_Light          = diffLight
+                                KLDiv_Observed_Theoretical_Light            = clusterLight.KLDiv_UnCorrected
+                                KLDiv_CorrectedObserved_Theoretical_Light   = clusterLight.KLDiv_Corrected
+                                QuantMz_Heavy                               = nan
+                                Quant_Heavy                                 = nan
+                                MeasuredApex_Heavy                          = nan
+                                Seo_Heavy                                   = nan
+                                Params_Heavy                                = [||]
+                                Difference_SearchRT_FittedRT_Heavy          = nan
+                                KLDiv_Observed_Theoretical_Heavy            = nan
+                                KLDiv_CorrectedObserved_Theoretical_Heavy   = nan
+                                Correlation_Light_Heavy                     = nan
+                                QuantificationSource                        = QuantificationSource.PSM
+                                IsotopicPatternMz_Light                     = clusterLight.PeakComparisons |> Array.map (fun x -> x.Mz)
+                                IsotopicPatternIntensity_Observed_Light     = clusterLight.PeakComparisons |> Array.map (fun x -> x.MeasuredIntensity)
+                                IsotopicPatternIntensity_Corrected_Light    = clusterLight.PeakComparisons |> Array.map (fun x -> x.MeasuredIntensityCorrected)
+                                RtTrace_Light                               = rtTraceLight
+                                IntensityTrace_Observed_Light               = intensityTraceLight
+                                IntensityTrace_Corrected_Light              = intensityTraceLight
+                                IsotopicPatternMz_Heavy                     = [||]
+                                IsotopicPatternIntensity_Observed_Heavy     = [||]
+                                IsotopicPatternIntensity_Corrected_Heavy    = [||]
+                                RtTrace_Heavy                               = [||]
+                                IntensityTrace_Observed_Heavy               = [||]
+                                IntensityTrace_Corrected_Heavy              = [||]
+                                AlignmentScore                              = nan
+                                AlignmentQValue                             = nan
+                                IonMobility                                 = targetQuant.WeightedIonMobility
+                            }
+                            |> Some
+            with
+            | ex ->
+                logger.Trace (sprintf "Gabor quantfailed: %A" ex)
+                None
         ///
         let labledQuantification (pepIon:PeptideIon) (psms:PSMStatisticsResultFragpipe []) = 
             try
@@ -1163,9 +2074,15 @@ module PSMBasedQuantificationTIMs =
             |> Array.mapi (fun i (pepIon,psms) -> 
                 if i % 100 = 0 then logger.Trace (sprintf "%i peptides quantified" i)
                 
-                match processParams.PerformLabeledQuantification with 
-                |Domain.Labeling.N15Labeling | Domain.Labeling.N15LabelingOnly | Domain.Labeling.Labelshift-> labledQuantification pepIon psms
-                |Domain.Labeling.Unlabeled -> lableFreeQuantification pepIon psms
+                match processParams.XicExtraction.XicProcessing, processParams.PerformLabeledQuantification with 
+                | Domain.XicProcessing.Gabor3D gaborParams, (Domain.Labeling.N15Labeling | Domain.Labeling.N15LabelingOnly | Domain.Labeling.Labelshift) ->
+                    gaborLabeledQuantification gaborParams pepIon psms
+                | Domain.XicProcessing.Gabor3D gaborParams, Domain.Labeling.Unlabeled ->
+                    gaborLabelFreeQuantification gaborParams pepIon psms
+                | _, (Domain.Labeling.N15Labeling | Domain.Labeling.N15LabelingOnly | Domain.Labeling.Labelshift) ->
+                    labledQuantification pepIon psms
+                | _, Domain.Labeling.Unlabeled ->
+                    lableFreeQuantification pepIon psms
                 )
             |> Array.choose id
                     
