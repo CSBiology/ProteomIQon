@@ -511,18 +511,6 @@ module PSMBasedQuantificationTIMs =
 
             | _ ->
                 None
-            let expectedRt =
-                weightedMeanOrMean weights scanTimes
-
-            let expectedMobility =
-                weightedMeanOrMean weights mobilities
-
-            Some
-                {
-                    ExpectedRt = expectedRt
-                    ExpectedMz = scanTimeToMzCorrection expectedRt + theoMz
-                    ExpectedMobility = expectedMobility
-                }
 
     let private toRtBin rtOrigin rt =
         int (floor ((rt - rtOrigin) / rtBinWidth))
@@ -658,7 +646,6 @@ module PSMBasedQuantificationTIMs =
     let createGaborKernel (parameters: Domain.Gabor3DParams) =
         validateGaborParameters parameters
 
-    let createGaborKernel (parameters: Domain.Gabor3DParams) =
         Create.createGaborWavelet2D
             parameters.sizeX
             parameters.sizeY
@@ -686,7 +673,6 @@ module PSMBasedQuantificationTIMs =
         grid.Intensities.[pixel.MobilityBin].[pixel.RtBin]
 
     let private tryExpectedPositionSeed
-    let private expectedPositionSeed
         (grid: GaborGrid)
         expectedRt
         expectedMobility
@@ -718,22 +704,6 @@ module PSMBasedQuantificationTIMs =
                 None
 
     let private tryFindHighestGaborSeedNearExpectedPosition
-        let expectedRtBin =
-            expectedRt
-            |> toRtBin grid.RtOrigin
-            |> clampBin grid.RtBinCount
-
-        let expectedMobilityBin =
-            expectedMobility
-            |> toMobilityBin grid.MobilityOrigin
-            |> clampBin grid.MobilityBinCount
-
-        {
-            MobilityBin = expectedMobilityBin
-            RtBin = expectedRtBin
-        }
-
-    let private findHighestGaborSeedNearExpectedPosition
         (grid: GaborGrid)
         (response: Create.gaborResponse)
         expectedRt
@@ -783,35 +753,6 @@ module PSMBasedQuantificationTIMs =
                 |> fst
                 |> Some
         )
-        let expectedSeed =
-            expectedPositionSeed grid expectedRt expectedMobility
-
-        let minRtBin =
-            expectedSeed.RtBin - gaborSeedRtSearchRadiusBins
-            |> clampBin grid.RtBinCount
-
-        let maxRtBin =
-            expectedSeed.RtBin + gaborSeedRtSearchRadiusBins
-            |> clampBin grid.RtBinCount
-
-        let minMobilityBin =
-            expectedSeed.MobilityBin - gaborSeedMobilitySearchRadiusBins
-            |> clampBin grid.MobilityBinCount
-
-        let maxMobilityBin =
-            expectedSeed.MobilityBin + gaborSeedMobilitySearchRadiusBins
-            |> clampBin grid.MobilityBinCount
-
-        seq {
-            for mobilityBin in minMobilityBin .. maxMobilityBin do
-                for rtBin in minRtBin .. maxRtBin do
-                    yield
-                        {
-                            MobilityBin = mobilityBin
-                            RtBin = rtBin
-                        }
-        }
-        |> Seq.maxBy (gaborMagnitudeAt response)
 
     let private isInsideRegionSearchBox seed candidate =
         abs (candidate.RtBin - seed.RtBin) <= gaborMaxRtRegionRadiusBins
@@ -863,7 +804,6 @@ module PSMBasedQuantificationTIMs =
                 gaborMagnitudeAt response pixel
 
             if Double.IsFinite magnitude && magnitude >= threshold then
-            if gaborMagnitudeAt response pixel >= threshold then
                 region.Add pixel
 
                 pixel
