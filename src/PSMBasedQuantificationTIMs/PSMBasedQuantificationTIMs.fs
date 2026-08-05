@@ -580,7 +580,7 @@ module PSMBasedQuantificationTIMs =
                     toMobilityBin mobilityOrigin observation.Mobility
 
                 let key =
-                    mobilityBin, rtBin
+                    rtBin, mobilityBin
 
                 let oldIntensity =
                     match binnedIntensities.TryGetValue key with
@@ -603,16 +603,16 @@ module PSMBasedQuantificationTIMs =
                 |> fun maxBin -> maxBin + 1
 
             let intensities =
-                Array.init mobilityBinCount (fun _ ->
-                    Array.zeroCreate<float> rtBinCount
+                Array.init rtBinCount (fun _ ->
+                    Array.zeroCreate<float> mobilityBinCount
                 )
 
             binnedIntensities
             |> Seq.iter (fun entry ->
-                let mobilityBin, rtBin =
+                let rtBin, mobilityBin =
                     entry.Key
 
-                intensities.[mobilityBin].[rtBin] <- entry.Value
+                intensities.[rtBin].[mobilityBin] <- entry.Value
             )
 
             Some
@@ -661,16 +661,16 @@ module PSMBasedQuantificationTIMs =
         Create.applyGaborWavelet2D grid.Intensities kernel
 
     let private isInsideGrid (grid: GaborGrid) pixel =
-        pixel.MobilityBin >= 0
-        && pixel.MobilityBin < grid.MobilityBinCount
-        && pixel.RtBin >= 0
+        pixel.RtBin >= 0
         && pixel.RtBin < grid.RtBinCount
+        && pixel.MobilityBin >= 0
+        && pixel.MobilityBin < grid.MobilityBinCount
 
     let private gaborMagnitudeAt (response: Create.gaborResponse) pixel =
-        response.Magnitude.[pixel.MobilityBin].[pixel.RtBin]
+        response.Magnitude.[pixel.RtBin].[pixel.MobilityBin]
 
     let private originalIntensityAt (grid: GaborGrid) pixel =
-        grid.Intensities.[pixel.MobilityBin].[pixel.RtBin]
+        grid.Intensities.[pixel.RtBin].[pixel.MobilityBin]
 
     let private tryExpectedPositionSeed
         (grid: GaborGrid)
@@ -789,7 +789,7 @@ module PSMBasedQuantificationTIMs =
         let addIfNew pixel =
             if isInsideGrid grid pixel && isInsideRegionSearchBox seed pixel then
                 let key =
-                    pixel.MobilityBin, pixel.RtBin
+                    pixel.RtBin, pixel.MobilityBin
 
                 if visited.Add key then
                     queue.Enqueue pixel
@@ -2294,6 +2294,8 @@ module PSMBasedQuantificationTIMs =
         logger.Trace "init quantification functions:finished"
         
         logger.Trace "executing quantification"
+        //group after peptide ion
+        // -> all PSMs that have the same modifiction peptide with the same charge are getting grouped
         let quantResults = 
             qpsmsMzRefined 
             |> Array.groupBy (fun x -> 
@@ -2318,7 +2320,7 @@ module PSMBasedQuantificationTIMs =
                 )
             |> Array.mapi (fun i (pepIon,psms) -> 
                 if i % 100 = 0 then logger.Trace (sprintf "%i peptides quantified" i)
-                
+                // check if unlabeled or labeled quantification should be performed and if gabor processing is requested
                 match processParams.XicExtraction.XicProcessing, processParams.PerformLabeledQuantification with 
                 | Domain.XicProcessing.Gabor3D gaborParams, (Domain.Labeling.N15Labeling | Domain.Labeling.N15LabelingOnly | Domain.Labeling.Labelshift) ->
                     gaborLabeledQuantification gaborParams pepIon psms

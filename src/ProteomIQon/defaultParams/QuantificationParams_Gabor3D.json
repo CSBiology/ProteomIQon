@@ -1,6 +1,6 @@
 {
   "PerformLabeledQuantification": {
-    "Case": "N15Labeling"
+    "Case": "Unlabeled"
   },
   "FragPipe": true,
   "XicExtraction": {
