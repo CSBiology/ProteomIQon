@@ -67,13 +67,72 @@ do fsi.AddPrinter(fun (printer:Deedle.Internal.IFsiFormattable) -> "\n" + (print
 
 
 
-let inReader = new MzSQL(@"D:\Testfiles\binned_spectra_1.000.mzlite")
+let inReader = new MzSQL(@"/home/paulinehans/Dokumente/testRunGabor/binned_spectra_1.000.mzlite")
 inReader.Connection.Open()
 let inRunID  = "sample=0"
 let inTr = inReader.BeginTransaction()
 
-let ms = inReader.ReadMassSpectrum("merged=475568 frame=53975 scanStart=1 scanEnd=918")
-ms |> MzIO.Processing.MassSpectrum.getScanTime
+// let ms = inReader.ReadMassSpectrum("merged=475568 frame=53975 scanStart=1 scanEnd=918")
+// ms |> MzIO.Processing.MassSpectrum.getScanTime
+
+let initRTProfile (readspecPeaks:string -> Peak1DArray)  (rtIndex: IMzIOArray<RtIndexEntry>) (rtRange: RangeQuery) (mzRange: RangeQuery) =
+    let entries = RtIndexEntry.Search(rtIndex, rtRange).ToArray()
+    //printfn "RtProfile %i" entries.Length
+    [|
+        for rtIdx = 0 to entries.Length-1 do
+            let entry = entries.[rtIdx]
+            let peaks = (readspecPeaks entry.SpectrumID).Peaks
+            let p = 
+                (RtIndexEntry.MzSearch (peaks, mzRange)).DefaultIfEmpty(Peak1D(0., mzRange.LockValue))
+                |> Seq.map (fun x -> RtIndexEntry.AsPeak2D (x, entry.Rt))
+                |> Seq.toArray
+                
+            p      
+    |]
+
+
+let filePathQuant = ("/home/paulinehans/Dokumente/testRunGabor/GaborOutput/binned_spectra_1.000_quant")
+let quantFile = Frame.ReadCsv (filePathQuant, hasHeaders =true, separators = "\t")
+let quantifiedRange = 
+    quantFile
+    |> Frame.mapRows (fun rk s -> 
+        {|
+            MassLight = s.GetAs<float>("QuantMz_Light");
+            RTTraceLight = s.GetAs<string>("RtTrace_Light").Split";" |> Array.map float |> Array.median;
+            QuantLight = s.GetAs<float>("Quant_Light")
+            ParamsLight = s.GetAs<string>("Params_Light")
+        |}
+    )
+    |> Series.values
+    |> Seq.toArray
+    |> Array.sortByDescending (fun r -> r.QuantLight)
+    |> Array.take 1
+let retTimeIdxed = Query.getMS1RTIdx inReader inRunID
+let allQuerys =
+    quantifiedRange 
+    |> Array.map (fun r -> 
+        let rt = RangeQuery (r.RTTraceLight, 2.0)
+        let mz = RangeQuery (r.MassLight, 0.1)
+        initRTProfile inReader.ReadSpectrumPeaks retTimeIdxed  rt mz
+    )  
+
+let transform  = 
+    let waveletData = 
+        allQuerys 
+        |> Array.map (fun x -> 
+            x    
+            |> Array.collect (fun x -> 
+                x 
+                |> Array.filter (fun y -> y.IonMobility.IsSome)
+            ) 
+            |> Array.map (fun x -> x.Rt, x.IonMobility.Value, x.Intensity)  
+        )
+    waveletData
+    |> Array.concat
+transform
+
+
+
 //let inReaderMS = new MzMLReaderMIRIM("D:\Testfiles\MS292NT_Slot1-25_1_1375.mzML")
 //let inReaderPeaks = new MzMLReaderMIRIM("D:\Testfiles\MS292NT_Slot1-25_1_1375.mzML")
 //let inTrMS = inReaderMS.BeginTransaction()

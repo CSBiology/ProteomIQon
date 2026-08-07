@@ -57,32 +57,35 @@ module PSMBasedQuantificationTIMs =
             )
             |> Array.ofSeq
 
-        let initRTProfileGabor
-            (readSpecPeaks: string -> Peak1DArray)
-            (rtIndex: IMzIOArray<RtIndexEntry>)
-            (rtRange: RangeQuery)
-            (mzRange: RangeQuery)
-            =
-
+        let initRTProfileGabor(readSpecPeaks: string -> Peak1DArray)(rtIndex: IMzIOArray<RtIndexEntry>)(rtRange: RangeQuery)(mzRange: RangeQuery)(ionMobilityRange: RangeQuery) =
             let entries =
                 RtIndexEntry.Search(rtIndex, rtRange).ToArray()
-
             [|
                 for entry in entries do
-
                     let peaks =
                         (readSpecPeaks entry.SpectrumID).Peaks
-
                     yield
                         RtIndexEntry.MzSearch(peaks, mzRange)
                         |> Seq.choose (fun peak ->
                             match peak.IonMobility with
-                            | Some _ ->
-                                Some (RtIndexEntry.AsPeak2D(peak, entry.Rt))
-                            | None ->
+                            | Some mobility
+                                when
+                                    mobility > ionMobilityRange.LowValue
+                                    && mobility < ionMobilityRange.HighValue
+                                ->
+
+                                Some (
+                                    RtIndexEntry.AsPeak2D(
+                                        peak,
+                                        entry.Rt
+                                    )
+                                )
+
+                            | _ ->
                                 None
                         )
                         |> Seq.toArray
+                    
             |]
 
     type PeptideIon = 
@@ -355,22 +358,20 @@ module PSMBasedQuantificationTIMs =
     let mobilityBinWidth = 0.0005
 
     [<Literal>]
-    let gaborRelativeRegionThreshold = 0.25
+    let gaborRtSearchRadiusBins = 50
 
     [<Literal>]
-    let gaborSeedRtSearchRadiusBins = 50
+    let gaborMobilitySearchRadiusBins = 20
 
     [<Literal>]
-    let gaborSeedMobilitySearchRadiusBins = 20
+    let gaussianFitRadiusInSigma = 3.0
 
     [<Literal>]
-    let gaborMaxRtRegionRadiusBins = 120
+    let gaussianFitMaximumIterations = 250
 
-    [<Literal>]
-    let gaborMaxMobilityRegionRadiusBins = 60
-
-    [<Literal>]
-    let gaborMinRegionPixels = 3
+    /// Scale factors used to build a compact Gabor filter bank around the configured sigma values.
+    let private gaborSigmaScaleFactors =
+        [| 0.75; 1.00; 1.25 |]
 
     type GaborObservation =
         {
@@ -379,36 +380,92 @@ module PSMBasedQuantificationTIMs =
             Intensity: float
         }
 
+    /// A regular RT-mobility grid. Array indices are stored separately from physical coordinates.
     type GaborGrid =
         {
             RtOrigin: float
             MobilityOrigin: float
+            RetentionTimes: float[]
+            Mobilities: float[]
             RtBinCount: int
             MobilityBinCount: int
             Intensities: float[][]
         }
 
-    type GaborPixel =
+    type GaborGridPosition =
         {
-            MobilityBin: int
             RtBin: int
+            MobilityBin: int
         }
 
+    /// Stores the kernel, score, and physical position belonging to one filter-bank match.
+    type GaborKernelMatch =
+        {
+            Parameters: Domain.Gabor3DParams
+            Position: GaborGridPosition
+            RetentionTime: float
+            IonMobility: float
+            CorrectedIntensityAtPosition: float
+            Magnitude: float
+        }
+
+    type GaborFilterBankResult =
+        {
+            BestMatch: GaborKernelMatch
+            SecondBestMatch: GaborKernelMatch option
+            ScoreRatio: float option
+        }
+
+    /// Contains the baseline surface assembled from independent RT-wise AsLS corrections.
+    type BaselineCorrection2DResult =
+        {
+            Baseline: float[][]
+            CorrectedIntensities: float[][]
+        }
+
+    type Gaussian2DObservation =
+        {
+            RetentionTime: float
+            IonMobility: float
+            Intensity: float
+        }
+
+    /// Parameters of an axis-aligned two-dimensional Gaussian peak model.
+    type Gaussian2DParameters =
+        {
+            Height: float
+            MeanRt: float
+            MeanMobility: float
+            SigmaRt: float
+            SigmaMobility: float
+        }
+
+    type GaborFitWindow =
+        {
+            MinRtBin: int
+            MaxRtBin: int
+            MinMobilityBin: int
+            MaxMobilityBin: int
+        }
+
+    /// Final Gabor quantification result. The old connected-region representation is intentionally removed.
     type Gabor2DQuantification =
         {
-            RawIntensitySum: float
             Volume: float
+            DirectWindowVolume: float
             ApexIntensity: float
             ApexRetentionTime: float
             ApexIonMobility: float
             WeightedRetentionTime: float
             WeightedIonMobility: float
-            Region: GaborPixel[]
             ProjectedRetentionTimes: float[]
             ProjectedIntensities: float[]
-            Seed: GaborPixel
-            GaborSeedScore: float
-            GaborThreshold: float
+            BestGaborMatch: GaborKernelMatch
+            SecondBestGaborMatch: GaborKernelMatch option
+            GaborScoreRatio: float option
+            InitialGaussianParameters: Gaussian2DParameters
+            FittedGaussianParameters: Gaussian2DParameters
+            FitRmse: float
         }
 
     type GaborTargetEstimate =
@@ -532,6 +589,28 @@ module PSMBasedQuantificationTIMs =
     let private clampBin binCount bin =
         clamp 0 (binCount - 1) bin
 
+    let private copyJaggedArray (data: float[][]) =
+        data |> Array.map Array.copy
+
+    let private validateRectangularGrid argumentName (intensities: float[][]) =
+        if isNull intensities || intensities.Length = 0 then
+            invalidArg argumentName "The intensity grid must not be empty."
+
+        if isNull intensities.[0] || intensities.[0].Length = 0 then
+            invalidArg argumentName "The intensity grid must contain at least one mobility bin."
+
+        let mobilityCount =
+            intensities.[0].Length
+
+        let isRectangular =
+            intensities
+            |> Array.forall (fun row ->
+                not (isNull row) && row.Length = mobilityCount
+            )
+
+        if not isRectangular then
+            invalidArg argumentName "All rows of the intensity grid must have equal length."
+
     let extractGaborObservations (peakGroups: MzIO.Binary.Peak2D[][]) =
         peakGroups
         |> Array.collect id
@@ -551,6 +630,7 @@ module PSMBasedQuantificationTIMs =
                 None
         )
 
+    /// Bins irregular MS1 observations into a regular RT-mobility matrix required by the Gabor convolution.
     let tryCreateGaborGrid (peakGroups: MzIO.Binary.Peak2D[][]) =
         let observations =
             extractGaborObservations peakGroups
@@ -590,13 +670,14 @@ module PSMBasedQuantificationTIMs =
                 binnedIntensities.[key] <- oldIntensity + observation.Intensity
             )
 
-            let mobilityBinCount =
+            // The dictionary key is (rtBin, mobilityBin); therefore fst belongs to RT and snd to mobility.
+            let rtBinCount =
                 binnedIntensities.Keys
                 |> Seq.maxBy fst
                 |> fst
                 |> fun maxBin -> maxBin + 1
 
-            let rtBinCount =
+            let mobilityBinCount =
                 binnedIntensities.Keys
                 |> Seq.maxBy snd
                 |> snd
@@ -615,14 +696,101 @@ module PSMBasedQuantificationTIMs =
                 intensities.[rtBin].[mobilityBin] <- entry.Value
             )
 
+            let retentionTimes =
+                Array.init rtBinCount (rtBinCenter rtOrigin)
+
+            let mobilities =
+                Array.init mobilityBinCount (mobilityBinCenter mobilityOrigin)
+
             Some
                 {
                     RtOrigin = rtOrigin
                     MobilityOrigin = mobilityOrigin
+                    RetentionTimes = retentionTimes
+                    Mobilities = mobilities
                     RtBinCount = rtBinCount
                     MobilityBinCount = mobilityBinCount
                     Intensities = intensities
                 }
+
+    /// Applies one-dimensional AsLS along RT independently for every mobility bin.
+    let correctBaselineAlongRt
+        (baseLineCorrection: Domain.BaseLineCorrection option)
+        (intensities: float[][])
+        =
+
+        validateRectangularGrid "intensities" intensities
+
+        let rtCount =
+            intensities.Length
+
+        let mobilityCount =
+            intensities.[0].Length
+
+        let baselineGrid =
+            Array.init rtCount (fun _ ->
+                Array.zeroCreate<float> mobilityCount
+            )
+
+        let correctedGrid =
+            Array.init rtCount (fun _ ->
+                Array.zeroCreate<float> mobilityCount
+            )
+
+        match baseLineCorrection with
+        | None ->
+            {
+                Baseline = baselineGrid
+                CorrectedIntensities = copyJaggedArray intensities
+            }
+
+        | Some parameters ->
+            for mobilityBin in 0 .. mobilityCount - 1 do
+                let rawRtTrace =
+                    Array.init rtCount (fun rtBin ->
+                        let value = intensities.[rtBin].[mobilityBin]
+                        if Double.IsFinite value && value > 0.0 then value else 0.0
+                    )
+
+                let containsSignal =
+                    rawRtTrace |> Array.exists (fun value -> value > 0.0)
+
+                // AsLS needs several samples to estimate curvature. Short or empty traces remain unchanged.
+                if containsSignal && rawRtTrace.Length >= 3 then
+                    let baselineTrace =
+                        try
+                            FSharp.Stats.Signal.Baseline.baselineAls'
+                                parameters.MaxIterations
+                                parameters.Lambda
+                                parameters.P
+                                rawRtTrace
+                            |> Array.ofSeq
+                        with
+                        | _ ->
+                            Array.zeroCreate<float> rawRtTrace.Length
+
+                    let usableBaseline =
+                        if baselineTrace.Length = rawRtTrace.Length then
+                            baselineTrace
+                        else
+                            Array.zeroCreate<float> rawRtTrace.Length
+
+                    for rtBin in 0 .. rtCount - 1 do
+                        let baselineValue =
+                            let value = usableBaseline.[rtBin]
+                            if Double.IsFinite value then value else 0.0
+
+                        baselineGrid.[rtBin].[mobilityBin] <- baselineValue
+                        correctedGrid.[rtBin].[mobilityBin] <-
+                            max 0.0 (rawRtTrace.[rtBin] - baselineValue)
+                else
+                    for rtBin in 0 .. rtCount - 1 do
+                        correctedGrid.[rtBin].[mobilityBin] <- rawRtTrace.[rtBin]
+
+            {
+                Baseline = baselineGrid
+                CorrectedIntensities = correctedGrid
+            }
 
     let private validateGaborParameters (parameters: Domain.Gabor3DParams) =
         if parameters.sizeX <= 0 then
@@ -643,6 +811,89 @@ module PSMBasedQuantificationTIMs =
         if not (Double.IsFinite parameters.theta) then
             invalidArg "theta" "Gabor theta must be finite."
 
+    let private ensureOdd value =
+        let positiveValue = max 3 value
+        if positiveValue % 2 = 0 then positiveValue + 1 else positiveValue
+
+    let private kernelSizeFromSigma configuredSize sigma =
+        let sigmaBasedSize =
+            2 * int (ceil (3.0 * sigma)) + 1
+            |> ensureOdd
+
+        // Keep the filter bank computationally bounded by the explicitly configured kernel support.
+        min (ensureOdd configuredSize) sigmaBasedSize
+        |> ensureOdd
+
+    /// Creates a sigma filter bank while retaining frequency and orientation from the configured kernel.
+    let createGaborParameterBank (baseParameters: Domain.Gabor3DParams) =
+        validateGaborParameters baseParameters
+
+        [|
+            for sigmaXScale in gaborSigmaScaleFactors do
+                for sigmaYScale in gaborSigmaScaleFactors do
+                    let sigmaX =
+                        baseParameters.sigmaX * sigmaXScale
+
+                    let sigmaY =
+                        baseParameters.sigmaY * sigmaYScale
+
+                    yield
+                        {
+                            baseParameters with
+                                sizeX = kernelSizeFromSigma baseParameters.sizeX sigmaX
+                                sizeY = kernelSizeFromSigma baseParameters.sizeY sigmaY
+                                sigmaX = sigmaX
+                                sigmaY = sigmaY
+                        }
+        |]
+        |> Array.distinctBy (fun parameters ->
+            parameters.sizeX,
+            parameters.sizeY,
+            parameters.sigmaX,
+            parameters.sigmaY,
+            parameters.frequency,
+            parameters.theta
+        )
+
+    /// Reapplies complex L2 normalization so filter-bank scores are comparable even with older package builds.
+    let private normalizeGaborKernelInPlace (kernel: Create.GaborWavelet3D) =
+        let real =
+            kernel.RealAnteil
+
+        let imaginary =
+            kernel.Imaginary
+
+        validateRectangularGrid "kernel.RealAnteil" real
+        validateRectangularGrid "kernel.Imaginary" imaginary
+
+        if real.Length <> imaginary.Length || real.[0].Length <> imaginary.[0].Length then
+            invalidArg "kernel" "Real and imaginary Gabor kernel parts must have identical dimensions."
+
+        let mutable squaredNorm =
+            0.0
+
+        for x in 0 .. real.Length - 1 do
+            for y in 0 .. real.[x].Length - 1 do
+                let realValue = real.[x].[y]
+                let imaginaryValue = imaginary.[x].[y]
+                squaredNorm <-
+                    squaredNorm
+                    + realValue * realValue
+                    + imaginaryValue * imaginaryValue
+
+        let norm =
+            sqrt squaredNorm
+
+        if not (Double.IsFinite norm) || norm <= 0.0 then
+            invalidArg "kernel" "Gabor kernel L2 energy must be positive and finite."
+
+        for x in 0 .. real.Length - 1 do
+            for y in 0 .. real.[x].Length - 1 do
+                real.[x].[y] <- real.[x].[y] / norm
+                imaginary.[x].[y] <- imaginary.[x].[y] / norm
+
+        kernel
+
     let createGaborKernel (parameters: Domain.Gabor3DParams) =
         validateGaborParameters parameters
 
@@ -653,6 +904,7 @@ module PSMBasedQuantificationTIMs =
             parameters.sigmaY
             parameters.frequency
             parameters.theta
+        |> normalizeGaborKernelInPlace
 
     let applyGaborToGrid (parameters: Domain.Gabor3DParams) (grid: GaborGrid) =
         let kernel =
@@ -660,19 +912,36 @@ module PSMBasedQuantificationTIMs =
 
         Create.applyGaborWavelet2D grid.Intensities kernel
 
-    let private isInsideGrid (grid: GaborGrid) pixel =
-        pixel.RtBin >= 0
-        && pixel.RtBin < grid.RtBinCount
-        && pixel.MobilityBin >= 0
-        && pixel.MobilityBin < grid.MobilityBinCount
+    let private isInsideGrid (grid: GaborGrid) position =
+        position.RtBin >= 0
+        && position.RtBin < grid.RtBinCount
+        && position.MobilityBin >= 0
+        && position.MobilityBin < grid.MobilityBinCount
 
-    let private gaborMagnitudeAt (response: Create.gaborResponse) pixel =
-        response.Magnitude.[pixel.RtBin].[pixel.MobilityBin]
+    let private isKernelFullyInsideGrid
+        (grid: GaborGrid)
+        (parameters: Domain.Gabor3DParams)
+        position
+        =
 
-    let private originalIntensityAt (grid: GaborGrid) pixel =
-        grid.Intensities.[pixel.RtBin].[pixel.MobilityBin]
+        let rtRadius =
+            parameters.sizeX / 2
 
-    let private tryExpectedPositionSeed
+        let mobilityRadius =
+            parameters.sizeY / 2
+
+        position.RtBin - rtRadius >= 0
+        && position.RtBin + rtRadius < grid.RtBinCount
+        && position.MobilityBin - mobilityRadius >= 0
+        && position.MobilityBin + mobilityRadius < grid.MobilityBinCount
+
+    let private gaborMagnitudeAt (response: Create.gaborResponse) position =
+        response.Magnitude.[position.RtBin].[position.MobilityBin]
+
+    let private correctedIntensityAt (grid: GaborGrid) position =
+        grid.Intensities.[position.RtBin].[position.MobilityBin]
+
+    let private tryExpectedGridPosition
         (grid: GaborGrid)
         expectedRt
         expectedMobility
@@ -686,265 +955,16 @@ module PSMBasedQuantificationTIMs =
         then
             None
         else
-            let expectedRtBin =
-                toRtBin grid.RtOrigin expectedRt
-
-            let expectedMobilityBin =
-                toMobilityBin grid.MobilityOrigin expectedMobility
-
-            let seed =
+            let expectedPosition =
                 {
-                    MobilityBin = expectedMobilityBin
-                    RtBin = expectedRtBin
+                    RtBin = toRtBin grid.RtOrigin expectedRt
+                    MobilityBin = toMobilityBin grid.MobilityOrigin expectedMobility
                 }
 
-            if isInsideGrid grid seed then
-                Some seed
+            if isInsideGrid grid expectedPosition then
+                Some expectedPosition
             else
                 None
-
-    let private tryFindHighestGaborSeedNearExpectedPosition
-        (grid: GaborGrid)
-        (response: Create.gaborResponse)
-        expectedRt
-        expectedMobility
-        =
-
-        tryExpectedPositionSeed grid expectedRt expectedMobility
-        |> Option.bind (fun expectedSeed ->
-            let minRtBin =
-                expectedSeed.RtBin - gaborSeedRtSearchRadiusBins
-                |> clampBin grid.RtBinCount
-
-            let maxRtBin =
-                expectedSeed.RtBin + gaborSeedRtSearchRadiusBins
-                |> clampBin grid.RtBinCount
-
-            let minMobilityBin =
-                expectedSeed.MobilityBin - gaborSeedMobilitySearchRadiusBins
-                |> clampBin grid.MobilityBinCount
-
-            let maxMobilityBin =
-                expectedSeed.MobilityBin + gaborSeedMobilitySearchRadiusBins
-                |> clampBin grid.MobilityBinCount
-
-            let candidates =
-                [|
-                    for mobilityBin in minMobilityBin .. maxMobilityBin do
-                        for rtBin in minRtBin .. maxRtBin do
-                            let pixel =
-                                {
-                                    MobilityBin = mobilityBin
-                                    RtBin = rtBin
-                                }
-
-                            let score =
-                                gaborMagnitudeAt response pixel
-
-                            if Double.IsFinite score then
-                                yield pixel, score
-                |]
-
-            if Array.isEmpty candidates then
-                None
-            else
-                candidates
-                |> Array.maxBy snd
-                |> fst
-                |> Some
-        )
-
-    let private isInsideRegionSearchBox seed candidate =
-        abs (candidate.RtBin - seed.RtBin) <= gaborMaxRtRegionRadiusBins
-        && abs (candidate.MobilityBin - seed.MobilityBin) <= gaborMaxMobilityRegionRadiusBins
-
-    let private neighbors8 pixel =
-        [|
-            for mobilityDelta in -1 .. 1 do
-                for rtDelta in -1 .. 1 do
-                    if mobilityDelta <> 0 || rtDelta <> 0 then
-                        yield
-                            {
-                                MobilityBin = pixel.MobilityBin + mobilityDelta
-                                RtBin = pixel.RtBin + rtDelta
-                            }
-        |]
-
-    let findConnectedGaborRegion
-        (grid: GaborGrid)
-        (response: Create.gaborResponse)
-        (seed: GaborPixel)
-        threshold
-        =
-
-        let visited =
-            System.Collections.Generic.HashSet<int * int>()
-
-        let queue =
-            System.Collections.Generic.Queue<GaborPixel>()
-
-        let region =
-            ResizeArray<GaborPixel>()
-
-        let addIfNew pixel =
-            if isInsideGrid grid pixel && isInsideRegionSearchBox seed pixel then
-                let key =
-                    pixel.RtBin, pixel.MobilityBin
-
-                if visited.Add key then
-                    queue.Enqueue pixel
-
-        addIfNew seed
-
-        while queue.Count > 0 do
-            let pixel =
-                queue.Dequeue()
-
-            let magnitude =
-                gaborMagnitudeAt response pixel
-
-            if Double.IsFinite magnitude && magnitude >= threshold then
-                region.Add pixel
-
-                pixel
-                |> neighbors8
-                |> Array.iter addIfNew
-
-        region.ToArray()
-
-    let private projectRegionToRtTrace (grid: GaborGrid) (region: GaborPixel[]) =
-        if Array.isEmpty region then
-            [||], [||]
-        else
-            let minRtBin =
-                region |> Array.minBy (fun pixel -> pixel.RtBin) |> fun pixel -> pixel.RtBin
-
-            let maxRtBin =
-                region |> Array.maxBy (fun pixel -> pixel.RtBin) |> fun pixel -> pixel.RtBin
-
-            let regionByRt =
-                System.Collections.Generic.Dictionary<int, GaborPixel[]>()
-
-            region
-            |> Array.groupBy (fun pixel -> pixel.RtBin)
-            |> Array.iter (fun (rtBin, pixels) ->
-                regionByRt.[rtBin] <- pixels
-            )
-
-            [| minRtBin .. maxRtBin |]
-            |> Array.map (fun rtBin ->
-                let intensity =
-                    match regionByRt.TryGetValue rtBin with
-                    | true, pixels ->
-                        pixels
-                        |> Array.sumBy (originalIntensityAt grid)
-                    | false, _ ->
-                        0.0
-
-                rtBinCenter grid.RtOrigin rtBin, intensity
-            )
-            |> Array.unzip
-
-    let quantifyRegionFromOriginalSignal
-        (grid: GaborGrid)
-        (response: Create.gaborResponse)
-        seed
-        threshold
-        (region: GaborPixel[])
-        =
-
-        if region.Length < gaborMinRegionPixels then
-            None
-        else
-            let signalPixels =
-                region
-                |> Array.filter (fun pixel ->
-                    let intensity =
-                        originalIntensityAt grid pixel
-
-                    Double.IsFinite intensity && intensity > 0.0
-                )
-
-            if Array.isEmpty signalPixels then
-                None
-            else
-                let rawIntensitySum =
-                    signalPixels
-                    |> Array.sumBy (originalIntensityAt grid)
-
-                if not (Double.IsFinite rawIntensitySum) || rawIntensitySum <= 0.0 then
-                    None
-                else
-                    let volume =
-                        rawIntensitySum * rtBinWidth * mobilityBinWidth
-
-                    if not (Double.IsFinite volume) || volume <= 0.0 then
-                        None
-                    else
-                        let apex =
-                            signalPixels
-                            |> Array.maxBy (originalIntensityAt grid)
-
-                        let apexIntensity =
-                            originalIntensityAt grid apex
-
-                        let weightedRetentionTime =
-                            signalPixels
-                            |> Array.sumBy (fun pixel ->
-                                originalIntensityAt grid pixel
-                                * rtBinCenter grid.RtOrigin pixel.RtBin
-                            )
-                            |> fun weightedSum -> weightedSum / rawIntensitySum
-
-                        let weightedIonMobility =
-                            signalPixels
-                            |> Array.sumBy (fun pixel ->
-                                originalIntensityAt grid pixel
-                                * mobilityBinCenter grid.MobilityOrigin pixel.MobilityBin
-                            )
-                            |> fun weightedSum -> weightedSum / rawIntensitySum
-
-                        let apexRetentionTime =
-                            rtBinCenter grid.RtOrigin apex.RtBin
-
-                        let apexIonMobility =
-                            mobilityBinCenter grid.MobilityOrigin apex.MobilityBin
-
-                        let seedScore =
-                            gaborMagnitudeAt response seed
-
-                        if
-                            not (Double.IsFinite apexIntensity)
-                            || apexIntensity <= 0.0
-                            || not (Double.IsFinite weightedRetentionTime)
-                            || not (Double.IsFinite weightedIonMobility)
-                            || not (Double.IsFinite apexRetentionTime)
-                            || not (Double.IsFinite apexIonMobility)
-                            || not (Double.IsFinite seedScore)
-                            || not (Double.IsFinite threshold)
-                            || threshold <= 0.0
-                        then
-                            None
-                        else
-                            let projectedRetentionTimes, projectedIntensities =
-                                projectRegionToRtTrace grid region
-
-                            Some
-                                {
-                                    RawIntensitySum = rawIntensitySum
-                                    Volume = volume
-                                    ApexIntensity = apexIntensity
-                                    ApexRetentionTime = apexRetentionTime
-                                    ApexIonMobility = apexIonMobility
-                                    WeightedRetentionTime = weightedRetentionTime
-                                    WeightedIonMobility = weightedIonMobility
-                                    Region = region
-                                    ProjectedRetentionTimes = projectedRetentionTimes
-                                    ProjectedIntensities = projectedIntensities
-                                    Seed = seed
-                                    GaborSeedScore = seedScore
-                                    GaborThreshold = threshold
-                                }
 
     let private isValidGaborResponse
         (grid: GaborGrid)
@@ -955,20 +975,600 @@ module PSMBasedQuantificationTIMs =
             response.Magnitude
 
         not (isNull magnitude)
-        && magnitude.Length = grid.MobilityBinCount
+        && magnitude.Length = grid.RtBinCount
         && magnitude.Length > 0
         && (
             magnitude
             |> Array.forall (fun row ->
                 not (isNull row)
-                && row.Length = grid.RtBinCount
+                && row.Length = grid.MobilityBinCount
                 && row.Length > 0
                 && (row |> Array.forall Double.IsFinite)
             )
         )
 
-    let tryQuantifyGabor2D
+    /// Finds the strongest response for one kernel inside the expected PSM search window.
+    let private tryFindHighestGaborPositionNearExpectedPosition
+        (grid: GaborGrid)
         (parameters: Domain.Gabor3DParams)
+        (response: Create.gaborResponse)
+        expectedRt
+        expectedMobility
+        =
+
+        tryExpectedGridPosition grid expectedRt expectedMobility
+        |> Option.bind (fun expectedPosition ->
+            let minRtBin =
+                expectedPosition.RtBin - gaborRtSearchRadiusBins
+                |> clampBin grid.RtBinCount
+
+            let maxRtBin =
+                expectedPosition.RtBin + gaborRtSearchRadiusBins
+                |> clampBin grid.RtBinCount
+
+            let minMobilityBin =
+                expectedPosition.MobilityBin - gaborMobilitySearchRadiusBins
+                |> clampBin grid.MobilityBinCount
+
+            let maxMobilityBin =
+                expectedPosition.MobilityBin + gaborMobilitySearchRadiusBins
+                |> clampBin grid.MobilityBinCount
+
+            let createCandidates requireFullKernelSupport =
+                [|
+                    for rtBin in minRtBin .. maxRtBin do
+                        for mobilityBin in minMobilityBin .. maxMobilityBin do
+                            let position =
+                                {
+                                    RtBin = rtBin
+                                    MobilityBin = mobilityBin
+                                }
+
+                            let supportIsUsable =
+                                not requireFullKernelSupport
+                                || isKernelFullyInsideGrid grid parameters position
+
+                            if supportIsUsable then
+                                let score =
+                                    gaborMagnitudeAt response position
+
+                                if Double.IsFinite score && score > 0.0 then
+                                    yield position, score
+                |]
+
+            let fullSupportCandidates =
+                createCandidates true
+
+            // Fall back to the package's zero-padded edge behavior only when no fully supported position exists.
+            let candidates =
+                if Array.isEmpty fullSupportCandidates then
+                    createCandidates false
+                else
+                    fullSupportCandidates
+
+            if Array.isEmpty candidates then
+                None
+            else
+                candidates
+                |> Array.maxBy snd
+                |> fst
+                |> Some
+        )
+
+    let private tryEvaluateGaborKernel
+        (grid: GaborGrid)
+        expectedRt
+        expectedMobility
+        (parameters: Domain.Gabor3DParams)
+        =
+
+        if parameters.sizeX > grid.RtBinCount || parameters.sizeY > grid.MobilityBinCount then
+            None
+        else
+            let response =
+                applyGaborToGrid parameters grid
+
+            if not (isValidGaborResponse grid response) then
+                None
+            else
+                tryFindHighestGaborPositionNearExpectedPosition
+                    grid
+                    parameters
+                    response
+                    expectedRt
+                    expectedMobility
+                |> Option.bind (fun position ->
+                    let magnitude =
+                        gaborMagnitudeAt response position
+
+                    if not (Double.IsFinite magnitude) || magnitude <= 0.0 then
+                        None
+                    else
+                        Some
+                            {
+                                Parameters = parameters
+                                Position = position
+                                RetentionTime = grid.RetentionTimes.[position.RtBin]
+                                IonMobility = grid.Mobilities.[position.MobilityBin]
+                                CorrectedIntensityAtPosition = correctedIntensityAt grid position
+                                Magnitude = magnitude
+                            }
+                )
+
+    /// Executes the complete filter bank and retains both the best and second-best kernel match.
+    let tryFindBestGaborMatch
+        (parameterBank: Domain.Gabor3DParams[])
+        (grid: GaborGrid)
+        expectedRt
+        expectedMobility
+        =
+
+        let sortedMatches =
+            parameterBank
+            |> Array.choose (
+                tryEvaluateGaborKernel
+                    grid
+                    expectedRt
+                    expectedMobility
+            )
+            |> Array.sortByDescending (fun matchResult -> matchResult.Magnitude)
+
+        if Array.isEmpty sortedMatches then
+            None
+        else
+            let bestMatch =
+                sortedMatches.[0]
+
+            let secondBestMatch =
+                if sortedMatches.Length > 1 then
+                    Some sortedMatches.[1]
+                else
+                    None
+
+            let scoreRatio =
+                secondBestMatch
+                |> Option.bind (fun second ->
+                    if Double.IsFinite second.Magnitude && second.Magnitude > 0.0 then
+                        Some (bestMatch.Magnitude / second.Magnitude)
+                    else
+                        None
+                )
+
+            Some
+                {
+                    BestMatch = bestMatch
+                    SecondBestMatch = secondBestMatch
+                    ScoreRatio = scoreRatio
+                }
+
+    /// Crops the baseline-corrected grid to the PSM search area plus enough kernel padding.
+    let tryCreateLocalGaborSearchGrid
+        (parameterBank: Domain.Gabor3DParams[])
+        (grid: GaborGrid)
+        expectedRt
+        expectedMobility
+        =
+
+        tryExpectedGridPosition grid expectedRt expectedMobility
+        |> Option.map (fun expectedPosition ->
+            let maximumRtKernelRadius =
+                parameterBank
+                |> Array.map (fun parameters -> parameters.sizeX / 2)
+                |> fun values -> if Array.isEmpty values then 0 else Array.max values
+
+            let maximumMobilityKernelRadius =
+                parameterBank
+                |> Array.map (fun parameters -> parameters.sizeY / 2)
+                |> fun values -> if Array.isEmpty values then 0 else Array.max values
+
+            let minRtBin =
+                expectedPosition.RtBin
+                - gaborRtSearchRadiusBins
+                - maximumRtKernelRadius
+                |> clampBin grid.RtBinCount
+
+            let maxRtBin =
+                expectedPosition.RtBin
+                + gaborRtSearchRadiusBins
+                + maximumRtKernelRadius
+                |> clampBin grid.RtBinCount
+
+            let minMobilityBin =
+                expectedPosition.MobilityBin
+                - gaborMobilitySearchRadiusBins
+                - maximumMobilityKernelRadius
+                |> clampBin grid.MobilityBinCount
+
+            let maxMobilityBin =
+                expectedPosition.MobilityBin
+                + gaborMobilitySearchRadiusBins
+                + maximumMobilityKernelRadius
+                |> clampBin grid.MobilityBinCount
+
+            let localRtCount =
+                maxRtBin - minRtBin + 1
+
+            let localMobilityCount =
+                maxMobilityBin - minMobilityBin + 1
+
+            let localIntensities =
+                Array.init localRtCount (fun localRtBin ->
+                    Array.init localMobilityCount (fun localMobilityBin ->
+                        grid.Intensities.[minRtBin + localRtBin].[minMobilityBin + localMobilityBin]
+                    )
+                )
+
+            let localRtOrigin =
+                grid.RtOrigin + float minRtBin * rtBinWidth
+
+            let localMobilityOrigin =
+                grid.MobilityOrigin + float minMobilityBin * mobilityBinWidth
+
+            {
+                RtOrigin = localRtOrigin
+                MobilityOrigin = localMobilityOrigin
+                RetentionTimes =
+                    grid.RetentionTimes.[minRtBin .. maxRtBin]
+                Mobilities =
+                    grid.Mobilities.[minMobilityBin .. maxMobilityBin]
+                RtBinCount = localRtCount
+                MobilityBinCount = localMobilityCount
+                Intensities = localIntensities
+            }
+        )
+
+    /// Converts the rotated Gabor envelope widths into axis-aligned standard deviations in grid bins.
+    let private effectiveGaussianSigmasInBins (parameters: Domain.Gabor3DParams) =
+        let cosTheta =
+            cos parameters.theta
+
+        let sinTheta =
+            sin parameters.theta
+
+        let rtEnvelopeVariance =
+            parameters.sigmaX * parameters.sigmaX * cosTheta * cosTheta
+            + parameters.sigmaY * parameters.sigmaY * sinTheta * sinTheta
+
+        let mobilityEnvelopeVariance =
+            parameters.sigmaX * parameters.sigmaX * sinTheta * sinTheta
+            + parameters.sigmaY * parameters.sigmaY * cosTheta * cosTheta
+
+        // The Gabor implementation uses exp(-x²/s²), whereas a standard Gaussian uses exp(-x²/(2σ²)).
+        sqrt (rtEnvelopeVariance / 2.0),
+        sqrt (mobilityEnvelopeVariance / 2.0)
+
+    let createGaussianFitWindow
+        (grid: GaborGrid)
+        (bestMatch: GaborKernelMatch)
+        =
+
+        let sigmaRtBins, sigmaMobilityBins =
+            effectiveGaussianSigmasInBins bestMatch.Parameters
+
+        let rtRadius =
+            max 2 (int (ceil (gaussianFitRadiusInSigma * sigmaRtBins)))
+
+        let mobilityRadius =
+            max 2 (int (ceil (gaussianFitRadiusInSigma * sigmaMobilityBins)))
+
+        {
+            MinRtBin = clampBin grid.RtBinCount (bestMatch.Position.RtBin - rtRadius)
+            MaxRtBin = clampBin grid.RtBinCount (bestMatch.Position.RtBin + rtRadius)
+            MinMobilityBin = clampBin grid.MobilityBinCount (bestMatch.Position.MobilityBin - mobilityRadius)
+            MaxMobilityBin = clampBin grid.MobilityBinCount (bestMatch.Position.MobilityBin + mobilityRadius)
+        }
+
+    let extractGaussianObservations
+        (grid: GaborGrid)
+        (window: GaborFitWindow)
+        =
+
+        [|
+            for rtBin in window.MinRtBin .. window.MaxRtBin do
+                for mobilityBin in window.MinMobilityBin .. window.MaxMobilityBin do
+                    let intensity =
+                        grid.Intensities.[rtBin].[mobilityBin]
+
+                    if Double.IsFinite intensity && intensity >= 0.0 then
+                        yield
+                            {
+                                RetentionTime = grid.RetentionTimes.[rtBin]
+                                IonMobility = grid.Mobilities.[mobilityBin]
+                                Intensity = intensity
+                            }
+        |]
+
+    let private gaussian2DValue
+        (parameters: Gaussian2DParameters)
+        retentionTime
+        ionMobility
+        =
+
+        if
+            parameters.Height < 0.0
+            || parameters.SigmaRt <= 0.0
+            || parameters.SigmaMobility <= 0.0
+        then
+            nan
+        else
+            let rtDistance =
+                (retentionTime - parameters.MeanRt) / parameters.SigmaRt
+
+            let mobilityDistance =
+                (ionMobility - parameters.MeanMobility) / parameters.SigmaMobility
+
+            parameters.Height
+            * exp (-0.5 * (rtDistance * rtDistance + mobilityDistance * mobilityDistance))
+
+    let private gaussianSse
+        (parameters: Gaussian2DParameters)
+        (observations: Gaussian2DObservation[])
+        =
+
+        if Array.isEmpty observations then
+            infinity
+        else
+            observations
+            |> Array.sumBy (fun observation ->
+                let predicted =
+                    gaussian2DValue
+                        parameters
+                        observation.RetentionTime
+                        observation.IonMobility
+
+                if not (Double.IsFinite predicted) then
+                    infinity
+                else
+                    let residual =
+                        observation.Intensity - predicted
+
+                    residual * residual
+            )
+
+    let private gaussianParameterAt index parameters =
+        match index with
+        | 0 -> parameters.Height
+        | 1 -> parameters.MeanRt
+        | 2 -> parameters.MeanMobility
+        | 3 -> parameters.SigmaRt
+        | 4 -> parameters.SigmaMobility
+        | _ -> invalidArg "index" "Gaussian parameter index must be between zero and four."
+
+    let private setGaussianParameter index value parameters =
+        match index with
+        | 0 -> { parameters with Height = value }
+        | 1 -> { parameters with MeanRt = value }
+        | 2 -> { parameters with MeanMobility = value }
+        | 3 -> { parameters with SigmaRt = value }
+        | 4 -> { parameters with SigmaMobility = value }
+        | _ -> invalidArg "index" "Gaussian parameter index must be between zero and four."
+
+    let private clampGaussianParameters
+        (lowerBounds: float[])
+        (upperBounds: float[])
+        (parameters: Gaussian2DParameters)
+        : Gaussian2DParameters =
+
+        [| 0 .. 4 |]
+        |> Array.fold
+            (fun (current: Gaussian2DParameters) (index: int) ->
+                let boundedValue =
+                    gaussianParameterAt index current
+                    |> clamp lowerBounds.[index] upperBounds.[index]
+
+                setGaussianParameter index boundedValue current
+            )
+            parameters
+
+    let createInitialGaussianParameters
+        (bestMatch: GaborKernelMatch)
+        (observations: Gaussian2DObservation[])
+        =
+
+        let sigmaRtBins, sigmaMobilityBins =
+            effectiveGaussianSigmasInBins bestMatch.Parameters
+
+        let maximumIntensity =
+            observations
+            |> Array.map (fun observation -> observation.Intensity)
+            |> Array.filter Double.IsFinite
+            |> fun values ->
+                if Array.isEmpty values then 0.0 else Array.max values
+
+        {
+            Height = maximumIntensity
+            MeanRt = bestMatch.RetentionTime
+            MeanMobility = bestMatch.IonMobility
+            SigmaRt = max (rtBinWidth * 0.5) (sigmaRtBins * rtBinWidth)
+            SigmaMobility = max (mobilityBinWidth * 0.5) (sigmaMobilityBins * mobilityBinWidth)
+        }
+
+    /// Fits the five Gaussian parameters with bounded coordinate pattern search.
+    /// This keeps the implementation deterministic and avoids adding another optimizer dependency.
+    let tryFitGaussian2D
+        (window: GaborFitWindow)
+        (grid: GaborGrid)
+        (initialParameters: Gaussian2DParameters)
+        (observations: Gaussian2DObservation[])
+        =
+
+        if observations.Length < 9 then
+            None
+        else
+            let maximumIntensity =
+                observations
+                |> Array.maxBy (fun observation -> observation.Intensity)
+                |> fun observation -> observation.Intensity
+
+            if not (Double.IsFinite maximumIntensity) || maximumIntensity <= 0.0 then
+                None
+            else
+                let minRt =
+                    grid.RetentionTimes.[window.MinRtBin]
+
+                let maxRt =
+                    grid.RetentionTimes.[window.MaxRtBin]
+
+                let minMobility =
+                    grid.Mobilities.[window.MinMobilityBin]
+
+                let maxMobility =
+                    grid.Mobilities.[window.MaxMobilityBin]
+
+                let rtSpan =
+                    max rtBinWidth (maxRt - minRt + rtBinWidth)
+
+                let mobilitySpan =
+                    max mobilityBinWidth (maxMobility - minMobility + mobilityBinWidth)
+
+                let lowerBounds =
+                    [|
+                        0.0
+                        minRt
+                        minMobility
+                        rtBinWidth * 0.5
+                        mobilityBinWidth * 0.5
+                    |]
+
+                let upperBounds =
+                    [|
+                        max (maximumIntensity * 5.0) (initialParameters.Height * 5.0)
+                        maxRt
+                        maxMobility
+                        rtSpan
+                        mobilitySpan
+                    |]
+
+                let mutable current =
+                    clampGaussianParameters lowerBounds upperBounds initialParameters
+
+                let mutable currentSse =
+                    gaussianSse current observations
+
+                if not (Double.IsFinite currentSse) then
+                    None
+                else
+                    let mutable steps =
+                        [|
+                            max (maximumIntensity * 0.10) 1e-9
+                            max (rtSpan * 0.10) rtBinWidth
+                            max (mobilitySpan * 0.10) mobilityBinWidth
+                            max (current.SigmaRt * 0.25) (rtBinWidth * 0.5)
+                            max (current.SigmaMobility * 0.25) (mobilityBinWidth * 0.5)
+                        |]
+
+                    let minimumSteps =
+                        [|
+                            max (maximumIntensity * 1e-6) 1e-9
+                            rtBinWidth * 0.01
+                            mobilityBinWidth * 0.01
+                            rtBinWidth * 0.01
+                            mobilityBinWidth * 0.01
+                        |]
+
+                    let mutable iteration =
+                        0
+
+                    let mutable converged =
+                        false
+
+                    while iteration < gaussianFitMaximumIterations && not converged do
+                        let mutable improvedInIteration =
+                            false
+
+                        for parameterIndex in 0 .. 4 do
+                            let currentValue =
+                                gaussianParameterAt parameterIndex current
+
+                            let candidates =
+                                [|
+                                    current
+                                    setGaussianParameter parameterIndex (currentValue + steps.[parameterIndex]) current
+                                    setGaussianParameter parameterIndex (currentValue - steps.[parameterIndex]) current
+                                |]
+                                |> Array.map (clampGaussianParameters lowerBounds upperBounds)
+                                |> Array.distinct
+                                |> Array.map (fun candidate ->
+                                    candidate, gaussianSse candidate observations
+                                )
+                                |> Array.filter (fun (_, sse) -> Double.IsFinite sse)
+
+                            if not (Array.isEmpty candidates) then
+                                let bestCandidate, bestSse =
+                                    candidates |> Array.minBy snd
+
+                                if bestSse < currentSse then
+                                    current <- bestCandidate
+                                    currentSse <- bestSse
+                                    improvedInIteration <- true
+
+                        if not improvedInIteration then
+                            steps <- steps |> Array.map (fun step -> step * 0.5)
+
+                        converged <-
+                            Array.forall2 (fun step minimumStep -> step <= minimumStep) steps minimumSteps
+
+                        iteration <- iteration + 1
+
+                    let fittedValues =
+                        [|
+                            current.Height
+                            current.MeanRt
+                            current.MeanMobility
+                            current.SigmaRt
+                            current.SigmaMobility
+                        |]
+
+                    if
+                        (fittedValues |> Array.forall Double.IsFinite)
+                        && current.Height > 0.0
+                        && current.SigmaRt > 0.0
+                        && current.SigmaMobility > 0.0
+                    then
+                        Some current
+                    else
+                        None
+
+    let private calculateGaussianVolume parameters =
+        2.0
+        * Math.PI
+        * parameters.Height
+        * parameters.SigmaRt
+        * parameters.SigmaMobility
+
+    let private calculateDirectWindowVolume (observations: Gaussian2DObservation[]) =
+        observations
+        |> Array.sumBy (fun observation -> observation.Intensity)
+        |> fun intensitySum -> intensitySum * rtBinWidth * mobilityBinWidth
+
+    let private calculateGaussianRmse parameters (observations: Gaussian2DObservation[]) =
+        if Array.isEmpty observations then
+            nan
+        else
+            gaussianSse parameters observations
+            |> fun sse -> sqrt (sse / float observations.Length)
+
+    let private projectFitWindowToRtTrace
+        (grid: GaborGrid)
+        (window: GaborFitWindow)
+        =
+
+        [| window.MinRtBin .. window.MaxRtBin |]
+        |> Array.map (fun rtBin ->
+            let intensity =
+                [| window.MinMobilityBin .. window.MaxMobilityBin |]
+                |> Array.sumBy (fun mobilityBin ->
+                    grid.Intensities.[rtBin].[mobilityBin]
+                )
+
+            grid.RetentionTimes.[rtBin], intensity
+        )
+        |> Array.unzip
+
+    /// Quantifies one PSM using RT-wise AsLS, a normalized Gabor filter bank, and a fitted 2D Gaussian.
+    let tryQuantifyGabor2D
+        (baseLineCorrection: Domain.BaseLineCorrection option)
+        (baseParameters: Domain.Gabor3DParams)
         expectedRt
         expectedMobility
         (peakGroups: MzIO.Binary.Peak2D[][])
@@ -976,45 +1576,100 @@ module PSMBasedQuantificationTIMs =
 
         peakGroups
         |> tryCreateGaborGrid
-        |> Option.bind (fun grid ->
-            let response =
-                applyGaborToGrid parameters grid
+        |> Option.bind (fun rawGrid ->
+            let baselineResult =
+                correctBaselineAlongRt
+                    baseLineCorrection
+                    rawGrid.Intensities
 
-            if not (isValidGaborResponse grid response) then
-                None
-            else
-                tryFindHighestGaborSeedNearExpectedPosition
-                    grid
-                    response
+            let correctedGrid =
+                {
+                    rawGrid with
+                        Intensities = baselineResult.CorrectedIntensities
+                }
+
+            let parameterBank =
+                createGaborParameterBank baseParameters
+
+            tryCreateLocalGaborSearchGrid
+                parameterBank
+                correctedGrid
+                expectedRt
+                expectedMobility
+            |> Option.bind (fun searchGrid ->
+                tryFindBestGaborMatch
+                    parameterBank
+                    searchGrid
                     expectedRt
                     expectedMobility
-                |> Option.bind (fun seed ->
-                    let seedScore =
-                        gaborMagnitudeAt response seed
+                |> Option.bind (fun filterBankResult ->
+                    let fitWindow =
+                        createGaussianFitWindow
+                            searchGrid
+                            filterBankResult.BestMatch
 
-                    if not (Double.IsFinite seedScore) || seedScore <= 0.0 then
-                        None
-                    else
-                        let threshold =
-                            seedScore * gaborRelativeRegionThreshold
+                    let observations =
+                        extractGaussianObservations
+                            searchGrid
+                            fitWindow
 
-                        if not (Double.IsFinite threshold) || threshold <= 0.0 then
+                    let initialParameters =
+                        createInitialGaussianParameters
+                            filterBankResult.BestMatch
+                            observations
+
+                    tryFitGaussian2D
+                        fitWindow
+                        searchGrid
+                        initialParameters
+                        observations
+                    |> Option.bind (fun fittedParameters ->
+                        let volume =
+                            calculateGaussianVolume fittedParameters
+
+                        let directWindowVolume =
+                            calculateDirectWindowVolume observations
+
+                        let fitRmse =
+                            calculateGaussianRmse fittedParameters observations
+
+                        if
+                            not (Double.IsFinite volume)
+                            || volume <= 0.0
+                            || not (Double.IsFinite directWindowVolume)
+                            || directWindowVolume <= 0.0
+                            || not (Double.IsFinite fitRmse)
+                        then
                             None
                         else
-                            let region =
-                                findConnectedGaborRegion
-                                    grid
-                                    response
-                                    seed
-                                    threshold
+                            let measuredApex =
+                                observations
+                                |> Array.maxBy (fun observation -> observation.Intensity)
 
-                            quantifyRegionFromOriginalSignal
-                                grid
-                                response
-                                seed
-                                threshold
-                                region
+                            let projectedRetentionTimes, projectedIntensities =
+                                projectFitWindowToRtTrace searchGrid fitWindow
+
+                            Some
+                                {
+                                    Volume = volume
+                                    DirectWindowVolume = directWindowVolume
+                                    ApexIntensity = measuredApex.Intensity
+                                    ApexRetentionTime = measuredApex.RetentionTime
+                                    ApexIonMobility = measuredApex.IonMobility
+                                    WeightedRetentionTime = fittedParameters.MeanRt
+                                    WeightedIonMobility = fittedParameters.MeanMobility
+                                    ProjectedRetentionTimes = projectedRetentionTimes
+                                    ProjectedIntensities = projectedIntensities
+                                    BestGaborMatch = filterBankResult.BestMatch
+                                    SecondBestGaborMatch = filterBankResult.SecondBestMatch
+                                    GaborScoreRatio = filterBankResult.ScoreRatio
+                                    InitialGaussianParameters = initialParameters
+                                    FittedGaussianParameters = fittedParameters
+                                    FitRmse = fitRmse
+                                }
+                    )
                 )
+            )
         )
 
     let initGetGabor2DQuantification
@@ -1022,6 +1677,8 @@ module PSMBasedQuantificationTIMs =
         idx
         scanTimeWindow
         mzWindow
+        mobilityWindow
+        baseLineCorrection
         =
 
         fun
@@ -1036,11 +1693,16 @@ module PSMBasedQuantificationTIMs =
             let mzQuery =
                 Query.createRangeQuery expectedMz mzWindow
 
-            getGaborPeaks idx rtQuery mzQuery
+            let ionMobilityQuery =
+                Query.createRangeQuery expectedMobility mobilityWindow
+
+            getGaborPeaks idx rtQuery mzQuery ionMobilityQuery
             |> tryQuantifyGabor2D
+                baseLineCorrection
                 parameters
                 expectedRt
                 expectedMobility
+
         
     ///
     let initGetIsotopicEnvelope reader idx scanTimeWindow mzWindow_Da ch meanScanTime meanPrecMz =
@@ -1525,6 +2187,8 @@ module PSMBasedQuantificationTIMs =
                 retTimeIdxed
                 processParams.XicExtraction.ScanTimeWindow
                 mzWindow
+                0.05
+                processParams.BaseLineCorrection
         logger.Trace "init quantification functions"
 
         let emptyClusterComparison =
@@ -1576,8 +2240,25 @@ module PSMBasedQuantificationTIMs =
 
                 q.Volume,
                 q.ApexIntensity,
-                nan,
-                ([||] : float[]),
+                q.FitRmse,
+                // Parameter order: kernel sizeX, sizeY, sigmaX, sigmaY, frequency, theta,
+                // Gabor magnitude, best/second-best score ratio, Gaussian height, mean RT,
+                // mean mobility, sigma RT, sigma mobility.
+                [|
+                    float q.BestGaborMatch.Parameters.sizeX
+                    float q.BestGaborMatch.Parameters.sizeY
+                    q.BestGaborMatch.Parameters.sigmaX
+                    q.BestGaborMatch.Parameters.sigmaY
+                    q.BestGaborMatch.Parameters.frequency
+                    q.BestGaborMatch.Parameters.theta
+                    q.BestGaborMatch.Magnitude
+                    (q.GaborScoreRatio |> Option.defaultValue nan)
+                    q.FittedGaussianParameters.Height
+                    q.FittedGaussianParameters.MeanRt
+                    q.FittedGaussianParameters.MeanMobility
+                    q.FittedGaussianParameters.SigmaRt
+                    q.FittedGaussianParameters.SigmaMobility
+                |],
                 expectedRt - q.WeightedRetentionTime,
                 cluster,
                 q.ProjectedRetentionTimes,
@@ -1621,12 +2302,12 @@ module PSMBasedQuantificationTIMs =
 
                 match estimateGaborTargetFromFragPipePsms scanTimeToMzCorrection theoMz psmsWithMatchedSums with
                 | None ->
-                    logger.Trace (sprintf "Gabor quant failed: No FragPipe seed, Sequence:%s, GlobalMod:%s, Charge:%s" (pepIon.Sequence |> String.filter (fun x -> x <> '*')) (pepIon.GlobalMod.ToString()) (pepIon.Charge.ToString()))
+                    logger.Trace (sprintf "Gabor quant failed: No FragPipe target estimate, Sequence:%s, GlobalMod:%s, Charge:%s" (pepIon.Sequence |> String.filter (fun x -> x <> '*')) (pepIon.GlobalMod.ToString()) (pepIon.Charge.ToString()))
                     None
                 | Some target ->
                     match getGabor2DQuantification gaborParams target.ExpectedRt target.ExpectedMz target.ExpectedMobility with
                     | None ->
-                        logger.Trace (sprintf "Gabor quant failed: No 2D region, Sequence:%s, GlobalMod:%s, Charge:%s" (pepIon.Sequence |> String.filter (fun x -> x <> '*')) (pepIon.GlobalMod.ToString()) (pepIon.Charge.ToString()))
+                        logger.Trace (sprintf "Gabor quant failed: No valid Gabor-Gaussian fit, Sequence:%s, GlobalMod:%s, Charge:%s" (pepIon.Sequence |> String.filter (fun x -> x <> '*')) (pepIon.GlobalMod.ToString()) (pepIon.Charge.ToString()))
                         None
                     | Some targetQuant ->
                         let meanScore =
@@ -1808,12 +2489,12 @@ module PSMBasedQuantificationTIMs =
 
                     match estimateGaborTargetFromFragPipePsms scanTimeToMzCorrection theoMz psmsWithMatchedSums with
                     | None ->
-                        logger.Trace (sprintf "Gabor quant failed: No FragPipe seed, Sequence:%s, GlobalMod:%s, Charge:%s" (pepIon.Sequence |> String.filter (fun x -> x <> '*')) (pepIon.GlobalMod.ToString()) (pepIon.Charge.ToString()))
+                        logger.Trace (sprintf "Gabor quant failed: No FragPipe target estimate, Sequence:%s, GlobalMod:%s, Charge:%s" (pepIon.Sequence |> String.filter (fun x -> x <> '*')) (pepIon.GlobalMod.ToString()) (pepIon.Charge.ToString()))
                         None
                     | Some target ->
                         match getGabor2DQuantification gaborParams target.ExpectedRt target.ExpectedMz target.ExpectedMobility with
                         | None ->
-                            logger.Trace (sprintf "Gabor quant failed: No 2D region, Sequence:%s, GlobalMod:%s, Charge:%s" (pepIon.Sequence |> String.filter (fun x -> x <> '*')) (pepIon.GlobalMod.ToString()) (pepIon.Charge.ToString()))
+                            logger.Trace (sprintf "Gabor quant failed: No valid Gabor-Gaussian fit, Sequence:%s, GlobalMod:%s, Charge:%s" (pepIon.Sequence |> String.filter (fun x -> x <> '*')) (pepIon.GlobalMod.ToString()) (pepIon.Charge.ToString()))
                             None
                         | Some targetQuant ->
                             let meanScore =
