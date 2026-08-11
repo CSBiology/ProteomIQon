@@ -2,7 +2,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFrameworks>net8.0</TargetFrameworks>
-    <Version>0.0.1-alpha</Version>
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>proteomiqon-psmbasedquantification</ToolCommandName>
     <RootNamespace>PSMBasedQuantification</RootNamespace>

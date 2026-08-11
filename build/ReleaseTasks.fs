@@ -81,7 +81,7 @@ let publishNugetPrerelease =
     BuildTask.create
         "PublishNugetPrerelease"
         [
-            clean
+            // clean
             build
             runTests
             packPrerelease
