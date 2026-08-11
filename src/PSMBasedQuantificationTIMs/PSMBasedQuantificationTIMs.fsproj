@@ -15,7 +15,7 @@
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
   <PropertyGroup>
-    <Authors>David Zimmer, Caroline Ott, Heinrich Lukas Weil, Timo Muehlhaus</Authors>
+    <Authors>David Zimmer, Caroline Ott, Heinrich Lukas Weil, Pauline Hans, Timo Muehlhaus</Authors>
     <Description>ProteomIQon.PSMBasedQuantificationTIMs - computational proteomics</Description>
     <Summary>ProteomIQon.PSMBasedQuantificationTIMs - computational proteomics</Summary>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
