@@ -247,13 +247,13 @@ let visuPeak=
     |> Chart.withMarkerStyle (Size = 1)
     |> Chart.saveHtml ("/home/paulinehans/Dokumente/testRunGabor/peakshape1000.html")
     
-let filePathQuantGabor = ("/home/paulinehans/Dokumente/testRunGabor/GaborOutput/binned_spectra_1.000.quant")
+let filePathQuantGabor = (@"C:\Users\phans\GaborTest\GaborOutput\binned_spectra_1.000.quant")
 let quantFileGabor = Frame.ReadCsv (filePathQuantGabor, hasHeaders =true, separators = "\t")
 
-let filePathOther = ("/home/paulinehans/Dokumente/PaulineTIMSDaten/runs/TIMsTest/out/singleFilequant/binned_spectra_1.000.quant")
+let filePathOther = (@"C:\Users\phans\Documents\PaulineTIMSDaten\runs\TIMsTest\TIMsTest\out\singleFilequant/binned_spectra_1.000.quant")
 let quantFileOther = Frame.ReadCsv (filePathOther, hasHeaders =true, separators = "\t")
 
-let quantFileFP = Frame.ReadCsv ("/home/paulinehans/Dokumente/PaulineTIMSDaten/runs/TIMsTest/FragPipe/14N2/combined_ion.tsv", hasHeaders =true, separators = "\t")
+// let quantFileFP = Frame.ReadCsv ("/home/paulinehans/Dokumente/PaulineTIMSDaten/runs/TIMsTest/FragPipe/14N2/combined_ion.tsv", hasHeaders =true, separators = "\t")
 
 
 let quantifiedRangeG: Frame<string*string,string> = 
@@ -296,17 +296,31 @@ quantifiedRangeFP.RowCount
 let both = Frame.join JoinKind.Inner quantifiedRangeG quantifiedRangeO
 let both2 = Frame.join JoinKind.Inner quantifiedRangeG quantifiedRangeFP
 
-let gabor: float [] = both2 |> Frame.getCol "Quant_Light_Gabor" |> Series.valuesAll |> Seq.toArray |> Array.map (fun x -> match x with | Some v -> log2 v | None -> 0.0)
-let other: float [] = both |> Frame.getCol "Quant_Light_Other" |> Series.valuesAll |> Seq.toArray |> Array.map (fun x -> match x with | Some v -> log2 v | None -> 0.0)
-let fp: float [] = both2 |> Frame.getCol "Intensity_FP" |> Series.valuesAll |> Seq.toArray |> Array.map (fun x -> match x with | Some v -> log2 v | None -> 0.0)
+let gabor: float [] = 
+    both 
+    |> Frame.getCol "Quant_Light_Gabor" 
+    |> Series.valuesAll 
+    |> Seq.toArray 
+    //|> Array.map (fun x -> match x with | Some v -> v | None -> 0.0)
+    |> Array.map (fun x -> match x with | Some v -> log2 v | None -> 0.0)
+let other: float [] = 
+    both 
+    |> Frame.getCol "Quant_Light_Other" 
+    |> Series.valuesAll 
+    |> Seq.toArray 
+    //|> Array.map (fun x -> match x with | Some v -> v | None -> 0.0)
+    |> Array.map (fun x -> match x with | Some v -> log2 v | None -> 0.0)
+
+
+// let fp: float [] = both2 |> Frame.getCol "Intensity_FP" |> Series.valuesAll |> Seq.toArray |> Array.map (fun x -> match x with | Some v -> log2 v | None -> 0.0)
 
 gabor.Length
 other.Length
-fp.Length
+// fp.Length
 
-Array.zip gabor fp
+Array.zip gabor other
 |> Chart.Point
 |> Chart.withXAxisStyle ("Gabor", ShowGrid = true)
 |> Chart.withYAxisStyle ("Other", ShowGrid = true)
-|> Chart.saveHtml ("/home/paulinehans/Dokumente/testRunGabor/quantificationComparisonWithFP.html")
+|> Chart.saveHtml (@"C:\Users\phans/quantificationComparisonWithFP.html")
 

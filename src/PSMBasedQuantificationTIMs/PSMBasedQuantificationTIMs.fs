@@ -57,6 +57,8 @@ module PSMBasedQuantificationTIMs =
             )
             |> Array.ofSeq
 
+
+        // extracts retetion time profile for given mz and rt range and ion mobility range. 
         let initRTProfileGabor(readSpecPeaks: string -> Peak1DArray)(rtIndex: IMzIOArray<RtIndexEntry>)(rtRange: RangeQuery)(mzRange: RangeQuery)(ionMobilityRange: RangeQuery) =
             let entries =
                 RtIndexEntry.Search(rtIndex, rtRange).ToArray()
