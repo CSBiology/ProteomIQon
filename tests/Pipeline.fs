@@ -1,18 +1,48 @@
-﻿module Pipeline
+module Pipeline
 
 open Expecto
 open System
 open System.IO
 open ProteomIQon.Core.InputPaths
-open Fake.DotNet
 open BioFSharp.Mz
 open System.Data.SQLite
 open FSharpAux.IO
 
+/// Directory of the compiled test assembly (tests/bin/<config>/<tfm>)
+let baseDir = AppContext.BaseDirectory
+
+let repoRoot = Path.GetFullPath(Path.Combine(baseDir, "..", "..", "..", ".."))
+
+/// Locates a tool dll in its project build output under src/<projectDir>/bin,
+/// preferring the most recently built configuration.
+let toolDll (projectDir: string) =
+    let assemblyName = sprintf "ProteomIQon.%s.dll" (projectDir.Replace("-", "_"))
+    let candidates =
+        [ for config in ["Release"; "Debug"] ->
+            Path.Combine(repoRoot, "src", projectDir, "bin", config, "net8.0", assemblyName) ]
+        |> List.filter File.Exists
+    match candidates with
+    | [] -> failwithf "%s not found, build it first (dotnet build src/%s)" assemblyName projectDir
+    | existing -> existing |> List.maxBy File.GetLastWriteTimeUtc
+
 let runDotNet cmd workingDir =
-    let result =
-        DotNet.exec (DotNet.Options.withWorkingDirectory workingDir) cmd ""
-    if result.ExitCode <> 0 then failwithf "'dotnet %s' failed in %s" cmd workingDir
+    let psi =
+        Diagnostics.ProcessStartInfo(
+            FileName = "dotnet",
+            Arguments = cmd,
+            WorkingDirectory = workingDir,
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true
+        )
+    use proc = Diagnostics.Process.Start psi
+    // read both streams concurrently to avoid pipe-buffer deadlocks
+    let stdOutTask = proc.StandardOutput.ReadToEndAsync()
+    let stdErrTask = proc.StandardError.ReadToEndAsync()
+    proc.WaitForExit()
+    let stdOut = stdOutTask.Result
+    let stdErr = stdErrTask.Result
+    if proc.ExitCode <> 0 then failwithf "'dotnet %s' failed in %s:\n%s\n%s" cmd workingDir stdOut stdErr
 
 let selectAllModSequence cn =
     let querystring = "SELECT * FROM ModSequence"
@@ -54,13 +84,13 @@ let selectAllProtein cn =
 let pipelineTests =
     testList "Pipeline" [
         testCase "PeptideDB" <| fun _ ->
-            let relToDirectory = getRelativePath Environment.CurrentDirectory
+            let relToDirectory = getRelativePath baseDir
             let fastaPath = relToDirectory "../../../data/PeptideDB/in/example.fasta"
             let peptideDBParams = relToDirectory "../../../data/PeptideDB/in/peptideDBParams.json"
             let outDirectory = relToDirectory "../../../data/PeptideDB/out/"
-            let pepDBExe = relToDirectory "../../../../../bin/PeptideDB/net5.0/ProteomIQon.PeptideDB.dll"
+            let pepDBExe = toolDll "PeptideDB"
             // run tool
-            runDotNet (sprintf "%s -i %s -o %s -p %s" pepDBExe fastaPath outDirectory peptideDBParams) Environment.CurrentDirectory
+            runDotNet (sprintf "%s -i %s -o %s -p %s" pepDBExe fastaPath outDirectory peptideDBParams) baseDir
             let referenceDB =
                 let dbPath = relToDirectory "../../../data/PeptideDB/out/MinimalReference.db"
                 use cn = SearchDB.getDBConnection dbPath
@@ -79,14 +109,14 @@ let pipelineTests =
             Expect.isTrue compare "Peptide databases are different"
     
         testCase "PeptideSpectrumMatching" <| fun _ ->
-            let relToDirectory = getRelativePath Environment.CurrentDirectory
+            let relToDirectory = getRelativePath baseDir
             let db = relToDirectory "../../../data/PeptideSpectrumMatching/in/Minimal.db"
             let mzlite = relToDirectory "../../../data/PeptideSpectrumMatching/in/minimal.mzlite"
             let psmParams = relToDirectory "../../../data/PeptideSpectrumMatching/in/defaultParams.json"
             let outDirectory = relToDirectory "../../../data/PeptideSpectrumMatching/out/"
-            let psmExe = relToDirectory "../../../../../bin/PeptideSpectrumMatching/net5.0/ProteomIQon.PeptideSpectrumMatching.dll"
+            let psmExe = toolDll "PeptideSpectrumMatching"
             // run tool
-            runDotNet (sprintf "%s -i %s -o %s -p %s -d %s" psmExe mzlite outDirectory psmParams db) Environment.CurrentDirectory
+            runDotNet (sprintf "%s -i %s -o %s -p %s -d %s" psmExe mzlite outDirectory psmParams db) baseDir
             let referencePSM = 
                 let psmPath = relToDirectory "../../../data/PeptideSpectrumMatching/out/minimalReference.psm"
                 File.ReadAllLines psmPath
@@ -101,7 +131,7 @@ let pipelineTests =
             Expect.isTrue compare "PSMs are different"
 
         testCase "PSMStatistics" <| fun _ ->
-            let relToDirectory = getRelativePath Environment.CurrentDirectory
+            let relToDirectory = getRelativePath baseDir
             let dbEstimate = relToDirectory "../../../data/PSMStatistics/in/MinimalEstimate.db"
             let dbFixed = relToDirectory "../../../data/PSMStatistics/in/MinimalFixed.db"
             let psmEstimate = relToDirectory "../../../data/PSMStatistics/in/minimalEstimate.psm"
@@ -110,10 +140,10 @@ let pipelineTests =
             let psmStatsParamsFixed = relToDirectory "../../../data/PSMStatistics/in/pSMStatisticsParamsFixed.json"
             let outDirectoryEstimate = relToDirectory "../../../data/PSMStatistics/out/estimateOut"
             let outDirectoryFixed = relToDirectory "../../../data/PSMStatistics/out/fixedOut"
-            let psmStatsExe = relToDirectory "../../../../../bin/PSMStatistics/net5.0/ProteomIQon.PSMStatistics.dll"
+            let psmStatsExe = toolDll "PSMStatistics"
             // run tool
-            runDotNet (sprintf "%s -i %s -o %s -p %s -d %s" psmStatsExe psmEstimate outDirectoryEstimate psmStatsParamsEstimate dbEstimate) Environment.CurrentDirectory
-            runDotNet (sprintf "%s -i %s -o %s -p %s -d %s" psmStatsExe psmFixed outDirectoryFixed psmStatsParamsFixed dbFixed) Environment.CurrentDirectory
+            runDotNet (sprintf "%s -i %s -o %s -p %s -d %s" psmStatsExe psmEstimate outDirectoryEstimate psmStatsParamsEstimate dbEstimate) baseDir
+            runDotNet (sprintf "%s -i %s -o %s -p %s -d %s" psmStatsExe psmFixed outDirectoryFixed psmStatsParamsFixed dbFixed) baseDir
             let referenceQPSMEstimate =
                 let qpsmPath = relToDirectory "../../../data/PSMStatistics/out/estimateOut/minimalReference.qpsm"
                 File.ReadAllLines qpsmPath
@@ -140,13 +170,13 @@ let pipelineTests =
             Expect.isTrue compare "QPSMs are different"
 
         testCase "PSMBasedQuantification" <| fun _ ->
-            let relToDirectory = getRelativePath Environment.CurrentDirectory
+            let relToDirectory = getRelativePath baseDir
             let db = relToDirectory "../../../data/PSMBasedQuantification/in/Minimal.db"
             let qpsm = relToDirectory "../../../data/PSMBasedQuantification/in/minimal.qpsm"
             let mzlite = relToDirectory "../../../data/PSMBasedQuantification/in/minimal.mzlite"
             let quantParams = relToDirectory "../../../data/PSMBasedQuantification/in/QuantificationParams.json"
             let outDirectory = relToDirectory "../../../data/PSMBasedQuantification/out"
-            let quantExe = relToDirectory "../../../../../bin/PSMBasedQuantification/net5.0/ProteomIQon.PSMBasedQuantification.dll"
+            let quantExe = toolDll "PSMBasedQuantification"
             // cleanup
             try
                 File.Delete (relToDirectory "../../../data/PSMBasedQuantification/out/minimal.quant")
@@ -156,7 +186,7 @@ let pipelineTests =
             with
             | _ -> ()
             // run tool
-            runDotNet (sprintf "%s -i %s -ii %s -o %s -p %s -d %s -dc" quantExe mzlite qpsm outDirectory quantParams db) Environment.CurrentDirectory
+            runDotNet (sprintf "%s -i %s -ii %s -o %s -p %s -d %s -dc" quantExe mzlite qpsm outDirectory quantParams db) baseDir
             let referenceQuant =
                 let quantPath = relToDirectory "../../../data/PSMBasedQuantification/out/minimalReference.quant"
                 FSharpAux.IO.SchemaReader.Csv.CsvReader<ProteomIQon.Dto.QuantificationResult>().ReadFile(quantPath,'\t',false,1)
@@ -251,18 +281,18 @@ let pipelineTests =
             Expect.isTrue compare (sprintf "Quants are different in the following fields: %s" fields)
 
         testCase "QuantBasedAlignment" <| fun _ ->
-            let relToDirectory = getRelativePath Environment.CurrentDirectory
+            let relToDirectory = getRelativePath baseDir
             let target = relToDirectory "../../../data/QuantBasedAlignment/in"
             let sources = relToDirectory "../../../data/QuantBasedAlignment/in"
             let outDirectory = relToDirectory "../../../data/QuantBasedAlignment/out"
             let relQuantPath =
                 if System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.Linux) then
-                    "../../../../../bin/QuantBasedAlignment_linux-x64/net5.0/ProteomIQon.QuantBasedAlignment_linux-x64.dll"
+                    toolDll "QuantBasedAlignment_linux-x64"
                 elif System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.Windows) then
-                    "../../../../../bin/QuantBasedAlignment_win-x64/net5.0/ProteomIQon.QuantBasedAlignment_win_x64.dll"
+                    toolDll "QuantBasedAlignment_win-x64"
                 else    
                     failwith "not supported OS to test QuantBasedAlignment"                
-            let quantExe = relToDirectory relQuantPath
+            let quantExe = relQuantPath
             // cleanup
             try
                 File.Delete (relToDirectory "../../../data/QuantBasedAlignment/out/trunc1.align")
@@ -283,7 +313,7 @@ let pipelineTests =
             with
             | _ -> ()
             // run tool
-            runDotNet (sprintf "%s -i %s -ii %s -o %s" quantExe target sources outDirectory) Environment.CurrentDirectory
+            runDotNet (sprintf "%s -i %s -ii %s -o %s" quantExe target sources outDirectory) baseDir
             let referenceAlign =
                 let quantPath = relToDirectory "../../../data/QuantBasedAlignment/out/trunc1_Reference.align"
                 FSharpAux.IO.SchemaReader.Csv.CsvReader<ProteomIQon.Dto.AlignmentResult>().ReadFile(quantPath,'\t',false,1)
@@ -310,16 +340,16 @@ let pipelineTests =
 
 
         testCase "ProteinInference" <| fun _ ->
-            let relToDirectory = getRelativePath Environment.CurrentDirectory
+            let relToDirectory = getRelativePath baseDir
             let db = relToDirectory "../../../data/ProteinInference/in/Minimal.db"
             let qpsm = relToDirectory "../../../data/ProteinInference/in/minimal.qpsm"
             let proteinInferenceParamsStorey = relToDirectory "../../../data/ProteinInference/in/ProteinInferenceParamsStorey.json"
             let proteinInferenceParamsMAYU = relToDirectory "../../../data/ProteinInference/in/ProteinInferenceParamsMAYU.json"
             let outDirectoryStorey = relToDirectory "../../../data/ProteinInference/out/storeyOut"
             let outDirectoryMAYU = relToDirectory "../../../data/ProteinInference/out/mayuOut"
-            let protInfExe = relToDirectory "../../../../../bin/ProteinInference/net5.0/ProteomIQon.ProteinInference.dll"
-            runDotNet (sprintf "%s -i %s -o %s -p %s -d %s" protInfExe qpsm outDirectoryStorey proteinInferenceParamsStorey db) Environment.CurrentDirectory
-            runDotNet (sprintf "%s -i %s -o %s -p %s -d %s" protInfExe qpsm outDirectoryMAYU proteinInferenceParamsMAYU db) Environment.CurrentDirectory
+            let protInfExe = toolDll "ProteinInference"
+            runDotNet (sprintf "%s -i %s -o %s -p %s -d %s" protInfExe qpsm outDirectoryStorey proteinInferenceParamsStorey db) baseDir
+            runDotNet (sprintf "%s -i %s -o %s -p %s -d %s" protInfExe qpsm outDirectoryMAYU proteinInferenceParamsMAYU db) baseDir
             let referenceProtStorey =
                 let protPath = relToDirectory "../../../data/ProteinInference/out/storeyOut/minimalReference.prot"
                 File.ReadAllLines protPath
@@ -348,7 +378,7 @@ let pipelineTests =
             File.Delete (relToDirectory "../../../data/ProteinInference/out/mayuOut/QValueGraph.html")
             Expect.isTrue compare "Prots are different"
         testCase "LabelFreeProteinQuantification" <| fun _ ->
-            let relToDirectory = getRelativePath Environment.CurrentDirectory
+            let relToDirectory = getRelativePath baseDir
             let quantAndProt = relToDirectory "../../../data/LabelFreeProteinQuantification/in/minimal.quantAndProt"
             let labelFreeQuantificationParams = "../../../data/LabelFreeProteinQuantification/in/LabelFreeQuantificationParams.json"
             let labelFreeQuantificationParamsChargeAgg = "../../../data/LabelFreeProteinQuantification/in/LabelFreeQuantificationParams_ChargeAgg.json"
@@ -358,11 +388,11 @@ let pipelineTests =
             let outDirectoryChargeAgg = "../../../data/LabelFreeProteinQuantification/out/chargeAgg"
             let outDirectoryChargeAggModAgg = "../../../data/LabelFreeProteinQuantification/out/chargeAggModAgg"
             let outDirectoryTransformFilterSum = "../../../data/LabelFreeProteinQuantification/out/transformFilterSum"
-            let labelFreeExe = relToDirectory "../../../../../bin/LabelFreeProteinQuantification/net5.0/ProteomIQon.LabelFreeProteinQuantification.dll"
-            runDotNet (sprintf "%s -i %s -o %s -p %s" labelFreeExe quantAndProt outDirectory labelFreeQuantificationParams) Environment.CurrentDirectory
-            runDotNet (sprintf "%s -i %s -o %s -p %s" labelFreeExe quantAndProt outDirectoryChargeAgg labelFreeQuantificationParamsChargeAgg) Environment.CurrentDirectory
-            runDotNet (sprintf "%s -i %s -o %s -p %s" labelFreeExe quantAndProt outDirectoryChargeAggModAgg labelFreeQuantificationParamsChargeAggModAgg) Environment.CurrentDirectory
-            runDotNet (sprintf "%s -i %s -o %s -p %s" labelFreeExe quantAndProt outDirectoryTransformFilterSum labelFreeQuantificationParamsTransformFilterSum) Environment.CurrentDirectory
+            let labelFreeExe = toolDll "LabelFreeProteinQuantification"
+            runDotNet (sprintf "%s -i %s -o %s -p %s" labelFreeExe quantAndProt outDirectory labelFreeQuantificationParams) baseDir
+            runDotNet (sprintf "%s -i %s -o %s -p %s" labelFreeExe quantAndProt outDirectoryChargeAgg labelFreeQuantificationParamsChargeAgg) baseDir
+            runDotNet (sprintf "%s -i %s -o %s -p %s" labelFreeExe quantAndProt outDirectoryChargeAggModAgg labelFreeQuantificationParamsChargeAggModAgg) baseDir
+            runDotNet (sprintf "%s -i %s -o %s -p %s" labelFreeExe quantAndProt outDirectoryTransformFilterSum labelFreeQuantificationParamsTransformFilterSum) baseDir
             let referenceLabelFree =
                 let labelFree = relToDirectory "../../../data/LabelFreeProteinQuantification/out/normal/minimalReference.txt"
                 File.ReadAllLines labelFree,
@@ -439,7 +469,7 @@ let pipelineTests =
             Expect.isTrue compare "Output files are not identical"
 
         testCase "LabeledProteinQuantification" <| fun _ ->
-            let relToDirectory = getRelativePath Environment.CurrentDirectory
+            let relToDirectory = getRelativePath baseDir
             let quantAndProt = relToDirectory "../../../data/LabeledProteinQuantification/in/minimal.quantAndProt"
             let labeledQuantificationParams = "../../../data/LabeledProteinQuantification/in/LabeledQuantificationParams.json"
             let labeledQuantificationParamsCorrChargeAgg = "../../../data/LabeledProteinQuantification/in/LabeledQuantificationParams_CorrFilter_ChargeAgg.json"
@@ -451,12 +481,12 @@ let pipelineTests =
             let outDirectoryCorrChargeAggModAgg = "../../../data/LabeledProteinQuantification/out/corrFilterChargeAggModAgg"
             let outDirectoryTransformFilterSum = "../../../data/LabeledProteinQuantification/out/transformFilterSum"
             let outDirectoryCorr = "../../../data/LabeledProteinQuantification/out/corrFilter"
-            let labeledExe = relToDirectory "../../../../../bin/LabeledProteinQuantification/net5.0/ProteomIQon.LabeledProteinQuantification.dll"
-            runDotNet (sprintf "%s -i %s -o %s -p %s" labeledExe quantAndProt outDirectory labeledQuantificationParams) Environment.CurrentDirectory
-            runDotNet (sprintf "%s -i %s -o %s -p %s" labeledExe quantAndProt outDirectoryCorrChargeAgg labeledQuantificationParamsCorrChargeAgg) Environment.CurrentDirectory
-            runDotNet (sprintf "%s -i %s -o %s -p %s" labeledExe quantAndProt outDirectoryCorrChargeAggModAgg labeledQuantificationParamsCorrChargeAggModAgg) Environment.CurrentDirectory
-            runDotNet (sprintf "%s -i %s -o %s -p %s" labeledExe quantAndProt outDirectoryTransformFilterSum labeledQuantificationParamsTransformFilterSum) Environment.CurrentDirectory
-            runDotNet (sprintf "%s -i %s -o %s -p %s" labeledExe quantAndProt outDirectoryCorr labeledQuantificationParamsCorr) Environment.CurrentDirectory
+            let labeledExe = toolDll "LabeledProteinQuantification"
+            runDotNet (sprintf "%s -i %s -o %s -p %s" labeledExe quantAndProt outDirectory labeledQuantificationParams) baseDir
+            runDotNet (sprintf "%s -i %s -o %s -p %s" labeledExe quantAndProt outDirectoryCorrChargeAgg labeledQuantificationParamsCorrChargeAgg) baseDir
+            runDotNet (sprintf "%s -i %s -o %s -p %s" labeledExe quantAndProt outDirectoryCorrChargeAggModAgg labeledQuantificationParamsCorrChargeAggModAgg) baseDir
+            runDotNet (sprintf "%s -i %s -o %s -p %s" labeledExe quantAndProt outDirectoryTransformFilterSum labeledQuantificationParamsTransformFilterSum) baseDir
+            runDotNet (sprintf "%s -i %s -o %s -p %s" labeledExe quantAndProt outDirectoryCorr labeledQuantificationParamsCorr) baseDir
             let referenceLabeled =
                 let labeled = relToDirectory "../../../data/LabeledProteinQuantification/out/normal/minimalReference.txt"
                 File.ReadAllLines labeled,
@@ -571,13 +601,13 @@ let pipelineTests =
             File.Delete (relToDirectory "../../../data/LabeledProteinQuantification/out/transformFilterSum/GlobModAggregation.txt")
             Expect.isTrue compare "Output files are not identical"
         testCase "AddDeducedPeptides" <| fun _ ->
-            let relToDirectory = getRelativePath Environment.CurrentDirectory
+            let relToDirectory = getRelativePath baseDir
             let quantDirectory = relToDirectory "../../../data/AddDeducedPeptides/in/quant"
             let protDirectory = relToDirectory "../../../data/AddDeducedPeptides/in/prot"
             let outDirectory = relToDirectory "../../../data/AddDeducedPeptides/out"
-            let addDeducedPeptidesExe = relToDirectory "../../../../../bin/AddDeducedPeptides/net5.0/ProteomIQon.AddDeducedPeptides.dll"
+            let addDeducedPeptidesExe = toolDll "AddDeducedPeptides"
             // run tool
-            runDotNet (sprintf "%s -i %s -ii %s -o %s" addDeducedPeptidesExe quantDirectory protDirectory outDirectory) Environment.CurrentDirectory
+            runDotNet (sprintf "%s -i %s -ii %s -o %s" addDeducedPeptidesExe quantDirectory protDirectory outDirectory) baseDir
             let reference1 =
                 let qpsmPath = relToDirectory "../../../data/AddDeducedPeptides/out/minimalReference1.prot"
                 File.ReadAllLines qpsmPath
