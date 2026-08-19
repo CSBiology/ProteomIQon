@@ -19,7 +19,7 @@ let toolDll (projectDir: string) =
     let assemblyName = sprintf "ProteomIQon.%s.dll" (projectDir.Replace("-", "_"))
     let candidates =
         [ for config in ["Release"; "Debug"] ->
-            Path.Combine(repoRoot, "src", projectDir, "bin", config, "net8.0", assemblyName) ]
+            Path.Combine(repoRoot, "src", projectDir, "bin", config, "net10.0", assemblyName) ]
         |> List.filter File.Exists
     match candidates with
     | [] -> failwithf "%s not found, build it first (dotnet build src/%s)" assemblyName projectDir
