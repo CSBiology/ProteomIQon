@@ -64,7 +64,7 @@ let projects =
         ProjectInfo.create("PeptideSpectrumMatching", "src/PeptideSpectrumMatching/PeptideSpectrumMatching.fsproj", "src/PeptideSpectrumMatching/RELEASE_NOTES.md")
         ProjectInfo.create("PSMStatistics", "src/PSMStatistics/PSMStatistics.fsproj", "src/PSMStatistics/RELEASE_NOTES.md")
         ProjectInfo.create("PSMBasedQuantification", "src/PSMBasedQuantification/PSMBasedQuantification.fsproj", "src/PSMBasedQuantification/RELEASE_NOTES.md")
-        ProjectInfo.create("PSMBasedQuantificationTIMs", "src/PSMBasedQuantificationTIMs/PSMBasedQuantificationTIMs.fsproj", "src/PSMBasedQuantificationTIMs/RELEASE_NOTES.md")
+        //ProjectInfo.create("PSMBasedQuantificationTIMs", "src/PSMBasedQuantificationTIMs/PSMBasedQuantificationTIMs.fsproj", "src/PSMBasedQuantificationTIMs/RELEASE_NOTES.md")
         ProjectInfo.create("RatioLFQ", "src/RatioLFQ/RatioLFQ.fsproj", "src/RatioLFQ/RELEASE_NOTES.md")
         ProjectInfo.create("QuantBasedAlignment", "src/QuantBasedAlignment/QuantBasedAlignment.fsproj", "src/QuantBasedAlignment/RELEASE_NOTES.md")
         ProjectInfo.create("QuantBasedAlignment_linux-x64", "src/QuantBasedAlignment_linux-x64/QuantBasedAlignment_linux-x64.fsproj", "src/QuantBasedAlignment_linux-x64/RELEASE_NOTES.md")
