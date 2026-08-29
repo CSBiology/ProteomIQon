@@ -15,6 +15,8 @@ open Domain
 open Plotly.NET
 open FSharp.Stats
 open BioFSharp.IO.GFF3
+open BioFSharp.FileFormats
+open BioFSharp.FileFormats.GFF3
 open System.IO
 open ProteomIQon.Dto
 
@@ -38,10 +40,10 @@ module ProteinInference =
     /// Calculates the q value with the chosen method
     let initQValue (qValueMethod: QValueMethod) bandwidth (data: ProteinInference'.InferredProteinClassItemScored[]) (proteinDB: (string*string)[]) =
         match qValueMethod with
-        | Storey-> FDRControl'.calculateQValueStorey data
+        | Storey-> BioFSharp.Mz.FDRControl.calculateQValueStorey data
         | LogisticRegression fdrMethod ->
              let fdr = initFDR fdrMethod data proteinDB
-             FDRControl'.calculateQValueLogReg fdr bandwidth data 
+             BioFSharp.Mz.FDRControl.calculateQValueLogReg fdr bandwidth data 
         | NoQValue -> (fun (a:'a -> bool) (i: 'i -> float) (ii: 'i -> float) -> fun x -> nan)
 
     let qValueHitsVisualization bandwidth (inferredProteinClassItemScored: ProteinInference'.InferredProteinClassItemQValue[]) path (groupFiles: bool) =
@@ -61,20 +63,20 @@ module ProteinInference =
         let histogram =
             [
                 Chart.Column freqTarget 
-                |> Chart.withTraceName "Target"
+                |> Chart.withTraceInfo "Target"
                 |> Chart.withAxisAnchor(Y=1);
-                Chart.Column freqDecoy |> Chart.withTraceName "Decoy"
+                Chart.Column freqDecoy |> Chart.withTraceInfo "Decoy"
                 |> Chart.withAxisAnchor(Y=1);
                 Chart.Column freqTarget1
                 |> Chart.withAxisAnchor(Y=2)
                 |> Chart.withMarkerStyle (Opacity = 0.)
-                |> Chart.withTraceName (Showlegend = false);
+                |> Chart.withTraceInfo (ShowLegend = false);
                 Chart.Column freqDecoy1
                 |> Chart.withAxisAnchor(Y=2)
                 |> Chart.withMarkerStyle (Opacity = 0.)
-                |> Chart.withTraceName (Showlegend = false)
+                |> Chart.withTraceInfo (ShowLegend = false)
             ]
-            |> Chart.Combine
+            |> Chart.combine
 
         let sortedQValues =
             inferredProteinClassItemScored
@@ -87,18 +89,18 @@ module ProteinInference =
             |> Array.sortBy (fun (score, qVal) -> score)
 
         [
-            Chart.Point sortedQValues |> Chart.withTraceName "Q-Values";
+            Chart.Point sortedQValues |> Chart.withTraceInfo "Q-Values";
             histogram
         ]
-        |> Chart.Combine
-        |> Chart.withY_AxisStyle("Relative Frequency / Q-Value",Side=StyleParam.Side.Left,Id=1, MinMax = (0., 1.))
-        |> Chart.withY_AxisStyle("Absolute Frequency",Side=StyleParam.Side.Right,Id=2,Overlaying=StyleParam.AxisAnchorId.Y 1, MinMax = (0., float target.Length))
-        |> Chart.withX_AxisStyle "Score"
-        |> Chart.withSize (900., 900.)
+        |> Chart.combine
+        |> Chart.withYAxisStyle("Relative Frequency / Q-Value",Side=StyleParam.Side.Left,Id=StyleParam.SubPlotId.YAxis 1, MinMax = (0., 1.))
+        |> Chart.withYAxisStyle("Absolute Frequency",Side=StyleParam.Side.Right,Id=StyleParam.SubPlotId.YAxis 2,Overlaying=StyleParam.LinearAxisId.Y 1, MinMax = (0., float target.Length))
+        |> Chart.withXAxisStyle "Score"
+        |> Chart.withSize (900, 900)
         |> if groupFiles then
-            Chart.SaveHtmlAs (path + @"\QValueGraph")
+            Chart.saveHtml (path + @"\QValueGraph")
            else
-            Chart.SaveHtmlAs (path + @"_QValueGraph")
+            Chart.saveHtml (path + @"_QValueGraph")
 
     /// Given a ggf3 and a fasta file, creates a collection of all theoretically possible peptides and the proteins they might
     /// originate from
@@ -131,7 +133,7 @@ module ProteinInference =
 
         //list of proteins tupled with list of possible peptides found in psm
         let accessionSequencePairs =
-            let preparedProtPepFunc = ProteomIQon.SearchDB'.getProteinPeptideLookUpFromFileBy memoryDB
+            let preparedProtPepFunc = BioFSharp.Mz.SearchDB.getProteinPeptideLookUpFromFileBy memoryDB
             inputPepSeqIDs
             |> List.map (fun pepID -> preparedProtPepFunc pepID)
             |> List.concat
@@ -153,7 +155,7 @@ module ProteinInference =
                     printfn "ERROR: Could not read gff3 file %s" gff3Path
                     failwithf "%s" err.Message
             | None ->                 
-                ProteomIQon.SearchDB'.selectProteins memoryDB
+                BioFSharp.Mz.SearchDB.Db.SQLiteQuery.selectProteins memoryDB
                 |> List.mapi (fun i (id,_) -> 
                     [
                     GFFEntryLine (createGFFEntry "Unknown" "." "gene" "." "." "." "." "." (sprintf "ID=%i" i) "");
@@ -225,12 +227,12 @@ module ProteinInference =
                 Path.Combine (outDirectory, ((System.IO.Path.GetFileNameWithoutExtension filePath) + ".prot"))
             )
 
-        let dbParams = ProteomIQon.SearchDB'.getSDBParams dbConnection
+        let dbParams = BioFSharp.Mz.SearchDB.getSDBParamsByCn dbConnection
 
         logger.Trace "Getting proteins with peptide sequence from db"
 
         let proteinsDB =
-            ProteomIQon.SearchDB'.selectProteins dbConnection
+            BioFSharp.Mz.SearchDB.Db.SQLiteQuery.selectProteins dbConnection
             |> Array.ofList
             |> Array.map (fun (protein, peptideSequence) ->
                 //is this the best way to get the protein names?

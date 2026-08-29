@@ -35,7 +35,7 @@ module PeptideDB =
         let dbConnection = SearchDB.connectOrCreateDB searchDBParams
         logger.Trace "Successfully created PeptideDB"
         logger.Trace "Set Index on data base if not present."
-        SearchDB'.setIndexOnModSequenceAndGlobalMod dbConnection |> ignore
+        SearchDB.Db.SQLiteQuery.setIndexOnModSequenceAndGlobalMod dbConnection |> ignore
         logger.Trace "Set Index on data base if not present: finished"
         dbConnection.Dispose()
         logger.Trace "Done"

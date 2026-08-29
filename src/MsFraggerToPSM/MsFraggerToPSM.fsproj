@@ -38,8 +38,8 @@
   <ItemGroup>
     <PackageReference Include="Argu" Version="[6.1.1]" />
     <PackageReference Include="NLog" Version="[4.7.8]" />
-    <PackageReference Include="BioFSharp.Mz" Version="[0.1.5-beta]" />
-    <PackageReference Include="FSharp.Stats" Version="[0.4.0]" />
+    <PackageReference Include="BioFSharp.Mz" Version="0.2.0" />
+    <PackageReference Include="FSharp.Stats" Version="0.6.0" />
     <PackageReference Include="System.Data.SQLite.Core" Version="[1.0.119]" />
   </ItemGroup>
 </Project>

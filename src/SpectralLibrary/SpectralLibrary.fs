@@ -162,7 +162,7 @@ module SpectralLibrary =
                         let sequence = peptideLookUp psm.ModSequenceID
                         let frag =
                             let ionSeries = (calcIonSeries sequence.BioSequence).TargetMasses
-                            ProteomIQon.Fragmentation'.ladderElement ionSeries [1. .. (float qr.Charge)]
+                            BioFSharp.Mz.Fragmentation.ladderElement ionSeries [1. .. (float qr.Charge)]
                             |> List.map (fun frag -> frag.MainPeak::frag.DependentPeaks)
                             |> List.concat
                         let spec = inReader.ReadSpectrumPeaks psm.PSMId
@@ -307,7 +307,7 @@ module SpectralLibrary =
             //    let sequence = peptideLookUp psm.ModSequenceID
             //    let frag =
             //        let ionSeries = (calcIonSeries sequence.BioSequence).TargetMasses
-            //        ProteomIQon.Fragmentation'.ladderElement ionSeries chargeList
+            //        BioFSharp.Mz.Fragmentation.ladderElement ionSeries chargeList
             //        |> List.map (fun frag -> frag.MainPeak::frag.DependentPeaks)
             //        |> List.concat
             //    let spec = inReader.ReadSpectrumPeaks psm.PSMId

@@ -38,7 +38,7 @@
   <ItemGroup>
     <PackageReference Include="Argu" Version="6.1.1" />
     <PackageReference Include="NLog" Version="4.7.11" />
-    <PackageReference Include="FSharpAux" Version="1.0.0" />
-    <PackageReference Include="FSharpAux.IO" Version="1.0.0" />
+    <PackageReference Include="FSharpAux" Version="2.1.0" />
+    <PackageReference Include="FSharpAux.IO" Version="2.1.0" />
   </ItemGroup>
 </Project>

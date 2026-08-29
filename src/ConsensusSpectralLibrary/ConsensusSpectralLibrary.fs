@@ -270,21 +270,21 @@ module ConsensusSpectralLibrary =
         
         [
         Chart.Histogram(libBinned |> Array.map snd  |> Array.concat |> Array.map (fun x -> x.Fragments.Length))
-        |> Chart.withTraceName "NumberOfFragments: after Filter"
+        |> Chart.withTraceInfo "NumberOfFragments: after Filter"
         Chart.Histogram(filtered |> Array.map snd |> Array.concat |> Array.map (fun x -> x.Fragments.Length))
-        |> Chart.withTraceName (sprintf "NumberOfFragments: top %f" processParams.FractionOfMostAbundandIonsPerBin)
+        |> Chart.withTraceInfo (sprintf "NumberOfFragments: top %f" processParams.FractionOfMostAbundandIonsPerBin)
         ]
-        |> Chart.Combine
-        |> Chart.Show
+        |> Chart.combine
+        |> Chart.show
 
         [
         Chart.Column(libBinned |> Array.map (fun (x,y) -> x,y.Length))
-        |> Chart.withTraceName "libBinned"
+        |> Chart.withTraceInfo "libBinned"
         Chart.Column(filtered |> Array.map (fun (x,y) -> x,y.Length))
-        |> Chart.withTraceName (sprintf "libBinned_filtered: top %f" processParams.FractionOfMostAbundandIonsPerBin)
+        |> Chart.withTraceInfo (sprintf "libBinned_filtered: top %f" processParams.FractionOfMostAbundandIonsPerBin)
         ]
-        |> Chart.Combine
-        |> Chart.Show
+        |> Chart.combine
+        |> Chart.show
         
         let estimatedScanTimesInSwathFile = 
             filtered
@@ -334,8 +334,8 @@ module ConsensusSpectralLibrary =
                             Chart.Point correlationTrace
                             Chart.Point [pepIon.ScanTime,correlationTrace |> Array.maxBy snd |> snd]
                             ]
-                            |> Chart.Combine
-                            |> Chart.SaveHtmlAs (getPlotFilePathFilePath ((pepIon.StringSequence |> String.filter (fun x -> x <> '*')) + "_GMod_" + pepIon.GlobalMod.ToString() + "Ch" + pepIon.Charge.ToString()) (libraryToAlign.FileName) ) 
+                            |> Chart.combine
+                            |> Chart.saveHtml (getPlotFilePathFilePath ((pepIon.StringSequence |> String.filter (fun x -> x <> '*')) + "_GMod_" + pepIon.GlobalMod.ToString() + "Ch" + pepIon.Charge.ToString()) (libraryToAlign.FileName) ) 
                             
                             let xData,yData = correlationTrace |> Array.unzip
                             // TODO: refactor parameters to parameter type
@@ -369,25 +369,25 @@ module ConsensusSpectralLibrary =
             d
             |> Array.map (fun x -> x.SourceScanTime ,x.TargetScanTime)
             |> Chart.Point
-            |> Chart.withX_AxisStyle "Source ScanTime"
-            |> Chart.withY_AxisStyle "Target ScanTime"
-            |> Chart.withTraceName lib.FileName
+            |> Chart.withXAxisStyle "Source ScanTime"
+            |> Chart.withYAxisStyle "Target ScanTime"
+            |> Chart.withTraceInfo lib.FileName
             ) libraryFiles swathFileFeatures 
-        |> Chart.Combine
-        |> Chart.withSize(1200.,1200.)
-        |> Chart.SaveHtmlAs (getPlotFilePathFilePath "identifiedPepFeatures" "" )
+        |> Chart.combine
+        |> Chart.withSize(1200,1200)
+        |> Chart.saveHtml (getPlotFilePathFilePath "identifiedPepFeatures" "" )
 
     let plotDifferencesBeforeAlignment getPlotFilePathFilePath libraryFiles swathFileFeatures =         
         Array.map2 (fun (lib:Library) (d:PeptideForLearning []) ->
             d
             |> Array.map (fun x -> x.SourceScanTime - x.TargetScanTime)
             |> Chart.BoxPlot
-            |> Chart.withX_AxisStyle "Differences before Alignment"
-            |> Chart.withTraceName lib.FileName
+            |> Chart.withXAxisStyle "Differences before Alignment"
+            |> Chart.withTraceInfo lib.FileName
             ) libraryFiles swathFileFeatures 
-        |> Chart.Combine
-        |> Chart.withSize(1200.,1200.)
-        |> Chart.SaveHtmlAs (getPlotFilePathFilePath "differencesBeforeAlignment" "" )
+        |> Chart.combine
+        |> Chart.withSize(1200,1200)
+        |> Chart.saveHtml (getPlotFilePathFilePath "differencesBeforeAlignment" "" )
 
 
     ///
@@ -484,9 +484,9 @@ module ConsensusSpectralLibrary =
                 Chart.Point(x,y)
                 Chart.Line(x,yHat)
                 ]
-                |> Chart.Combine
-                |> Chart.withTraceName (sprintf "rs: %f, l:%f" rs lambda)
-                |> Chart.Show
+                |> Chart.combine
+                |> Chart.withTraceInfo (sprintf "rs: %f, l:%f" rs lambda)
+                |> Chart.show
                 rs
             rSquared, fit     
         let rSquared,model = 
@@ -525,13 +525,13 @@ module ConsensusSpectralLibrary =
             |> Array.sortBy fst
             |> Chart.Line
             ]
-            |> Chart.Combine
-            |> Chart.withTraceName (sprintf "%s, Rsquared:%f" alignedLib.FileName alignedLib.RegressionMetric.RSquared)
+            |> Chart.combine
+            |> Chart.withTraceInfo (sprintf "%s, Rsquared:%f" alignedLib.FileName alignedLib.RegressionMetric.RSquared)
             ) 
-        |> Chart.Combine
-        |> Chart.withX_AxisStyle "Differences after Alignment"
-        |> Chart.withSize(1200.,1200.)
-        |> Chart.SaveHtmlAs (getPlotFilePathFilePath "Alignments" "" )
+        |> Chart.combine
+        |> Chart.withXAxisStyle "Differences after Alignment"
+        |> Chart.withSize(1200,1200)
+        |> Chart.saveHtml (getPlotFilePathFilePath "Alignments" "" )
 
     let plotDifferencesAfterAlignment getPlotFilePathFilePath alignedLibs =         
         alignedLibs
@@ -549,12 +549,12 @@ module ConsensusSpectralLibrary =
                     | None -> None
                 )
             |> Chart.BoxPlot
-            |> Chart.withTraceName (sprintf "%s, Rsquared:%f" alignedLib.FileName alignedLib.RegressionMetric.RSquared)
-            |> Chart.withX_AxisStyle "Source ScanTime"
+            |> Chart.withTraceInfo (sprintf "%s, Rsquared:%f" alignedLib.FileName alignedLib.RegressionMetric.RSquared)
+            |> Chart.withXAxisStyle "Source ScanTime"
             ) 
-        |> Chart.Combine
-        |> Chart.withSize(1200.,1200.)
-        |> Chart.SaveHtmlAs (getPlotFilePathFilePath "differencesAfterAlignment" "" )
+        |> Chart.combine
+        |> Chart.withSize(1200,1200)
+        |> Chart.saveHtml (getPlotFilePathFilePath "differencesAfterAlignment" "" )
     /////
     //let performAlignment outDir align (source: LibToAlign) =
     
