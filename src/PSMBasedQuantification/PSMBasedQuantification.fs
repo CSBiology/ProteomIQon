@@ -600,12 +600,21 @@ module PSMBasedQuantification =
             let scanTimeToMzCorrection =
                 let runTime = scanTimeVsDelta |> Array.maxBy fst |> fst
                 if runTime > 20. && qpsms.Length > 500 then
-                    let binWidth = 
+                    let binWidth =
                         System.Math.Min(runTime / 2., 20.)
                     let stabw = filteredValues |> Seq.stDevBy snd
-                    let r,f = initSpline binWidth filteredValues
-                    f
-                else 
+                    try
+                        let r,f = initSpline binWidth filteredValues
+                        f
+                    with ex ->
+                        // the smoothing spline needs enough filtered points per bin; sparse samples fall back to the median correction below
+                        logger.Trace (sprintf "Mz correction spline failed (%s), falling back to median correction." ex.Message)
+                        let m =
+                            filteredValues
+                            |> Seq.map snd
+                            |> Seq.median
+                        fun scanTime -> m
+                else
                     let m = 
                         filteredValues 
                         |> Seq.map snd 
