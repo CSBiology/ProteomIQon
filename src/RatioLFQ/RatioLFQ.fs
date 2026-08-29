@@ -117,14 +117,14 @@ module RatioLFQ =
         readQuantResult path proteinColumn
         |> Frame.filterCols (fun ck os -> ck.EndsWith(ratioColumnEnding))
         |> Frame.fillMissingWith nan
-        |> Frame.mapValues log2
-        |> Frame.filterRows (fun rk s -> isNan (Stats.mean s) |> not)
+        |> Frame.mapValues FSharp.Stats.Ops.log2
+        |> Frame.filterRows (fun rk s -> FSharp.Stats.Ops.isNan (Stats.mean s) |> not)
 
     let combinedOriginal (path: string) (proteinColumn: string) (referenceColumnEnding: string) =
         readQuantResult path proteinColumn
         |> Frame.filterCols (fun ck os -> ck.EndsWith(referenceColumnEnding))
         |> Frame.fillMissingWith nan
-        |> Frame.mapValues log2
+        |> Frame.mapValues FSharp.Stats.Ops.log2
         |> Frame.mapRows (fun rk s -> Stats.mean s)
         |> Series.observations
         |> Map.ofSeq

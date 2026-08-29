@@ -345,7 +345,7 @@ module PeptideSpectrumMatching =
 
         let chargeParams = processParams.ChargeStateDeterminationParams
         logger.Trace (sprintf "Charge parameters: %A" chargeParams)
-        let dBParams     = SearchDB'.getSDBParams memoryDB
+        let dBParams     = BioFSharp.Mz.SearchDB.getSDBParamsByCn memoryDB
         logger.Trace (sprintf "DB parameters: %A" dBParams)
 
         let calcIonSeries aal  =

@@ -215,7 +215,7 @@ module AlignmentBasedQuantification =
                 let apexNorm = x.MeasuredApex_Light / medianApexIntensities
                 let quantNorm =  x.Quant_Light / medianQuantIntensities
                 quantNorm / apexNorm
-                |> log2
+                |> FSharp.Stats.Ops.log2
             (qualR > lowerBorder && qualR < upperBorder) || (nan.Equals(qualR) )
             ) 
 
@@ -237,7 +237,7 @@ module AlignmentBasedQuantification =
                 let apexNorm = x.MeasuredApex_Heavy / medianApexIntensities
                 let quantNorm =  x.Quant_Heavy / medianQuantIntensities
                 quantNorm / apexNorm
-                |> log2
+                |> FSharp.Stats.Ops.log2
             (qualR > lowerBorder && qualR < upperBorder) || (nan.Equals(qualR) )
             )
     
@@ -439,30 +439,30 @@ module AlignmentBasedQuantification =
                 (pattern:PeakComparison []) plotDirectory =
         let xic = 
             [
-            Chart.Point(xXic, yXic)                     |> Chart.withTraceName "Target XIC"
-            Chart.Point(alignedSource)                  |> Chart.withTraceName "Aligned Source XIC"
-            Chart.Point([avgScanTime],[1.])             |> Chart.withTraceName "Inferred Scan Time"
-            Chart.Point([inferredScanTimeRefined],[1.]) |> Chart.withTraceName "Inferred Scan Time Refined"
-            Chart.Point([xScantime],[1.])               |> Chart.withTraceName "ScanTime Source"
-            Chart.Point((xToQuantify), (ypToQuantify))  |> Chart.withTraceName "Identified Target Peak"
-            Chart.Line(xToQuantify,fitY)                |> Chart.withTraceName "Fit of target Peak"
-            Chart.Point(xXicInferred, yXicinferred)     |> Chart.withTraceName "Inferred XIC"
-            Chart.Line(xInferred,inferredFit)           |> Chart.withTraceName "Fit of inferred Peak"
+            Chart.Point(xXic, yXic)                     |> Chart.withTraceInfo "Target XIC"
+            Chart.Point(alignedSource)                  |> Chart.withTraceInfo "Aligned Source XIC"
+            Chart.Point([avgScanTime],[1.])             |> Chart.withTraceInfo "Inferred Scan Time"
+            Chart.Point([inferredScanTimeRefined],[1.]) |> Chart.withTraceInfo "Inferred Scan Time Refined"
+            Chart.Point([xScantime],[1.])               |> Chart.withTraceInfo "ScanTime Source"
+            Chart.Point((xToQuantify), (ypToQuantify))  |> Chart.withTraceInfo "Identified Target Peak"
+            Chart.Line(xToQuantify,fitY)                |> Chart.withTraceInfo "Fit of target Peak"
+            Chart.Point(xXicInferred, yXicinferred)     |> Chart.withTraceInfo "Inferred XIC"
+            Chart.Line(xInferred,inferredFit)           |> Chart.withTraceInfo "Fit of inferred Peak"
 
             ]
-            |> Chart.Combine
+            |> Chart.combine
         let pattern = 
             [
-            Chart.Point(pattern |> Array.map (fun x -> x.Mz), pattern |> Array.map (fun x -> x.MeasuredIntensity))          |> Chart.withTraceName "Measured"
-            Chart.Point(pattern |> Array.map (fun x -> x.Mz), pattern |> Array.map (fun x -> x.MeasuredIntensityCorrected)) |> Chart.withTraceName "Measured Corrected"
-            Chart.Point(pattern |> Array.map (fun x -> x.Mz), pattern |> Array.map (fun x -> x.PredictedRelFrequency))      |> Chart.withTraceName "Predicted Relative Frequency"
+            Chart.Point(pattern |> Array.map (fun x -> x.Mz), pattern |> Array.map (fun x -> x.MeasuredIntensity))          |> Chart.withTraceInfo "Measured"
+            Chart.Point(pattern |> Array.map (fun x -> x.Mz), pattern |> Array.map (fun x -> x.MeasuredIntensityCorrected)) |> Chart.withTraceInfo "Measured Corrected"
+            Chart.Point(pattern |> Array.map (fun x -> x.Mz), pattern |> Array.map (fun x -> x.PredictedRelFrequency))      |> Chart.withTraceInfo "Predicted Relative Frequency"
             ]
-            |> Chart.Combine
+            |> Chart.combine
         [xic;pattern]
-        |> Chart.Stack(2, 0.1)
+        |> Chart.Grid(1, 2, XGap = 0.1, YGap = 0.1)
         |> Chart.withTitle(sprintf "Sequence= %s,globalMod = %i" sequence globalMod)
-        |> Chart.withSize(2500.,800.)
-        |> Chart.SaveHtmlAs(Path.Combine[|plotDirectory; ((sequence |> String.filter (fun x -> x <> '*')) + "_GMod_" + globalMod.ToString() + "Ch" + ch.ToString())|])
+        |> Chart.withSize(2500,800)
+        |> Chart.saveHtml(Path.Combine[|plotDirectory; ((sequence |> String.filter (fun x -> x <> '*')) + "_GMod_" + globalMod.ToString() + "Ch" + ch.ToString())|])
         
     ///
     let saveChart sequence globalMod ch (xXic:float[]) (yXic:float[]) avgScanTime 
@@ -472,35 +472,35 @@ module AlignmentBasedQuantification =
                 (pattern:PeakComparison []) plotDirectory =
         let xic = 
             [
-            Chart.Point(xXic, yXic)                     |> Chart.withTraceName "Target XIC"
-            Chart.Point(alignedSource)                  |> Chart.withTraceName "Aligned Source XIC"
-            Chart.Point([avgScanTime],[1.])             |> Chart.withTraceName "Inferred Scan Time"
-            Chart.Point([inferredScanTimeRefined],[1.]) |> Chart.withTraceName "Inferred Scan Time Refined"
-            Chart.Point((xToQuantify), (ypToQuantify))  |> Chart.withTraceName "Identified Target Peak"
-            Chart.Line(xToQuantify,fitY)                |> Chart.withTraceName "Fit of target Peak"
-            Chart.Point(xXicInferred, yXicinferred)     |> Chart.withTraceName "Inferred XIC"
-            Chart.Line(xInferred,inferredFit)           |> Chart.withTraceName "Fit of inferred Peak"
+            Chart.Point(xXic, yXic)                     |> Chart.withTraceInfo "Target XIC"
+            Chart.Point(alignedSource)                  |> Chart.withTraceInfo "Aligned Source XIC"
+            Chart.Point([avgScanTime],[1.])             |> Chart.withTraceInfo "Inferred Scan Time"
+            Chart.Point([inferredScanTimeRefined],[1.]) |> Chart.withTraceInfo "Inferred Scan Time Refined"
+            Chart.Point((xToQuantify), (ypToQuantify))  |> Chart.withTraceInfo "Identified Target Peak"
+            Chart.Line(xToQuantify,fitY)                |> Chart.withTraceInfo "Fit of target Peak"
+            Chart.Point(xXicInferred, yXicinferred)     |> Chart.withTraceInfo "Inferred XIC"
+            Chart.Line(xInferred,inferredFit)           |> Chart.withTraceInfo "Fit of inferred Peak"
 
             ]
-            |> Chart.Combine
+            |> Chart.combine
         let pattern = 
             [
-            Chart.Point(pattern |> Array.map (fun x -> x.Mz), pattern |> Array.map (fun x -> x.MeasuredIntensity))          |> Chart.withTraceName "Measured"
-            Chart.Point(pattern |> Array.map (fun x -> x.Mz), pattern |> Array.map (fun x -> x.MeasuredIntensityCorrected)) |> Chart.withTraceName "Measured Corrected"
-            Chart.Point(pattern |> Array.map (fun x -> x.Mz), pattern |> Array.map (fun x -> x.PredictedRelFrequency))      |> Chart.withTraceName "Predicted Relative Frequency"
+            Chart.Point(pattern |> Array.map (fun x -> x.Mz), pattern |> Array.map (fun x -> x.MeasuredIntensity))          |> Chart.withTraceInfo "Measured"
+            Chart.Point(pattern |> Array.map (fun x -> x.Mz), pattern |> Array.map (fun x -> x.MeasuredIntensityCorrected)) |> Chart.withTraceInfo "Measured Corrected"
+            Chart.Point(pattern |> Array.map (fun x -> x.Mz), pattern |> Array.map (fun x -> x.PredictedRelFrequency))      |> Chart.withTraceInfo "Predicted Relative Frequency"
             ]
-            |> Chart.Combine
+            |> Chart.combine
         [xic;pattern]
-        |> Chart.Stack(2, 0.1)
+        |> Chart.Grid(1, 2, XGap = 0.1, YGap = 0.1)
         |> Chart.withTitle(sprintf "Sequence= %s,globalMod = %i" sequence globalMod)
-        |> Chart.withSize(2500.,800.)
-        |> Chart.SaveHtmlAs(Path.Combine[|plotDirectory; ((sequence |> String.filter (fun x -> x <> '*')) + "_GMod_" + globalMod.ToString() + "Ch" + ch.ToString())|])
+        |> Chart.withSize(2500,800)
+        |> Chart.saveHtml(Path.Combine[|plotDirectory; ((sequence |> String.filter (fun x -> x <> '*')) + "_GMod_" + globalMod.ToString() + "Ch" + ch.ToString())|])
             
     let saveErrorChart (xXic:float[]) (yXic:float[]) pepSeq gMod ch desc plotDirectory =      
         Chart.Point(xXic, yXic)
         |> Chart.withTitle(sprintf "Sequence= %s,globalMod = %i_%s" pepSeq gMod desc)
-        |> Chart.withSize(1500.,800.)
-        |> Chart.SaveHtmlAs(Path.Combine[|plotDirectory; ((pepSeq |> String.filter (fun x -> x <> '*')) + "_GMod_" + gMod.ToString() + "Ch" + ch.ToString() + "_notQuantified")|])
+        |> Chart.withSize(1500,800)
+        |> Chart.saveHtml(Path.Combine[|plotDirectory; ((pepSeq |> String.filter (fun x -> x <> '*')) + "_GMod_" + gMod.ToString() + "Ch" + ch.ToString() + "_notQuantified")|])
                
     // Method is based on: https://doi.org/10.1021/ac0600196
     /// Estimates the autocorrelation at lag 1 of a blank signal (containing only noise). Subsequently, the signal of interest is smoothed
@@ -682,7 +682,7 @@ module AlignmentBasedQuantification =
         logger.Trace "Copy peptide DB into Memory: finished"
         
         logger.Trace "Get peptide lookUp function"
-        let dBParams = SearchDB'.getSDBParams memoryDB
+        let dBParams = BioFSharp.Mz.SearchDB.getSDBParamsByCn memoryDB
         let peptideLookUp = SearchDB'.getThreadSafePeptideLookUpFromFileBySequenceAndGMod memoryDB dBParams
         let calcIonSeries aal = Fragmentation.Series.fragmentMasses Fragmentation.Series.bOfBioList Fragmentation.Series.yOfBioList dBParams.MassFunction aal
         logger.Trace "Get peptide lookUp function: finished"
@@ -765,13 +765,13 @@ module AlignmentBasedQuantification =
                     |> Array.filter (fun (s,d) -> d <= borders.Upper && d >= borders.Lower)
             [
             Chart.Point(scanTimeVsDelta)
-            |> Chart.withTraceName "Raw"
+            |> Chart.withTraceInfo "Raw"
             Chart.Point(filteredValues)
-            |> Chart.withTraceName "Filtered"
+            |> Chart.withTraceInfo "Filtered"
             ]
-            |> Chart.Combine
+            |> Chart.combine
             |> Chart.withTitle (sprintf "upper border:%f, lower border:%f" borders.Upper borders.Lower)
-            |> Chart.SaveHtmlAs(Path.Combine[|plotDirectory; "mzCorrectionData"|])
+            |> Chart.saveHtml(Path.Combine[|plotDirectory; "mzCorrectionData"|])
             let scanTimeToMzCorrection =
                 let runTime = scanTimeVsDelta |> Array.maxBy fst |> fst
                 if runTime > 20. && psmbasedQuant.Length > 500 then
@@ -793,11 +793,11 @@ module AlignmentBasedQuantification =
             if diagCharts then 
                 [
                 Chart.Point(scanTimeVsDelta)
-                |> Chart.withTraceName "Raw"
+                |> Chart.withTraceInfo "Raw"
                 Chart.Line(scanTimeVsDelta |> Array.sortBy fst |> Array.map (fun (st,d) -> st, scanTimeToMzCorrection st))
                 ]
-                |> Chart.Combine
-                |> Chart.SaveHtmlAs(Path.Combine[|plotDirectory; "mzErrorAndCorrection"|])
+                |> Chart.combine
+                |> Chart.saveHtml(Path.Combine[|plotDirectory; "mzErrorAndCorrection"|])
             //stDev, scanTimeToMzCorrection 
             0.05, scanTimeToMzCorrection 
             

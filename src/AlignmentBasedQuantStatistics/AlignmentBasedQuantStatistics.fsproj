@@ -39,10 +39,10 @@
 	<PackageReference Include="Argu" Version="6.1.1" />
 	<PackageReference Include="Microsoft.ML" Version="1.7.1" />
 	<PackageReference Include="Microsoft.ML.FastTree" Version="1.7.1" />
-	<PackageReference Include="FSharpAux" Version="1.0.0" />
-	<PackageReference Include="FSharpAux.IO" Version="1.0.0" />
-	<PackageReference Include="FSharp.Stats" Version="0.4.0" />
+	<PackageReference Include="FSharpAux" Version="2.1.0" />
+	<PackageReference Include="FSharpAux.IO" Version="2.1.0" />
+	<PackageReference Include="FSharp.Stats" Version="0.6.0" />
 	<PackageReference Include="Deedle" Version="3.0.0-beta.1" />
-	<PackageReference Include="Plotly.NET" Version="2.0.0-alpha5" />
+	<PackageReference Include="Plotly.NET" Version="6.0.0-preview.2" />
   </ItemGroup>
 </Project>

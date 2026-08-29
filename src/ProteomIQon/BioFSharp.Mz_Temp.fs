@@ -701,157 +701,11 @@ module FSharpStats' =
 
 
 
-module Fitting' =
-
-    module NonLinearRegression' =
-
-        module LevenbergMarquardtConstrained' =
-
-            /// Logistic Function
-            /// Line model of the form "y = a * x + b"
-            let LogisticFunction = {
-                ParameterNames= [|"L - curve maximum";"k - Steepness"; "x0 xValue of midpoint"|]
-                GetFunctionValue = (fun (parameterVector:Vector<float>) xValue -> parameterVector.[0] / (1. + exp(parameterVector.[1]*(xValue-parameterVector.[2]))))
-                GetGradientValue = (fun (parameterVector:Vector<float>) (gradientVector: Vector<float>) xValue ->
-                                    gradientVector.[0] <- 1. / (1. + exp(parameterVector.[1]*(xValue-parameterVector.[2])))
-                                    gradientVector.[1] <- (parameterVector.[0] * (xValue-parameterVector.[2]) * exp(parameterVector.[1]*(xValue-parameterVector.[2])) ) / (exp(parameterVector.[1]*(xValue-parameterVector.[2])) + 1.)**2.
-                                    gradientVector.[2] <- (parameterVector.[0] * parameterVector.[1] * exp(parameterVector.[1]*(xValue-parameterVector.[2])) ) / (exp(parameterVector.[1]*(xValue-parameterVector.[2])) + 1.)**2.
-                                    gradientVector)
-                }
-
-            // Looks for the real point in a dataset that is closest to the given point
-            let private findClosestPoint (point: float) (data: float []) =
-                let distance =
-                    data
-                    |> Array.map (fun x ->
-                        abs (point - x)
-                    )
-                let indexSmallest =
-                    distance
-                    |> Array.findIndex (fun x ->
-                        x = (distance |> Array.min)
-                    )
-                data.[indexSmallest]
-
-            /// Returns an estimate for an initial parameter for the linear least square estimator for a given dataset (xData, yData).
-            /// The initial estimation is intended for a logistic function.
-            let initialParam (xData: float[]) (yData: float[]) =
-                let xRange = ((xData |> Array.max) - (xData |> Array.min))
-                let yRange = ((yData |> Array.max) - (yData |> Array.min))
-                let maxY = yData |> Array.max
-                let combined = Array.map2 (fun x y -> x,y) xData yData
-                // finds the point which is closest to the middle of the range on the y axis
-                let midX,midY =
-                    let point = maxY - yRange / 2.
-                    let middleYData = findClosestPoint point yData
-                    Array.filter (fun (x,y) -> y = middleYData) combined
-                    |> Array.averageBy fst, middleYData
-                // looks for the point where the descending functions slope begins to flatten
-                // for that the first point which is in the lowest percent of the y values is taken
-                let rightSlopeX,rightSlopeY =
-                    combined
-                    |> Array.filter (fun (x, y) -> (maxY - y) < 0.001 * yRange)
-                    |> Array.head
-                // mirrors the x value of the right slope point through the x value of the middle point
-                // takes max y for y
-                let leftSlopeX, leftSlopeY =
-                    let leftX = midX - (rightSlopeX - midX)
-                    leftX, maxY
-                // slope = (y2 - y1)/(x2 - x1)
-                let slope =
-                    ((rightSlopeY - leftSlopeY)/yRange) / ((rightSlopeX - leftSlopeX)/xRange)
-                let steepness = abs slope
-                Table.lineSolverOptions [|maxY; steepness; midX|]
-
-            /// Returns an estimate for an initial parameter for the linear least square estimator for a given dataset (xData, yData).
-            /// The steepness is given as an array and not estimated. An initial estimate is returned for every given steepness.
-            /// The initial estimation is intended for a logistic function.
-            let initialParamsOverRange (xData: float[]) (yData: float[]) (steepnessRange: float []) =
-                // works the same as initialParam for mid point estimation
-                let yRange = abs ((yData |> Array.max) - (yData |> Array.min))
-                let maxY = yData |> Array.max
-                let combined = Array.map2 (fun x y -> x,y) xData yData
-                let midX,midY =
-                    let point = maxY - yRange / 2.
-                    let middleYData = findClosestPoint point yData
-                    Array.filter (fun (x,y) -> y = middleYData) combined
-                    |> Array.averageBy fst, middleYData
-                steepnessRange
-                |> Array.map (fun steepness ->
-                    Table.lineSolverOptions [|maxY; steepness; midX|]
-                )
-
-            /// Returns an estimate for an initial parameter for the linear least square estimator for a given dataset (xData, yData).
-            /// The steepness and midpoint ranges are given as an array and not estimated. An initial estimate is returned for every given steepness and midpoint in the input array.
-            /// The initial estimation is intended for a logistic function with variable position on the y-axis.
-            let initialParamsOverRangeMidAndSteepness (yData: float[]) (steepnessRange: float []) (midpointRange: float []) (minY: float option) =
-                // works the same as initialParam for mid point estimation
-                let yRange = abs ((yData |> Array.max) - (yData |> Array.min))
-                steepnessRange
-                |> Array.collect (fun steepness -> 
-                    midpointRange
-                    |> Array.map (fun midpoint ->
-                        match minY with
-                        | Some minimum -> Table.lineSolverOptions [|yRange; steepness; midpoint; minimum|]
-                        | None -> Table.lineSolverOptions [|yRange; steepness; midpoint|]
-                    )
-                )
-
-            /// Returns a parameter vector tupled with its residual sum of squares (RSS) as a possible solution for linear least square based nonlinear fitting of a given dataset (xData, yData) with a given
-            /// model function.
-            let estimatedParamsWithRSS (model: Model) (solverOptions: SolverOptions) lambdaInitial lambdaFactor (lowerBound: vector) (upperBound: vector) (xData: float[]) (yData: float []) =
-                let estParams = LevenbergMarquardtConstrained.estimatedParamsVerbose model solverOptions lambdaInitial lambdaFactor lowerBound upperBound xData yData
-                estParams
-                |> fun estParams ->
-                    let paramGuess = estParams.[estParams.Count-1]
-                    let rss = getRSS model xData yData paramGuess
-                    estParams.[estParams.Count-1], rss
-
 module SearchDB' =
 
     module DB' =
 
         module SQLiteQuery' =
-
-            /// Prepares statement to select a Protein Accession entry by ID
-            let prepareSelectProteinAccessionByID (cn:SQLiteConnection) (tr) =
-                let querystring = "SELECT Accession FROM Protein WHERE ID=@id "
-                let cmd = new SQLiteCommand(querystring, cn, tr)
-                cmd.Parameters.Add("@id", DbType.Int32) |> ignore
-                (fun (id:int32)  ->
-                    cmd.Parameters.["@id"].Value <- id
-                    use reader = cmd.ExecuteReader()
-                    match reader.Read() with
-                    | true  -> (reader.GetString(0))
-                    | false -> ""
-                )
-
-            /// Prepares statement to select a Peptide Sequence entry by ID
-            let prepareSelectPepSequenceByPepSequenceID (cn:SQLiteConnection) (tr) =
-                let querystring = "SELECT Sequence FROM PepSequence WHERE ID=@pepSequenceID"
-                let cmd = new SQLiteCommand(querystring, cn, tr)
-                cmd.Parameters.Add("@pepSequenceID", DbType.Int32) |> ignore
-                (fun (pepSequenceID:int)  ->
-                    cmd.Parameters.["@pepSequenceID"].Value <- pepSequenceID
-                    use reader = cmd.ExecuteReader()
-                    reader.Read() |> ignore
-                    reader.GetString(0)
-                )
-
-            /// Prepares statement to select a ModSequence entry by Massrange (Between selected Mass -/+ the selected toleranceWidth)
-            let prepareSelectMassByModSequenceAndGlobalMod (cn:SQLiteConnection) =
-                let querystring = "SELECT RealMass FROM ModSequence WHERE Sequence=@sequence AND GlobalMod=@globalMod"
-                let cmd = new SQLiteCommand(querystring, cn)
-                cmd.Parameters.Add("@sequence", Data.DbType.String) |> ignore
-                cmd.Parameters.Add("@globalMod", Data.DbType.Int32) |> ignore
-                fun (sequence:string) (globalMod:int) ->
-                    cmd.Parameters.["@sequence"].Value  <- sequence
-                    cmd.Parameters.["@globalMod"].Value <- globalMod
-                    use reader = cmd.ExecuteReader()
-                    match reader.Read() with
-                    | true  -> Some (reader.GetDouble(0))
-                    | false -> Option.None
-                
 
             //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
             /// Prepares statement to select a ModSequence entry by ModSequenceID
@@ -868,56 +722,6 @@ module SearchDB' =
                         | true ->  (reader.GetInt32(0), reader.GetInt32(1),reader.GetDouble(2), reader.GetInt64(3), reader.GetString(4), reader.GetInt32(5))
                         | false -> -1,-1,nan,-1L,"",-1
 
-    /// Prepares a function which returns a list of protein Accessions tupled with the peptide sequence whose ID they were retrieved by
-    let getProteinPeptideLookUpFromFileBy (memoryDB: SQLiteConnection) =
-        let tr = memoryDB.BeginTransaction()
-        let selectCleavageIdxByPepSeqID   = Db.SQLiteQuery.prepareSelectCleavageIndexByPepSequenceID memoryDB tr
-        let selectProteinByProtID         = DB'.SQLiteQuery'.prepareSelectProteinAccessionByID memoryDB tr
-        let selectPeptideByPepSeqID       = DB'.SQLiteQuery'.prepareSelectPepSequenceByPepSequenceID memoryDB tr
-        fun pepSequenceID ->
-            selectCleavageIdxByPepSeqID pepSequenceID
-            |> List.map (fun (_,protID,pepID,_,_,_) -> selectProteinByProtID protID, selectPeptideByPepSeqID pepID )
-
-    /// Returns Accession and Sequence of Proteins from SearchDB
-    let selectProteins (cn:SQLiteConnection) =
-        let selectProteins =
-            let querystring = "SELECT Accession, Sequence FROM Protein"
-            let cmd = new SQLiteCommand(querystring, cn)
-            use reader = cmd.ExecuteReader()
-            
-            [
-                while reader.Read() do
-                    yield (reader.GetString(0), reader.GetString(1))
-            ]
-            
-        selectProteins
-
-    /// Returns SearchDbParams of a existing database by filePath
-    let getSDBParams (cn :SQLiteConnection)=
-        let cn =
-            match cn.State with
-            | ConnectionState.Open ->
-                cn
-            | ConnectionState.Closed ->
-                cn.Open()
-                cn
-            | _ as x -> failwith "Data base is busy."
-        match Db.SQLiteQuery.selectSearchDbParams cn with
-        | Some (iD,name,fo,fp,pr,minmscl,maxmscl,mass,minpL,maxpL,isoL,mMode,fMods,vMods,vThr) ->
-            createSearchDbParams
-                name fo fp id (Digestion.Table.getProteaseBy pr) minmscl maxmscl mass minpL maxpL
-                    (Newtonsoft.Json.JsonConvert.DeserializeObject<SearchInfoIsotopic list>(isoL)) (Newtonsoft.Json.JsonConvert.DeserializeObject<MassMode>(mMode)) (massFBy (Newtonsoft.Json.JsonConvert.DeserializeObject<MassMode>(mMode)))
-                        (Newtonsoft.Json.JsonConvert.DeserializeObject<SearchModification list>(fMods)) (Newtonsoft.Json.JsonConvert.DeserializeObject<SearchModification list>(vMods)) vThr
-        | None ->
-            failwith "This database does not contain any SearchParameters. It is not recommended to work with this file."
-
-
-    ///
-    let setIndexOnModSequenceAndGlobalMod (cn:SQLiteConnection) =
-        let querystring = "CREATE INDEX IF NOT EXISTS SequenceAndGlobalModIndex ON ModSequence (Sequence,GlobalMod)"
-        let cmd = new SQLiteCommand(querystring, cn)
-        cmd.ExecuteNonQuery()
-
     /// Returns a LookUpResult list
     let getThreadSafePeptideLookUpFromFileBySequenceAndGMod (cn:SQLiteConnection) sdbParams = 
         let parseAAString = initOfModAminoAcidString sdbParams.IsotopicMod (sdbParams.FixedMods@sdbParams.VariableMods)
@@ -929,11 +733,12 @@ module SearchDB' =
 module ProteinInference' =
 
     open BioFSharp.PeptideClassification
+    open BioFSharp.FileFormats
+    open BioFSharp.FileFormats.GFF3
     open BioFSharp.IO.GFF3
     open FSharpAux.IO.SchemaReader.Attribute
     open FSharp.Stats.Interpolation
     open Plotly.NET
-    open Fitting'.NonLinearRegression'.LevenbergMarquardtConstrained'
 
     /// For a group of proteins, contains information about all peptides that might be used for its quantification and score calculated for it.
     type InferredProteinClassItemScored =
@@ -1018,42 +823,14 @@ module ProteinInference' =
             ModelScore : float
         }
 
-    /// Input for QValue calulation
-    type QValueInput =
-        {
-            Score    : float
-            IsDecoy  : bool
-        }
-
-    let createQValueInput score isDecoy =
-        {
-            Score     = score
-            IsDecoy   = isDecoy
-        }
-
-    type ScoreTargetDecoyCount =
-        {
-            Score      : float
-            DecoyCount : float
-            TargetCount: float
-        }
-
-    /// Gives the decoy and target count at a specific score
-    let createScoreTargetDecoyCount score decoyCount targetCount =
-        {
-            Score       = score
-            DecoyCount  = decoyCount
-            TargetCount = targetCount
-        }
-
     ///checks if GFF line describes gene
-    let isGene (item: GFFLine<seq<char>>) =
+    let isGene (item: GFFLine<'a>) =
         match item with
         | GFFEntryLine x -> x.Feature = "gene"
         | _ -> false
 
     ///checks if GFF line describes rna
-    let isRNA (item: GFFLine<seq<char>>) =
+    let isRNA (item: GFFLine<'a>) =
         match item with
         | GFFEntryLine x -> if x.Feature = "mRNA" then Some x else None
         | _ -> None
@@ -1088,7 +865,7 @@ module ProteinInference' =
 
     /// By reading GFF creates the protein models (relationships of proteins to each other) which basically means grouping the rnas over the gene loci
     /// TODO: Don't group over order but rather group over id
-    let assignTranscriptsToGenes tryParseProteinID (gffLines: seq<GFF3.GFFLine<seq<char>>>)  =
+    let assignTranscriptsToGenes tryParseProteinID (gffLines: seq<GFF3.GFFLine<'a>>)  =
         gffLines
         // transcripts are grouped by the gene they originate from
         |> Seq.groupWhen isGene
@@ -1201,7 +978,6 @@ module ProteinInference' =
 module FDRControl' =
 
     open Plotly.NET
-    open Fitting'.NonLinearRegression'.LevenbergMarquardtConstrained'
     open FSharp.Stats.Interpolation
     open FSharpAux.IO
 
@@ -1212,37 +988,7 @@ module FDRControl' =
             | Some a -> a
             | None -> failwith "Could not find an alpha for logistic regression of fdr data"
         let weight = FSharp.Stats.Fitting.LogisticRegression.Univariable.coefficient epsilon alpha x y
-        FSharp.Stats.Fitting.LogisticRegression.Univariable.fit weight
-
-    /// returns scores, pep, q
-    let binningFunction bandwidth pi0 (scoreF: 'A -> float) (isDecoyF: 'A -> bool) (data:'A[])  =
-        let totalDecoyProportion =
-            let decoyCount = Array.filter isDecoyF data |> Array.length |> float
-            let totalCount = data |> Array.length  |> float
-            1. / (2. * decoyCount / totalCount)
-        data
-        |> Array.groupBy (fun s -> floor (scoreF s / bandwidth))
-        |> Array.sortBy fst
-        |> Array.map (fun (k,values)->
-            let median     = values |> Array.map scoreF |> Array.average
-            let totalCount = values |> Array.length |> float
-            let decoyCount = values |> Array.filter isDecoyF |> Array.length |> float |> (*) totalDecoyProportion
-            // Include modified decoy count in total count?
-            //let totalCount = values |> Array.filter (isDecoyF >> not) |> Array.length |> float |> (+) decoyCount
-            //(median |> float,(decoyCount * pi0  / totalCount))
-            median,totalCount,decoyCount
-                //(median, totalCount )
-        )
-        |> fun a ->
-            a
-            |> Array.mapi (fun i (median,totalCountBin,decoyCountBin) ->
-                            /// TODO: Accumulate totalCount + totalDecoyCount beforeHand and skip the time intensive mapping accross the array in each iteration.
-                            let _,totalCountRight,decoyCountRight = a.[i..a.Length-1] |> Array.reduce (fun (x,y,z) (x',y',z') -> x+x',y+y',z+z')
-                            (median,(pi0 * 2. * decoyCountBin / totalCountBin),(pi0 * 2. * decoyCountRight / totalCountRight))
-            )
-        |> Array.sortBy (fun (score,pep,q) -> score)
-        |> Array.unzip3
-        |> fun (score,pep,q) -> vector score, vector pep, vector q
+        FSharp.Stats.Fitting.LogisticRegression.Univariable.predict weight
 
     ///// Calculates q value mapping funtion for target/decoy dataset
     //let getQValueFunc pi0 bw (scoreF: 'A -> float) (isDecoyF: 'A -> bool) (data:'A[]) =
@@ -1258,7 +1004,7 @@ module FDRControl' =
     // Code form 'stirlingLogFactorial' to 'estimatePi0HG' translated from percolator 'ProteinFDREstimator.cpp'
 
     let private stirlingLogFacorial (n: float) =
-        log(sqrt(2. * pi  *n)) + n * log(n) - n
+        log(sqrt(2. * Ops.pi  *n)) + n * log(n) - n
 
     let private exactLogFactorial (n: float) =
         let rec loop i log_fact =
@@ -1307,7 +1053,7 @@ module FDRControl' =
             |> List.foldi (fun i acc x ->
                 acc + x * (float i)
             ) 0.
-        if (isNan expectation_value_FP_PID) || (isInf expectation_value_FP_PID) then
+        if (Ops.isNan expectation_value_FP_PID) || (Ops.isInf expectation_value_FP_PID) then
             0.
         else
             expectation_value_FP_PID
@@ -1433,7 +1179,7 @@ module FDRControl' =
             | false -> 1.
             )
         let fdr =
-            if (isNan estimatedFP) || (isInf estimatedFP) || estimatedFP = 0. then
+            if (Ops.isNan estimatedFP) || (Ops.isInf estimatedFP) || estimatedFP = 0. then
                 1.
             elif (estimatedFP / targetCount < 0.) || (estimatedFP / targetCount > 1.) then
                 1.
@@ -1459,125 +1205,6 @@ module FDRControl' =
                 | false -> 1.
             )
         decoyCount/targetCount
-
-    /// Gives a function to calculate the q value for a score in a dataset using Lukas method and Levenberg Marguardt fitting
-    let calculateQValueLogReg fdrEstimate bandwidth (data: 'a []) (isDecoy: 'a -> bool) (decoyScoreF: 'a -> float) (targetScoreF: 'a -> float) =
-        // Input for q value calculation
-        let createTargetDecoyInput =
-            data
-            |> Array.map (fun item ->
-                if isDecoy item then
-                    ProteinInference'.createQValueInput (decoyScoreF item) true
-                else
-                    ProteinInference'.createQValueInput (targetScoreF item) false
-            )
-
-        let scores,pep,qVal =
-            binningFunction bandwidth fdrEstimate (fun (x: ProteinInference'.QValueInput) -> x.Score) (fun (x: ProteinInference'.QValueInput) -> x.IsDecoy) createTargetDecoyInput
-            |> fun (scores,pep,qVal) -> scores.ToArray(), pep.ToArray(), qVal.ToArray()
-
-        // gives a range of 1 to 30 for the steepness. This can be adjusted depending on the data, but normally it should lie in this range
-        let initialGuess =
-            initialParamsOverRange scores qVal [|1. .. 30.|]
-
-        // performs Levenberg Marguardt Constrained algorithm on the data for every given initial estimate with different steepnesses and selects the one with the lowest RSS
-        let estimate =
-            initialGuess
-            |> Array.map (fun initial ->
-                if initial.InitialParamGuess.Length > 3 then failwith "Invalid initial param guess for Logistic Function"
-                let lowerBound =
-                    initial.InitialParamGuess
-                    |> Array.map (fun param -> param - (abs param) * 0.1)
-                    |> vector
-                let upperBound =
-                    initial.InitialParamGuess
-                    |> Array.map (fun param -> param + (abs param) * 0.1)
-                    |> vector
-                estimatedParamsWithRSS LogisticFunction initial 0.001 10.0 lowerBound upperBound scores qVal
-            )
-            |> Array.filter (fun (param,rss) -> not (param |> Vector.exists System.Double.IsNaN))
-            |> Array.minBy snd
-            |> fst
-
-        let logisticFunction = LogisticFunction.GetFunctionValue estimate
-        logisticFunction
-
-    /// Gives a function to calculate the q value for a score in a dataset using Storeys method
-    let calculateQValueStorey (data: 'a[]) (isDecoy: 'a -> bool) (decoyScoreF: 'a -> float) (targetScoreF: 'a -> float) =
-        // Gives an array of scores with the frequency of decoy and target hits at that score
-        let scoreFrequencies =
-            data
-            |> Array.map (fun x ->
-                if isDecoy x then
-                    decoyScoreF x, true
-                else
-                    targetScoreF x, false
-            )
-            // groups by score
-            |> Array.groupBy fst
-            // counts occurences of targets and decoys at that score
-            |> Array.map (fun (score,scoreDecoyInfo) ->
-                let decoyCount =
-                    scoreDecoyInfo
-                    |> Array.sumBy (fun (score, decoyInfo) ->
-                        match decoyInfo with
-                        | true -> 1.
-                        | false -> 0.
-                    )
-                let targetCount =
-                    scoreDecoyInfo
-                    |> Array.sumBy (fun (score, decoyInfo) ->
-                        match decoyInfo with
-                        | true -> 0.
-                        | false -> 1.
-                    )
-                ProteinInference'.createScoreTargetDecoyCount score decoyCount targetCount
-            )
-            |> Array.sortByDescending (fun x -> x.Score)
-
-        // Goes through the list and assigns each protein a "q value" by dividing total decoy hits so far through total target hits so far
-        let reverseQVal =
-            scoreFrequencies
-            |> Array.fold (fun (acc: (float*float*float*float) list) scoreCounts ->
-                let _,_,decoyCount,targetCount = acc.Head
-                // Should decoy hits be doubled?
-                // accumulates decoy hits
-                let newDecoyCount  = decoyCount + scoreCounts.DecoyCount(* * 2.*)
-                // accumulates target hits
-                let newTargetCount = targetCount + scoreCounts.TargetCount
-                let newQVal =
-                    let nominator =
-                        if newTargetCount > 0. then
-                            newTargetCount
-                        else 1.
-                    newDecoyCount / nominator
-                (scoreCounts.Score, newQVal, newDecoyCount, newTargetCount):: acc
-            ) [0., 0., 0., 0.]
-            // removes last part of the list which was the "empty" initial entry
-            |> fun list -> list.[.. list.Length-2]
-            |> List.map (fun (score, qVal, decoyC, targetC) -> score, qVal)
-
-        //Assures monotonicity by going through the list from the bottom to top and assigning the previous q value if it is smaller than the current one
-        let score, monotoneQVal =
-            if reverseQVal.IsEmpty then
-                failwith "Reverse qvalues in Storey calculation are empty"
-            let head::tail = reverseQVal
-            tail
-            |> List.fold (fun (acc: (float*float) list) (score, newQValue) ->
-                let _,qValue = acc.Head
-                if newQValue > qValue then
-                    (score, qValue)::acc
-                else
-                    (score, newQValue)::acc
-            )[head]
-            |> Array.ofList
-            |> Array.sortBy fst
-            |> Array.unzip
-        // Linear Interpolation
-        let linearSplineCoeff = LinearSpline.initInterpolateSorted score monotoneQVal
-        // takes a score from the dataset and assigns it a q value
-        let interpolation = LinearSpline.interpolate linearSplineCoeff
-        interpolation
 
     // Assigns a q value to an InferredProteinClassItemScored
     let assignQValueToIPCIS (qValueF: float -> float) (item: ProteinInference'.InferredProteinClassItemScored) =
@@ -1676,8 +1303,8 @@ module FDRControl' =
                     |> Array.ofList
                     |> Array.unzip
                 let logitScore, logitPEPVal = logitTransformPepValues score' pep'
-                let coeff = Fitting.LinearRegression.OrdinaryLeastSquares.Linear.Univariable.coefficient (vector logitScore) (vector logitPEPVal)
-                let fittingFunction' = (Fitting.LinearRegression.OrdinaryLeastSquares.Linear.Univariable.fit coeff) >> (fun x -> 10.**(x)/(1.+10.**(x)))
+                let coeff = Fitting.LinearRegression.OLS.Linear.Univariable.fit (vector logitScore) (vector logitPEPVal)
+                let fittingFunction' = (Fitting.LinearRegression.OLS.Linear.Univariable.predict coeff) >> (fun x -> 10.**(x)/(1.+10.**(x)))
                 let sos = FSharp.Stats.Fitting.GoodnessOfFit.calculateSumOfSquares fittingFunction' score' pep'
                 if coeff.[1] < 0. then
                     Some (sos.Error/sos.Count, fittingFunction', score', pep', bw)
@@ -1689,54 +1316,6 @@ module FDRControl' =
         fittingFunction
 
 
-
-module Fragmentation' =
-
-    type LadderedTaggedMass (iontype:Ions.IonTypeFlag,mass:float, number:int, charge: float) =
-        member this.Iontype = iontype
-        member this.MassOverCharge = mass
-        member this.Number = number
-        member this.Charge = charge
-
-    type LadderedPeakFamily<'a, 'b> = {
-        MainPeak       : 'a
-        DependentPeaks : 'b list
-    }
-
-    let createLadderedPeakFamily mainPeak dependentPeaks = {
-        MainPeak       = mainPeak
-        DependentPeaks = dependentPeaks
-    }
-
-    let ladderAndChargeElement (chargeList: float list) (sortedList: Mz.PeakFamily<Mz.TaggedMass.TaggedMass> list) =
-        sortedList
-        |> List.mapi (fun i taggedMass ->
-            chargeList
-            |> List.map (fun charge ->
-                let mainPeak = taggedMass.MainPeak
-                let dependentPeaks = taggedMass.DependentPeaks
-                let newMainPeak = new LadderedTaggedMass(mainPeak.Iontype, Mass.toMZ mainPeak.Mass charge, i + 1, charge)
-                let newDependentPeaks =
-                    dependentPeaks
-                    |> List.map (fun dependentPeak ->
-                        new LadderedTaggedMass(dependentPeak.Iontype, Mass.toMZ dependentPeak.Mass charge, i + 1, charge)
-                    )
-                let newPeakFamily =
-                    createLadderedPeakFamily newMainPeak newDependentPeaks
-                newPeakFamily
-            )
-        )
-        |> List.concat
-
-    let ladderElement (ionList: Mz.PeakFamily<Mz.TaggedMass.TaggedMass> list) (chargeList: float list) =
-        let groupedList =
-            ionList
-            |> List.groupBy ( fun x -> 
-                x.MainPeak.Iontype)
-            |> List.map snd
-            |> List.map List.sort
-        groupedList
-        |> List.collect (ladderAndChargeElement chargeList)
 
 module Drafo = 
     
@@ -1750,8 +1329,8 @@ module Drafo =
             inherit DynamicObj ()
            
             member this.addCol(columns:(string*'a)) =
-                this.SetValue columns
-                this  
+                this.SetProperty columns
+                this
 
             override this.ToString() = 
                 let sb = new System.Text.StringBuilder()
@@ -1908,7 +1487,7 @@ module Drafo =
         let pivot (pivotCol:string) (assembeledFrame:Frame<Key,string>) =
             assembeledFrame
             |> Frame.nestBy (fun k -> 
-                let value: string option = k.TryGetTypedValue pivotCol
+                let value: string option = k.TryGetTypedPropertyValue pivotCol
                 value.Value
                 )
             |> Series.map (fun k f ->

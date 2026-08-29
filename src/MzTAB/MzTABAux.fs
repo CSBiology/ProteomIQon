@@ -10,6 +10,32 @@ open Domain
 
 module MzTABAux =
 
+    /// Verbatim copy of FSharpAux 1.0.0's ReflectionHelper subset (dropped in FSharpAux 2.1.0);
+    /// kept module-local so the existing call sites stay unchanged.
+    module ReflectionHelper =
+
+        // Gets public properties including interface propterties
+        let getPublicProperties (t:Type) =
+            [|
+                for propInfo in t.GetProperties() -> propInfo
+                for i in t.GetInterfaces() do yield! i.GetProperties()
+            |]
+
+        /// Try to get the PropertyInfo by name using reflection
+        let tryGetPropertyInfo (o:obj) (propName:string) =
+            getPublicProperties (o.GetType())
+            |> Array.tryFind (fun n -> n.Name = propName)
+
+        /// Gets property value as option using reflection
+        let tryGetPropertyValue (o:obj) (propName:string) =
+            try
+                match tryGetPropertyInfo o propName with
+                | Some v -> Some (v.GetValue(o,null))
+                | None -> None
+            with
+            | :? System.Reflection.TargetInvocationException -> None
+            | :? System.NullReferenceException -> None
+
     type TableSort =
         {
             Protein: string

@@ -390,5 +390,5 @@ module PepValueCalculation =
                 |> Array.ofList
         |> fun (x, y) ->
             let coeff = FSharp.Stats.Interpolation.LinearSpline.initInterpolate x y
-            let fitLinSp = Interpolation.LinearSpline.interpolate coeff
+            let fitLinSp = Interpolation.LinearSpline.predict coeff
             fitLinSp

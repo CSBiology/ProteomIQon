@@ -15,7 +15,7 @@
     <PackageReference Include="Expecto" Version="10.*" />
     <PackageReference Include="YoloDev.Expecto.TestSdk" Version="0.*" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.*" />
-    <PackageReference Include="BioFSharp.Mz" Version="0.1.5-beta" />
+    <PackageReference Include="BioFSharp.Mz" Version="0.2.0" />
   </ItemGroup>
 
   <ItemGroup>
