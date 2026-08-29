@@ -12,7 +12,7 @@ module MzTABAux =
 
     /// Verbatim copy of FSharpAux 1.0.0's ReflectionHelper subset (dropped in FSharpAux 2.1.0);
     /// kept module-local so the existing call sites stay unchanged.
-    module ReflectionHelper =
+    module private ReflectionHelper =
 
         // Gets public properties including interface propterties
         let getPublicProperties (t:Type) =
