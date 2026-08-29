@@ -182,7 +182,7 @@ module MzMLIonMobilityToMzLite =
         | :? MzML.MzMLReader as r       -> "sample=0"
         | :? MzMLReaderMIRIM as r       -> "sample=0"
 
-    let processFile (processParams:MzMLtoMzLiteParams) (outputDir:string) (instrumentOutput:string) =
+    let processFile (processParams:MzMLtoMzLiteParams) (fixFile: bool) (outputDir:string) (instrumentOutput:string) =
 
         let logger = Logging.createLogger (Path.GetFileNameWithoutExtension instrumentOutput)
 
@@ -190,7 +190,12 @@ module MzMLIonMobilityToMzLite =
         logger.Trace (sprintf "Output directory: %s" outputDir)
         logger.Trace (sprintf "Parameters: %A" processParams)
 
-    
+        if fixFile then
+            logger.Trace "Fixing file."
+            File.ReadAllLines instrumentOutput
+            |> Array.map (fun s -> s.Replace ("&quot",""))
+            |> fun c -> File.WriteAllLines (instrumentOutput,c)
+
         //let tmp = File.ReadAllText instrumentOutput
         //File.WriteAllText(instrumentOutput, tmp.Replace("&quot;", ""))
 
