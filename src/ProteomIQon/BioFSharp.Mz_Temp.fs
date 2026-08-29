@@ -317,7 +317,17 @@ module SeqIO' =
                 sb.Clear() |> ignore
                 res
 
-    let csv separator header flatten data = Seq.CSVwith Seq.valueFunction stringFunction separator header flatten data 
+    let csv (separator: string) header flatten (data: seq<'a>) =
+        // Seq.CSVwith derives its schema from the first element and throws on an empty sequence;
+        // derive the header from the static record type instead so an empty result still yields a valid file.
+        if Seq.isEmpty data then
+            if header && Microsoft.FSharp.Reflection.FSharpType.IsRecord typeof<'a> then
+                Microsoft.FSharp.Reflection.FSharpType.GetRecordFields typeof<'a>
+                |> Array.map (fun p -> p.Name)
+                |> String.concat separator
+                |> Seq.singleton
+            else Seq.empty
+        else Seq.CSVwith Seq.valueFunction stringFunction separator header flatten data
     
 module FSharpStats' = 
 
