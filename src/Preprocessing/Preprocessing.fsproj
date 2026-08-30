@@ -47,7 +47,7 @@
     <PackageReference Include="MzIO.Wiff" Version="0.1.1" />
     <PackageReference Include="MzIO.Bruker" Version="0.1.1" />
     <PackageReference Include="MzIO.Thermo" Version="0.1.1" />
-    <PackageReference Include="BioFSharp.Mz" Version="0.2.0" />
+    <PackageReference Include="BioFSharp.Mz" Version="0.2.1" />
     <PackageReference Include="FSharp.Stats" Version="0.6.0" />
     <PackageReference Include="System.Data.SQLite.Core" Version="1.0.119" />
   </ItemGroup>

@@ -683,7 +683,7 @@ module AlignmentBasedQuantification =
         
         logger.Trace "Get peptide lookUp function"
         let dBParams = BioFSharp.Mz.SearchDB.getSDBParamsByCn memoryDB
-        let peptideLookUp = SearchDB'.getThreadSafePeptideLookUpFromFileBySequenceAndGMod memoryDB dBParams
+        let peptideLookUp = SearchDB.getThreadSafePeptideLookUpFromFileBySequenceAndGMod memoryDB dBParams
         let calcIonSeries aal = Fragmentation.Series.fragmentMasses Fragmentation.Series.bOfBioList Fragmentation.Series.yOfBioList dBParams.MassFunction aal
         logger.Trace "Get peptide lookUp function: finished"
         // initialize Reader and Transaction

@@ -299,7 +299,7 @@ module ConsensusSpectralLibrary =
                     let fragmentVector = 
                         fragmentMzs 
                         //|> fun x -> BioFSharp.Mz.PeakArray.peaksToNearestUnitDaltonBinVector x 100. 2000.
-                        |> SparsePeakArray'.peaksToNearestBinVector processParams.FragMatchingBinWidth processParams.FragMatchingBinOffset (processParams.MS2ScanRange |> fst) (processParams.MS2ScanRange |> snd)
+                        |> BioFSharp.Mz.SparsePeakArray.peaksToNearestBinVector processParams.FragMatchingBinWidth processParams.FragMatchingBinOffset (processParams.MS2ScanRange |> fst) (processParams.MS2ScanRange |> snd)
                     let rtQuery   = MzIO.Processing.Query.createRangeQuery pepIon.ScanTime processParams.RtWindowWidth
                     let mzQueries = 
                         fragmentMzs 
@@ -321,14 +321,14 @@ module ConsensusSpectralLibrary =
                                     |> Array.map (fun p -> p.Mz,p.Intensity)
                                     |> Array.ofSeq
                                     |> BioFSharp.Mz.PeakArray.zipMzInt
-                                    |> SparsePeakArray'.peaksToNearestBinVector processParams.FragMatchingBinWidth processParams.FragMatchingBinOffset (processParams.MS2ScanRange |> fst) (processParams.MS2ScanRange |> snd)
+                                    |> BioFSharp.Mz.SparsePeakArray.peaksToNearestBinVector processParams.FragMatchingBinWidth processParams.FragMatchingBinOffset (processParams.MS2ScanRange |> fst) (processParams.MS2ScanRange |> snd)
                     
                                     )
                                 |> Array.sortBy fst
                             let correlationTrace = 
                                 fragVecs
                                 |> Array.map (fun (rt, measuredFrags) -> 
-                                    rt, SparsePeakArray'.dot fragmentVector measuredFrags
+                                    rt, BioFSharp.Mz.SparsePeakArray.dot fragmentVector measuredFrags
                                     )
                             [
                             Chart.Point correlationTrace

@@ -27,7 +27,7 @@ open MzIO.Commons.Arrays
 open System.Linq
 open BioFSharp.Mz.SearchDB
 open BioFSharp.Mz.Quantification
-open SparsePeakArray'
+open BioFSharp.Mz.SparsePeakArray
 
 module SwathAnalysis =
 

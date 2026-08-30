@@ -40,7 +40,7 @@
     <PackageReference Include="Argu" Version="6.1.1" />
     <PackageReference Include="NLog" Version="4.7.11" />
     <PackageReference Include="BioFSharp" Version="2.0.0" />
-    <PackageReference Include="BioFSharp.Mz" Version="0.2.0" />
+    <PackageReference Include="BioFSharp.Mz" Version="0.2.1" />
     <PackageReference Include="FSharpAux" Version="2.1.0" />
     <PackageReference Include="FSharpAux.IO" Version="2.1.0" />
     <PackageReference Include="Plotly.NET" Version="6.0.0-preview.2" />

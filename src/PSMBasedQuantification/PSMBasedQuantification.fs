@@ -13,7 +13,6 @@ open Plotly.NET
 open BioFSharp
 open MzIO.Processing
 open BioFSharp.Mz.SearchDB
-open SearchDB'
 
 module PSMBasedQuantification =
     module Query = 
