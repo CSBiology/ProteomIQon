@@ -14,7 +14,6 @@ open Plotly.NET
 open BioFSharp
 open MzIO.Processing
 open BioFSharp.Mz.SearchDB
-open SearchDB'
 open Gabor3D.algorithm
 
 module PSMBasedQuantificationTIMs =

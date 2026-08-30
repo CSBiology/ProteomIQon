@@ -45,7 +45,7 @@
     <PackageReference Include="Microsoft.ML" Version="1.5.5" />
     <PackageReference Include="Microsoft.ML.FastTree" Version="1.5.5" />
     <PackageReference Include="FSharp.Stats" Version="0.6.0" />
-    <PackageReference Include="BioFSharp.Mz" Version="0.2.0" />
+    <PackageReference Include="BioFSharp.Mz" Version="0.2.1" />
     <PackageReference Include="Plotly.NET" Version="6.0.0-preview.2" />
   </ItemGroup>
 </Project>

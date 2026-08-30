@@ -20,7 +20,7 @@ namespace ProteomIQon
 open FSharp.Stats
 open FSharpAux
 open System
-open FDRControl'
+open BioFSharp.Mz.FDRControl
 
 module PepValueCalculation =
 

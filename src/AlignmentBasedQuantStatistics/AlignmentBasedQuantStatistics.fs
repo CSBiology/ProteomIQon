@@ -5,7 +5,6 @@ open Microsoft
 open Microsoft.ML
 open Microsoft.ML.Data
 open ProteomIQon.DTW'
-open ProteomIQon.FDRControl'
 open FSharpAux
 open Plotly.NET
 open FSharpAux.IO
