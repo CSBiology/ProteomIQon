@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFrameworks>net8.0</TargetFrameworks>
+    <TargetFrameworks>net10.0</TargetFrameworks>
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>proteomiqon-msfraggertopsm</ToolCommandName>
     <RootNamespace>MsFraggerToPSM</RootNamespace>
@@ -38,8 +38,8 @@
   <ItemGroup>
     <PackageReference Include="Argu" Version="[6.1.1]" />
     <PackageReference Include="NLog" Version="[4.7.8]" />
-    <PackageReference Include="BioFSharp.Mz" Version="[0.1.5-beta]" />
-    <PackageReference Include="FSharp.Stats" Version="[0.4.0]" />
+    <PackageReference Include="BioFSharp.Mz" Version="0.2.1" />
+    <PackageReference Include="FSharp.Stats" Version="0.6.0" />
     <PackageReference Include="System.Data.SQLite.Core" Version="[1.0.119]" />
   </ItemGroup>
 </Project>

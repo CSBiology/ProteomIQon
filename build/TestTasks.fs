@@ -16,6 +16,7 @@ let buildTests =
             |> DotNet.build (fun p ->
                 {
                     p with
+                        Configuration = DotNet.BuildConfiguration.fromString configuration
                         MSBuildParams = { p.MSBuildParams with DisableInternalBinLog = true}
                 }
                 // Use this if you want to speed up your build. Especially helpful in large projects
@@ -25,7 +26,7 @@ let buildTests =
         )
     }
 
-let runTests = BuildTask.create "RunTests" [clean; build] {
+let runTests = BuildTask.create "RunTests" [clean; build; buildTests] {
     testProjects
     |> Seq.iter (fun testProjectInfo ->
         Fake.DotNet.DotNet.test

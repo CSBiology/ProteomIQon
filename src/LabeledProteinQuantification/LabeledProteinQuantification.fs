@@ -45,7 +45,7 @@ module LabeledProteinQuantification =
                 match alignment_QValue with 
                 | Some a -> 
                     Core.createFilter (fun x -> 
-                        x < a || isNan x
+                        x < a || FSharp.Stats.Ops.isNan x
                     ) alignmentQVal
                     |> Series.fillMissingWith true
                 | None -> Core.createFilter (fun x -> true ) alignmentQVal

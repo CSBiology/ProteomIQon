@@ -21,6 +21,7 @@ module console1 =
         let i = results.GetResult InstrumentOutput |> List.map getPathRelativeToDir
         let o = results.GetResult OutputDirectory  |> getPathRelativeToDir
         let p = results.GetResult ParamFile        |> getPathRelativeToDir
+        let f = results.Contains FixFiles
         Directory.CreateDirectory(o) |> ignore
         Logging.generateConfig o
         let logger = Logging.createLogger "MzMLToMzLite"
@@ -39,7 +40,7 @@ module console1 =
         if files.Length = 1  then
             logger.Info "single file"
             logger.Trace (sprintf "Preprocessing %s" files.[0])
-            MzMLIonMobilityToMzLite.processFile processParams o files.[0]
+            MzMLIonMobilityToMzLite.processFile processParams f o files.[0]
         else
             logger.Info "multiple files"
             logger.Trace (sprintf "Preprocessing multiple files: %A" files)
@@ -52,7 +53,7 @@ module console1 =
             let partitionedFiles =
                 files
                 |> Array.splitInto c
-            [for i in partitionedFiles do yield async { return i |> Array.map (MzMLIonMobilityToMzLite.processFile processParams o)}]
+            [for i in partitionedFiles do yield async { return i |> Array.map (MzMLIonMobilityToMzLite.processFile processParams f o)}]
             |> Async.Parallel
             |> Async.RunSynchronously
             |> ignore

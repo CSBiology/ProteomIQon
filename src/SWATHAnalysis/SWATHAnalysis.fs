@@ -27,7 +27,7 @@ open MzIO.Commons.Arrays
 open System.Linq
 open BioFSharp.Mz.SearchDB
 open BioFSharp.Mz.Quantification
-open SparsePeakArray'
+open BioFSharp.Mz.SparsePeakArray
 
 module SwathAnalysis =
 
@@ -336,16 +336,16 @@ module SwathAnalysis =
                         Chart.Point(correlationTrace)
                         Chart.Point([targetScanTime],[apex])
                         ]
-                        |> Chart.Combine
+                        |> Chart.combine
                         Chart.Point(fragCorrQuant |> List.map (fun x -> targetScanTime,x.Quant_Max))
-                        |> Chart.withTraceName "Max"
+                        |> Chart.withTraceInfo "Max"
                         Chart.Point(fragCorrQuant |> List.map (fun x -> targetScanTime,x.Quant_Sum))
-                        |> Chart.withTraceName "Sum"
+                        |> Chart.withTraceInfo "Sum"
                         List.map2 (fun (x:float[]) (y:float[]) -> Chart.Line(x,y)) xFrags yFrags
-                        |> Chart.Combine 
+                        |> Chart.combine 
                     ]
-                    |> Chart.Combine
-                    |> Chart.SaveHtmlAs (getPlotFilePathFilePath ((pepIon.StringSequence |> String.filter (fun x -> x <> '*')) + "_GMod_" + pepIon.GlobalMod.ToString() + "Ch" + pepIon.Charge.ToString()) ("_") ) 
+                    |> Chart.combine
+                    |> Chart.saveHtml (getPlotFilePathFilePath ((pepIon.StringSequence |> String.filter (fun x -> x <> '*')) + "_GMod_" + pepIon.GlobalMod.ToString() + "Ch" + pepIon.Charge.ToString()) ("_") ) 
                 
                 match fragCorrQuant with 
                 | [] -> 
@@ -418,7 +418,7 @@ module SwathAnalysis =
                 message,items.Length
             )
         |> Chart.Column
-        |> Chart.SaveHtmlAs (getPlotFilePathFilePath ("Errors") ("_") ) 
+        |> Chart.saveHtml (getPlotFilePathFilePath ("Errors") ("_") ) 
         results
         |> Array.choose (fun x ->
                 match x with 

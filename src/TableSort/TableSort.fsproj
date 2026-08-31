@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFrameworks>net8.0</TargetFrameworks>
+    <TargetFrameworks>net10.0</TargetFrameworks>
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>proteomiqon-tablesort</ToolCommandName>
     <RootNamespace>TableSort</RootNamespace>
@@ -38,11 +38,11 @@
     <PackageReference Include="Argu" Version="6.1.1" />
     <PackageReference Include="NLog" Version="4.7.11" />
     <PackageReference Include="Deedle" Version="2.3.0" />
-    <PackageReference Include="BioFSharp" Version="2.0.0-beta4" />
-    <PackageReference Include="FSharp.Stats" Version="0.4.0" />
-    <PackageReference Include="FSharpAux" Version="1.0.0" />
-    <PackageReference Include="FSharpAux.IO" Version="1.0.0" />
+    <PackageReference Include="BioFSharp" Version="2.0.0" />
+    <PackageReference Include="FSharp.Stats" Version="0.6.0" />
+    <PackageReference Include="FSharpAux" Version="2.1.0" />
+    <PackageReference Include="FSharpAux.IO" Version="2.1.0" />
     <PackageReference Include="System.Data.SQLite.Core" Version="1.0.119" />
-    <PackageReference Include="Plotly.NET" Version="2.0.0-alpha5" />
+    <PackageReference Include="Plotly.NET" Version="6.0.0-preview.2" />
   </ItemGroup>
 </Project>
