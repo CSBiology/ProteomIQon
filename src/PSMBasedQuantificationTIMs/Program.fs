@@ -45,7 +45,7 @@ module console1 =
             else
                 failwith "The given path to the instrument output is neither a valid file path nor a valid directory path."
         logger.Trace "Set Index on data base if not present."
-        SearchDB'.setIndexOnModSequenceAndGlobalMod dbConnection |> ignore
+        BioFSharp.Mz.SearchDB.Db.SQLiteQuery.setIndexOnModSequenceAndGlobalMod dbConnection |> ignore
         logger.Trace "Set Index on data base if not present: finished"
         let mzfiles = 
             parsePaths MzIO.Reader.getMzLiteMzMLPaths i

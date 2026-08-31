@@ -5,7 +5,6 @@ open Microsoft
 open Microsoft.ML
 open Microsoft.ML.Data
 open ProteomIQon.DTW'
-open ProteomIQon.FDRControl'
 open FSharpAux
 open Plotly.NET
 open FSharpAux.IO
@@ -363,7 +362,7 @@ module AlignmentBasedQuantStatistics =
             |> predF.Predict
 
         let qValueStorey =
-            calculateQValueStorey trainingsData' (fun x -> x.Label |> not) (fun x -> float (predict x).Score) (fun x -> float (predict x).Score)
+            BioFSharp.Mz.FDRControl.calculateQValueStorey trainingsData' (fun x -> x.Label |> not) (fun x -> float (predict x).Score) (fun x -> float (predict x).Score)
         
         if diagnosticCharts then
             let setPositive,setNegative =
@@ -374,46 +373,46 @@ module AlignmentBasedQuantStatistics =
                 |> Array.map predict
                 |> Array.map (fun x -> x.Probability)
                 |> Chart.Histogram
-                |> Chart.withTraceName "Positive"
+                |> Chart.withTraceInfo "Positive"
     
             let negative =
                 setNegative
                 |> Array.map predict
                 |> Array.map (fun x -> x.Probability)
                 |> Chart.Histogram
-                |> Chart.withTraceName "Negative"
+                |> Chart.withTraceInfo "Negative"
 
             [
                 positive
                 negative
             ]
-            |> Chart.Combine
-            |> Chart.withX_AxisStyle("Probability")
-            |> Chart.withY_AxisStyle("Count")
-            |> Chart.SaveHtmlAs (System.IO.Path.Combine(chartDirectory,"ProbabilityHistogram"))
+            |> Chart.combine
+            |> Chart.withXAxisStyle("Probability")
+            |> Chart.withYAxisStyle("Count")
+            |> Chart.saveHtml (System.IO.Path.Combine(chartDirectory,"ProbabilityHistogram"))
 
             let positiveQVal =
                 setPositive
                 |> Array.map predict
                 |> Array.map (fun x -> qValueStorey(float x.Score))
                 |> Chart.Histogram
-                |> Chart.withTraceName "Positive"
+                |> Chart.withTraceInfo "Positive"
                 
             let negativeQVal =
                 setNegative
                 |> Array.map predict
                 |> Array.map (fun x -> qValueStorey(float x.Score))
                 |> Chart.Histogram
-                |> Chart.withTraceName "Negative"
+                |> Chart.withTraceInfo "Negative"
                 
             [
                 positiveQVal
                 negativeQVal
             ]
-            |> Chart.Combine
-            |> Chart.withX_AxisStyle("Q-Value")
-            |> Chart.withY_AxisStyle("Count")
-            |> Chart.SaveHtmlAs (System.IO.Path.Combine(chartDirectory,"QValueDistribution"))
+            |> Chart.combine
+            |> Chart.withXAxisStyle("Q-Value")
+            |> Chart.withYAxisStyle("Count")
+            |> Chart.saveHtml (System.IO.Path.Combine(chartDirectory,"QValueDistribution"))
 
         if returnTestSet then
             let index =

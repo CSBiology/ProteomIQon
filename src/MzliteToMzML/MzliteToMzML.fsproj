@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFrameworks>net8.0</TargetFrameworks>
+    <TargetFrameworks>net10.0</TargetFrameworks>
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>proteomiqon-mzlitetomzml</ToolCommandName>
     <RootNamespace>MzliteToMzML</RootNamespace>
@@ -42,7 +42,7 @@
     <PackageReference Include="MzIO.Processing" Version="0.1.1" />
     <PackageReference Include="MzIO.SQL" Version="0.1.1" />
     <PackageReference Include="MzIO.MzML" Version="0.1.1" />
-    <PackageReference Include="BioFSharp" Version="2.0.0-beta4" />
-    <PackageReference Include="BioFSharp.Mz" Version="0.1.5-beta" />
+    <PackageReference Include="BioFSharp" Version="2.0.0" />
+    <PackageReference Include="BioFSharp.Mz" Version="0.2.1" />
   </ItemGroup>
 </Project>

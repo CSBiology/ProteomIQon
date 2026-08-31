@@ -275,7 +275,7 @@ module Common =
         
         let toDomain transform =
             match transform with 
-            | Log2          -> log2 
+            | Log2          -> FSharp.Stats.Ops.log2
             | Substract v   -> fun x -> x - v 
             | Add v         -> fun x -> v + x
             | DivideBy v    -> fun x -> x / v
@@ -332,8 +332,8 @@ module Common =
                 fun (values:seq<float>) -> 
                     let v = Array.ofSeq values
                     let tukey = FSharp.Stats.Signal.Outliers.tukey threshold
-                    match tukey v with 
-                    | Intervals.Interval.ClosedInterval (lower, upper) -> 
+                    match tukey v with
+                    | FSharp.Stats.Interval.Closed (lower, upper) ->
                         (fun v -> v <= upper && v >= lower)
                     | _ -> fun v -> false
             | Stdev threshold ->  
