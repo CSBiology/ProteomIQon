@@ -1,3 +1,11 @@
+#### 0.0.11 - Wednesday, September 2, 2026
+* Add Gabor3D parameters and default params for PSMBasedQuantificationTIMs
+* Write a header only csv instead of failing when a result sequence is empty
+* Remove modules that moved upstream into BioFSharp.Mz (SparsePeakArray, Fitting, SearchDB, ProteinInference, FDRControl, Fragmentation)
+* Update to .NET 10
+* Update System.Data.SQLite.Core to 1.0.119 for the memory access fix
+* Update BioFSharp to 2.0.0, BioFSharp.Mz to 0.2.1, FSharpAux to 2.1.0, FSharp.Stats to 0.6.0, Plotly.NET to 6.0.0-preview.2 and DynamicObj to 7.0.1
+
 #### 0.0.10 - Monday, June 02, 2025
 * Fix transform for edge cases in pep value calculation (by @paulineHans)
 

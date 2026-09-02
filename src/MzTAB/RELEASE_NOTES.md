@@ -1,3 +1,8 @@
+#### 0.0.6 - Wednesday, September 2, 2026
+* Update field names
+* Update to .NET 10
+* Update MzIO packages, FSharpAux to 2.1.0, FSharp.Stats to 0.6.0 and Plotly.NET to 6.0.0-preview.2
+
 #### 0.0.5 - Friday, June 18, 2021
 * add flag to trigger name based file matching
 * add flag to trigger the creation of diagnostic charts

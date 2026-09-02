@@ -1,3 +1,7 @@
+#### 0.0.10 - Wednesday, September 2, 2026
+* Update to .NET 10
+* Update BioFSharp.Mz to 0.2.1
+
 #### 0.0.9 - Tuesday, March 18, 2025
 * Add additional modification options
 
