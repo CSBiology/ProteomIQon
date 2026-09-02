@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <Compile Include="Pipeline.fs" />
+    <Compile Include="Unit_Tests\PSMBasedQuantificationTIMs.fs"/>
     <Compile Include="Main.fs" />
   </ItemGroup>
 
@@ -36,6 +37,6 @@
     <ProjectReference Include="..\src\LabelFreeProteinQuantification\LabelFreeProteinQuantification.fsproj" ReferenceOutputAssembly="false" />
     <ProjectReference Include="..\src\LabeledProteinQuantification\LabeledProteinQuantification.fsproj" ReferenceOutputAssembly="false" />
     <ProjectReference Include="..\src\AddDeducedPeptides\AddDeducedPeptides.fsproj" ReferenceOutputAssembly="false" />
-    <ProjectReference Include="..\src\PSMBasedQuantificationTIMs\PSMBasedQuantificationTIMs.fsproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\src\PSMBasedQuantificationTIMs\PSMBasedQuantificationTIMs.fsproj" ReferenceOutputAssembly="true" />
   </ItemGroup>
 </Project>
