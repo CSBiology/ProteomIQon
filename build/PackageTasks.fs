@@ -64,7 +64,7 @@ let packPrerelease =
     BuildTask.create
         "PackPrerelease"
         [
-            //clean
+            clean
             build
             runTests
         ] {
