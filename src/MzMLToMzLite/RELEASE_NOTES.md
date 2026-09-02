@@ -1,3 +1,8 @@
+#### 0.0.10 - Wednesday, September 2, 2026
+* Update to .NET 10
+* Update System.Data.SQLite.Core to 1.0.119 for the memory access fix
+* Update BioFSharp.Mz to 0.2.1 and FSharp.Stats to 0.6.0
+
 #### 0.0.9 - Monday, March 10, 2025
 * Update to .NET 8
 * Add option to fix mzml files converted with "&quot"
