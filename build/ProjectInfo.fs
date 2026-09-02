@@ -64,7 +64,7 @@ let projects =
         ProjectInfo.create("PeptideSpectrumMatching", "src/PeptideSpectrumMatching/PeptideSpectrumMatching.fsproj", "src/PeptideSpectrumMatching/RELEASE_NOTES.md")
         ProjectInfo.create("PSMStatistics", "src/PSMStatistics/PSMStatistics.fsproj", "src/PSMStatistics/RELEASE_NOTES.md")
         ProjectInfo.create("PSMBasedQuantification", "src/PSMBasedQuantification/PSMBasedQuantification.fsproj", "src/PSMBasedQuantification/RELEASE_NOTES.md")
-        //ProjectInfo.create("PSMBasedQuantificationTIMs", "src/PSMBasedQuantificationTIMs/PSMBasedQuantificationTIMs.fsproj", "src/PSMBasedQuantificationTIMs/RELEASE_NOTES.md")
+        ProjectInfo.create("PSMBasedQuantificationTIMs", "src/PSMBasedQuantificationTIMs/PSMBasedQuantificationTIMs.fsproj", "src/PSMBasedQuantificationTIMs/RELEASE_NOTES.md")
         ProjectInfo.create("RatioLFQ", "src/RatioLFQ/RatioLFQ.fsproj", "src/RatioLFQ/RELEASE_NOTES.md")
         ProjectInfo.create("QuantBasedAlignment", "src/QuantBasedAlignment/QuantBasedAlignment.fsproj", "src/QuantBasedAlignment/RELEASE_NOTES.md")
         ProjectInfo.create("QuantBasedAlignment_linux-x64", "src/QuantBasedAlignment_linux-x64/QuantBasedAlignment_linux-x64.fsproj", "src/QuantBasedAlignment_linux-x64/RELEASE_NOTES.md")
@@ -72,19 +72,19 @@ let projects =
         ProjectInfo.create("AddDeducedPeptides", "src/AddDeducedPeptides/AddDeducedPeptides.fsproj", "src/AddDeducedPeptides/RELEASE_NOTES.md")
         ProjectInfo.create("AlignmentBasedQuantification", "src/AlignmentBasedQuantification/AlignmentBasedQuantification.fsproj", "src/AlignmentBasedQuantification/RELEASE_NOTES.md")
         ProjectInfo.create("AlignmentBasedQuantStatistics", "src/AlignmentBasedQuantStatistics/AlignmentBasedQuantStatistics.fsproj", "src/AlignmentBasedQuantStatistics/RELEASE_NOTES.md")
-        //ProjectInfo.create("ConsensusSpectralLibrary", "src/ConsensusSpectralLibrary/ConsensusSpectralLibrary.fsproj", "src/ConsensusSpectralLibrary/RELEASE_NOTES.md")
+        // ProjectInfo.create("ConsensusSpectralLibrary", "src/ConsensusSpectralLibrary/ConsensusSpectralLibrary.fsproj", "src/ConsensusSpectralLibrary/RELEASE_NOTES.md")
         ProjectInfo.create("JoinQuantPepIonsWithProteins", "src/JoinQuantPepIonsWithProteins/JoinQuantPepIonsWithProteins.fsproj", "src/JoinQuantPepIonsWithProteins/RELEASE_NOTES.md")
         ProjectInfo.create("LabeledProteinQuantification", "src/LabeledProteinQuantification/LabeledProteinQuantification.fsproj", "src/LabeledProteinQuantification/RELEASE_NOTES.md")
-        //ProjectInfo.create("LabelEfficiencyCalculator", "src/LabelEfficiencyCalculator/LabelEfficiencyCalculator.fsproj", "src/LabelEfficiencyCalculator/RELEASE_NOTES.md")
+        // ProjectInfo.create("LabelEfficiencyCalculator", "src/LabelEfficiencyCalculator/LabelEfficiencyCalculator.fsproj", "src/LabelEfficiencyCalculator/RELEASE_NOTES.md")
         ProjectInfo.create("LabelFreeProteinQuantification", "src/LabelFreeProteinQuantification/LabelFreeProteinQuantification.fsproj", "src/LabelFreeProteinQuantification/RELEASE_NOTES.md")
-        //ProjectInfo.create("MzliteToMzML", "src/MzliteToMzML/MzliteToMzML.fsproj", "src/MzliteToMzML/RELEASE_NOTES.md")
-        //ProjectInfo.create("MzTAB", "src/MzTAB/MzTAB.fsproj", "src/MzTAB/RELEASE_NOTES.md")
-        //ProjectInfo.create("Preprocessing", "src/Preprocessing/Preprocessing.fsproj", "src/Preprocessing/RELEASE_NOTES.md")
+        // ProjectInfo.create("MzliteToMzML", "src/MzliteToMzML/MzliteToMzML.fsproj", "src/MzliteToMzML/RELEASE_NOTES.md")
+        // ProjectInfo.create("MzTAB", "src/MzTAB/MzTAB.fsproj", "src/MzTAB/RELEASE_NOTES.md")
+        // ProjectInfo.create("Preprocessing", "src/Preprocessing/Preprocessing.fsproj", "src/Preprocessing/RELEASE_NOTES.md")
         ProjectInfo.create("ProteinInference", "src/ProteinInference/ProteinInference.fsproj", "src/ProteinInference/RELEASE_NOTES.md")
-        //ProjectInfo.create("SpectralLibrary", "src/SpectralLibrary/SpectralLibrary.fsproj", "src/SpectralLibrary/RELEASE_NOTES.md")
-        //ProjectInfo.create("SWATHAnalysis", "src/SWATHAnalysis/SWATHAnalysis.fsproj", "src/SWATHAnalysis/RELEASE_NOTES.md")
-        //ProjectInfo.create("TableSort", "src/TableSort/TableSort.fsproj", "src/TableSort/RELEASE_NOTES.md")
-    ]
+        // ProjectInfo.create("SpectralLibrary", "src/SpectralLibrary/SpectralLibrary.fsproj", "src/SpectralLibrary/RELEASE_NOTES.md")
+        // ProjectInfo.create("SWATHAnalysis", "src/SWATHAnalysis/SWATHAnalysis.fsproj", "src/SWATHAnalysis/RELEASE_NOTES.md")
+        // ProjectInfo.create("TableSort", "src/TableSort/TableSort.fsproj", "src/TableSort/RELEASE_NOTES.md")
+     ]
 
 
 let project = "ProteomIQon"
