@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
-clear
+
+set -eu
+set -o pipefail
 
 dotnet run --project ./build/build.fsproj "$@"
