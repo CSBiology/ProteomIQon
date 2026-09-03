@@ -3,49 +3,59 @@
 title: AddDeducedPeptides
 category: Tools
 categoryindex: 1
-index: 10
+index: 13
 ---
 *)
+
 (**
 [![Binder]({{root}}img/badge-binder.svg)](https://mybinder.org/v2/gh/csbiology/ProteomIQon/gh-pages?filepath={{fsdocs-source-basename}}.ipynb)&emsp;
 [![Script]({{root}}img/badge-script.svg)]({{root}}{{fsdocs-source-basename}}.fsx)&emsp;
 [![Notebook]({{root}}img/badge-notebook.svg)]({{root}}{{fsdocs-source-basename}}.ipynb)
 
-# Add Deduced Peptides
-**Disclaimer** this tool needs [protein inference]({{root}}tools/ProteinInference.html) and [aligned quant]({{root}}tools/AlignmentBasedQuantification.html)
-files.
+# AddDeducedPeptides
 
-After the alignment based quantification, the protein inference files do no longer match the peptides present in the quantification files. The quantification file now contains additional quantified peptides based on 
-information from other quantification files in the same run. If the protein inference was performed on the combined files earlier, then all inference information is contained in the combined protein inference files. This tool 
-takes this combined inference information and assigns it to the peptides present in the new quantification file, thereby creating a new protein inference result for each quantification.
+After [alignment]({{root}}tools/QuantBasedAlignment.html) and
+[AlignmentBasedQuantification]({{root}}tools/AlignmentBasedQuantification.html) a run's .quant file holds peptides that were never identified
+in that run, so the run's .prot file from [ProteinInference]({{root}}tools/ProteinInference.html) does not list them. AddDeducedPeptides
+takes the protein groups of the combined inference and assigns them to every peptide present in each aligned .quant file, so that
+[JoinQuantPepIonsWithProteins]({{root}}tools/JoinQuantPepIonsWithProteins.html) can join the transferred quantifications to proteins.
 
-## Executing the Tool
-*)
+## Inputs and outputs
 
-(**
-	proteomiqon-adddeducedpeptides -i "path/to/your/run.quant" -ii "path/to/your/prot" -o "path/to/your/outDirectory"
-*)
+| Flag | Meaning | Comes from |
+|------|---------|------------|
+| `-i` | one or more aligned `.quant` files, or a directory that is searched for `*.quant` | [AlignmentBasedQuantification]({{root}}tools/AlignmentBasedQuantification.html) |
+| `-ii` | one or more `.prot` files, or a directory that is searched for `*.prot` | [ProteinInference]({{root}}tools/ProteinInference.html) |
+| `-o` | the output directory, created when missing | |
 
-(**
-It is also possible to call the tool on a lists of quant and prot files.
-*)
+The tool reads all .prot files as one combined inference and does not pair them with the .quant files by name. This only
+works when ProteinInference ran over all runs together (GroupFiles set to true), because then every run's .prot file carries the same scores and
+the same q-value for a protein group. If a protein group turns up with different scores, the tool stops with the message
+"If you are running this tool please infer proteins over all files".
 
-(**
-	proteomiqon-adddeducedpeptides -i "path/to/your/run1.quant" "path/to/your/run2.quant" "path/to/your/run3.quant" -ii "path/to/your/run1.prot" "path/to/your/run2.prot" "path/to/your/run3.prot" -o "path/to/your/outDirectory"
-*)
+For every input .quant file the tool writes `<quant>.prot` into the output directory, a tab separated table with the columns of a
+ProteinInference result. Each protein group keeps its scores and q-value, and its PeptideSequence column lists only the peptides that occur
+in that .quant file. Protein groups without any peptide in the file are dropped. JoinQuantPepIonsWithProteins reads the new .prot file
+together with the scored .quant file of the same run. There is no parameter file. Delete an existing `<quant>.prot` in the output
+directory before a rerun, the tool appends to it. Logs go to `AddDeducedPeptides_log.txt` there.
 
-(**
-Alternatively, it is possible to call the tool on folders of quant and prot files.
-*)
+## Running the tool
 
-(**
-	proteomiqon-adddeducedpeptides -i "path/to/your/quant" -ii "path/to/your/prot" -o "path/to/your/outDirectory"
-*)
+Install the tool with `dotnet tool install --global ProteomIQon.AddDeducedPeptides`. One run.
 
-(**
-A detailed description of the CLI arguments the tool expects can be obtained by calling the tool:
-*)
+```text
+proteomiqon-adddeducedpeptides -i path/to/run.quant -ii path/to/run.prot -o path/to/output
+```
 
-(**
-	proteomiqon-adddeducedpeptides --help
+All runs of an experiment. Every .prot file in the directory is read, and every .quant file gets a new .prot file.
+
+```text
+proteomiqon-adddeducedpeptides -i path/to/quant -ii path/to/prot -o path/to/output
+```
+
+Print the description of every argument.
+
+```text
+proteomiqon-adddeducedpeptides --help
+```
 *)
