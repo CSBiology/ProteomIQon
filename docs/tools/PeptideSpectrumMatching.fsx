@@ -6,55 +6,85 @@ categoryindex: 1
 index: 4
 ---
 *)
+
+(*** hide ***)
+
+(*** condition: prepare ***)
+#r "nuget: BioFSharp.Mz, 0.2.1"
+#r "nuget: Newtonsoft.Json, 13.0.4"
+#r "../../src/ProteomIQon/bin/Release/net10.0/ProteomIQon.dll"
+
+(*** condition: ipynb ***)
+#if IPYNB
+#r "nuget: ProteomIQon, {{fsdocs-package-version}}"
+#endif // IPYNB
+
 (**
 [![Binder]({{root}}img/badge-binder.svg)](https://mybinder.org/v2/gh/csbiology/ProteomIQon/gh-pages?filepath={{fsdocs-source-basename}}.ipynb)&emsp;
 [![Script]({{root}}img/badge-script.svg)]({{root}}{{fsdocs-source-basename}}.fsx)&emsp;
 [![Notebook]({{root}}img/badge-notebook.svg)]({{root}}{{fsdocs-source-basename}}.ipynb)
 
-# Peptide Spectrum Matching
-**Disclaimer** this tool needs a peptide database to query against, if you did not create one yet you can do so by using the [PeptideDB]({{root}}tools/peptideDb.html) tool.
+# PeptideSpectrumMatching
 
-An established method to identify acquired MS/MS spectra is the comparison of each spectrum with peptides in a [reference database]({{root}}tools/peptideDb.html). 
-
-Given raw a MS run in the mzLite or mzml format, this tool iterates accross all recorded MS/MS scans and determines the charge state of precursor ions which were selected for fragmentation. With this it is possible to 
-query the peptide data base for every precursor ion mass +/- a tolerance (which defines the so called 'search space') and retrieve peptides that are theoretical candidates for a match. 
-For each of the peptide candidates we create an theoretical spectrum in silico and compare it to the measured MS/MS scan. 
+PeptideSpectrumMatching identifies the peptides behind the MS/MS spectra of a run. For each MS2 scan it first determines the charge of the precursor ion from the isotope pattern in the preceding MS1 scan ([charge state determination](https://www.biofsharp.com/BioFSharp.Mz/01_03_charge_state_determination.html)).
+With the charge, the precursor m/z becomes a peptide mass, and the tool fetches every peptide from the [PeptideDB]({{root}}tools/PeptideDB.html) database whose mass lies within LookUpPPM of it.
+For each candidate it computes the theoretical fragment ions ([fragmentation](https://www.biofsharp.com/BioFSharp.Mz/02_01_fragmentation.html)) and compares them with the measured spectrum. Each candidate gets a [SEQUEST-like](https://www.biofsharp.com/BioFSharp.Mz/02_03_sequest_like_scoring.html) score and an [Andromeda-like](https://www.biofsharp.com/BioFSharp.Mz/02_04_andromeda_like_scoring.html) score. An X!Tandem-like score is computed alongside the Andromeda one.
+The candidates include reversed decoy peptides, which [PSMStatistics]({{root}}tools/PSMStatistics.html) later uses to estimate the false discovery rate ([what the decoys are for](https://www.biofsharp.com/BioFSharp.Mz/02_03_sequest_like_scoring.html#What-the-decoys-are-for)).
 
 <img src="{{root}}img/PSM.png" width="1000" height="750" />
 
-To measure similarity we use our own implementations of three established search enginge scores: SEQUEST, Andromeda and XTandem.
-The search space is extended by so called decoys. Decoys are reversed counterparts of peptides within the search space and allow us to assign a false discovery rate to each scored peptide
-using the [PSMStatistics tool]({{root}}tools/PSMStatistics.html).
+## Inputs and outputs
 
+| Flag | Meaning | Comes from |
+|------|---------|------------|
+| `-i` | one or more `.mzlite` or `.mzML` files, or a directory that is searched for `*.mzlite`, `*.mzML` and `*.mzml` (not recursive) | [MzMLToMzLite]({{root}}tools/MzMLToMzLite.html) |
+| `-d` | the SQLite peptide database | [PeptideDB]({{root}}tools/PeptideDB.html) |
+| `-o` | the output directory, created when missing | |
+| `-p` | the parameter file in JSON | this page |
+| `-c` | number of runs scored at the same time, default 1 | |
+
+All four flags are mandatory. The reader opens files by extension and knows `.mzlite` and `.mzML` only, so an mzML file has to carry the extension in exactly that spelling. The tool stops when the database file does not exist.
+
+The tool writes one `<run>.psm` per input into the output directory. It is a tab separated table with a header. Each row is one candidate peptide for one spectrum with its charge, precursor m/z, theoretical mass, the three scores with their delta values to the next candidates, the peptide sequence and a Label of 1 for a target peptide and -1 for a decoy.
+The file is opened in append mode, so running the tool twice into the same directory adds a second header and a second set of rows. Delete the old file first.
+The `.psm` is read by [PSMStatistics]({{root}}tools/PSMStatistics.html). The output directory also receives `PeptideSpectrumMatching_log.txt` and one `<run>_log.txt` per input.
 ## Parameters
-The following table gives an overview of the parameter set:
 
-| **Parameter**                  | **Default Value**                                                                                                                         | **Description**                                                    |
-|--------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------|
-| ChargeStateDeterminationParams | {ExpectedMinimalCharge = 2; ExpectedMaximumCharge = 5; Width = 1.1; MinIntensity = 0.15; DeltaMinIntensity = 0.3; NrOfRndSpectra = 10000} | Parameters used for the charge state determination of the peptides |
-| LookUpPPM                      | 30                                                                                                                                        | Mass range in Da in which potential peptides are selected          |
-| MS2ScanRange                   | 100.,2000.                                                                                                                                | m/z range for MS2 spectra                                          |
-| nTerminalSeries                | NTerminalSeries.B                                                                                                                         | Considered ions starting from the N-Terminus                       |
-| cTerminalSeries                | CTerminalSeries.Y                                                                                                                         | Considered ions starting from the C-Terminus                       |
-| Andromeda                      | {PMinPMax = 4,10; MatchingIonTolerancePPM = 100.}                                                                                         | Andromeda scoring parameters                                       |
+| Parameter | Default | Meaning |
+|---|---|---|
+| ChargeStateDeterminationParams | see below | Settings of the charge state determination. |
+| LookUpPPM | 30.0 | Mass window, in ppm around the precursor mass, from which candidate peptides are fetched. |
+| nTerminalSeries | NTerminalSeries.B | Fragment ion series counted from the N terminus. Keep B, the scoring builds the theoretical spectra from the b and y series. |
+| cTerminalSeries | CTerminalSeries.Y | Fragment ion series counted from the C terminus. Keep Y. |
+| Andromeda | { PMinPMax = 4, 10; MatchingIonTolerancePPM = 100.0 } | Settings of the Andromeda-like and X!Tandem-like scoring. |
 
-## Parameter Generation
+ChargeStateDeterminationParams is a BioFSharp.Mz ChargeState.ChargeDetermParams record.
 
-Parameters are handed to the cli tool as a .json file. you can download the default file [here](https://github.com/CSBiology/ProteomIQon/blob/master/src/ProteomIQon/defaultParams/peptideSpectrumMatchingParams.json), 
-or use an F# script, which can be downloaded or run in Binder at the top of the page, to write your own parameter file:
+| Parameter | Default | Meaning |
+|---|---|---|
+| ExpectedMinimalCharge | 2 | Lowest precursor charge that is tested. |
+| ExpectedMaximumCharge | 5 | Highest precursor charge that is tested. |
+| Width | 1.1 | Width of the m/z window around the precursor in which the MS1 isotope pattern is examined. |
+| MinIntensity | 0.15 | Minimum relative intensity of a peak to count as part of the isotope pattern. |
+| DeltaMinIntensity | 0.3 | Minimum relative intensity difference used when comparing neighbouring peaks of the pattern. |
+| NrOfRndSpectra | 10000 | Number of random spectra used to estimate how likely a matching pattern arises by chance. |
+
+Andromeda is a ProteomIQon.Domain.AndromedaParams record.
+
+| Parameter | Default | Meaning |
+|---|---|---|
+| PMinPMax | 4, 10 | Lowest and highest number of most intense peaks kept per 100 Da window. Every count in between is tried and the best score is kept. |
+| MatchingIonTolerancePPM | 100.0 | Tolerance in ppm for matching a theoretical fragment to a measured peak. |
+
+The default file is [peptideSpectrumMatchingParams.json](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/peptideSpectrumMatchingParams.json).
+
+## Writing a parameter file
 *)
 
-#r "nuget: BioFSharp.Mz, 0.1.5-beta"
-#r "nuget: Newtonsoft.Json, 12.0.3"
-#r "nuget: ProteomIQon, 0.0.5"
-
-open BioFSharp.Mz.SearchDB
-open Newtonsoft.Json
-open ProteomIQon
-open ProteomIQon.Domain
 open BioFSharp.Mz
+open ProteomIQon
 
-let chargeDetermParams :ChargeState.ChargeDetermParams =
+let chargeDetermParams : ChargeState.ChargeDetermParams =
     {
         ExpectedMinimalCharge = 2
         ExpectedMaximumCharge = 5
@@ -64,58 +94,44 @@ let chargeDetermParams :ChargeState.ChargeDetermParams =
         NrOfRndSpectra        = 10000
     }
 
-let andromedaParams: AndromedaParams =
+let andromedaParams : Domain.AndromedaParams =
     {
-        PMinPMax                = 4,10
-        MatchingIonTolerancePPM = 100.
+        PMinPMax                = 4, 10
+        MatchingIonTolerancePPM = 100.0
     }
 
-let peptideSpectrumMatchingParams :Dto.PeptideSpectrumMatchingParams =
+let peptideSpectrumMatchingParams : Dto.PeptideSpectrumMatchingParams =
     {
-        ChargeStateDeterminationParams = chargeDetermParams 
-        LookUpPPM                      = 30.
+        ChargeStateDeterminationParams = chargeDetermParams
+        LookUpPPM                      = 30.0
         nTerminalSeries                = NTerminalSeries.B
         cTerminalSeries                = CTerminalSeries.Y
         Andromeda                      = andromedaParams
     }
 
+// Replace the temp folder with your project folder.
+let outputPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "peptideSpectrumMatchingParams.json")
 
-let serialized =
-    peptideSpectrumMatchingParams
-    |> JsonConvert.SerializeObject
-
-(***condition:ipynb***)
-#if IPYNB
-(**
-If you are running this tool in Binder, you can copy the output of the following codeblock and save it in a JSON file.
-*)
-serialized
-#endif // IPYNB
+Json.serializeAndWrite outputPath peptideSpectrumMatchingParams
 
 (**
-## Executing the Tool
-**Disclaimer** this tool needs a peptide database to query against, if you did not create one yet you can do so by using the [PeptideDB]({{root}}tools/peptideDb.html) tool.
+## Running the tool
 
-To score all MS/MS of an MS run simply call: 
+Install the tool with `dotnet tool install --global ProteomIQon.PeptideSpectrumMatching`, then score one run:
 
-*)
+```text
+proteomiqon-peptidespectrummatching -i path/to/run.mzlite -d path/to/AraTest.db -o path/to/output -p path/to/peptideSpectrumMatchingParams.json
+```
 
-(**
-	proteomiqon-peptidespectrummatching -i "path/to/your/run.mzml" -d "path/to/your/database.sqlite" -o "path/to/your/outDirectory" -p "path/to/your/params.json"
-*)
+Several runs, three of them scored at the same time:
 
-(**
-It is also possible to call the tool on a list of MS files. If you have a mulitcore cpu it is possible to score multiple runs in parallel using the -c flag:
-*)
+```text
+proteomiqon-peptidespectrummatching -i path/to/run1.mzlite path/to/run2.mzlite path/to/run3.mzlite -d path/to/AraTest.db -o path/to/output -p path/to/peptideSpectrumMatchingParams.json -c 3
+```
 
-(**
-	proteomiqon-peptidespectrummatching -i "path/to/your/run1.mzml" "path/to/your/run2.mzml" "path/to/your/run3.mzml" -d "path/to/your/database.sqlite" -o "path/to/your/outDirectory" -p "path/to/your/params.json" -c 3
-*)
+All flags:
 
-(**
-A detailed description of the CLI arguments the tool expects can be obtained by calling the tool:
-*)
-
-(**
-	proteomiqon-peptidespectrummatching --help
+```text
+proteomiqon-peptidespectrummatching --help
+```
 *)
