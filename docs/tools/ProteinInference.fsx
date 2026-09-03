@@ -3,108 +3,111 @@
 title: ProteinInference
 category: Tools
 categoryindex: 1
-index: 7
+index: 9
 ---
 *)
+
+(*** hide ***)
+
+(*** condition: prepare ***)
+#r "nuget: BioFSharp.Mz, 0.2.1"
+#r "nuget: Newtonsoft.Json, 13.0.4"
+#r "../../src/ProteomIQon/bin/Release/net10.0/ProteomIQon.dll"
+
+(*** condition: ipynb ***)
+#if IPYNB
+#r "nuget: ProteomIQon, {{fsdocs-package-version}}"
+#endif // IPYNB
 
 (**
 [![Binder]({{root}}img/badge-binder.svg)](https://mybinder.org/v2/gh/csbiology/ProteomIQon/gh-pages?filepath={{fsdocs-source-basename}}.ipynb)&emsp;
 [![Script]({{root}}img/badge-script.svg)]({{root}}{{fsdocs-source-basename}}.fsx)&emsp;
 [![Notebook]({{root}}img/badge-notebook.svg)]({{root}}{{fsdocs-source-basename}}.ipynb)
 
-# Protein Inference
-**Disclaimer** this tool needs a [peptide database]({{root}}tools/peptideDb.html) and [peptide spectrum matches]({{root}}tools/PeptideSpectrumMatching.html)
-which [passed fdr thresholds]({{root}}tools/PSMStatistics.html).
+# ProteinInference
 
-MS-based shotgun proteomics estimates protein abundances using a proxy: peptides. The process of 'Protein Inference' is concerned with the mapping of identified peptides
-to the proteins they putatively originated from. This process is not as straightforward as one might think at a first glance on the subject, since the peptide-to-protein mapping
-is not necessarily a one-to-one relationship but in many cases a one-to-many relationship. This is due to the fact that many proteins share peptides with an identical sequence, e.g.
-two proteins originating from two different splice variants of the same gene.
+A peptide identified by [PSMStatistics]({{root}}tools/PSMStatistics.html) often fits more than one protein, for example two splice variants of the same gene. ProteinInference maps the identified peptides back to proteins and reports [protein groups](https://www.biofsharp.com/BioFSharp.Mz/04_02_protein_inference.html#Grouping-the-evidence-into-protein-groups): sets of proteins that share their peptide evidence.
+Each group gets a score from its peptides and a decoy score from the reversed proteins, and from these a [protein level q-value](https://www.biofsharp.com/BioFSharp.Mz/04_02_protein_inference.html#Estimating-the-protein-level-FDR).
 
-One way to cope with this problem is to introduce the concept of protein groups, which allow us to report the aggregation of all peptides which map to all isoforms of a gene
-independently from the peptides mapping uniquely to a single isoform. While this approach has its merits it leaves room for fine tuning when implemented. Lets say we have two proteins pA and pB which were both
-discovered by one peptide uniquely mapping to each of them and additionally by a third peptide, which maps to both of them: How do we report our findings?
-We could report both proteins seperately and as a protein group, we could only report the protein group, or we could report both proteins but not the protein group. A problem of comparable complexity occurs when
-we think about peptides when calculating the abundances for the proteingroup pA;pB. Do we use the peptides only once, or do we also use the peptides mapping uniquely to protein pA and pB? 
-Fortunately, the tool ProteinInference gives you the possibility to choose any of the described scenarios by tuning the parameters described below. 
-The following scheme gives an overview how parameter settings influence inferred protein groups:
+Two parameters decide how groups are formed and which peptides count for them. Take two proteins pA and pB, each found by one unique peptide and both by a third shared peptide. `Protein` (the integration strictness) decides whether pA, pB and the group `pA;pB` are all reported or whether overlapping groups are merged into the smallest set that explains every peptide. `Peptide` (the peptide usage) decides whether the abundance of `pA;pB` later comes from the shared peptide only or also from the peptides unique to pA and pB. The figure shows the outcomes for every combination.
 
 <img src="{{root}}img/ProteinInference.png" width="1200" height="1000" />
 
-Moreover, we report each protein group with a so called 'Peptide evidence class'. This metric gives an indication how pure the peptide composition of a protein group is and
-lets us differentiate between protein groups that consist of isoforms of a splice variant or contain a rather arbitrary mix of proteins. In order to determine these inter-protein relationships the
-user can optionally supply a gff3 file.
+## Inputs and outputs
+
+| Flag | Meaning | Comes from |
+|------|---------|------------|
+| `-i` | one or more `.qpsm` files, or a directory that is searched for `*.qpsm` | [PSMStatistics]({{root}}tools/PSMStatistics.html) |
+| `-d` | the SQLite peptide database | [PeptideDB]({{root}}tools/PeptideDB.html) |
+| `-g` | optional GFF3 annotation of the proteome | your genome annotation |
+| `-o` | the output directory, created when missing | |
+| `-p` | the parameter file in JSON | this page |
+| `-dc` | switch: save diagnostic charts to the output directory | |
+
+The GFF3 file tells the tool which proteins are transcripts of the same gene. With it the `Class` column (the peptide evidence class) separates groups made of isoforms of one gene from groups that mix unrelated proteins. Without `-g` every database protein counts as its own gene and the class carries no such information.
+
+For every input `run.qpsm` the tool writes `run.prot`, tab separated with a header and the columns `ProteinGroup` (protein identifiers joined by `;`), `PeptideSequence` (the peptides of the group found in this run, joined by `;`), `Class`, `TargetScore`, `DecoyScore` and `QValue`.
+[JoinQuantPepIonsWithProteins]({{root}}tools/JoinQuantPepIonsWithProteins.html) and [AddDeducedPeptides]({{root}}tools/AddDeducedPeptides.html) read `.prot` files.
+
+With `-dc` the tool saves a chart of scores against q-values, as `QValueGraph.html` in the output directory when the files are grouped and as `run.prot_QValueGraph.html` per run otherwise. Logs go to `ProteinInference_log.txt` and a few `ProteinInference_<step>_log.txt` files in the output directory. There is no parallelism flag.
 
 ## Parameters
-The following table gives an overview of the parameter set:
 
-| **Parameter**                  | **Default Value**                                                                                                                         | **Description**                                                    |
-|--------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------|
-| ProteinIdentifierRegex         | id                                                                                                                                        | Regex pattern for parsing of the protein IDs in the database       |
-| Protein                        | ProteinInference.IntegrationStrictness.Maximal                                                                                            | Parameter to tune creation of protein groups (see scheme above)    |
-| Peptide                        | ProteinInference.PeptideUsageForQuantification.Minimal                                                                                    | Parameters to tune the way peptides are aggregated (see scheme above) |
-| GroupFiles                     | true                                                                                                                                      | Indicates if information is shared accross .qpsm files             |
-| GetQValue                      | QValueMethod.Storey                                                                                                                       | Lets the user choose between published FDR calculation methods     |
+| Parameter | Default | Meaning |
+|-----------|---------|---------|
+| `ProteinIdentifierRegex` | `"Cre\S+"` | Regex that extracts the protein identifier from the protein names in the database and, with `-g`, from the GFF3 entries. The default matches Chlamydomonas identifiers. Put a pattern for your own proteome here. |
+| `Protein` | `ProteinInference.IntegrationStrictness.Maximal` | `Maximal` keeps every protein group intact. `Minimal` merges overlapping groups into the smallest set of proteins that explains all peptides. |
+| `Peptide` | `ProteinInference.PeptideUsageForQuantification.Minimal` | `Minimal` uses only the best matching peptides of a group. `Maximal` also uses peptides that point to a larger group containing this one. `MaximalInverse` also uses peptides that point to a part of this group. |
+| `GroupFiles` | `true` | Infer all input files together: the peptides of every run go into one inference and one q-value calculation, and every output file reports the same protein groups, each restricted to the peptides seen in that run. AddDeducedPeptides needs this. `false` infers each run on its own. |
+| `GetQValue` | `QValueMethod.LogisticRegression FDRMethod.MAYU` | Estimate the protein FDR with MAYU and turn it into q-values by logistic regression on the target and decoy scores. The other FDR estimates are `FDRMethod.DecoyTargetRatio` and `FDRMethod.Conservative` (an FDR of 1). `QValueMethod.Storey` uses the Storey estimate instead, `QValueMethod.NoQValue` writes `nan`. If the chosen calculation fails the tool falls back to `nan` and logs it. |
 
-## Parameter Generation
+The default file is [ProteinInferenceParams.json](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/ProteinInferenceParams.json).
 
-Parameters are handed to the cli tool as a .json file. you can download the default file [here](https://github.com/CSBiology/ProteomIQon/blob/master/src/ProteomIQon/defaultParams/peptideSpectrumMatchingParams.json), 
-or use an F# script, which can be downloaded or run in Binder at the top of the page, to write your own parameter file:
+## Writing a parameter file
 *)
-
-#r "nuget: ProteomIQon, 0.0.5"
-#r "nuget: BioFSharp.Mz, 0.1.5-beta"
 
 open ProteomIQon
 open ProteomIQon.Domain
 open BioFSharp.Mz
 
-let defaultProteinInferenceParams: Dto.ProteinInferenceParams =
+let proteinInferenceParams : Dto.ProteinInferenceParams =
     {
-        ProteinIdentifierRegex = "id"
+        ProteinIdentifierRegex = @"Cre\S+"
         Protein                = ProteinInference.IntegrationStrictness.Maximal
         Peptide                = ProteinInference.PeptideUsageForQuantification.Minimal
         GroupFiles             = true
-        GetQValue              = QValueMethod.Storey 
+        GetQValue              = QValueMethod.LogisticRegression FDRMethod.MAYU
     }
 
-let serialized = 
-    defaultProteinInferenceParams
-    |> Json.serialize
+// Replace the temp folder with your project folder.
+let outputPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "ProteinInferenceParams.json")
 
-(***condition:ipynb***)
-#if IPYNB
-(**
-If you are running this tool in Binder, you can copy the output of the following codeblock and save it in a JSON file.
-*)
-serialized
-#endif // IPYNB
+Json.serializeAndWrite outputPath proteinInferenceParams
 
 (**
-## Executing the Tool
-**Disclaimer** this tool needs a [peptide database]({{root}}tools/peptideDb.html) and [peptide spectrum matches]({{root}}tools/PeptideSpectrumMatching.html)
-which [passed fdr thresholds]({{root}}tools/PSMStatistics.html). 
+## Running the tool
 
-To map all identified peptide sequences of an MS run to a protein group simply call:
+Install with `dotnet tool install --global ProteomIQon.ProteinInference`, then infer the proteins of one run:
 
-*)
+```text
+proteomiqon-proteininference -i path/to/run.qpsm -d path/to/database.db -o path/to/output -p path/to/ProteinInferenceParams.json
+```
 
-(**
-	proteomiqon-proteininference -i "path/to/your/run.qpsm" -d "path/to/your/database.sqlite" -g "path/to/your/proteom.gff3" -o "path/to/your/outDirectory" -p "path/to/your/params.json"
-*)
+Several runs grouped together, with the annotation for the evidence class:
 
-(**
-It is also possible to call the tool on a lists of scored psm files:
-*)
+```text
+proteomiqon-proteininference -i path/to/run1.qpsm path/to/run2.qpsm path/to/run3.qpsm -d path/to/database.db -g path/to/proteome.gff3 -o path/to/output -p path/to/ProteinInferenceParams.json
+```
 
-(**
-	proteomiqon-proteininference -i "path/to/your/run1.qpsm" "path/to/your/run2.qpsm" "path/to/your/run3.qpsm" -d "path/to/your/database.sqlite" -g "path/to/your/proteom.gff3" -o "path/to/your/outDirectory" -p "path/to/your/params.json" 
-*)
+A whole directory, with the q-value chart:
 
-(**
-A detailed description of the CLI arguments the tool expects can be obtained by calling the tool:
-*)
+```text
+proteomiqon-proteininference -i path/to/qpsmFolder -d path/to/database.db -o path/to/output -p path/to/ProteinInferenceParams.json -dc
+```
 
-(**
-	proteomiqon-proteininference --help
+All flags:
+
+```text
+proteomiqon-proteininference --help
+```
 *)
