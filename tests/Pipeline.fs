@@ -44,6 +44,32 @@ let runDotNet cmd workingDir =
     let stdErr = stdErrTask.Result
     if proc.ExitCode <> 0 then failwithf "'dotnet %s' failed in %s:\n%s\n%s" cmd workingDir stdOut stdErr
 
+/// Compares two tab separated result files cell by cell. Numeric cells are
+/// compared with a relative tolerance, because iterative fits (PEP values,
+/// q-values) pick up last-digit differences from the platform's math library
+/// and do not reproduce bit for bit between Windows and Linux. Every other
+/// cell has to match exactly.
+let tsvFilesEqual (relTolerance: float) (referencePath: string) (testPath: string) =
+    let tryFloat (s: string) =
+        match Double.TryParse(s, Globalization.NumberStyles.Float, Globalization.CultureInfo.InvariantCulture) with
+        | true, v -> Some v
+        | _ -> None
+    let cellsEqual (r: string) (t: string) =
+        r = t ||
+        match tryFloat r, tryFloat t with
+        | Some r, Some t ->
+            (Double.IsNaN r && Double.IsNaN t) ||
+            abs (r - t) <= relTolerance * max (abs r) (abs t)
+        | _ -> false
+    let reference = File.ReadAllLines referencePath
+    let test = File.ReadAllLines testPath
+    reference.Length = test.Length &&
+    Array.forall2 (fun (r: string) (t: string) ->
+        let rc = r.Split '\t'
+        let tc = t.Split '\t'
+        rc.Length = tc.Length && Array.forall2 cellsEqual rc tc
+    ) reference test
+
 let selectAllModSequence cn =
     let querystring = "SELECT * FROM ModSequence"
     use cmd = new SQLiteCommand(querystring, cn)
@@ -144,20 +170,13 @@ let pipelineTests =
             // run tool
             runDotNet (sprintf "%s -i %s -o %s -p %s -d %s" psmStatsExe psmEstimate outDirectoryEstimate psmStatsParamsEstimate dbEstimate) baseDir
             runDotNet (sprintf "%s -i %s -o %s -p %s -d %s" psmStatsExe psmFixed outDirectoryFixed psmStatsParamsFixed dbFixed) baseDir
-            let referenceQPSMEstimate =
-                let qpsmPath = relToDirectory "../../../data/PSMStatistics/out/estimateOut/minimalReference.qpsm"
-                File.ReadAllLines qpsmPath
-            let testQPSMEstimate =
-                let qpsmPath = relToDirectory "../../../data/PSMStatistics/out/estimateOut/minimalEstimate.qpsm"
-                File.ReadAllLines qpsmPath
-            let referenceQPSMFixed =
-                let qpsmPath = relToDirectory "../../../data/PSMStatistics/out/fixedOut/minimalReference.qpsm"
-                File.ReadAllLines qpsmPath
-            let testQPSMFixed =
-                let qpsmPath = relToDirectory "../../../data/PSMStatistics/out/fixedOut/minimalFixed.qpsm"
-                File.ReadAllLines qpsmPath
             let compare =
-                referenceQPSMEstimate = testQPSMEstimate && referenceQPSMFixed = testQPSMFixed
+                tsvFilesEqual 1e-9
+                    (relToDirectory "../../../data/PSMStatistics/out/estimateOut/minimalReference.qpsm")
+                    (relToDirectory "../../../data/PSMStatistics/out/estimateOut/minimalEstimate.qpsm") &&
+                tsvFilesEqual 1e-9
+                    (relToDirectory "../../../data/PSMStatistics/out/fixedOut/minimalReference.qpsm")
+                    (relToDirectory "../../../data/PSMStatistics/out/fixedOut/minimalFixed.qpsm")
             // cleanup
             File.Delete (relToDirectory "../../../data/PSMStatistics/out/fixedOut/minimalFixed.qpsm")
             File.Delete (relToDirectory "../../../data/PSMStatistics/out/fixedOut/minimalFixed_log.txt")
@@ -447,19 +466,13 @@ let pipelineTests =
             let protInfExe = toolDll "ProteinInference"
             runDotNet (sprintf "%s -i %s -o %s -p %s -d %s" protInfExe qpsm outDirectoryStorey proteinInferenceParamsStorey db) baseDir
             runDotNet (sprintf "%s -i %s -o %s -p %s -d %s" protInfExe qpsm outDirectoryMAYU proteinInferenceParamsMAYU db) baseDir
-            let referenceProtStorey =
-                let protPath = relToDirectory "../../../data/ProteinInference/out/storeyOut/minimalReference.prot"
-                File.ReadAllLines protPath
-            let protStorey =
-                let protPath = relToDirectory "../../../data/ProteinInference/out/storeyOut/minimal.prot"
-                File.ReadAllLines protPath
-            let referenceProtMAYU =
-                let protPath = relToDirectory "../../../data/ProteinInference/out/mayuOut/minimalReference.prot"
-                File.ReadAllLines protPath
-            let protMAYU =
-                let protPath = relToDirectory "../../../data/ProteinInference/out/mayuOut/minimal.prot"
-                File.ReadAllLines protPath
-            let compare = referenceProtStorey = protStorey && referenceProtMAYU = protMAYU
+            let compare =
+                tsvFilesEqual 1e-9
+                    (relToDirectory "../../../data/ProteinInference/out/storeyOut/minimalReference.prot")
+                    (relToDirectory "../../../data/ProteinInference/out/storeyOut/minimal.prot") &&
+                tsvFilesEqual 1e-9
+                    (relToDirectory "../../../data/ProteinInference/out/mayuOut/minimalReference.prot")
+                    (relToDirectory "../../../data/ProteinInference/out/mayuOut/minimal.prot")
             // cleanup
             File.Delete (relToDirectory "../../../data/ProteinInference/out/storeyOut/minimal.prot")
             File.Delete (relToDirectory "../../../data/ProteinInference/out/storeyOut/ProteinInference_createClassItemCollection_log.txt")
