@@ -1,4 +1,4 @@
-#### 0.0.12 - Wednesday, September 2, 2026
+#### 0.0.13 - Wednesday, September 2, 2026
 * Add Gabor3D algorithm for peak detection
 * Fall back to a median mz correction when the smoothing spline cannot be fitted on sparse data
 * Make the light and heavy quality filters robust against empty results and non finite intensities
