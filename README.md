@@ -25,13 +25,6 @@ Contributing
 
 Please refer to the CSB [Contribution guidelines](.github/CONTRIBUTING.md)
 
-Community/Social
-----------------
-
-Want to get in touch with us? We recently joined the twitter crowd:
-
-[![Twitter Follow](https://img.shields.io/twitter/follow/cs_biology.svg?style=social)](https://twitter.com/cs_biology)
-
 Citation
 ----------------
 
