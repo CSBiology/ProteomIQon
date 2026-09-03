@@ -84,6 +84,11 @@ module Common =
         | Phosphorylation'Ser'Thr'Tyr'
         | Pyro_Glu'GluNterm'
         | Pyro_Glu'GlnNterm'
+        | Methylation'Met'MetNTerm'
+        | Carbamate'Lys'
+        | Hydroxylation'Pro'
+        | Methylation'Cys'
+        | Methylation'Thr'
     
 
     module Modification  =
@@ -98,6 +103,26 @@ module Common =
         let pyro_Glu'GlnNterm' =
             createSearchModification "Pyro_Glu'Gln'" "28" "	Pyro-glu from Q" true "H3N"
                 [Specific(Gln,ModLocation.Nterm);] SearchModType.Minus "pq"
+
+        let carbamate'Lys'=
+            createSearchModification "Carbamate_LysL" "36" "Addition of CO2 to AA residue" true "CO2" 
+                [Specific(Lys,ModLocation.Residual)] SearchModType.Plus "ca"
+
+        let methylation_Met'MetNTerm'=
+            createSearchModification "Methylation_Met" "37" "Methyl group replacing hydrogen on H2N group" true "CH2"
+                [Specific(Met,ModLocation.Nterm)] SearchModType.Plus "methyl"
+
+        let hydroxylation'Pro'=
+            createSearchModification "Hydroxylation_ProL" "38" "Hydroxy group replacing hydrogen at the pyroole ring" true "O"
+                [Specific(Pro,ModLocation.Residual)] SearchModType.Plus "hyd"
+
+        let methylation'Cys' =
+            createSearchModification "Methylation_CysL" "39" "Hydrogen attached to the sulfur is replaced by a methyl group" true "CH2"
+                [Specific(Cys,ModLocation.Residual)] SearchModType.Plus "methyl"
+
+        let methylation'Thr' =
+            createSearchModification "Methylation_Thr" "40" "Methyl group replacing the hydrogen on the hydroxy side chain" true "CH2"
+                [Specific(Thr,ModLocation.Residual)] SearchModType.Plus "methyl"
              
         let toDomain modification = 
             match modification with
@@ -107,6 +132,11 @@ module Common =
             | Phosphorylation'Ser'Thr'Tyr'  -> SearchDB.Table.phosphorylation'Ser'Thr'Tyr'
             | Pyro_Glu'GluNterm'            -> pyro_Glu'GluNterm'
             | Pyro_Glu'GlnNterm'            -> pyro_Glu'GlnNterm'
+            | Methylation'Met'MetNTerm'     -> methylation_Met'MetNTerm'
+            | Carbamate'Lys'                -> carbamate'Lys'
+            | Hydroxylation'Pro'            -> hydroxylation'Pro'
+            | Methylation'Cys'              -> methylation'Cys'
+            | Methylation'Thr'              -> methylation'Thr'
 
         
     type IsotopicMod =
@@ -245,7 +275,7 @@ module Common =
         
         let toDomain transform =
             match transform with 
-            | Log2          -> log2 
+            | Log2          -> FSharp.Stats.Ops.log2
             | Substract v   -> fun x -> x - v 
             | Add v         -> fun x -> v + x
             | DivideBy v    -> fun x -> x / v
@@ -302,8 +332,8 @@ module Common =
                 fun (values:seq<float>) -> 
                     let v = Array.ofSeq values
                     let tukey = FSharp.Stats.Signal.Outliers.tukey threshold
-                    match tukey v with 
-                    | Intervals.Interval.ClosedInterval (lower, upper) -> 
+                    match tukey v with
+                    | FSharp.Stats.Interval.Closed (lower, upper) ->
                         (fun v -> v <= upper && v >= lower)
                     | _ -> fun v -> false
             | Stdev threshold ->  
@@ -865,6 +895,8 @@ module Dto =
         AlignmentScore                              : float
         [<FieldAttribute(44)>]
         AlignmentQValue                             : float
+        [<FieldAttribute(45)>]
+        IonMobility                                 : float
         }
 
     module QuantificationResult = 
@@ -1048,9 +1080,11 @@ module Dto =
             [<FieldAttribute(12)>][<TraceConverter>]
             IntensityTrace_SourceFile    : float []
             [<FieldAttribute(13)>][<TraceConverter>]
-            IsotopicPatternMz_SourceFile                    : float []            
+            IsotopicPatternMz_SourceFile                    : float []
             [<FieldAttribute(14)>][<TraceConverter>]
-            IsotopicPatternIntensity_Observed_SourceFile    : float []       
+            IsotopicPatternIntensity_Observed_SourceFile    : float []
+            [<FieldAttribute(15)>]
+            IonMobility                  : float
         } 
 
     /////
@@ -1122,7 +1156,9 @@ module Dto =
            [<FieldAttribute(20)>] [<TraceConverter>]
            Y_IntensityTrace                     : float []
            [<FieldAttribute(21)>]
-           DtwDistanceBefore                    : float 
+           DtwDistanceBefore                    : float
+           [<FieldAttribute(22)>]
+           IonMobility                          : float
        }
 
     type AlignmentBasedQuantificationParams =
@@ -1297,6 +1333,8 @@ module Dto =
         AlignmentScore                              : float
         [<FieldAttribute(47)>]
         AlignmentQValue                             : float
+        [<FieldAttribute(48)>]
+        IonMobility                                 : float
         }
 
     type TableSortParams =

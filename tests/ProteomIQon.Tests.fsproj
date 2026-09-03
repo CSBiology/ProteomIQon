@@ -1,0 +1,42 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <GenerateProgramFile>false</GenerateProgramFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="Pipeline.fs" />
+    <Compile Include="Unit_Tests\PSMBasedQuantificationTIMs.fs"/>
+    <Compile Include="Main.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Expecto" Version="10.*" />
+    <PackageReference Include="YoloDev.Expecto.TestSdk" Version="0.*" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.*" />
+    <PackageReference Include="BioFSharp.Mz" Version="0.2.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\src\ProteomIQon\ProteomIQon.fsproj" />
+  </ItemGroup>
+
+  <!-- Build-only references: make sure the tools exercised by the e2e pipeline
+       tests are built before the tests run. Their assemblies are located at
+       runtime via Pipeline.toolDll, not referenced. -->
+  <ItemGroup>
+    <ProjectReference Include="..\src\PeptideDB\PeptideDB.fsproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\src\PeptideSpectrumMatching\PeptideSpectrumMatching.fsproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\src\PSMStatistics\PSMStatistics.fsproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\src\PSMBasedQuantification\PSMBasedQuantification.fsproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\src\QuantBasedAlignment_win-x64\QuantBasedAlignment_win-x64.fsproj" ReferenceOutputAssembly="false" Condition="'$(OS)' == 'Windows_NT'" />
+    <ProjectReference Include="..\src\QuantBasedAlignment_linux-x64\QuantBasedAlignment_linux-x64.fsproj" ReferenceOutputAssembly="false" Condition="'$(OS)' != 'Windows_NT'" />
+    <ProjectReference Include="..\src\ProteinInference\ProteinInference.fsproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\src\LabelFreeProteinQuantification\LabelFreeProteinQuantification.fsproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\src\LabeledProteinQuantification\LabeledProteinQuantification.fsproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\src\AddDeducedPeptides\AddDeducedPeptides.fsproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\src\PSMBasedQuantificationTIMs\PSMBasedQuantificationTIMs.fsproj" ReferenceOutputAssembly="true" />
+  </ItemGroup>
+</Project>

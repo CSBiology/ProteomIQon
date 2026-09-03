@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net5.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <!-- <GeneratePackageOnBuild>true</GeneratePackageOnBuild> -->
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>proteomiqon-quantbasedalignment</ToolCommandName>
@@ -30,7 +30,6 @@
     <FsDocsReleaseNotesLink>https://github.com/CSBiology/ProteomIQon/blob/master/RELEASE_NOTES.md</FsDocsReleaseNotesLink>
   </PropertyGroup>
   <ItemGroup>
-    <None Include="App.config" />
     <Compile Include="Program.fs" />
   </ItemGroup>
   <ItemGroup>
@@ -39,12 +38,12 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Argu" Version="6.1.1" />
-    <PackageReference Include="NLog" Version="4.7.8" />
-    <PackageReference Include="BioFSharp" Version="2.0.0-beta4" />
-    <PackageReference Include="BioFSharp.Mz" Version="0.1.5-beta" />
-    <PackageReference Include="FSharpAux" Version="1.0.0" />
-    <PackageReference Include="FSharpAux.IO" Version="1.0.0" />
-    <PackageReference Include="Plotly.NET" Version="2.0.0-alpha5" />
+    <PackageReference Include="NLog" Version="4.7.11" />
+    <PackageReference Include="BioFSharp" Version="2.0.0" />
+    <PackageReference Include="BioFSharp.Mz" Version="0.2.1" />
+    <PackageReference Include="FSharpAux" Version="2.1.0" />
+    <PackageReference Include="FSharpAux.IO" Version="2.1.0" />
+    <PackageReference Include="Plotly.NET" Version="6.0.0-preview.2" />
     <PackageReference Include="MKL.NET" Version="1.3.2" />
     <PackageReference Include="MKL.NET.linux-x64" Version="2021.4.0.640" >
       <PrivateAssets>all</PrivateAssets>
@@ -70,20 +69,26 @@
       <Message Text="Copy MKL DLL"/>
       <Copy SourceFiles="$(OutDir)/runtimes/linux-x64\lib\netstandard2.0\MKL.NET.dll" DestinationFolder="$(OutDir)/"/>
   </Target>
-  <ItemGroup>
-      <Content Include="bin/Release/$(TargetFramework)/runtimes/linux-x64/native/*.so" Exclude="bin/Release/$(TargetFramework)/runtimes/linux-x64/native/MKL.NET.Native.so">
-        <Pack>true</Pack>
-        <PackagePath>\tools\$(TargetFramework)\any\</PackagePath>
+  <ItemGroup Condition="Exists('$(OutputPath)runtimes/linux-x64/native')">
+      <Content Include="$(OutputPath)runtimes/linux-x64/native/*.so" Exclude="$(OutputPath)runtimes/linux-x64/native/MKL.NET.Native.so">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+        <Link>%(Filename)%(Extension)</Link>
+        <Pack>false</Pack>
       </Content>
-      <Content Include="bin/Release/$(TargetFramework)/runtimes/linux-x64/native/*.so.1" >
-        <Pack>true</Pack>
-        <PackagePath>\tools\$(TargetFramework)\any\</PackagePath>
+      <Content Include="$(OutputPath)runtimes/linux-x64/native/*.so.*">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+        <Link>%(Filename)%(Extension)</Link>
+        <Pack>false</Pack>
       </Content>
   </ItemGroup>
-  <ItemGroup>
-      <Content Include="bin/Release/$(TargetFramework)/runtimes/linux-x64/lib/netstandard2.0/MKL.NET.dll">
-        <Pack>true</Pack>
-        <PackagePath>\tools\$(TargetFramework)\any\</PackagePath>
+  <ItemGroup Condition="Exists('$(OutputPath)runtimes/linux-x64/lib/netstandard2.0')">
+      <Content Include="$(OutputPath)runtimes/linux-x64/lib/netstandard2.0/MKL.NET.dll">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+        <Link>MKL.NET.dll</Link>
+        <Pack>false</Pack>
       </Content>
   </ItemGroup>
 </Project>

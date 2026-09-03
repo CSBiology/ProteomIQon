@@ -131,11 +131,23 @@ module Domain =
             WindowSize                   : WindowSize
         }
     
+
     type WaveletParameters = FSharpStats'.Wavelet.Parameters 
 
+    type Gabor3DParams = 
+        {
+            sizeX                        : int
+            sizeY                        : int
+            sigmaX                       : float
+            sigmaY                       : float
+            frequency                    : float
+            theta                        : float
+        }
+        
     type XicProcessing = 
         | SecondDerivative of SecondDerivativeParams
         | Wavelet of WaveletParameters
+        | Gabor3D of Gabor3DParams
         
     type Window = 
         | Fixed of float

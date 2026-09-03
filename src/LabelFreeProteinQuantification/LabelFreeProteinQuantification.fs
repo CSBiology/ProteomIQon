@@ -110,7 +110,7 @@ module LabelFreeProteinQuantification =
                                     frame
                                     |> Frame.filterRows (fun rk os ->
                                         let alignmentQVal = os.GetAs<float>("AlignmentQValue",nan)
-                                        alignmentQVal < a || isNan alignmentQVal
+                                        alignmentQVal < a || FSharp.Stats.Ops.isNan alignmentQVal
                                     )
                                 | None -> frame
                         |> Frame.sliceCols

@@ -5,7 +5,6 @@ open Microsoft
 open Microsoft.ML
 open Microsoft.ML.Data
 open ProteomIQon.DTW'
-open ProteomIQon.FDRControl'
 open FSharpAux
 open Plotly.NET
 open FSharpAux.IO
@@ -159,7 +158,7 @@ module AlignmentBasedQuantStatistics =
     
         alignedQuant, quant |> Frame.mapColKeys (fun ck -> ck |> String.replace"quant_" ""), pepForLearningToTakeMap
 
-    let createTrainingsData fullQuant align alignQuant (alignScoreParams: Domain.AlignmentBasedQuantStatisticsParams) =
+    let createTrainingsData fullQuant align alignQuant (returnTestSet: bool) (alignScoreParams: Domain.AlignmentBasedQuantStatisticsParams) =
         let quant =
             Csv.CsvReader<Dto.QuantificationResult>(SchemaMode=Csv.Fill).ReadFile(fullQuant,'\t',false,1)
             |> Array.ofSeq
@@ -234,6 +233,8 @@ module AlignmentBasedQuantStatistics =
         let overlapSet =
             Frame.join JoinKind.Inner overlap alignedQuant
 
+        let traininSetDict = new System.Collections.Generic.Dictionary<string*bool*int*int*int,PeptideForLearning>()
+
         let trainingSet = 
             overlapSet
             |> Frame.mapRows (fun rk s ->
@@ -241,48 +242,73 @@ module AlignmentBasedQuantStatistics =
                     let originalQuant = 
                         quantMap.QuantHeavy
                         |> Map.tryFind rk
-                    match originalQuant with
-                    | Some o ->
+                    let originalQuantMz = 
+                        quantMap.QuantMzHeavy
+                        |> Map.tryFind rk
+                    match originalQuant, originalQuantMz with
+                    | Some oQ, Some oMZ ->
                         if 
-                            abs (quantMap.QuantMzHeavy.[rk] - s.GetAs<float>("QuantMz_Heavy")) < (quantMap.QuantMzHeavy.[rk] * (alignScoreParams.PositiveQuantMzCutoff)) &&
-                            abs (quantMap.QuantHeavy.[rk] - s.GetAs<float>("Quant_Heavy")) < (quantMap.QuantHeavy.[rk] * (alignScoreParams.PositiveQuantCutoff)) then
-                            Some (toPeptideForLearning true s)
+                            abs (oMZ - s.GetAs<float>("QuantMz_Heavy")) < (oMZ * (alignScoreParams.PositiveQuantMzCutoff)) &&
+                            abs (oQ - s.GetAs<float>("Quant_Heavy")) < (oQ * (alignScoreParams.PositiveQuantCutoff)) then
+                            let peptideForLearning = toPeptideForLearning true s
+                            if returnTestSet then traininSetDict.Add(rk,peptideForLearning)
+                            Some peptideForLearning
                         elif
-                            abs (quantMap.QuantMzHeavy.[rk] - s.GetAs<float>("QuantMz_Heavy")) > (quantMap.QuantMzHeavy.[rk] * (1. - alignScoreParams.NegativeQuantMzCutoff)) ||
-                            abs (quantMap.QuantHeavy.[rk] - s.GetAs<float>("Quant_Heavy")) > (quantMap.QuantHeavy.[rk] * (1. - alignScoreParams.NegativeQuantCutoff)) then
-                            Some (toPeptideForLearning false s)
+                            abs (oMZ - s.GetAs<float>("QuantMz_Heavy")) > (oMZ * (1. - alignScoreParams.NegativeQuantMzCutoff)) ||
+                            abs (oQ - s.GetAs<float>("Quant_Heavy")) > (oQ * (1. - alignScoreParams.NegativeQuantCutoff)) then
+                            let peptideForLearning = toPeptideForLearning false s
+                            if returnTestSet then traininSetDict.Add(rk,peptideForLearning)
+                            Some peptideForLearning
                         else
-                            Some (toPeptideForLearning false s)
-                    | None -> None
+                            let peptideForLearning = toPeptideForLearning false s
+                            if returnTestSet then traininSetDict.Add(rk,peptideForLearning)
+                            Some peptideForLearning
+                    | _,None -> None
+                    | None,_ -> None
                 else
                     let originalQuant = 
                         quantMap.QuantLight
                         |> Map.tryFind rk
-                    match originalQuant with
-                    | Some o ->
+                    let originalQuantMz = 
+                        quantMap.QuantMzLight
+                        |> Map.tryFind rk
+                    match originalQuant,originalQuantMz with
+                    | Some oQ, Some oMZ ->
                         if
-                            abs (quantMap.QuantMzLight.[rk] - s.GetAs<float>("QuantMz_Light")) < (quantMap.QuantMzLight.[rk] * (alignScoreParams.PositiveQuantMzCutoff)) &&
-                            abs (quantMap.QuantLight.[rk] - s.GetAs<float>("Quant_Light")) < (quantMap.QuantLight.[rk] * (alignScoreParams.PositiveQuantCutoff)) then
-                            Some (toPeptideForLearning true s)
+                            abs (oMZ - s.GetAs<float>("QuantMz_Light")) < (oMZ * (alignScoreParams.PositiveQuantMzCutoff)) &&
+                            abs (oQ - s.GetAs<float>("Quant_Light")) < (oQ * (alignScoreParams.PositiveQuantCutoff)) then
+                            let peptideForLearning = toPeptideForLearning true s
+                            if returnTestSet then traininSetDict.Add(rk,peptideForLearning)
+                            Some peptideForLearning
                         elif
-                            abs (quantMap.QuantMzLight.[rk] - s.GetAs<float>("QuantMz_Light")) > (quantMap.QuantMzLight.[rk] * (1. - alignScoreParams.NegativeQuantMzCutoff)) ||
-                            abs (quantMap.QuantLight.[rk] - s.GetAs<float>("Quant_Light")) > (quantMap.QuantLight.[rk] * (1. - alignScoreParams.NegativeQuantCutoff)) then
-                            Some (toPeptideForLearning false s)
+                            abs (oMZ - s.GetAs<float>("QuantMz_Light")) > (oMZ * (1. - alignScoreParams.NegativeQuantMzCutoff)) ||
+                            abs (oQ - s.GetAs<float>("Quant_Light")) > (oQ * (1. - alignScoreParams.NegativeQuantCutoff)) then
+                            let peptideForLearning = toPeptideForLearning false s
+                            if returnTestSet then traininSetDict.Add(rk,peptideForLearning)
+                            Some peptideForLearning
                         else
-                            Some (toPeptideForLearning false s)
-                    | None -> None
+                            let peptideForLearning = toPeptideForLearning false s
+                            if returnTestSet then traininSetDict.Add(rk,peptideForLearning)
+                            Some peptideForLearning
+                    | _,None -> None
+                    | None,_ -> None
             )
             |> Series.values
             |> Seq.choose id
     
-        trainingSet
+        trainingSet,traininSetDict
         
-    let assignScoreAndQValue ((quantFile,alignFile,alignQuantFile): (string*string*string)) (matchedFilesLearning: (string*string*string)[]) diagnosticCharts (alignScoreParams: Domain.AlignmentBasedQuantStatisticsParams) outputDirectory =
+    let assignScoreAndQValue ((quantFile,alignFile,alignQuantFile): (string*string*string)) (matchedFilesLearning: (string*string*string)[]) diagnosticCharts (returnTestSet: bool) (alignScoreParams: Domain.AlignmentBasedQuantStatisticsParams) outputDirectory =
 
         let logger = Logging.createLogger (System.IO.Path.GetFileNameWithoutExtension quantFile)
-        let trainingsData =
+
+        let chartDirectory = System.IO.Path.Combine(outputDirectory, System.IO.Path.GetFileNameWithoutExtension quantFile)
+        System.IO.Directory.CreateDirectory(chartDirectory) |> ignore
+
+        let trainingsData, trainingPepInfo =
             matchedFilesLearning
-            |> Array.map (fun (quantFilePath,alignfilePath,alignQuantFilePath) -> createTrainingsData quantFilePath alignfilePath alignQuantFilePath alignScoreParams)
+            |> Array.map (fun (quantFilePath,alignfilePath,alignQuantFilePath) -> createTrainingsData quantFilePath alignfilePath alignQuantFilePath returnTestSet alignScoreParams)
+            |> Array.unzip
 
         let alignedQuants, quants, pepForLearningToTakeMap =
             createDataToScore quantFile alignFile alignQuantFile
@@ -336,7 +362,7 @@ module AlignmentBasedQuantStatistics =
             |> predF.Predict
 
         let qValueStorey =
-            calculateQValueStorey trainingsData' (fun x -> x.Label |> not) (fun x -> float (predict x).Score) (fun x -> float (predict x).Score)
+            BioFSharp.Mz.FDRControl.calculateQValueStorey trainingsData' (fun x -> x.Label |> not) (fun x -> float (predict x).Score) (fun x -> float (predict x).Score)
         
         if diagnosticCharts then
             let setPositive,setNegative =
@@ -347,46 +373,99 @@ module AlignmentBasedQuantStatistics =
                 |> Array.map predict
                 |> Array.map (fun x -> x.Probability)
                 |> Chart.Histogram
-                |> Chart.withTraceName "Positive"
+                |> Chart.withTraceInfo "Positive"
     
             let negative =
                 setNegative
                 |> Array.map predict
                 |> Array.map (fun x -> x.Probability)
                 |> Chart.Histogram
-                |> Chart.withTraceName "Negative"
+                |> Chart.withTraceInfo "Negative"
 
             [
                 positive
                 negative
             ]
-            |> Chart.Combine
-            |> Chart.withX_AxisStyle("Probability")
-            |> Chart.withY_AxisStyle("Count")
-            |> Chart.SaveHtmlAs (System.IO.Path.Combine(outputDirectory,"ProbabilityHistogram"))
+            |> Chart.combine
+            |> Chart.withXAxisStyle("Probability")
+            |> Chart.withYAxisStyle("Count")
+            |> Chart.saveHtml (System.IO.Path.Combine(chartDirectory,"ProbabilityHistogram"))
 
             let positiveQVal =
                 setPositive
                 |> Array.map predict
                 |> Array.map (fun x -> qValueStorey(float x.Score))
                 |> Chart.Histogram
-                |> Chart.withTraceName "Positive"
+                |> Chart.withTraceInfo "Positive"
                 
             let negativeQVal =
                 setNegative
                 |> Array.map predict
                 |> Array.map (fun x -> qValueStorey(float x.Score))
                 |> Chart.Histogram
-                |> Chart.withTraceName "Negative"
+                |> Chart.withTraceInfo "Negative"
                 
             [
                 positiveQVal
                 negativeQVal
             ]
-            |> Chart.Combine
-            |> Chart.withX_AxisStyle("Q-Value")
-            |> Chart.withY_AxisStyle("Count")
-            |> Chart.SaveHtmlAs (System.IO.Path.Combine(outputDirectory,"QValueDistribution"))
+            |> Chart.combine
+            |> Chart.withXAxisStyle("Q-Value")
+            |> Chart.withYAxisStyle("Count")
+            |> Chart.saveHtml (System.IO.Path.Combine(chartDirectory,"QValueDistribution"))
+
+        if returnTestSet then
+            let index =
+                let originalFileName = quantFile |> System.IO.Path.GetFileNameWithoutExtension
+                matchedFilesLearning
+                |> Array.tryFindIndex (fun (q,_,_) -> (System.IO.Path.GetFileNameWithoutExtension q) = originalFileName)
+            match index with
+            | Some i -> 
+                alignedQuants
+                |> Frame.filterRows (fun rk s ->
+                    trainingPepInfo.[i].ContainsKey rk
+                )
+                |> fun frame ->
+                    let scoreSeries =
+                        frame
+                        |> Frame.mapRows (fun rk s ->
+                            let prediction =
+                                (trainingPepInfo.[i].[rk])
+                                |> predict
+                            float prediction.Score
+                        )
+                    let qValSeries =
+                        scoreSeries
+                        |> Series.map (fun rk v ->
+                            let qValue =
+                                v
+                                |> float
+                                |> qValueStorey
+                            qValue
+                        )
+                    let isPositiveSeries =
+                        scoreSeries
+                        |> Series.map (fun rk v ->
+                            trainingPepInfo.[i].[rk].Label
+                        )
+                    frame
+                    |> Frame.dropCol "AlignmentScore"
+                    |> Frame.dropCol "AlignmentQValue"
+                    |> Frame.addCol "AlignmentScore" scoreSeries
+                    |> Frame.addCol "AlignmentQValue" qValSeries
+                    |> Frame.addCol "WasPositiveSet" isPositiveSeries
+                |> Frame.mapValues (fun (v: obj) -> 
+                    if v :? System.Double [] then
+                        v :?> System.Double []
+                        |> Array.map string
+                        |> String.concat ";"
+                    else
+                        string v
+                )
+                |> fun frame ->
+                    frame.SaveCsv(System.IO.Path.Combine(outputDirectory, (quantFile |> System.IO.Path.GetFileName) + "testset"), includeRowKeys = false, separator = '\t')
+            | None -> ()
+            
 
         alignedQuants
         |> Frame.filterRows (fun rk s ->

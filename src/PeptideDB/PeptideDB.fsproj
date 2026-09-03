@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFrameworks>net5.0</TargetFrameworks>
+    <TargetFrameworks>net10.0</TargetFrameworks>
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>proteomiqon-peptidedb</ToolCommandName>
     <RootNamespace>PeptideDB</RootNamespace>
@@ -34,7 +34,7 @@
   <ItemGroup>
     <ProjectReference Include="..\ProteomIQon\ProteomIQon.fsproj" />
     <PackageReference Include="Argu" Version="6.1.1" />
-    <PackageReference Include="NLog" Version="4.7.8" />
-    <PackageReference Include="BioFSharp.Mz" Version="0.1.5-beta" />
+    <PackageReference Include="NLog" Version="4.7.11" />
+    <PackageReference Include="BioFSharp.Mz" Version="0.2.1" />
   </ItemGroup>
 </Project>

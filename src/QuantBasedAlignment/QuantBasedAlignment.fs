@@ -449,6 +449,7 @@ module QuantBasedAlignment =
             IsotopicPatternMz_TargetFile                    : float []         
             // [<ColumnName("IsotopicPatternIntensity_Observed_TargetFile")>]
             IsotopicPatternIntensity_Observed_TargetFile    : float []
+            IonMobility                  : float32
         }
 
     /////
@@ -487,6 +488,7 @@ module QuantBasedAlignment =
                 IsotopicPatternIntensity_Observed_SourceFile    = getIsotopicPatternIntensity_Observed sourcePep
                 IsotopicPatternMz_TargetFile                    = getIsotopicPatternMz tP  
                 IsotopicPatternIntensity_Observed_TargetFile    = getIsotopicPatternIntensity_Observed tP
+                IonMobility                                     = sourcePep.IonMobility |> float32
             }
         | None -> 
             {
@@ -518,6 +520,7 @@ module QuantBasedAlignment =
                 IsotopicPatternIntensity_Observed_SourceFile    = getIsotopicPatternIntensity_Observed sourcePep
                 IsotopicPatternMz_TargetFile                    = [||]
                 IsotopicPatternIntensity_Observed_TargetFile    = [||]
+                IonMobility                                     = sourcePep.IonMobility |> float32
             }
 
     ///
@@ -608,6 +611,7 @@ module QuantBasedAlignment =
             IntensityTrace_SourceFile                       = getTargetIntensityTrace quantifiedPeptide
             IsotopicPatternMz_SourceFile                    = getIsotopicPatternMz quantifiedPeptide       
             IsotopicPatternIntensity_Observed_SourceFile    = getIsotopicPatternIntensity_Observed quantifiedPeptide       
+            IonMobility                                     = quantifiedPeptide.IonMobility
         }   
 
 
@@ -636,6 +640,7 @@ module QuantBasedAlignment =
         Y_RtTrace                           : float [][]
         Y_IntensityTrace                    : float [][]
         DtwDistanceBefore                   : float []
+        IonMobility                         : float []
         }
 
 
@@ -647,43 +652,43 @@ module QuantBasedAlignment =
         let color = getRandomColor rnd |> FSharpAux.Colors.toWebColor        
         let xVsY = 
             [
-            Chart.Point(metrics.X_Test,metrics.Y_Test) |> Chart.withMarkerStyle(Color = color)
+            Chart.Point(metrics.X_Test,metrics.Y_Test) |> Chart.withMarkerStyle(Color = Color.fromHex color)
             Chart.Line(Array.zip metrics.X_Test metrics.YHat_Test |> Array.sortBy fst)
             ]
-            |> Chart.Combine
-            |> Chart.withX_AxisStyle("source ScanTimes (X_Test)")
-            |> Chart.withY_AxisStyle("measured (dotted) and predicted (Line) target ScanTimes (YHat_Test)")
-            |> Chart.withTraceName traceName
+            |> Chart.combine
+            |> Chart.withXAxisStyle("source ScanTimes (X_Test)")
+            |> Chart.withYAxisStyle("measured (dotted) and predicted (Line) target ScanTimes (YHat_Test)")
+            |> Chart.withTraceInfo traceName
         let yVsYHat = 
             Chart.Point(metrics.Y_Test,metrics.YHat_Test)
-            |> Chart.withMarkerStyle(Color = color)
-            |> Chart.withX_AxisStyle("target ScanTimes (Y_Test)")
-            |> Chart.withY_AxisStyle("predicted target ScanTimes (YHat_Test)")
-            |> Chart.withTraceName traceName
+            |> Chart.withMarkerStyle(Color = Color.fromHex color)
+            |> Chart.withXAxisStyle("target ScanTimes (Y_Test)")
+            |> Chart.withYAxisStyle("predicted target ScanTimes (YHat_Test)")
+            |> Chart.withTraceInfo traceName
         let xVsDifferenceYandYHat = 
             Chart.Point(metrics.X_Test, Array.map2 (fun y yHat -> y - yHat) metrics.Y_Test metrics.YHat_Test)
-            |> Chart.withMarkerStyle(Color = color)
-            |> Chart.withX_AxisStyle("Source ScanTimes (X_Test)")
-            |> Chart.withY_AxisStyle("target ScanTimes (Y_Test) - predicted target ScanTimes (YHat_Test)")
-            |> Chart.withTraceName traceName
+            |> Chart.withMarkerStyle(Color = Color.fromHex color)
+            |> Chart.withXAxisStyle("Source ScanTimes (X_Test)")
+            |> Chart.withYAxisStyle("target ScanTimes (Y_Test) - predicted target ScanTimes (YHat_Test)")
+            |> Chart.withTraceInfo traceName
         let xVsDifferenceYandYHatNormed = 
             Chart.Point(metrics.X_Test, Array.map3 (fun y yHat stabwMedian -> (y - yHat) / stabwMedian) metrics.Y_Test metrics.YHat_Test metrics.X_Stabw)
-            |> Chart.withMarkerStyle(Color = color)
-            |> Chart.withX_AxisStyle("Source ScanTimes (X_Test)")
-            |> Chart.withY_AxisStyle("normed target ScanTimes (Y_Test) - predicted target ScanTimes (YHat_Test)")
-            |> Chart.withTraceName traceName
+            |> Chart.withMarkerStyle(Color = Color.fromHex color)
+            |> Chart.withXAxisStyle("Source ScanTimes (X_Test)")
+            |> Chart.withYAxisStyle("normed target ScanTimes (Y_Test) - predicted target ScanTimes (YHat_Test)")
+            |> Chart.withTraceInfo traceName
         let xVsDifferenceYandYHat_refined = 
             Chart.Point(metrics.X_Test, Array.map2 (fun y yHat -> y - yHat) metrics.Y_Test metrics.YHat_Refined_Test)
-            |> Chart.withMarkerStyle(Color = color)
-            |> Chart.withX_AxisStyle("Source ScanTimes (X_Test)")
-            |> Chart.withY_AxisStyle("target ScanTimes (Y_Test) - refined target ScanTimes (YHat_Test)")
-            |> Chart.withTraceName traceName
+            |> Chart.withMarkerStyle(Color = Color.fromHex color)
+            |> Chart.withXAxisStyle("Source ScanTimes (X_Test)")
+            |> Chart.withYAxisStyle("target ScanTimes (Y_Test) - refined target ScanTimes (YHat_Test)")
+            |> Chart.withTraceInfo traceName
         let xVsDifferenceYandYHatNormed_refined = 
             Chart.Point(metrics.X_Test, Array.map3 (fun y yHat stabwMedian -> (y - yHat) / stabwMedian) metrics.Y_Test metrics.YHat_Refined_Test metrics.X_Stabw)
-            |> Chart.withMarkerStyle(Color = color)
-            |> Chart.withX_AxisStyle("Source ScanTimes (X_Test)")
-            |> Chart.withY_AxisStyle("normed target ScanTimes (Y_Test) - refined target ScanTimes (YHat_Test)")
-            |> Chart.withTraceName traceName
+            |> Chart.withMarkerStyle(Color = Color.fromHex color)
+            |> Chart.withXAxisStyle("Source ScanTimes (X_Test)")
+            |> Chart.withYAxisStyle("normed target ScanTimes (Y_Test) - refined target ScanTimes (YHat_Test)")
+            |> Chart.withTraceInfo traceName
         let makeBar yHat_Test = 
             let metric =  Array.map3 (fun y yHat stabwMedian -> (y - yHat) / stabwMedian) metrics.Y_Test yHat_Test metrics.X_Stabw
             let UpToOne   = metric |> Array.filter (fun x -> abs x >= 0. && abs x < 1.)   |> Array.length |> float |> fun x -> x / float metric.Length
@@ -695,17 +700,17 @@ module QuantBasedAlignment =
             let UpToSeven = metric |> Array.filter (fun x -> abs x >= 6. && abs x < 7.)   |> Array.length |> float |> fun x -> x / float metric.Length
             let OutOfSeven  = metric |> Array.filter (fun x -> abs x > 7.)                |> Array.length |> float |> fun x -> x / float metric.Length           
             [
-                Chart.StackedColumn(values=[UpToOne],keys=[traceName],Name="UpToOne")       |> Chart.withMarkerStyle(Color=FSharpAux.Colors.toWebColor FSharpAux.Colors.Table.StatisticalGraphics24.Green1)
-                Chart.StackedColumn(values=[UpToTwo],keys=[traceName],Name="UpToTwo")       |> Chart.withMarkerStyle(Color=FSharpAux.Colors.toWebColor FSharpAux.Colors.Table.StatisticalGraphics24.Green2)
-                Chart.StackedColumn(values=[UpToThree],keys=[traceName],Name="UpToThree")   |> Chart.withMarkerStyle(Color=FSharpAux.Colors.toWebColor FSharpAux.Colors.Table.StatisticalGraphics24.Green3)
-                Chart.StackedColumn(values=[UpToFour],keys=[traceName],Name="UpToFour")     |> Chart.withMarkerStyle(Color=FSharpAux.Colors.toWebColor FSharpAux.Colors.Table.StatisticalGraphics24.Orange1)
-                Chart.StackedColumn(values=[UpToFive],keys=[traceName],Name="UpToFive")     |> Chart.withMarkerStyle(Color=FSharpAux.Colors.toWebColor FSharpAux.Colors.Table.StatisticalGraphics24.Orange2)
-                Chart.StackedColumn(values=[UpToSix],keys=[traceName],Name="UpToSix")       |> Chart.withMarkerStyle(Color=FSharpAux.Colors.toWebColor FSharpAux.Colors.Table.StatisticalGraphics24.Orange3)
-                Chart.StackedColumn(values=[UpToSeven],keys=[traceName],Name="UpToSeven")   |> Chart.withMarkerStyle(Color=FSharpAux.Colors.toWebColor FSharpAux.Colors.Table.StatisticalGraphics24.Red1)
-                Chart.StackedColumn(values=[OutOfSeven],keys=[traceName],Name="OutOfSeven") |> Chart.withMarkerStyle(Color=FSharpAux.Colors.toWebColor FSharpAux.Colors.Table.StatisticalGraphics24.Red2)
+                Chart.StackedColumn(values=[UpToOne],Keys=[traceName],Name="UpToOne")       |> Chart.withMarkerStyle(Color=Color.fromHex (FSharpAux.Colors.toWebColor FSharpAux.Colors.Table.StatisticalGraphics24.Green1))
+                Chart.StackedColumn(values=[UpToTwo],Keys=[traceName],Name="UpToTwo")       |> Chart.withMarkerStyle(Color=Color.fromHex (FSharpAux.Colors.toWebColor FSharpAux.Colors.Table.StatisticalGraphics24.Green2))
+                Chart.StackedColumn(values=[UpToThree],Keys=[traceName],Name="UpToThree")   |> Chart.withMarkerStyle(Color=Color.fromHex (FSharpAux.Colors.toWebColor FSharpAux.Colors.Table.StatisticalGraphics24.Green3))
+                Chart.StackedColumn(values=[UpToFour],Keys=[traceName],Name="UpToFour")     |> Chart.withMarkerStyle(Color=Color.fromHex (FSharpAux.Colors.toWebColor FSharpAux.Colors.Table.StatisticalGraphics24.Orange1))
+                Chart.StackedColumn(values=[UpToFive],Keys=[traceName],Name="UpToFive")     |> Chart.withMarkerStyle(Color=Color.fromHex (FSharpAux.Colors.toWebColor FSharpAux.Colors.Table.StatisticalGraphics24.Orange2))
+                Chart.StackedColumn(values=[UpToSix],Keys=[traceName],Name="UpToSix")       |> Chart.withMarkerStyle(Color=Color.fromHex (FSharpAux.Colors.toWebColor FSharpAux.Colors.Table.StatisticalGraphics24.Orange3))
+                Chart.StackedColumn(values=[UpToSeven],Keys=[traceName],Name="UpToSeven")   |> Chart.withMarkerStyle(Color=Color.fromHex (FSharpAux.Colors.toWebColor FSharpAux.Colors.Table.StatisticalGraphics24.Red1))
+                Chart.StackedColumn(values=[OutOfSeven],Keys=[traceName],Name="OutOfSeven") |> Chart.withMarkerStyle(Color=Color.fromHex (FSharpAux.Colors.toWebColor FSharpAux.Colors.Table.StatisticalGraphics24.Red2))
             ]
-            |> Chart.Combine
-            |> Chart.withY_AxisStyle("")
+            |> Chart.combine
+            |> Chart.withYAxisStyle("")
         let bar = makeBar metrics.YHat_Test
         let barRef = makeBar metrics.YHat_Refined_Test
         [
@@ -718,8 +723,8 @@ module QuantBasedAlignment =
         bar
         barRef
         ]
-        |> Chart.Stack 2
-        |> Chart.withSize(2000.,2500.)
+        |> Chart.Grid(4, 2)
+        |> Chart.withSize(2000,2500)
 
 
     ///
@@ -753,6 +758,7 @@ module QuantBasedAlignment =
                         Y_RtTrace                            = metrics.Y_RtTrace.[i]
                         Y_IntensityTrace                     = metrics.Y_IntensityTrace.[i]   
                         DtwDistanceBefore                    = metrics.DtwDistanceBefore.[i]
+                        IonMobility                          = metrics.IonMobility.[i]
                     }
             |]
         if System.IO.File.Exists outFilePath then 
@@ -825,16 +831,16 @@ module QuantBasedAlignment =
         //                 x.SourceScanTime, z (float x.SourceScanTime)
         //                 )
         //         |> Chart.Line
-        //         |> Chart.withTraceName (sprintf "lambda %f" x)
+        //         |> Chart.withTraceInfo (sprintf "lambda %f" x)
         //         )
-        //     |> Chart.Combine
+        //     |> Chart.combine
         // ]
-        // |> Chart.Combine
-        // // |> Chart.Show
+        // |> Chart.combine
+        // // |> Chart.show
         // models
         // |> Array.map (fun (x,y,z) -> x,y)
         // |> Chart.Point
-        // // |> Chart.Show
+        // // |> Chart.show
         let metrics =             
             let rSquared = rSquared
             let yHat          = testComp |> Seq.map (fun x -> model (float x.SourceScanTime))|> Array.ofSeq
@@ -843,6 +849,7 @@ module QuantBasedAlignment =
             let charge        = testComp |> Seq.map (fun x -> x.Charge)         |> Array.ofSeq
             let pepSequenceID = testComp |> Seq.map (fun x -> x.PepSequenceID)  |> Array.ofSeq
             let modSequenceID = testComp |> Seq.map (fun x -> x.ModSequenceID)  |> Array.ofSeq
+            let ionMobility   = testComp |> Seq.map (fun x -> float x.IonMobility) |> Array.ofSeq
             let i             =  testComp |> Seq.map (fun x -> float x.SourceIntensity)  |> Array.ofSeq
             let std           =  testComp |> Seq.map (fun x -> float x.SourceStabw)      |> Array.ofSeq
             let x             =  testComp |> Seq.map (fun x -> float x.SourceScanTime)   |> Array.ofSeq
@@ -898,6 +905,7 @@ module QuantBasedAlignment =
                 Y_RtTrace                           = xTarget
                 Y_IntensityTrace                    = yTarget
                 DtwDistanceBefore                   = dtwDistanceBefore
+                IonMobility                         = ionMobility
             }
 
         // Spline
@@ -915,7 +923,7 @@ module QuantBasedAlignment =
 
     type Alignment = {
         Metrics      : ModelMetrics
-        MetricsChart : GenericChart.GenericChart
+        MetricsChart : GenericChart
         AlignFunc    : (QuantificationResult->AlignmentResult)
         SourceFile   : AlignmentFile
         }
@@ -982,9 +990,9 @@ module QuantBasedAlignment =
             if diagCharts then 
                 sortedByQuality
                 |> Array.map (fun x -> x.MetricsChart)
-                |> Chart.Combine
+                |> Chart.combine
                 |> Chart.withTitle(targetAlignmentFile.FileName)
-                |> Chart.SaveHtmlAs(getPlotFilePathFilePath "Metrics" targetAlignmentFile.FileName)                    
+                |> Chart.saveHtml(getPlotFilePathFilePath "Metrics" targetAlignmentFile.FileName)                    
             sortedByQuality 
         logger.Trace "Performing Alignments: finished"
         logger.Trace "Transfer identifications"

@@ -1,3 +1,16 @@
+#### 0.0.12 - Wednesday, September 2, 2026
+* Fall back to a median mz correction when the smoothing spline cannot be fitted on sparse data
+* Write a header only output file instead of failing when no peptide ion could be quantified
+* Update to .NET 10
+* Update System.Data.SQLite.Core to 1.0.119 for the memory access fix
+* Update BioFSharp to 2.0.0, BioFSharp.Mz to 0.2.1, FSharpAux to 2.1.0, FSharp.Stats to 0.6.0 and Plotly.NET to 6.0.0-preview.2
+
+#### 0.0.11 - Sunday, March 23, 2025
+* Add Ion Mobility to output type
+
+#### 0.0.10 - Monday, March 10, 2025
+* Update to .NET 8
+
 #### 0.0.9 - Monday, February 13, 2023
 * Add Alignment Score fields to quantification results
 

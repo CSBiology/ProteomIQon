@@ -16,7 +16,6 @@
 [Dd]ebug/
 [Rr]elease/
 x64/
-build/
 [Bb]in/
 [Oo]bj/
 
@@ -207,3 +206,11 @@ docs/tools/YourPathHere
 
 .ionide
 /src/AlignmentBasedQuantification/Properties/launchSettings.json
+
+# e2e pipeline test run artifacts (tests/data/**/out reference files stay tracked)
+tests/data/**/*_log.txt
+tests/data/**/minimal_plots/
+tests/data/**/*_Metrics.html
+tests/data/QuantBasedAlignment/out/trunc?.align
+tests/data/QuantBasedAlignment/out/trunc?.alignmetric
+tests/data/PSMBasedQuantification/out/minimal.quant

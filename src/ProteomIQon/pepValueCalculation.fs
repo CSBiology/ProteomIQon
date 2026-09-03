@@ -20,7 +20,7 @@ namespace ProteomIQon
 open FSharp.Stats
 open FSharpAux
 open System
-open FDRControl'
+open BioFSharp.Mz.FDRControl
 
 module PepValueCalculation =
 
@@ -42,17 +42,21 @@ module PepValueCalculation =
         let mutable transf: float -> float = fun x -> x
 
         let transform deltaLow deltaHigh doLogit doLog (xx: float) =
-            if not doLogit && not doLog then
-                xx
-            elif deltaLow > 0. || deltaHigh > 0. then
-                if doLogit then
-                    log ((xx * (1. - deltaHigh - deltaLow)) + deltaLow)
+                if not doLogit && not doLog then
+                    xx
+                elif deltaLow > 0. || deltaHigh > 0. then
+                    if doLogit then
+                        let xxNew = ((xx * (1. - deltaHigh - deltaLow)) + deltaLow)
+                        log (xxNew / (1. - xxNew))
+                    else
+                        let xxNew = (xx + deltaLow)
+                        log (xxNew)
+                elif doLogit then
+                    log (xx / (1. - xx))
+                elif doLog then
+                    log (xx)
                 else
-                    log (xx + deltaLow)
-            elif doLogit then
-                log (xx / (1. - xx))
-            else
-                failwith "unexpected transform input"
+                    failwith "unexpected transform input"
 
         let setData (xx: Vector<float>) =
             x <- Vector.zeroCreate xx.Length
@@ -386,5 +390,5 @@ module PepValueCalculation =
                 |> Array.ofList
         |> fun (x, y) ->
             let coeff = FSharp.Stats.Interpolation.LinearSpline.initInterpolate x y
-            let fitLinSp = Interpolation.LinearSpline.interpolate coeff
+            let fitLinSp = Interpolation.LinearSpline.predict coeff
             fitLinSp
