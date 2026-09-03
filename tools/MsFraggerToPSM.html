@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <title>MsFraggerToPSM</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="author" content="David Zimmer, Caroline Ott, Heinrich Lukas Weil, Timo Muehlhaus">
+    <link rel="shortcut icon" type="image/x-icon" href="https://csbiology.github.io/ProteomIQon/img/favicon.ico">
+    <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <!-- <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML"></script> -->
+
+    <link type="text/css" rel="stylesheet" href="https://csbiology.github.io/ProteomIQon/content/fsdocs-legacy.css" />
+    <link type="text/css" rel="stylesheet" href="https://csbiology.github.io/ProteomIQon/content/fsdocs-custom.css" />
+    <script type="text/javascript" src="https://csbiology.github.io/ProteomIQon/content/fsdocs-tips.js"></script>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@creativebulma/bulma-collapsible@1.0.4/dist/js/bulma-collapsible.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@creativebulma/bulma-collapsible@1.0.4/dist/css/bulma-collapsible.min.css">
+    <!-- HTML5 shim, for IE6-8 support of HTML5 elements -->
+    <!--[if lt IE 9]>
+      <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <!-- BEGIN SEARCH BOX: this adds support for the search box -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/JavaScript-autoComplete/1.0.4/auto-complete.css" />
+    <!-- END SEARCH BOX: this adds support for the search box -->
+    
+</head> 
+
+<body>
+    <div class="columns is-fullheight m-0">
+        <div id="fsdocs-menu" class="column is-2 is-paddingless">
+            <aside class="menu">
+                <div class="container is-paddingless is-marginless has-background-dark">
+                    <a href="https://csbiology.github.io/ProteomIQon/">
+                        <figure class="image is-128x128 container">
+                            <img src="https://csbiology.github.io/ProteomIQon/img/logo.png">
+                        </figure>
+                    </a>
+                    <h2 class="title has-text-centered has-text-white pb-4">ProteomIQon</h2>
+                </div>
+                <div class="content">
+                    <!-- BEGIN SEARCH BOX: this adds support for the search box -->
+                    <div id="header">
+                        <div class="field">
+                            <div class="control has-icons-left has-icons-right searchbox" id="fsdocs-searchbox">
+                                <input data-search-input="" id="search-by" type="search" placeholder="Search..." class="input"/>
+                                <span class="icon is-small is-left">
+                                    <i class="fas fa-search"></i>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- END SEARCH BOX: this adds support for the search box -->
+                    <ul class="navbar-nav">
+                        <li class="nav-header">General</li>
+                        <li class="nav-item"><a href="https://csbiology.github.io/ProteomIQon/">Home</a></li>
+                        <li class="nav-header active">
+  Tools
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/MzMLToMzLite.html">
+    MzMLToMzLite
+  </a>
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/MzMLToMzLiteIonMobility.html">
+    MzMLToMzLiteIonMobility
+  </a>
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/PeptideDB.html">
+    PeptideDB
+  </a>
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/PeptideSpectrumMatching.html">
+    PeptideSpectrumMatching
+  </a>
+</li>             
+<li class="nav-item active">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/MsFraggerToPSM.html">
+    MsFraggerToPSM
+  </a>
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/PSMStatistics.html">
+    PSMStatistics
+  </a>
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/PSMBasedQuantification.html">
+    PSMBasedQuantification
+  </a>
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/PSMBasedQuantificationTIMs.html">
+    PSMBasedQuantificationTIMs
+  </a>
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/ProteinInference.html">
+    ProteinInference
+  </a>
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/QuantBasedAlignment.html">
+    QuantBasedAlignment
+  </a>
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/AlignmentBasedQuantification.html">
+    AlignmentBasedQuantification
+  </a>
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/AlignmentBasedQuantStatistics.html">
+    AlignmentBasedQuantStatistics
+  </a>
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/AddDeducedPeptides.html">
+    AddDeducedPeptides
+  </a>
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/JoinQuantPepIonsWithProteins.html">
+    JoinQuantPepIonsWithProteins
+  </a>
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/LabelFreeProteinQuantification.html">
+    LabelFreeProteinQuantification
+  </a>
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/LabeledProteinQuantification.html">
+    LabeledProteinQuantification
+  </a>
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/RatioLFQ.html">
+    RatioLFQ
+  </a>
+</li>             
+<li class="nav-header ">
+  Developer Notes
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/develop/How_to_create_a_tool.html">
+    How to create your own tool
+  </a>
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/develop/How_to_document_your_work.html">
+    How to document your work
+  </a>
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/develop/How_to_build_binaries_or_packages.html">
+    How to build binaries or packages
+  </a>
+</li>
+                        <li class="nav-header">Powered By</li>
+                        <li class="nav-item"><a href="https://github.com/CSBiology/MzIO">MzIO</a></li>
+                        <li class="nav-item"><a href="https://github.com/CSBiology/BioFSharp">BioFSharp</a></li>
+                        <li class="nav-item"><a href="https://github.com/CSBiology/BioFSharp.Mz">BioFSharp.Mz</a></li>
+                        <li class="nav-item"><a href="https://github.com/fslaborg/FSharp.Stats">FSharp.Stats</a></li>
+                        <li class="nav-item"><a href="https://github.com/fslaborg/Deedle">Deedle</a></li>
+                        <li class="nav-item"><a href="https://fsharp.org">FSharp</a></li>
+                    </ul>
+                </div>
+            </aside>
+        </div>
+        <div class="column is-10 is-paddingless">
+            <div class="section pt-4">
+                <div class="container" id="fsdocs-content">
+                    
+<p><a href="https://mybinder.org/v2/gh/csbiology/ProteomIQon/gh-pages?filepath=tools/MsFraggerToPSM.ipynb"><img src="https://csbiology.github.io/ProteomIQon/img/badge-binder.svg" alt="Binder" /></a>&emsp;
+<a href="https://csbiology.github.io/ProteomIQon/tools/MsFraggerToPSM.fsx"><img src="https://csbiology.github.io/ProteomIQon/img/badge-script.svg" alt="Script" /></a>&emsp;
+<a href="https://csbiology.github.io/ProteomIQon/tools/MsFraggerToPSM.ipynb"><img src="https://csbiology.github.io/ProteomIQon/img/badge-notebook.svg" alt="Notebook" /></a></p>
+<h1><a name="MsFraggerToPSM" class="anchor" href="#MsFraggerToPSM">MsFraggerToPSM</a></h1>
+<p>MsFraggerToPSM turns the <code>psm.tsv</code> result of an MSFragger search, as written by FragPipe, into the <code>.qpsm</code> files that <a href="https://csbiology.github.io/ProteomIQon/tools/PSMBasedQuantificationTIMs.html">PSMBasedQuantificationTIMs</a> reads.
+With it, an ion mobility run can be identified in FragPipe and quantified in ProteomIQon, in place of the <a href="https://csbiology.github.io/ProteomIQon/tools/PeptideSpectrumMatching.html">PeptideSpectrumMatching</a> and <a href="https://csbiology.github.io/ProteomIQon/tools/PSMStatistics.html">PSMStatistics</a> pair.
+For each row of the tsv the tool rebuilds the modified peptide sequence in ProteomIQon notation, looks it up in the <a href="https://csbiology.github.io/ProteomIQon/tools/PeptideDB.html">PeptideDB</a> database to get the peptide and modified sequence identifiers, and assigns the row to the MS2 spectrum of the mzlite whose scan time and precursor m/z lie closest to the values in the tsv.
+The tool has no parameter file.</p>
+<h2><a name="Inputs-and-outputs" class="anchor" href="#Inputs-and-outputs">Inputs and outputs</a></h2>
+<table>
+<thead>
+<tr class="header">
+<th><p>Flag</p></th>
+<th><p>Meaning</p></th>
+<th><p>Comes from</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><p><code>-i</code></p></td>
+<td><p>one or more <code>psm.tsv</code> files, or a directory that is searched for <code>*.tsv</code></p></td>
+<td><p>MSFragger (FragPipe)</p></td>
+</tr>
+<tr class="even">
+<td><p><code>-ii</code></p></td>
+<td><p>the matching <code>.mzlite</code> files, or a directory that is searched for <code>*.mzlite</code></p></td>
+<td><p><a href="https://csbiology.github.io/ProteomIQon/tools/MzMLToMzLiteIonMobility.html">MzMLToMzLiteIonMobility</a></p></td>
+</tr>
+<tr class="odd">
+<td><p><code>-o</code></p></td>
+<td><p>the output directory, created when missing</p></td>
+<td></td>
+</tr>
+<tr class="even">
+<td><p><code>-d</code></p></td>
+<td><p>the SQLite peptide database</p></td>
+<td><p><a href="https://csbiology.github.io/ProteomIQon/tools/PeptideDB.html">PeptideDB</a></p></td>
+</tr>
+<tr class="odd">
+<td><p><code>-c</code></p></td>
+<td><p>number of pairs converted at the same time, default 1</p></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+
+<p>All four flags are mandatory. The tsv needs the columns Assigned Modifications, Peptide, Spectrum, Retention, Charge, Calibrated Observed M/Z, Calculated Peptide Mass, Delta Mass, Ion Mobility, Peptide Length, Number of Missed Cleavages, Expectation, Hyperscore, Probability and Protein. Retention is read in seconds and stored in minutes.
+Files are paired by position, the first tsv with the first mzlite and so on. Give both lists in the same order and with the same length, otherwise the tool converts nothing.
+The tool stops when the database file does not exist. The lookup uses the unlabeled sequences of the database. Rows whose modified sequence has no entry in the database are dropped, so the database has to be built with the same modifications as the FragPipe search.</p>
+<p>From the Assigned Modifications column the tool understands oxidized methionine and carbamidomethylated cysteine, plus N-terminal acetylation. A row with any other modification is printed to the console and dropped.</p>
+<p>The tool writes one <code>&lt;run&gt;.qpsm</code> per mzlite into the output directory, named after the mzlite. It is a tab separated table with a header and one row per identified spectrum, with the spectrum identifier of the mzlite, the database identifiers, scan time, charge, precursor m/z, ion mobility, the MSFragger expectation, hyperscore and probability, the sequence and the protein names.
+An existing <code>.qpsm</code> of the same name is appended to. Delete the old file before a rerun.
+The output directory also receives <code>MSFraggerToPSM_log.txt</code>.</p>
+<h2><a name="Running-the-tool" class="anchor" href="#Running-the-tool">Running the tool</a></h2>
+<p>Install the tool with <code>dotnet tool install --global ProteomIQon.MsFraggerToPSM</code>, then convert one run:</p>
+<table class="pre"><tr><td class="snippet"><pre class="fssnip"><code lang="text">proteomiqon-msfraggertopsm -i path/to/run/psm.tsv -ii path/to/run.mzlite -d path/to/AraTest.db -o path/to/output
+</code></pre></td></tr></table>
+<p>Several runs, paired by position and converted three at a time:</p>
+<table class="pre"><tr><td class="snippet"><pre class="fssnip"><code lang="text">proteomiqon-msfraggertopsm -i path/to/run1/psm.tsv path/to/run2/psm.tsv path/to/run3/psm.tsv -ii path/to/run1.mzlite path/to/run2.mzlite path/to/run3.mzlite -d path/to/AraTest.db -o path/to/output -c 3
+</code></pre></td></tr></table>
+<p>All flags:</p>
+<table class="pre"><tr><td class="snippet"><pre class="fssnip"><code lang="text">proteomiqon-msfraggertopsm --help
+</code></pre></td></tr></table>
+
+                </div>
+            </div>
+        </div>
+        
+    </div>
+
+    <!-- BEGIN SEARCH BOX: this adds support for the search box -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/JavaScript-autoComplete/1.0.4/auto-complete.css" />
+    <script type="text/javascript">var fsdocs_search_baseurl = 'https://csbiology.github.io/ProteomIQon/'</script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/lunr.js/2.3.8/lunr.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/JavaScript-autoComplete/1.0.4/auto-complete.min.js"></script>
+    <script type="text/javascript" src="https://csbiology.github.io/ProteomIQon/content/fsdocs-search.js"></script>
+    <!-- END SEARCH BOX: this adds support for the search box -->
+</body>
+<footer>
+    <script>
+        bulmaCollapsible.attach('.is-collapsible');
+    </script>
+</footer>
+</html>

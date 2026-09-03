@@ -5,13 +5,13 @@
     <meta charset="utf-8">
     <title>PeptideDB</title>
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <meta name="author" content="David Zimmer, Jonathan Ott, Heinrich Lukas Weil, Timo Muehlhaus">
-    <link rel="shortcut icon" type="image/x-icon" href="https://csbiology.github.io/ProteomIQon//img/favicon.ico">
+    <meta name="author" content="David Zimmer, Caroline Ott, Heinrich Lukas Weil, Timo Muehlhaus">
+    <link rel="shortcut icon" type="image/x-icon" href="https://csbiology.github.io/ProteomIQon/img/favicon.ico">
     <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
     <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
     <!-- <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML"></script> -->
 
-    <link type="text/css" rel="stylesheet" href="https://csbiology.github.io/ProteomIQon/content/fsdocs-default.css" />
+    <link type="text/css" rel="stylesheet" href="https://csbiology.github.io/ProteomIQon/content/fsdocs-legacy.css" />
     <link type="text/css" rel="stylesheet" href="https://csbiology.github.io/ProteomIQon/content/fsdocs-custom.css" />
     <script type="text/javascript" src="https://csbiology.github.io/ProteomIQon/content/fsdocs-tips.js"></script>
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@creativebulma/bulma-collapsible@1.0.4/dist/js/bulma-collapsible.min.js"></script>
@@ -53,84 +53,109 @@
                     <!-- END SEARCH BOX: this adds support for the search box -->
                     <ul class="navbar-nav">
                         <li class="nav-header">General</li>
-                        <li class="nav-item"><a href="/ProteomIQon">Home</a></li>
-                        <li class="nav-header">
+                        <li class="nav-item"><a href="https://csbiology.github.io/ProteomIQon/">Home</a></li>
+                        <li class="nav-header active">
   Tools
 </li>             
-<li class="nav-item">
+<li class="nav-item ">
   <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/MzMLToMzLite.html">
     MzMLToMzLite
   </a>
 </li>             
-<li class="nav-item">
+<li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/MzMLToMzLiteIonMobility.html">
+    MzMLToMzLiteIonMobility
+  </a>
+</li>             
+<li class="nav-item active">
   <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/PeptideDB.html">
     PeptideDB
   </a>
 </li>             
-<li class="nav-item">
+<li class="nav-item ">
   <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/PeptideSpectrumMatching.html">
     PeptideSpectrumMatching
   </a>
 </li>             
-<li class="nav-item">
+<li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/MsFraggerToPSM.html">
+    MsFraggerToPSM
+  </a>
+</li>             
+<li class="nav-item ">
   <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/PSMStatistics.html">
     PSMStatistics
   </a>
 </li>             
-<li class="nav-item">
+<li class="nav-item ">
   <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/PSMBasedQuantification.html">
     PSMBasedQuantification
   </a>
 </li>             
-<li class="nav-item">
+<li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/PSMBasedQuantificationTIMs.html">
+    PSMBasedQuantificationTIMs
+  </a>
+</li>             
+<li class="nav-item ">
   <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/ProteinInference.html">
     ProteinInference
   </a>
 </li>             
-<li class="nav-item">
+<li class="nav-item ">
   <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/QuantBasedAlignment.html">
     QuantBasedAlignment
   </a>
 </li>             
-<li class="nav-item">
+<li class="nav-item ">
   <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/AlignmentBasedQuantification.html">
-    AlignmentbasedQuantification
+    AlignmentBasedQuantification
   </a>
 </li>             
-<li class="nav-item">
+<li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/AlignmentBasedQuantStatistics.html">
+    AlignmentBasedQuantStatistics
+  </a>
+</li>             
+<li class="nav-item ">
   <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/AddDeducedPeptides.html">
     AddDeducedPeptides
   </a>
 </li>             
-<li class="nav-item">
+<li class="nav-item ">
   <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/JoinQuantPepIonsWithProteins.html">
     JoinQuantPepIonsWithProteins
   </a>
 </li>             
-<li class="nav-item">
+<li class="nav-item ">
   <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/LabelFreeProteinQuantification.html">
     LabelFreeProteinQuantification
   </a>
 </li>             
-<li class="nav-item">
+<li class="nav-item ">
   <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/LabeledProteinQuantification.html">
     LabeledProteinQuantification
   </a>
 </li>             
-<li class="nav-header">
+<li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/RatioLFQ.html">
+    RatioLFQ
+  </a>
+</li>             
+<li class="nav-header ">
   Developer Notes
 </li>             
-<li class="nav-item">
+<li class="nav-item ">
   <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/develop/How_to_create_a_tool.html">
     How to create your own tool
   </a>
 </li>             
-<li class="nav-item">
+<li class="nav-item ">
   <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/develop/How_to_document_your_work.html">
     How to document your work
   </a>
 </li>             
-<li class="nav-item">
+<li class="nav-item ">
   <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/develop/How_to_build_binaries_or_packages.html">
     How to build binaries or packages
   </a>
@@ -154,158 +179,273 @@
 <a href="https://csbiology.github.io/ProteomIQon/tools/PeptideDB.fsx"><img src="https://csbiology.github.io/ProteomIQon/img/badge-script.svg" alt="Script" /></a>&emsp;
 <a href="https://csbiology.github.io/ProteomIQon/tools/PeptideDB.ipynb"><img src="https://csbiology.github.io/ProteomIQon/img/badge-notebook.svg" alt="Notebook" /></a></p>
 <h1><a name="PeptideDB" class="anchor" href="#PeptideDB">PeptideDB</a></h1>
-<p>MS-based shotgun proteomics estimates protein abundances using a proxy: peptides. An established method to identify acquired MS/MS spectra is the comparison of each spectrum with peptides in a reference database.
-The PeptideDB tool helps to create peptide databases by in silico digestion given proteome information in the FASTA format and a set of parameters that allow the user to mimic conditions of their specific experiment.
-The created database stores peptide protein relationships in a SQLite database which can then be supplied to other ProteomIQon tools.</p>
-<h2><a name="Parameters" class="anchor" href="#Parameters">Parameters</a></h2>
-<p>The following table gives an overview of the parameter set:</p>
+<p>PeptideDB digests the proteins of a FASTA file in silico and stores the resulting peptides, with their masses and modifications, in a SQLite database.
+The search tools compare measured spectra against these peptides, so the digestion settings define the search space of the whole analysis. How the protease, the allowed missed cleavages, the length limits and the modifications shape that space is explained in the <a href="https://www.biofsharp.com/BioFSharp.Mz/02_02_search_databases.html#Describing-the-search-space">BioFSharp.Mz documentation</a>, and the <a href="https://www.biofsharp.com/BioFSharp.Mz/02_02_search_databases.html#Building-and-connecting-to-the-database">database layout</a> is described on the same page.</p>
+<h2><a name="Inputs-and-outputs" class="anchor" href="#Inputs-and-outputs">Inputs and outputs</a></h2>
 <table>
 <thead>
 <tr class="header">
-<th><p><strong>Parameter</strong></p></th>
-<th><p><strong>Default Value</strong></p></th>
-<th><p><strong>Description</strong></p></th>
+<th><p>Flag</p></th>
+<th><p>Meaning</p></th>
+<th><p>Comes from</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><p><code>-i</code></p></td>
+<td><p>one FASTA file (no directories)</p></td>
+<td><p>your proteome</p></td>
+</tr>
+<tr class="even">
+<td><p><code>-o</code></p></td>
+<td><p>the output directory, created when missing</p></td>
+<td></td>
+</tr>
+<tr class="odd">
+<td><p><code>-p</code></p></td>
+<td><p>the parameter file in JSON</p></td>
+<td><p>this page</p></td>
+</tr>
+</tbody>
+</table>
+
+<p>The tool writes <code>&lt;Name&gt;.db</code> into the output directory, where Name comes from the parameter file. The database is read by <a href="https://csbiology.github.io/ProteomIQon/tools/PeptideSpectrumMatching.html">PeptideSpectrumMatching</a>, <a href="https://csbiology.github.io/ProteomIQon/tools/PSMStatistics.html">PSMStatistics</a>, <a href="https://csbiology.github.io/ProteomIQon/tools/MsFraggerToPSM.html">MsFraggerToPSM</a>, <a href="https://csbiology.github.io/ProteomIQon/tools/PSMBasedQuantification.html">PSMBasedQuantification</a>, <a href="https://csbiology.github.io/ProteomIQon/tools/PSMBasedQuantificationTIMs.html">PSMBasedQuantificationTIMs</a>, <a href="https://csbiology.github.io/ProteomIQon/tools/AlignmentBasedQuantification.html">AlignmentBasedQuantification</a> and <a href="https://csbiology.github.io/ProteomIQon/tools/ProteinInference.html">ProteinInference</a>.
+When a <code>&lt;Name&gt;.db</code> already exists in the output directory and the parameters stored inside it equal the parameter file, the tool reuses that database and only makes sure its index is present.
+The output directory also receives <code>PeptideDB_log.txt</code> and <code>PeptideDB_&lt;Name&gt;_log.txt</code>.</p>
+<h2><a name="Parameters" class="anchor" href="#Parameters">Parameters</a></h2>
+<table>
+<thead>
+<tr class="header">
+<th><p>Parameter</p></th>
+<th><p>Default</p></th>
+<th><p>Meaning</p></th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
 <td><p>Name</p></td>
-<td><p>"YourNameHere"</p></td>
-<td><p>Name of the database</p></td>
+<td><p>"AraTest"</p></td>
+<td><p>Name of the database and stem of the output file.</p></td>
 </tr>
 <tr class="even">
 <td><p>ParseProteinIDRegexPattern</p></td>
-<td><p>id</p></td>
-<td><p>Regex pattern for parsing of the protein IDs in the database</p></td>
+<td><p>"id"</p></td>
+<td><p>How protein identifiers are taken from the FASTA headers. "id" (in any letter case, or an empty string) keeps the whole header line as the identifier. Any other value is a regular expression, and the matched part of the header becomes the identifier, for example "^\S+" for the first word.</p></td>
 </tr>
 <tr class="odd">
 <td><p>Protease</p></td>
 <td><p>Protease.Trypsin</p></td>
-<td><p>Protease used for the digestion of the proteins</p></td>
+<td><p>Enzyme used for the digestion. Other values are Protease.Trypsin_P, Protease.LysC, Protease.LysC_P, Protease.Chymotrypsin and Protease.PepsinA.</p></td>
 </tr>
 <tr class="even">
 <td><p>MinMissedCleavages</p></td>
 <td><p>0</p></td>
-<td><p>Minimal amount of missed cleavages a peptide can have</p></td>
+<td><p>Lowest number of missed cleavage sites a peptide may have.</p></td>
 </tr>
 <tr class="odd">
 <td><p>MaxMissedCleavages</p></td>
 <td><p>2</p></td>
-<td><p>Maximal amount of missed cleavages a peptide can have</p></td>
+<td><p>Highest number of missed cleavage sites a peptide may have.</p></td>
 </tr>
 <tr class="even">
 <td><p>MaxMass</p></td>
-<td><p>15000.</p></td>
-<td><p>Maximal mass of a peptide in Da</p></td>
+<td><p>15000.0</p></td>
+<td><p>Peptides above this mass in Da are dropped.</p></td>
 </tr>
 <tr class="odd">
 <td><p>MinPepLength</p></td>
 <td><p>4</p></td>
-<td><p>Minimal length of a peptide</p></td>
+<td><p>Shortest peptide length kept, in residues.</p></td>
 </tr>
 <tr class="even">
 <td><p>MaxPepLength</p></td>
 <td><p>65</p></td>
-<td><p>Maximal length of a peptide</p></td>
+<td><p>Longest peptide length kept, in residues.</p></td>
 </tr>
 <tr class="odd">
 <td><p>IsotopicMod</p></td>
 <td><p>[IsotopicMod.N15]</p></td>
-<td><p>List of isotopic modifications in the experiment</p></td>
+<td><p>Isotopic labels of the experiment. Each label adds a labeled variant of every peptide next to the unlabeled one. Use [] for an unlabeled experiment. Other values are IsotopicMod.C13, IsotopicMod.O17, IsotopicMod.O18 and IsotopicMod.D.</p></td>
 </tr>
 <tr class="even">
 <td><p>MassMode</p></td>
-<td><p>MassMode.Monoisotopi</p></td>
-<td><p>Method for mass calcluation (possibilities: Monoisotopic &amp; Average)</p></td>
+<td><p>MassMode.Monoisotopic</p></td>
+<td><p>Mass calculation, MassMode.Monoisotopic or MassMode.Average.</p></td>
 </tr>
 <tr class="odd">
 <td><p>FixedMods</p></td>
 <td><p>[]</p></td>
-<td><p>Fixed modifications of the proteins</p></td>
+<td><p>Modifications applied to every matching residue.</p></td>
 </tr>
 <tr class="even">
 <td><p>VariableMods</p></td>
-<td><p>[Modification.Oxidation'Met';Modification.Acetylation'ProtNTerm']</p></td>
-<td><p>Variable Modifications of the proteins</p></td>
+<td><p>[Modification.Oxidation'Met'; Modification.Acetylation'ProtNTerm']</p></td>
+<td><p>Modifications that may or may not be present. Every allowed combination becomes its own database entry.</p></td>
 </tr>
 <tr class="odd">
 <td><p>VarModThreshold</p></td>
 <td><p>4</p></td>
-<td><p>Threshold for variable modifications</p></td>
+<td><p>Maximum number of variable modifications on one peptide.</p></td>
 </tr>
 </tbody>
 </table>
 
-<h2><a name="Parameter-Generation" class="anchor" href="#Parameter-Generation">Parameter Generation</a></h2>
-<p>Parameters are handed to the cli tool as .json files. You can download an example file <a href="https://github.com/CSBiology/ProteomIQon/blob/master/src/ProteomIQon/defaultParams/peptideDBParams.json">here</a>,
-or use an F# script, which can be downloaded or run in Binder at the top of the page, to write your own parameter file:</p>
-<pre class="fssnip highlighted"><code lang="fsharp"><span class="pp">#r</span> <span class="s">&quot;nuget: BioFSharp.Mz, 0.1.5-beta&quot;</span>
-<span class="pp">#r</span> <span class="s">&quot;nuget: Newtonsoft.Json, 12.0.3&quot;</span>
-<span class="pp">#r</span> <span class="s">&quot;nuget: ProteomIQon, 0.0.5&quot;</span>
+<p>The available modifications are the cases of ProteomIQon.Modification, for example Modification.Carbamidomethyl'Cys' or Modification.Phosphorylation'Ser'Thr'Tyr'.
+The default file is <a href="https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/peptideDBParams.json">peptideDBParams.json</a>. A variant for Thermo data with carbamidomethylation as variable modification is <a href="https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/peptideDBParamsThermo.json">peptideDBParamsThermo.json</a>.</p>
+<h2><a name="Writing-a-parameter-file" class="anchor" href="#Writing-a-parameter-file">Writing a parameter file</a></h2>
+<pre class="fssnip highlighted"><code lang="fsharp"><span class="k">open</span> <span onmouseout="hideTip(event, 'fs1', 1)" onmouseover="showTip(event, 'fs1', 1)" class="id">BioFSharp</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs2', 2)" onmouseover="showTip(event, 'fs2', 2)" class="id">Mz</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs3', 3)" onmouseover="showTip(event, 'fs3', 3)" class="m">SearchDB</span>
+<span class="k">open</span> <span onmouseout="hideTip(event, 'fs4', 4)" onmouseover="showTip(event, 'fs4', 4)" class="id">ProteomIQon</span>
 
-<span class="k">open</span> <span onmouseout="hideTip(event, 'fs1', 1)" onmouseover="showTip(event, 'fs1', 1)" class="id">BioFSharp</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs2', 2)" onmouseover="showTip(event, 'fs2', 2)" class="id">Mz</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs3', 3)" onmouseover="showTip(event, 'fs3', 3)" class="m">SearchDB</span>
-<span class="k">open</span> <span onmouseout="hideTip(event, 'fs4', 4)" onmouseover="showTip(event, 'fs4', 4)" class="id">Newtonsoft</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs5', 5)" onmouseover="showTip(event, 'fs5', 5)" class="id">Json</span>
-<span class="k">open</span> <span onmouseout="hideTip(event, 'fs6', 6)" onmouseover="showTip(event, 'fs6', 6)" class="id">ProteomIQon</span>
-
-<span class="k">let</span> <span onmouseout="hideTip(event, 'fs7', 7)" onmouseover="showTip(event, 'fs7', 7)" class="id">peptideDBParams</span><span class="pn">:</span> <span onmouseout="hideTip(event, 'fs8', 8)" onmouseover="showTip(event, 'fs8', 8)" class="m">Dto</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs9', 9)" onmouseover="showTip(event, 'fs9', 9)" class="id">PeptideDBParams</span> <span class="o">=</span> 
+<span class="k">let</span> <span onmouseout="hideTip(event, 'fs5', 5)" onmouseover="showTip(event, 'fs5', 5)" class="id">peptideDBParams</span> <span class="pn">:</span> <span onmouseout="hideTip(event, 'fs6', 6)" onmouseover="showTip(event, 'fs6', 6)" class="m">Dto</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs7', 7)" onmouseover="showTip(event, 'fs7', 7)" class="id">PeptideDBParams</span> <span class="o">=</span>
     <span class="pn">{</span>
-    <span class="prop">Name</span>                        <span class="o">=</span> <span class="s">&quot;Test&quot;</span>
-    <span class="prop">ParseProteinIDRegexPattern</span>  <span class="o">=</span> <span class="s">&quot;id&quot;</span>
-    <span onmouseout="hideTip(event, 'fs10', 10)" onmouseover="showTip(event, 'fs10', 10)" class="prop">Protease</span>                    <span class="o">=</span> <span onmouseout="hideTip(event, 'fs10', 11)" onmouseover="showTip(event, 'fs10', 11)" class="m">Protease</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs11', 12)" onmouseover="showTip(event, 'fs11', 12)" class="id">Trypsin</span>
-    <span class="prop">MinMissedCleavages</span>          <span class="o">=</span> <span class="n">0</span>
-    <span class="prop">MaxMissedCleavages</span>          <span class="o">=</span> <span class="n">2</span>
-    <span class="prop">MaxMass</span>                     <span class="o">=</span> <span class="n">15000.0</span>
-    <span class="prop">MinPepLength</span>                <span class="o">=</span> <span class="n">4</span>
-    <span class="prop">MaxPepLength</span>                <span class="o">=</span> <span class="n">65</span>
-    <span onmouseout="hideTip(event, 'fs12', 13)" onmouseover="showTip(event, 'fs12', 13)" class="prop">IsotopicMod</span>                 <span class="o">=</span> <span class="pn">[</span><span onmouseout="hideTip(event, 'fs12', 14)" onmouseover="showTip(event, 'fs12', 14)" class="m">IsotopicMod</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs13', 15)" onmouseover="showTip(event, 'fs13', 15)" class="id">N15</span><span class="pn">]</span>
-    <span onmouseout="hideTip(event, 'fs14', 16)" onmouseover="showTip(event, 'fs14', 16)" class="prop">MassMode</span>                    <span class="o">=</span> <span onmouseout="hideTip(event, 'fs14', 17)" onmouseover="showTip(event, 'fs14', 17)" class="m">MassMode</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs15', 18)" onmouseover="showTip(event, 'fs15', 18)" class="id">Monoisotopic</span>
-    <span class="prop">FixedMods</span>                   <span class="o">=</span> <span class="pn">[</span><span class="pn">]</span>
-    <span class="prop">VariableMods</span>                <span class="o">=</span> <span class="pn">[</span><span onmouseout="hideTip(event, 'fs16', 19)" onmouseover="showTip(event, 'fs16', 19)" class="m">Modification</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs17', 20)" onmouseover="showTip(event, 'fs17', 20)" class="id">Oxidation&#39;Met&#39;</span><span class="pn">;</span><span onmouseout="hideTip(event, 'fs16', 21)" onmouseover="showTip(event, 'fs16', 21)" class="m">Modification</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs18', 22)" onmouseover="showTip(event, 'fs18', 22)" class="id">Acetylation&#39;ProtNTerm&#39;</span><span class="pn">]</span>
-    <span class="prop">VarModThreshold</span>             <span class="o">=</span> <span class="n">4</span>
+        <span class="prop">Name</span>                       <span class="o">=</span> <span class="s">&quot;AraTest&quot;</span>
+        <span class="prop">ParseProteinIDRegexPattern</span> <span class="o">=</span> <span class="s">&quot;id&quot;</span>
+        <span onmouseout="hideTip(event, 'fs8', 8)" onmouseover="showTip(event, 'fs8', 8)" class="prop">Protease</span>                   <span class="o">=</span> <span onmouseout="hideTip(event, 'fs8', 9)" onmouseover="showTip(event, 'fs8', 9)" class="m">Protease</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs9', 10)" onmouseover="showTip(event, 'fs9', 10)" class="id">Trypsin</span>
+        <span class="prop">MinMissedCleavages</span>         <span class="o">=</span> <span class="n">0</span>
+        <span class="prop">MaxMissedCleavages</span>         <span class="o">=</span> <span class="n">2</span>
+        <span class="prop">MaxMass</span>                    <span class="o">=</span> <span class="n">15000.0</span>
+        <span class="prop">MinPepLength</span>               <span class="o">=</span> <span class="n">4</span>
+        <span class="prop">MaxPepLength</span>               <span class="o">=</span> <span class="n">65</span>
+        <span onmouseout="hideTip(event, 'fs10', 11)" onmouseover="showTip(event, 'fs10', 11)" class="prop">IsotopicMod</span>                <span class="o">=</span> <span class="pn">[</span><span onmouseout="hideTip(event, 'fs10', 12)" onmouseover="showTip(event, 'fs10', 12)" class="m">IsotopicMod</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs11', 13)" onmouseover="showTip(event, 'fs11', 13)" class="id">N15</span><span class="pn">]</span>
+        <span onmouseout="hideTip(event, 'fs12', 14)" onmouseover="showTip(event, 'fs12', 14)" class="prop">MassMode</span>                   <span class="o">=</span> <span onmouseout="hideTip(event, 'fs12', 15)" onmouseover="showTip(event, 'fs12', 15)" class="m">MassMode</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs13', 16)" onmouseover="showTip(event, 'fs13', 16)" class="id">Monoisotopic</span>
+        <span class="prop">FixedMods</span>                  <span class="o">=</span> <span class="pn">[</span><span class="pn">]</span>
+        <span class="prop">VariableMods</span>               <span class="o">=</span> <span class="pn">[</span><span onmouseout="hideTip(event, 'fs14', 17)" onmouseover="showTip(event, 'fs14', 17)" class="m">Modification</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs15', 18)" onmouseover="showTip(event, 'fs15', 18)" class="id">Oxidation&#39;Met&#39;</span><span class="pn">;</span> <span onmouseout="hideTip(event, 'fs14', 19)" onmouseover="showTip(event, 'fs14', 19)" class="m">Modification</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs16', 20)" onmouseover="showTip(event, 'fs16', 20)" class="id">Acetylation&#39;ProtNTerm&#39;</span><span class="pn">]</span>
+        <span class="prop">VarModThreshold</span>            <span class="o">=</span> <span class="n">4</span>
     <span class="pn">}</span>
 
-<span class="k">let</span> <span onmouseout="hideTip(event, 'fs19', 23)" onmouseover="showTip(event, 'fs19', 23)" class="id">serialized</span> <span class="o">=</span> 
-    <span onmouseout="hideTip(event, 'fs7', 24)" onmouseover="showTip(event, 'fs7', 24)" class="id">peptideDBParams</span>
-    <span class="o">|&gt;</span> <span onmouseout="hideTip(event, 'fs20', 25)" onmouseover="showTip(event, 'fs20', 25)" class="rt">JsonConvert</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs21', 26)" onmouseover="showTip(event, 'fs21', 26)" class="id">SerializeObject</span>
+<span class="c">// Replace the temp folder with your project folder.</span>
+<span class="k">let</span> <span onmouseout="hideTip(event, 'fs17', 21)" onmouseover="showTip(event, 'fs17', 21)" class="id">outputPath</span> <span class="o">=</span> <span onmouseout="hideTip(event, 'fs18', 22)" onmouseover="showTip(event, 'fs18', 22)" class="id">System</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs19', 23)" onmouseover="showTip(event, 'fs19', 23)" class="id">IO</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs20', 24)" onmouseover="showTip(event, 'fs20', 24)" class="rt">Path</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs21', 25)" onmouseover="showTip(event, 'fs21', 25)" class="id">Combine</span><span class="pn">(</span><span onmouseout="hideTip(event, 'fs18', 26)" onmouseover="showTip(event, 'fs18', 26)" class="id">System</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs19', 27)" onmouseover="showTip(event, 'fs19', 27)" class="id">IO</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs20', 28)" onmouseover="showTip(event, 'fs20', 28)" class="rt">Path</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs22', 29)" onmouseover="showTip(event, 'fs22', 29)" class="id">GetTempPath</span><span class="pn">(</span><span class="pn">)</span><span class="pn">,</span> <span class="s">&quot;peptideDBParams.json&quot;</span><span class="pn">)</span>
 
-<span onmouseout="hideTip(event, 'fs22', 27)" onmouseover="showTip(event, 'fs22', 27)" class="id">System</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs23', 28)" onmouseover="showTip(event, 'fs23', 28)" class="id">IO</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs24', 29)" onmouseover="showTip(event, 'fs24', 29)" class="rt">File</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs25', 30)" onmouseover="showTip(event, 'fs25', 30)" class="id">WriteAllText</span><span class="pn">(</span><span class="s">&quot;path/to/your/params.json&quot;</span><span class="pn">,</span><span onmouseout="hideTip(event, 'fs19', 31)" onmouseover="showTip(event, 'fs19', 31)" class="id">serialized</span><span class="pn">)</span>
+<span onmouseout="hideTip(event, 'fs23', 30)" onmouseover="showTip(event, 'fs23', 30)" class="m">Json</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs24', 31)" onmouseover="showTip(event, 'fs24', 31)" class="id">serializeAndWrite</span> <span onmouseout="hideTip(event, 'fs17', 32)" onmouseover="showTip(event, 'fs17', 32)" class="id">outputPath</span> <span onmouseout="hideTip(event, 'fs5', 33)" onmouseover="showTip(event, 'fs5', 33)" class="id">peptideDBParams</span>
 </code></pre>
-<h2><a name="Executing-the-Tool" class="anchor" href="#Executing-the-Tool">Executing the Tool</a></h2>
-<p>To create a peptide data base just call the tool:</p>
-<pre class="fssnip highlighted"><code lang="fsharp"><span class="id">proteomiqon</span><span class="o">-</span><span class="id">peptidedb</span> <span class="o">-</span><span class="id">i</span> <span class="s">&quot;path/to/your/proteom.fasta&quot;</span> <span class="o">-</span><span class="id">o</span> <span class="s">&quot;path/to/your/outDirectory&quot;</span> <span class="o">-</span><span class="id">p</span> <span class="s">&quot;path/to/your/params.json&quot;</span>
-</code></pre>
-<p>A detailed description of the CLI arguments the tool expects can be obtained by calling the tool:</p>
-<pre class="fssnip highlighted"><code lang="fsharp"><span class="id">proteomiqon</span><span class="o">-</span><span class="id">peptidedb</span> <span class="pn">--</span><span class="id">help</span>
-</code></pre>
+<h2><a name="Running-the-tool" class="anchor" href="#Running-the-tool">Running the tool</a></h2>
+<p>Install the tool with <code>dotnet tool install --global ProteomIQon.PeptideDB</code>, then build the database:</p>
+<table class="pre"><tr><td class="snippet"><pre class="fssnip"><code lang="text">proteomiqon-peptidedb -i path/to/proteome.fasta -o path/to/output -p path/to/peptideDBParams.json
+</code></pre></td></tr></table>
+<p>All flags:</p>
+<table class="pre"><tr><td class="snippet"><pre class="fssnip"><code lang="text">proteomiqon-peptidedb --help
+</code></pre></td></tr></table>
 
                 </div>
             </div>
         </div>
         <div class="fsdocs-tip" id="fs1">namespace BioFSharp</div>
 <div class="fsdocs-tip" id="fs2">namespace BioFSharp.Mz</div>
-<div class="fsdocs-tip" id="fs3">module SearchDB<br /><br />from BioFSharp.Mz</div>
-<div class="fsdocs-tip" id="fs4">namespace Newtonsoft</div>
-<div class="fsdocs-tip" id="fs5">namespace Newtonsoft.Json</div>
-<div class="fsdocs-tip" id="fs6">namespace ProteomIQon</div>
-<div class="fsdocs-tip" id="fs7">val peptideDBParams : Dto.PeptideDBParams</div>
-<div class="fsdocs-tip" id="fs8">module Dto<br /><br />from ProteomIQon</div>
-<div class="fsdocs-tip" id="fs9">Multiple items<br />module PeptideDBParams<br /><br />from ProteomIQon.Dto<br /><br />--------------------<br />type PeptideDBParams =<br />&#160;&#160;{ Name: string<br />&#160;&#160;&#160;&#160;ParseProteinIDRegexPattern: string<br />&#160;&#160;&#160;&#160;Protease: Protease<br />&#160;&#160;&#160;&#160;MinMissedCleavages: int<br />&#160;&#160;&#160;&#160;MaxMissedCleavages: int<br />&#160;&#160;&#160;&#160;MaxMass: float<br />&#160;&#160;&#160;&#160;MinPepLength: int<br />&#160;&#160;&#160;&#160;MaxPepLength: int<br />&#160;&#160;&#160;&#160;IsotopicMod: IsotopicMod list<br />&#160;&#160;&#160;&#160;MassMode: MassMode<br />&#160;&#160;&#160;&#160;... }</div>
-<div class="fsdocs-tip" id="fs10">Multiple items<br />module Protease<br /><br />from ProteomIQon.Common<br /><br />--------------------<br />type Protease = | Trypsin</div>
-<div class="fsdocs-tip" id="fs11">union case Protease.Trypsin: Protease</div>
-<div class="fsdocs-tip" id="fs12">Multiple items<br />module IsotopicMod<br /><br />from ProteomIQon.Common<br /><br />--------------------<br />type IsotopicMod = | N15</div>
-<div class="fsdocs-tip" id="fs13">union case IsotopicMod.N15: IsotopicMod</div>
-<div class="fsdocs-tip" id="fs14">Multiple items<br />module MassMode<br /><br />from ProteomIQon.Common<br /><br />--------------------<br />type MassMode =<br />&#160;&#160;| Average<br />&#160;&#160;| Monoisotopic<br />&#160;&#160;&#160;&#160;override ToString : unit -&gt; string</div>
-<div class="fsdocs-tip" id="fs15">union case MassMode.Monoisotopic: MassMode</div>
-<div class="fsdocs-tip" id="fs16">Multiple items<br />module Modification<br /><br />from ProteomIQon.Common<br /><br />--------------------<br />type Modification =<br />&#160;&#160;| Acetylation&#39;ProtNTerm&#39;<br />&#160;&#160;| Carbamidomethyl&#39;Cys&#39;<br />&#160;&#160;| Oxidation&#39;Met&#39;<br />&#160;&#160;| Phosphorylation&#39;Ser&#39;Thr&#39;Tyr&#39;<br />&#160;&#160;| Pyro_Glu&#39;GluNterm&#39;<br />&#160;&#160;| Pyro_Glu&#39;GlnNterm&#39;</div>
-<div class="fsdocs-tip" id="fs17">union case Modification.Oxidation&#39;Met&#39;: Modification</div>
-<div class="fsdocs-tip" id="fs18">union case Modification.Acetylation&#39;ProtNTerm&#39;: Modification</div>
-<div class="fsdocs-tip" id="fs19">val serialized : string</div>
-<div class="fsdocs-tip" id="fs20">type JsonConvert =<br />&#160;&#160;static member DeserializeAnonymousType&lt;&#39;T&gt; : value: string * anonymousTypeObject: &#39;T -&gt; &#39;T + 1 overload<br />&#160;&#160;static member DeserializeObject : value: string -&gt; obj + 7 overloads<br />&#160;&#160;static member DeserializeXNode : value: string -&gt; XDocument + 3 overloads<br />&#160;&#160;static member DeserializeXmlNode : value: string -&gt; XmlDocument + 3 overloads<br />&#160;&#160;static member EnsureDecimalPlace : value: float * text: string -&gt; string + 1 overload<br />&#160;&#160;static member EnsureFloatFormat : value: float * text: string * floatFormatHandling: FloatFormatHandling * quoteChar: char * nullable: bool -&gt; string<br />&#160;&#160;static member PopulateObject : value: string * target: obj -&gt; unit + 1 overload<br />&#160;&#160;static member SerializeObject : value: obj -&gt; string + 7 overloads<br />&#160;&#160;static member SerializeObjectInternal : value: obj * type: Type * jsonSerializer: JsonSerializer -&gt; string<br />&#160;&#160;static member SerializeXNode : node: XObject -&gt; string + 2 overloads<br />&#160;&#160;...</div>
-<div class="fsdocs-tip" id="fs21">JsonConvert.SerializeObject(value: obj) : string<br />JsonConvert.SerializeObject(value: obj, settings: JsonSerializerSettings) : string<br />JsonConvert.SerializeObject(value: obj, [&lt;System.ParamArray&gt;] converters: JsonConverter []) : string<br />JsonConvert.SerializeObject(value: obj, formatting: Formatting) : string<br />JsonConvert.SerializeObject(value: obj, formatting: Formatting, settings: JsonSerializerSettings) : string<br />JsonConvert.SerializeObject(value: obj, type: System.Type, settings: JsonSerializerSettings) : string<br />JsonConvert.SerializeObject(value: obj, formatting: Formatting, [&lt;System.ParamArray&gt;] converters: JsonConverter []) : string<br />JsonConvert.SerializeObject(value: obj, type: System.Type, formatting: Formatting, settings: JsonSerializerSettings) : string</div>
-<div class="fsdocs-tip" id="fs22">namespace System</div>
-<div class="fsdocs-tip" id="fs23">namespace System.IO</div>
-<div class="fsdocs-tip" id="fs24">type File =<br />&#160;&#160;static member AppendAllLines : path: string * contents: IEnumerable&lt;string&gt; -&gt; unit + 1 overload<br />&#160;&#160;static member AppendAllLinesAsync : path: string * contents: IEnumerable&lt;string&gt; * encoding: Encoding *?cancellationToken: CancellationToken -&gt; Task + 1 overload<br />&#160;&#160;static member AppendAllText : path: string * contents: string -&gt; unit + 1 overload<br />&#160;&#160;static member AppendAllTextAsync : path: string * contents: string * encoding: Encoding *?cancellationToken: CancellationToken -&gt; Task + 1 overload<br />&#160;&#160;static member AppendText : path: string -&gt; StreamWriter<br />&#160;&#160;static member Copy : sourceFileName: string * destFileName: string -&gt; unit + 1 overload<br />&#160;&#160;static member Create : path: string -&gt; FileStream + 2 overloads<br />&#160;&#160;static member CreateText : path: string -&gt; StreamWriter<br />&#160;&#160;static member Decrypt : path: string -&gt; unit<br />&#160;&#160;static member Delete : path: string -&gt; unit<br />&#160;&#160;...</div>
-<div class="fsdocs-tip" id="fs25">System.IO.File.WriteAllText(path: string, contents: string) : unit<br />System.IO.File.WriteAllText(path: string, contents: string, encoding: System.Text.Encoding) : unit</div>
+<div class="fsdocs-tip" id="fs3">module SearchDB
+
+from BioFSharp.Mz</div>
+<div class="fsdocs-tip" id="fs4">namespace ProteomIQon</div>
+<div class="fsdocs-tip" id="fs5">val peptideDBParams: Dto.PeptideDBParams</div>
+<div class="fsdocs-tip" id="fs6">module Dto
+
+from ProteomIQon</div>
+<div class="fsdocs-tip" id="fs7">Multiple items<br />module PeptideDBParams
+
+from ProteomIQon.Dto<br /><br />--------------------<br />type PeptideDBParams =
+  {
+    Name: string
+    ParseProteinIDRegexPattern: string
+    Protease: Protease
+    MinMissedCleavages: int
+    MaxMissedCleavages: int
+    MaxMass: float
+    MinPepLength: int
+    MaxPepLength: int
+    IsotopicMod: IsotopicMod list
+    MassMode: MassMode
+    ...
+  }
+  member Equals: PeptideDBParams * IEqualityComparer -&gt; bool</div>
+<div class="fsdocs-tip" id="fs8">Multiple items<br />module Protease
+
+from ProteomIQon.Common<br /><br />--------------------<br />type Protease =
+  | Trypsin
+  | Trypsin_P
+  | LysC
+  | LysC_P
+  | Chymotrypsin
+  | PepsinA
+  member Equals: Protease * IEqualityComparer -&gt; bool
+  member IsChymotrypsin: bool
+  member IsLysC: bool
+  member IsLysC_P: bool
+  member IsPepsinA: bool
+  member IsTrypsin: bool
+  member IsTrypsin_P: bool</div>
+<div class="fsdocs-tip" id="fs9">union case Protease.Trypsin: Protease</div>
+<div class="fsdocs-tip" id="fs10">Multiple items<br />module IsotopicMod
+
+from ProteomIQon.Common<br /><br />--------------------<br />type IsotopicMod =
+  | N15
+  | C13
+  | O17
+  | O18
+  | D
+  member Equals: IsotopicMod * IEqualityComparer -&gt; bool
+  member IsC13: bool
+  member IsD: bool
+  member IsN15: bool
+  member IsO17: bool
+  member IsO18: bool</div>
+<div class="fsdocs-tip" id="fs11">union case IsotopicMod.N15: IsotopicMod</div>
+<div class="fsdocs-tip" id="fs12">Multiple items<br />module MassMode
+
+from ProteomIQon.Common<br /><br />--------------------<br />type MassMode =
+  | Average
+  | Monoisotopic
+  member Equals: MassMode * IEqualityComparer -&gt; bool
+  override ToString: unit -&gt; string
+  member IsAverage: bool
+  member IsMonoisotopic: bool</div>
+<div class="fsdocs-tip" id="fs13">union case MassMode.Monoisotopic: MassMode</div>
+<div class="fsdocs-tip" id="fs14">Multiple items<br />module Modification
+
+from ProteomIQon.Common<br /><br />--------------------<br />type Modification =
+  | Acetylation&#39;ProtNTerm&#39;
+  | Carbamidomethyl&#39;Cys&#39;
+  | Oxidation&#39;Met&#39;
+  | Phosphorylation&#39;Ser&#39;Thr&#39;Tyr&#39;
+  | Pyro_Glu&#39;GluNterm&#39;
+  | Pyro_Glu&#39;GlnNterm&#39;
+  | Methylation&#39;Met&#39;MetNTerm&#39;
+  | Carbamate&#39;Lys&#39;
+  | Hydroxylation&#39;Pro&#39;
+  | Methylation&#39;Cys&#39;
+  ...
+  member Equals: Modification * IEqualityComparer -&gt; bool
+  member IsAcetylation&#39;ProtNTerm&#39;: bool
+  member IsCarbamate&#39;Lys&#39;: bool
+  member IsCarbamidomethyl&#39;Cys&#39;: bool
+  member IsHydroxylation&#39;Pro&#39;: bool
+  member IsMethylation&#39;Cys&#39;: bool
+  member IsMethylation&#39;Met&#39;MetNTerm&#39;: bool
+  member IsMethylation&#39;Thr&#39;: bool
+  member IsOxidation&#39;Met&#39;: bool
+  member IsPhosphorylation&#39;Ser&#39;Thr&#39;Tyr&#39;: bool
+  ...</div>
+<div class="fsdocs-tip" id="fs15">union case Modification.Oxidation&#39;Met&#39;: Modification</div>
+<div class="fsdocs-tip" id="fs16">union case Modification.Acetylation&#39;ProtNTerm&#39;: Modification</div>
+<div class="fsdocs-tip" id="fs17">val outputPath: string</div>
+<div class="fsdocs-tip" id="fs18">namespace System</div>
+<div class="fsdocs-tip" id="fs19">namespace System.IO</div>
+<div class="fsdocs-tip" id="fs20">type Path =
+  static member ChangeExtension: path: string * extension: string -&gt; string
+  static member Combine: path1: string * path2: string -&gt; string + 4 overloads
+  static member EndsInDirectorySeparator: path: ReadOnlySpan&lt;char&gt; -&gt; bool + 1 overload
+  static member Exists: path: string -&gt; bool
+  static member GetDirectoryName: path: ReadOnlySpan&lt;char&gt; -&gt; ReadOnlySpan&lt;char&gt; + 1 overload
+  static member GetExtension: path: ReadOnlySpan&lt;char&gt; -&gt; ReadOnlySpan&lt;char&gt; + 1 overload
+  static member GetFileName: path: ReadOnlySpan&lt;char&gt; -&gt; ReadOnlySpan&lt;char&gt; + 1 overload
+  static member GetFileNameWithoutExtension: path: ReadOnlySpan&lt;char&gt; -&gt; ReadOnlySpan&lt;char&gt; + 1 overload
+  static member GetFullPath: path: string -&gt; string + 1 overload
+  static member GetInvalidFileNameChars: unit -&gt; char array
+  ...<br /><em>&lt;summary&gt;Performs operations on &lt;see cref=&quot;T:System.String&quot; /&gt; instances that contain file or directory path information. These operations are performed in a cross-platform manner.&lt;/summary&gt;</em></div>
+<div class="fsdocs-tip" id="fs21">System.IO.Path.Combine(paths: System.ReadOnlySpan&lt;string&gt;) : string<br />System.IO.Path.Combine([&lt;System.ParamArray&gt;] paths: string array) : string<br />System.IO.Path.Combine(path1: string, path2: string) : string<br />System.IO.Path.Combine(path1: string, path2: string, path3: string) : string<br />System.IO.Path.Combine(path1: string, path2: string, path3: string, path4: string) : string</div>
+<div class="fsdocs-tip" id="fs22">System.IO.Path.GetTempPath() : string</div>
+<div class="fsdocs-tip" id="fs23">module Json
+
+from ProteomIQon</div>
+<div class="fsdocs-tip" id="fs24">val serializeAndWrite: path: string -&gt; obj: &#39;a -&gt; unit</div>
 
     </div>
 

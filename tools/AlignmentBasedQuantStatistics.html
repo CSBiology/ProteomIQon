@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <title>AlignmentBasedQuantStatistics</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="author" content="David Zimmer, Caroline Ott, Heinrich Lukas Weil, Timo Muehlhaus">
+    <link rel="shortcut icon" type="image/x-icon" href="https://csbiology.github.io/ProteomIQon/img/favicon.ico">
+    <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <!-- <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML"></script> -->
+
+    <link type="text/css" rel="stylesheet" href="https://csbiology.github.io/ProteomIQon/content/fsdocs-legacy.css" />
+    <link type="text/css" rel="stylesheet" href="https://csbiology.github.io/ProteomIQon/content/fsdocs-custom.css" />
+    <script type="text/javascript" src="https://csbiology.github.io/ProteomIQon/content/fsdocs-tips.js"></script>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@creativebulma/bulma-collapsible@1.0.4/dist/js/bulma-collapsible.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@creativebulma/bulma-collapsible@1.0.4/dist/css/bulma-collapsible.min.css">
+    <!-- HTML5 shim, for IE6-8 support of HTML5 elements -->
+    <!--[if lt IE 9]>
+      <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <!-- BEGIN SEARCH BOX: this adds support for the search box -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/JavaScript-autoComplete/1.0.4/auto-complete.css" />
+    <!-- END SEARCH BOX: this adds support for the search box -->
+    
+</head> 
+
+<body>
+    <div class="columns is-fullheight m-0">
+        <div id="fsdocs-menu" class="column is-2 is-paddingless">
+            <aside class="menu">
+                <div class="container is-paddingless is-marginless has-background-dark">
+                    <a href="https://csbiology.github.io/ProteomIQon/">
+                        <figure class="image is-128x128 container">
+                            <img src="https://csbiology.github.io/ProteomIQon/img/logo.png">
+                        </figure>
+                    </a>
+                    <h2 class="title has-text-centered has-text-white pb-4">ProteomIQon</h2>
+                </div>
+                <div class="content">
+                    <!-- BEGIN SEARCH BOX: this adds support for the search box -->
+                    <div id="header">
+                        <div class="field">
+                            <div class="control has-icons-left has-icons-right searchbox" id="fsdocs-searchbox">
+                                <input data-search-input="" id="search-by" type="search" placeholder="Search..." class="input"/>
+                                <span class="icon is-small is-left">
+                                    <i class="fas fa-search"></i>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- END SEARCH BOX: this adds support for the search box -->
+                    <ul class="navbar-nav">
+                        <li class="nav-header">General</li>
+                        <li class="nav-item"><a href="https://csbiology.github.io/ProteomIQon/">Home</a></li>
+                        <li class="nav-header active">
+  Tools
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/MzMLToMzLite.html">
+    MzMLToMzLite
+  </a>
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/MzMLToMzLiteIonMobility.html">
+    MzMLToMzLiteIonMobility
+  </a>
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/PeptideDB.html">
+    PeptideDB
+  </a>
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/PeptideSpectrumMatching.html">
+    PeptideSpectrumMatching
+  </a>
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/MsFraggerToPSM.html">
+    MsFraggerToPSM
+  </a>
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/PSMStatistics.html">
+    PSMStatistics
+  </a>
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/PSMBasedQuantification.html">
+    PSMBasedQuantification
+  </a>
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/PSMBasedQuantificationTIMs.html">
+    PSMBasedQuantificationTIMs
+  </a>
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/ProteinInference.html">
+    ProteinInference
+  </a>
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/QuantBasedAlignment.html">
+    QuantBasedAlignment
+  </a>
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/AlignmentBasedQuantification.html">
+    AlignmentBasedQuantification
+  </a>
+</li>             
+<li class="nav-item active">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/AlignmentBasedQuantStatistics.html">
+    AlignmentBasedQuantStatistics
+  </a>
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/AddDeducedPeptides.html">
+    AddDeducedPeptides
+  </a>
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/JoinQuantPepIonsWithProteins.html">
+    JoinQuantPepIonsWithProteins
+  </a>
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/LabelFreeProteinQuantification.html">
+    LabelFreeProteinQuantification
+  </a>
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/LabeledProteinQuantification.html">
+    LabeledProteinQuantification
+  </a>
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/RatioLFQ.html">
+    RatioLFQ
+  </a>
+</li>             
+<li class="nav-header ">
+  Developer Notes
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/develop/How_to_create_a_tool.html">
+    How to create your own tool
+  </a>
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/develop/How_to_document_your_work.html">
+    How to document your work
+  </a>
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/develop/How_to_build_binaries_or_packages.html">
+    How to build binaries or packages
+  </a>
+</li>
+                        <li class="nav-header">Powered By</li>
+                        <li class="nav-item"><a href="https://github.com/CSBiology/MzIO">MzIO</a></li>
+                        <li class="nav-item"><a href="https://github.com/CSBiology/BioFSharp">BioFSharp</a></li>
+                        <li class="nav-item"><a href="https://github.com/CSBiology/BioFSharp.Mz">BioFSharp.Mz</a></li>
+                        <li class="nav-item"><a href="https://github.com/fslaborg/FSharp.Stats">FSharp.Stats</a></li>
+                        <li class="nav-item"><a href="https://github.com/fslaborg/Deedle">Deedle</a></li>
+                        <li class="nav-item"><a href="https://fsharp.org">FSharp</a></li>
+                    </ul>
+                </div>
+            </aside>
+        </div>
+        <div class="column is-10 is-paddingless">
+            <div class="section pt-4">
+                <div class="container" id="fsdocs-content">
+                    
+<p><a href="https://mybinder.org/v2/gh/csbiology/ProteomIQon/gh-pages?filepath=tools/AlignmentBasedQuantStatistics.ipynb"><img src="https://csbiology.github.io/ProteomIQon/img/badge-binder.svg" alt="Binder" /></a>&emsp;
+<a href="https://csbiology.github.io/ProteomIQon/tools/AlignmentBasedQuantStatistics.fsx"><img src="https://csbiology.github.io/ProteomIQon/img/badge-script.svg" alt="Script" /></a>&emsp;
+<a href="https://csbiology.github.io/ProteomIQon/tools/AlignmentBasedQuantStatistics.ipynb"><img src="https://csbiology.github.io/ProteomIQon/img/badge-notebook.svg" alt="Notebook" /></a></p>
+<h1><a name="AlignmentBasedQuantStatistics" class="anchor" href="#AlignmentBasedQuantStatistics">AlignmentBasedQuantStatistics</a></h1>
+<p>A peptide ion transferred by <a href="https://csbiology.github.io/ProteomIQon/tools/QuantBasedAlignment.html">alignment</a> and quantified by
+<a href="https://csbiology.github.io/ProteomIQon/tools/AlignmentBasedQuantification.html">AlignmentBasedQuantification</a> has no identification behind it, so nothing says yet whether
+the peak found at the predicted scan time is the peptide. AlignmentBasedQuantStatistics gives every transferred quantification an alignment
+score and an alignment q-value, so downstream tools can filter transferred quantifications the way identifications are filtered by q-value.
+It learns from peptide ions where the truth is known: the .align file also predicts ions the run had identified itself, and for those the
+transferred quantification can be compared with the quantification of the identified ion. Ions where m/z and intensity agree closely are
+positive training examples, ions where they disagree are negative ones. A gradient boosted tree classifier trained on them scores every
+transferred ion, and the q-value follows from the score distribution of the negative examples.</p>
+<h2><a name="Inputs-and-outputs" class="anchor" href="#Inputs-and-outputs">Inputs and outputs</a></h2>
+<table>
+<thead>
+<tr class="header">
+<th><p>Flag</p></th>
+<th><p>Meaning</p></th>
+<th><p>Comes from</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><p><code>-i</code></p></td>
+<td><p>.quant of the run, before alignment</p></td>
+<td><p><a href="https://csbiology.github.io/ProteomIQon/tools/PSMBasedQuantification.html">PSMBasedQuantification</a></p></td>
+</tr>
+<tr class="even">
+<td><p><code>-ii</code></p></td>
+<td><p>.align of the run</p></td>
+<td><p><a href="https://csbiology.github.io/ProteomIQon/tools/QuantBasedAlignment.html">QuantBasedAlignment</a></p></td>
+</tr>
+<tr class="odd">
+<td><p><code>-iii</code></p></td>
+<td><p>.quant of the run, after alignment</p></td>
+<td><p><a href="https://csbiology.github.io/ProteomIQon/tools/AlignmentBasedQuantification.html">AlignmentBasedQuantification</a></p></td>
+</tr>
+<tr class="even">
+<td><p><code>-l</code></p></td>
+<td><p>.quant files of the runs used for training</p></td>
+<td><p><a href="https://csbiology.github.io/ProteomIQon/tools/PSMBasedQuantification.html">PSMBasedQuantification</a></p></td>
+</tr>
+<tr class="odd">
+<td><p><code>-ll</code></p></td>
+<td><p>.align files of the runs used for training</p></td>
+<td><p><a href="https://csbiology.github.io/ProteomIQon/tools/QuantBasedAlignment.html">QuantBasedAlignment</a></p></td>
+</tr>
+<tr class="even">
+<td><p><code>-lll</code></p></td>
+<td><p>.quant files after alignment for the runs used for training</p></td>
+<td><p><a href="https://csbiology.github.io/ProteomIQon/tools/AlignmentBasedQuantification.html">AlignmentBasedQuantification</a></p></td>
+</tr>
+<tr class="odd">
+<td><p><code>-o</code></p></td>
+<td><p>output directory, created when missing</p></td>
+<td></td>
+</tr>
+<tr class="even">
+<td><p><code>-p</code></p></td>
+<td><p>parameter file (JSON)</p></td>
+<td><p>this page</p></td>
+</tr>
+<tr class="odd">
+<td><p><code>-c</code></p></td>
+<td><p>number of runs scored in parallel, default 1</p></td>
+<td></td>
+</tr>
+<tr class="even">
+<td><p><code>-ts</code></p></td>
+<td><p>switch: write the training examples selected from each run</p></td>
+<td></td>
+</tr>
+<tr class="odd">
+<td><p><code>-dc</code></p></td>
+<td><p>switch: write diagnostic charts</p></td>
+<td></td>
+</tr>
+<tr class="even">
+<td><p><code>-mf</code></p></td>
+<td><p>switch: pair input files by name instead of position</p></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+
+<p><code>-i</code> to <code>-iii</code> name the runs to score, <code>-l</code> to <code>-lll</code> the runs to learn from. The runs to learn from can be the same runs. Every one
+of the six flags takes one file, several files, or a directory that is searched for *.quant or *.align. Without <code>-mf</code> the quant, align and
+aligned quant files are paired by position. With <code>-mf</code> they are paired by file name without extension. Every scored run trains a classifier on
+the pooled examples of all training runs.</p>
+<p>The tool writes a file with the same name as the <code>-i</code> .quant file into the output directory. It holds the rows of that file with
+AlignmentScore and AlignmentQValue filled for the rows whose QuantificationSource is Alignment.
+<a href="https://csbiology.github.io/ProteomIQon/tools/JoinQuantPepIonsWithProteins.html">JoinQuantPepIonsWithProteins</a> reads it, and
+<a href="https://csbiology.github.io/ProteomIQon/tools/LabelFreeProteinQuantification.html">LabelFreeProteinQuantification</a> and
+<a href="https://csbiology.github.io/ProteomIQon/tools/LabeledProteinQuantification.html">LabeledProteinQuantification</a> filter on the q-value column through their Alignment_QValue
+parameter. With <code>-ts</code> the tool also writes <code>&lt;quant file name&gt;testset</code>, the training examples taken from the run of the same name with
+their aligned quantification columns, AlignmentScore, AlignmentQValue and the label column WasPositiveSet. With <code>-dc</code> it writes ProbabilityHistogram.html and QValueDistribution.html into a directory
+named after the run. Logs go to <code>AlignmentBasedQuantStatistics_log.txt</code> and one <code>&lt;run&gt;_log.txt</code> per scored run in the output directory.</p>
+<h2><a name="Parameters" class="anchor" href="#Parameters">Parameters</a></h2>
+<p>The four cutoffs decide which training ions count as positive and which as negative. Each compares a transferred value with the value of the
+identified ion (light or heavy, matching the ion's GlobalMod) and expresses the allowed difference as a fraction of the identified value.</p>
+<table>
+<thead>
+<tr class="header">
+<th><p>Parameter</p></th>
+<th><p>Default</p></th>
+<th><p>Meaning</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><p>PositiveQuantMzCutoff</p></td>
+<td><p>0.01</p></td>
+<td><p>Positive when the m/z difference is below this fraction of the identified m/z and the intensity condition holds too.</p></td>
+</tr>
+<tr class="even">
+<td><p>NegativeQuantMzCutoff</p></td>
+<td><p>0.99</p></td>
+<td><p>Negative when the m/z difference is above (1 - NegativeQuantMzCutoff) times the identified m/z, so above 1 percent with the default.</p></td>
+</tr>
+<tr class="odd">
+<td><p>PositiveQuantCutoff</p></td>
+<td><p>0.1</p></td>
+<td><p>Positive when the intensity difference is below this fraction of the identified intensity and the m/z condition holds too.</p></td>
+</tr>
+<tr class="even">
+<td><p>NegativeQuantCutoff</p></td>
+<td><p>0.9</p></td>
+<td><p>Negative when the intensity difference is above (1 - NegativeQuantCutoff) times the identified intensity, so above 10 percent with the default.</p></td>
+</tr>
+</tbody>
+</table>
+
+<p>The positive test runs first. An ion that fails it is negative, whether or not it passes one of the negative conditions. The default file is
+<a href="https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/AlignmentBasedQuantStatisticsParams.json">AlignmentBasedQuantStatisticsParams.json</a>.</p>
+<h2><a name="Writing-a-parameter-file" class="anchor" href="#Writing-a-parameter-file">Writing a parameter file</a></h2>
+<pre class="fssnip highlighted"><code lang="fsharp"><span class="k">open</span> <span onmouseout="hideTip(event, 'fs1', 1)" onmouseover="showTip(event, 'fs1', 1)" class="id">ProteomIQon</span>
+
+<span class="k">let</span> <span onmouseout="hideTip(event, 'fs2', 2)" onmouseover="showTip(event, 'fs2', 2)" class="id">alignmentBasedQuantStatisticsParams</span> <span class="pn">:</span> <span onmouseout="hideTip(event, 'fs3', 3)" onmouseover="showTip(event, 'fs3', 3)" class="m">Dto</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs4', 4)" onmouseover="showTip(event, 'fs4', 4)" class="id">AlignmentBasedQuantStatisticsParams</span> <span class="o">=</span>
+    <span class="pn">{</span>
+        <span class="prop">PositiveQuantMzCutoff</span> <span class="o">=</span> <span class="n">0.01</span>
+        <span class="prop">NegativeQuantMzCutoff</span> <span class="o">=</span> <span class="n">0.99</span>
+        <span class="prop">PositiveQuantCutoff</span>   <span class="o">=</span> <span class="n">0.1</span>
+        <span class="prop">NegativeQuantCutoff</span>   <span class="o">=</span> <span class="n">0.9</span>
+    <span class="pn">}</span>
+
+<span class="c">// Replace the temp folder with your project folder.</span>
+<span class="k">let</span> <span onmouseout="hideTip(event, 'fs5', 5)" onmouseover="showTip(event, 'fs5', 5)" class="id">outputPath</span> <span class="o">=</span>
+    <span onmouseout="hideTip(event, 'fs6', 6)" onmouseover="showTip(event, 'fs6', 6)" class="id">System</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs7', 7)" onmouseover="showTip(event, 'fs7', 7)" class="id">IO</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs8', 8)" onmouseover="showTip(event, 'fs8', 8)" class="rt">Path</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs9', 9)" onmouseover="showTip(event, 'fs9', 9)" class="id">Combine</span><span class="pn">(</span><span onmouseout="hideTip(event, 'fs6', 10)" onmouseover="showTip(event, 'fs6', 10)" class="id">System</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs7', 11)" onmouseover="showTip(event, 'fs7', 11)" class="id">IO</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs8', 12)" onmouseover="showTip(event, 'fs8', 12)" class="rt">Path</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs10', 13)" onmouseover="showTip(event, 'fs10', 13)" class="id">GetTempPath</span><span class="pn">(</span><span class="pn">)</span><span class="pn">,</span> <span class="s">&quot;AlignmentBasedQuantStatisticsParams.json&quot;</span><span class="pn">)</span>
+
+<span onmouseout="hideTip(event, 'fs11', 14)" onmouseover="showTip(event, 'fs11', 14)" class="m">Json</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs12', 15)" onmouseover="showTip(event, 'fs12', 15)" class="id">serializeAndWrite</span> <span onmouseout="hideTip(event, 'fs5', 16)" onmouseover="showTip(event, 'fs5', 16)" class="id">outputPath</span> <span onmouseout="hideTip(event, 'fs2', 17)" onmouseover="showTip(event, 'fs2', 17)" class="id">alignmentBasedQuantStatisticsParams</span>
+</code></pre>
+<h2><a name="Running-the-tool" class="anchor" href="#Running-the-tool">Running the tool</a></h2>
+<p>Install the tool with <code>dotnet tool install --global ProteomIQon.AlignmentBasedQuantStatistics</code>. Score one run and learn from the same run.</p>
+<table class="pre"><tr><td class="snippet"><pre class="fssnip"><code lang="text">proteomiqon-alignmentbasedquantstatistics -i path/to/run.quant -ii path/to/run.align -iii path/to/aligned/run.quant -l path/to/run.quant -ll path/to/run.align -lll path/to/aligned/run.quant -o path/to/output -p path/to/AlignmentBasedQuantStatisticsParams.json
+</code></pre></td></tr></table>
+<p>Score every run in the directories, learn from all of them, pair the files by name, and work on four runs at a time.</p>
+<table class="pre"><tr><td class="snippet"><pre class="fssnip"><code lang="text">proteomiqon-alignmentbasedquantstatistics -i path/to/quant -ii path/to/align -iii path/to/aligned -l path/to/quant -ll path/to/align -lll path/to/aligned -o path/to/output -p path/to/AlignmentBasedQuantStatisticsParams.json -mf -c 4
+</code></pre></td></tr></table>
+<p>Add <code>-ts</code> to keep the training examples and <code>-dc</code> to get the charts.</p>
+<table class="pre"><tr><td class="snippet"><pre class="fssnip"><code lang="text">proteomiqon-alignmentbasedquantstatistics -i path/to/quant -ii path/to/align -iii path/to/aligned -l path/to/quant -ll path/to/align -lll path/to/aligned -o path/to/output -p path/to/AlignmentBasedQuantStatisticsParams.json -mf -ts -dc
+</code></pre></td></tr></table>
+<p>Print the description of every argument.</p>
+<table class="pre"><tr><td class="snippet"><pre class="fssnip"><code lang="text">proteomiqon-alignmentbasedquantstatistics --help
+</code></pre></td></tr></table>
+
+                </div>
+            </div>
+        </div>
+        <div class="fsdocs-tip" id="fs1">namespace ProteomIQon</div>
+<div class="fsdocs-tip" id="fs2">val alignmentBasedQuantStatisticsParams: Dto.AlignmentBasedQuantStatisticsParams</div>
+<div class="fsdocs-tip" id="fs3">module Dto
+
+from ProteomIQon</div>
+<div class="fsdocs-tip" id="fs4">Multiple items<br />module AlignmentBasedQuantStatisticsParams
+
+from ProteomIQon.Dto<br /><br />--------------------<br />type AlignmentBasedQuantStatisticsParams =
+  {
+    PositiveQuantMzCutoff: float
+    NegativeQuantMzCutoff: float
+    PositiveQuantCutoff: float
+    NegativeQuantCutoff: float
+  }
+  member Equals: AlignmentBasedQuantStatisticsParams * IEqualityComparer -&gt; bool</div>
+<div class="fsdocs-tip" id="fs5">val outputPath: string</div>
+<div class="fsdocs-tip" id="fs6">namespace System</div>
+<div class="fsdocs-tip" id="fs7">namespace System.IO</div>
+<div class="fsdocs-tip" id="fs8">type Path =
+  static member ChangeExtension: path: string * extension: string -&gt; string
+  static member Combine: path1: string * path2: string -&gt; string + 4 overloads
+  static member EndsInDirectorySeparator: path: ReadOnlySpan&lt;char&gt; -&gt; bool + 1 overload
+  static member Exists: path: string -&gt; bool
+  static member GetDirectoryName: path: ReadOnlySpan&lt;char&gt; -&gt; ReadOnlySpan&lt;char&gt; + 1 overload
+  static member GetExtension: path: ReadOnlySpan&lt;char&gt; -&gt; ReadOnlySpan&lt;char&gt; + 1 overload
+  static member GetFileName: path: ReadOnlySpan&lt;char&gt; -&gt; ReadOnlySpan&lt;char&gt; + 1 overload
+  static member GetFileNameWithoutExtension: path: ReadOnlySpan&lt;char&gt; -&gt; ReadOnlySpan&lt;char&gt; + 1 overload
+  static member GetFullPath: path: string -&gt; string + 1 overload
+  static member GetInvalidFileNameChars: unit -&gt; char array
+  ...<br /><em>&lt;summary&gt;Performs operations on &lt;see cref=&quot;T:System.String&quot; /&gt; instances that contain file or directory path information. These operations are performed in a cross-platform manner.&lt;/summary&gt;</em></div>
+<div class="fsdocs-tip" id="fs9">System.IO.Path.Combine(paths: System.ReadOnlySpan&lt;string&gt;) : string<br />System.IO.Path.Combine([&lt;System.ParamArray&gt;] paths: string array) : string<br />System.IO.Path.Combine(path1: string, path2: string) : string<br />System.IO.Path.Combine(path1: string, path2: string, path3: string) : string<br />System.IO.Path.Combine(path1: string, path2: string, path3: string, path4: string) : string</div>
+<div class="fsdocs-tip" id="fs10">System.IO.Path.GetTempPath() : string</div>
+<div class="fsdocs-tip" id="fs11">module Json
+
+from ProteomIQon</div>
+<div class="fsdocs-tip" id="fs12">val serializeAndWrite: path: string -&gt; obj: &#39;a -&gt; unit</div>
+
+    </div>
+
+    <!-- BEGIN SEARCH BOX: this adds support for the search box -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/JavaScript-autoComplete/1.0.4/auto-complete.css" />
+    <script type="text/javascript">var fsdocs_search_baseurl = 'https://csbiology.github.io/ProteomIQon/'</script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/lunr.js/2.3.8/lunr.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/JavaScript-autoComplete/1.0.4/auto-complete.min.js"></script>
+    <script type="text/javascript" src="https://csbiology.github.io/ProteomIQon/content/fsdocs-search.js"></script>
+    <!-- END SEARCH BOX: this adds support for the search box -->
+</body>
+<footer>
+    <script>
+        bulmaCollapsible.attach('.is-collapsible');
+    </script>
+</footer>
+</html>

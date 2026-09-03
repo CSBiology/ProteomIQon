@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <title>RatioLFQ</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="author" content="David Zimmer, Caroline Ott, Heinrich Lukas Weil, Timo Muehlhaus">
+    <link rel="shortcut icon" type="image/x-icon" href="https://csbiology.github.io/ProteomIQon/img/favicon.ico">
+    <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <!-- <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML"></script> -->
+
+    <link type="text/css" rel="stylesheet" href="https://csbiology.github.io/ProteomIQon/content/fsdocs-legacy.css" />
+    <link type="text/css" rel="stylesheet" href="https://csbiology.github.io/ProteomIQon/content/fsdocs-custom.css" />
+    <script type="text/javascript" src="https://csbiology.github.io/ProteomIQon/content/fsdocs-tips.js"></script>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@creativebulma/bulma-collapsible@1.0.4/dist/js/bulma-collapsible.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@creativebulma/bulma-collapsible@1.0.4/dist/css/bulma-collapsible.min.css">
+    <!-- HTML5 shim, for IE6-8 support of HTML5 elements -->
+    <!--[if lt IE 9]>
+      <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <!-- BEGIN SEARCH BOX: this adds support for the search box -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/JavaScript-autoComplete/1.0.4/auto-complete.css" />
+    <!-- END SEARCH BOX: this adds support for the search box -->
+    
+</head> 
+
+<body>
+    <div class="columns is-fullheight m-0">
+        <div id="fsdocs-menu" class="column is-2 is-paddingless">
+            <aside class="menu">
+                <div class="container is-paddingless is-marginless has-background-dark">
+                    <a href="https://csbiology.github.io/ProteomIQon/">
+                        <figure class="image is-128x128 container">
+                            <img src="https://csbiology.github.io/ProteomIQon/img/logo.png">
+                        </figure>
+                    </a>
+                    <h2 class="title has-text-centered has-text-white pb-4">ProteomIQon</h2>
+                </div>
+                <div class="content">
+                    <!-- BEGIN SEARCH BOX: this adds support for the search box -->
+                    <div id="header">
+                        <div class="field">
+                            <div class="control has-icons-left has-icons-right searchbox" id="fsdocs-searchbox">
+                                <input data-search-input="" id="search-by" type="search" placeholder="Search..." class="input"/>
+                                <span class="icon is-small is-left">
+                                    <i class="fas fa-search"></i>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- END SEARCH BOX: this adds support for the search box -->
+                    <ul class="navbar-nav">
+                        <li class="nav-header">General</li>
+                        <li class="nav-item"><a href="https://csbiology.github.io/ProteomIQon/">Home</a></li>
+                        <li class="nav-header active">
+  Tools
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/MzMLToMzLite.html">
+    MzMLToMzLite
+  </a>
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/MzMLToMzLiteIonMobility.html">
+    MzMLToMzLiteIonMobility
+  </a>
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/PeptideDB.html">
+    PeptideDB
+  </a>
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/PeptideSpectrumMatching.html">
+    PeptideSpectrumMatching
+  </a>
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/MsFraggerToPSM.html">
+    MsFraggerToPSM
+  </a>
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/PSMStatistics.html">
+    PSMStatistics
+  </a>
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/PSMBasedQuantification.html">
+    PSMBasedQuantification
+  </a>
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/PSMBasedQuantificationTIMs.html">
+    PSMBasedQuantificationTIMs
+  </a>
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/ProteinInference.html">
+    ProteinInference
+  </a>
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/QuantBasedAlignment.html">
+    QuantBasedAlignment
+  </a>
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/AlignmentBasedQuantification.html">
+    AlignmentBasedQuantification
+  </a>
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/AlignmentBasedQuantStatistics.html">
+    AlignmentBasedQuantStatistics
+  </a>
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/AddDeducedPeptides.html">
+    AddDeducedPeptides
+  </a>
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/JoinQuantPepIonsWithProteins.html">
+    JoinQuantPepIonsWithProteins
+  </a>
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/LabelFreeProteinQuantification.html">
+    LabelFreeProteinQuantification
+  </a>
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/LabeledProteinQuantification.html">
+    LabeledProteinQuantification
+  </a>
+</li>             
+<li class="nav-item active">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/RatioLFQ.html">
+    RatioLFQ
+  </a>
+</li>             
+<li class="nav-header ">
+  Developer Notes
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/develop/How_to_create_a_tool.html">
+    How to create your own tool
+  </a>
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/develop/How_to_document_your_work.html">
+    How to document your work
+  </a>
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/develop/How_to_build_binaries_or_packages.html">
+    How to build binaries or packages
+  </a>
+</li>
+                        <li class="nav-header">Powered By</li>
+                        <li class="nav-item"><a href="https://github.com/CSBiology/MzIO">MzIO</a></li>
+                        <li class="nav-item"><a href="https://github.com/CSBiology/BioFSharp">BioFSharp</a></li>
+                        <li class="nav-item"><a href="https://github.com/CSBiology/BioFSharp.Mz">BioFSharp.Mz</a></li>
+                        <li class="nav-item"><a href="https://github.com/fslaborg/FSharp.Stats">FSharp.Stats</a></li>
+                        <li class="nav-item"><a href="https://github.com/fslaborg/Deedle">Deedle</a></li>
+                        <li class="nav-item"><a href="https://fsharp.org">FSharp</a></li>
+                    </ul>
+                </div>
+            </aside>
+        </div>
+        <div class="column is-10 is-paddingless">
+            <div class="section pt-4">
+                <div class="container" id="fsdocs-content">
+                    
+<p><a href="https://mybinder.org/v2/gh/csbiology/ProteomIQon/gh-pages?filepath=tools/RatioLFQ.ipynb"><img src="https://csbiology.github.io/ProteomIQon/img/badge-binder.svg" alt="Binder" /></a>&emsp;
+<a href="https://csbiology.github.io/ProteomIQon/tools/RatioLFQ.fsx"><img src="https://csbiology.github.io/ProteomIQon/img/badge-script.svg" alt="Script" /></a>&emsp;
+<a href="https://csbiology.github.io/ProteomIQon/tools/RatioLFQ.ipynb"><img src="https://csbiology.github.io/ProteomIQon/img/badge-notebook.svg" alt="Notebook" /></a></p>
+<h1><a name="RatioLFQ" class="anchor" href="#RatioLFQ">RatioLFQ</a></h1>
+<p>A labeled experiment gives one light to heavy ratio per protein and run. Ratios of different runs are only comparable through their shared reference, so RatioLFQ turns them into one intensity per run and protein, the way label free quantification would report it. For every protein it takes the log2 ratio of each run, forms the difference of the log2 ratios for every pair of runs, and solves a least squares problem for one log2 value per run that reproduces these differences. The system is underdetermined by one degree of freedom, and the tool fixes it with the constraint that the sum of the run values equals the mean log2 reference intensity of the protein times the number of runs with a ratio. The solution is exponentiated back and written as the LFQ value of each run.</p>
+<h2><a name="Inputs-and-outputs" class="anchor" href="#Inputs-and-outputs">Inputs and outputs</a></h2>
+<table>
+<thead>
+<tr class="header">
+<th><p>Flag</p></th>
+<th><p>Meaning</p></th>
+<th><p>Comes from</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><p><code>-i</code></p></td>
+<td><p>one tab separated protein table, typically LabeledQuant.txt</p></td>
+<td><p><a href="https://csbiology.github.io/ProteomIQon/tools/LabeledProteinQuantification.html">LabeledProteinQuantification</a></p></td>
+</tr>
+<tr class="even">
+<td><p><code>-o</code></p></td>
+<td><p>the path of the output file (not a directory), its folder has to exist</p></td>
+<td></td>
+</tr>
+<tr class="odd">
+<td><p><code>-pc</code></p></td>
+<td><p>name of the column that identifies the protein, ProteinGroup for that file</p></td>
+<td></td>
+</tr>
+<tr class="even">
+<td><p><code>-rac</code></p></td>
+<td><p>suffix that selects the ratio columns, <code>.Ratio_LightByHeavy</code> for that file</p></td>
+<td></td>
+</tr>
+<tr class="odd">
+<td><p><code>-rfc</code></p></td>
+<td><p>suffix that selects the reference columns, <code>.Quant_Heavy</code> for that file</p></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+
+<p><code>-rac</code> and <code>-rfc</code> are plain suffix tests on the column name, so in LabeledQuant.txt, where the columns are named <code>&lt;run&gt;.Ratio_LightByHeavy</code> and <code>&lt;run&gt;.Quant_Heavy</code>, pass the suffixes with the leading dot. Without the dot, <code>Quant_Heavy</code> also matches CV_Quant_Heavy, StDev_Quant_Heavy and SEM_Quant_Heavy, and those would go into the reference mean.</p>
+<p>The output file is a tab separated table with a ProteinGroup column followed by one column per ratio column, named like the input column with the suffix <code>_LFQ</code>. Proteins with a ratio in only one run are left out because there is no pair of runs to compare. Runs without a ratio for a protein get a 0 in that cell, which stands for no ratio, not for a zero intensity.</p>
+<h2><a name="Running-the-tool" class="anchor" href="#Running-the-tool">Running the tool</a></h2>
+<p>The tool installs with <code>dotnet tool install --global ProteomIQon.RatioLFQ</code>. A call on the labeled protein table:</p>
+<table class="pre"><tr><td class="snippet"><pre class="fssnip"><code lang="text">proteomiqon-ratiolfq -i path/to/LabeledQuant.txt -o path/to/LabeledQuant_LFQ.txt -pc ProteinGroup -rac .Ratio_LightByHeavy -rfc .Quant_Heavy
+</code></pre></td></tr></table>
+<p>All flags:</p>
+<table class="pre"><tr><td class="snippet"><pre class="fssnip"><code lang="text">proteomiqon-ratiolfq --help
+</code></pre></td></tr></table>
+
+                </div>
+            </div>
+        </div>
+        
+    </div>
+
+    <!-- BEGIN SEARCH BOX: this adds support for the search box -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/JavaScript-autoComplete/1.0.4/auto-complete.css" />
+    <script type="text/javascript">var fsdocs_search_baseurl = 'https://csbiology.github.io/ProteomIQon/'</script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/lunr.js/2.3.8/lunr.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/JavaScript-autoComplete/1.0.4/auto-complete.min.js"></script>
+    <script type="text/javascript" src="https://csbiology.github.io/ProteomIQon/content/fsdocs-search.js"></script>
+    <!-- END SEARCH BOX: this adds support for the search box -->
+</body>
+<footer>
+    <script>
+        bulmaCollapsible.attach('.is-collapsible');
+    </script>
+</footer>
+</html>

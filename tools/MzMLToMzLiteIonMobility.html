@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <title>MzMLToMzLiteIonMobility</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="author" content="David Zimmer, Caroline Ott, Heinrich Lukas Weil, Timo Muehlhaus">
+    <link rel="shortcut icon" type="image/x-icon" href="https://csbiology.github.io/ProteomIQon/img/favicon.ico">
+    <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <!-- <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML"></script> -->
+
+    <link type="text/css" rel="stylesheet" href="https://csbiology.github.io/ProteomIQon/content/fsdocs-legacy.css" />
+    <link type="text/css" rel="stylesheet" href="https://csbiology.github.io/ProteomIQon/content/fsdocs-custom.css" />
+    <script type="text/javascript" src="https://csbiology.github.io/ProteomIQon/content/fsdocs-tips.js"></script>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@creativebulma/bulma-collapsible@1.0.4/dist/js/bulma-collapsible.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@creativebulma/bulma-collapsible@1.0.4/dist/css/bulma-collapsible.min.css">
+    <!-- HTML5 shim, for IE6-8 support of HTML5 elements -->
+    <!--[if lt IE 9]>
+      <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <!-- BEGIN SEARCH BOX: this adds support for the search box -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/JavaScript-autoComplete/1.0.4/auto-complete.css" />
+    <!-- END SEARCH BOX: this adds support for the search box -->
+    
+</head> 
+
+<body>
+    <div class="columns is-fullheight m-0">
+        <div id="fsdocs-menu" class="column is-2 is-paddingless">
+            <aside class="menu">
+                <div class="container is-paddingless is-marginless has-background-dark">
+                    <a href="https://csbiology.github.io/ProteomIQon/">
+                        <figure class="image is-128x128 container">
+                            <img src="https://csbiology.github.io/ProteomIQon/img/logo.png">
+                        </figure>
+                    </a>
+                    <h2 class="title has-text-centered has-text-white pb-4">ProteomIQon</h2>
+                </div>
+                <div class="content">
+                    <!-- BEGIN SEARCH BOX: this adds support for the search box -->
+                    <div id="header">
+                        <div class="field">
+                            <div class="control has-icons-left has-icons-right searchbox" id="fsdocs-searchbox">
+                                <input data-search-input="" id="search-by" type="search" placeholder="Search..." class="input"/>
+                                <span class="icon is-small is-left">
+                                    <i class="fas fa-search"></i>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- END SEARCH BOX: this adds support for the search box -->
+                    <ul class="navbar-nav">
+                        <li class="nav-header">General</li>
+                        <li class="nav-item"><a href="https://csbiology.github.io/ProteomIQon/">Home</a></li>
+                        <li class="nav-header active">
+  Tools
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/MzMLToMzLite.html">
+    MzMLToMzLite
+  </a>
+</li>             
+<li class="nav-item active">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/MzMLToMzLiteIonMobility.html">
+    MzMLToMzLiteIonMobility
+  </a>
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/PeptideDB.html">
+    PeptideDB
+  </a>
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/PeptideSpectrumMatching.html">
+    PeptideSpectrumMatching
+  </a>
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/MsFraggerToPSM.html">
+    MsFraggerToPSM
+  </a>
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/PSMStatistics.html">
+    PSMStatistics
+  </a>
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/PSMBasedQuantification.html">
+    PSMBasedQuantification
+  </a>
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/PSMBasedQuantificationTIMs.html">
+    PSMBasedQuantificationTIMs
+  </a>
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/ProteinInference.html">
+    ProteinInference
+  </a>
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/QuantBasedAlignment.html">
+    QuantBasedAlignment
+  </a>
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/AlignmentBasedQuantification.html">
+    AlignmentBasedQuantification
+  </a>
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/AlignmentBasedQuantStatistics.html">
+    AlignmentBasedQuantStatistics
+  </a>
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/AddDeducedPeptides.html">
+    AddDeducedPeptides
+  </a>
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/JoinQuantPepIonsWithProteins.html">
+    JoinQuantPepIonsWithProteins
+  </a>
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/LabelFreeProteinQuantification.html">
+    LabelFreeProteinQuantification
+  </a>
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/LabeledProteinQuantification.html">
+    LabeledProteinQuantification
+  </a>
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/RatioLFQ.html">
+    RatioLFQ
+  </a>
+</li>             
+<li class="nav-header ">
+  Developer Notes
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/develop/How_to_create_a_tool.html">
+    How to create your own tool
+  </a>
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/develop/How_to_document_your_work.html">
+    How to document your work
+  </a>
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/develop/How_to_build_binaries_or_packages.html">
+    How to build binaries or packages
+  </a>
+</li>
+                        <li class="nav-header">Powered By</li>
+                        <li class="nav-item"><a href="https://github.com/CSBiology/MzIO">MzIO</a></li>
+                        <li class="nav-item"><a href="https://github.com/CSBiology/BioFSharp">BioFSharp</a></li>
+                        <li class="nav-item"><a href="https://github.com/CSBiology/BioFSharp.Mz">BioFSharp.Mz</a></li>
+                        <li class="nav-item"><a href="https://github.com/fslaborg/FSharp.Stats">FSharp.Stats</a></li>
+                        <li class="nav-item"><a href="https://github.com/fslaborg/Deedle">Deedle</a></li>
+                        <li class="nav-item"><a href="https://fsharp.org">FSharp</a></li>
+                    </ul>
+                </div>
+            </aside>
+        </div>
+        <div class="column is-10 is-paddingless">
+            <div class="section pt-4">
+                <div class="container" id="fsdocs-content">
+                    
+<p><a href="https://mybinder.org/v2/gh/csbiology/ProteomIQon/gh-pages?filepath=tools/MzMLToMzLiteIonMobility.ipynb"><img src="https://csbiology.github.io/ProteomIQon/img/badge-binder.svg" alt="Binder" /></a>&emsp;
+<a href="https://csbiology.github.io/ProteomIQon/tools/MzMLToMzLiteIonMobility.fsx"><img src="https://csbiology.github.io/ProteomIQon/img/badge-script.svg" alt="Script" /></a>&emsp;
+<a href="https://csbiology.github.io/ProteomIQon/tools/MzMLToMzLiteIonMobility.ipynb"><img src="https://csbiology.github.io/ProteomIQon/img/badge-notebook.svg" alt="Notebook" /></a></p>
+<h1><a name="MzMLToMzLiteIonMobility" class="anchor" href="#MzMLToMzLiteIonMobility">MzMLToMzLiteIonMobility</a></h1>
+<p>MzMLToMzLiteIonMobility converts mzML files from ion mobility instruments such as the Bruker timsTOF into mzlite files. In these files every peak carries an ion mobility value next to its m/z and intensity, and the tool keeps that value in the mzlite.
+It is the ion mobility counterpart of <a href="https://csbiology.github.io/ProteomIQon/tools/MzMLToMzLite.html">MzMLToMzLite</a>, which also explains how to get mzML from raw files and what mzlite is.
+The tool reads the same parameter record as MzMLToMzLite. The spectra are written with their m/z, intensity and ion mobility arrays as they are in the mzML, and Compress decides how those arrays are stored.</p>
+<h2><a name="Inputs-and-outputs" class="anchor" href="#Inputs-and-outputs">Inputs and outputs</a></h2>
+<table>
+<thead>
+<tr class="header">
+<th><p>Flag</p></th>
+<th><p>Meaning</p></th>
+<th><p>Comes from</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><p><code>-i</code></p></td>
+<td><p>one or more mzML files with ion mobility data per peak, or a directory that is searched for <code>*.mzML</code> and <code>*.mzml</code> (not recursive)</p></td>
+<td><p>msconvert</p></td>
+</tr>
+<tr class="even">
+<td><p><code>-o</code></p></td>
+<td><p>the output directory, created when missing</p></td>
+<td></td>
+</tr>
+<tr class="odd">
+<td><p><code>-p</code></p></td>
+<td><p>the parameter file in JSON, by default TIMsMzMLtoMzLiteParams.json</p></td>
+<td><p>this page</p></td>
+</tr>
+<tr class="even">
+<td><p><code>-c</code></p></td>
+<td><p>number of files converted at the same time, default 1</p></td>
+<td></td>
+</tr>
+<tr class="odd">
+<td><p><code>-f</code></p></td>
+<td><p>switch: rewrite every input file in place and remove <code>&amp;quot</code></p></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+
+<p>The reader fails on mzML without ion mobility data. <code>-f</code> rewrites every input file in place and removes the string <code>&amp;quot</code>, for mzML exports where that string breaks the XML reader.</p>
+<p>The tool writes one <code>&lt;run&gt;.mzlite</code> per input into the output directory. Spectra with an MS level other than 1 or 2 stop the conversion with an error. Scan times are stored in minutes.
+The mzlite is read by <a href="https://csbiology.github.io/ProteomIQon/tools/MsFraggerToPSM.html">MsFraggerToPSM</a> and <a href="https://csbiology.github.io/ProteomIQon/tools/PSMBasedQuantificationTIMs.html">PSMBasedQuantificationTIMs</a>.
+The output directory also receives <code>MzMLToMzLite_log.txt</code> and one <code>&lt;run&gt;_log.txt</code> per input.</p>
+<h2><a name="Parameters" class="anchor" href="#Parameters">Parameters</a></h2>
+<table>
+<thead>
+<tr class="header">
+<th><p>Parameter</p></th>
+<th><p>Default</p></th>
+<th><p>Meaning</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><p>Compress</p></td>
+<td><p>Compression.NoCompression</p></td>
+<td><p>Compression of the peak arrays in the mzlite. Compression.ZLib and Compression.NumPress are the other options, Compression.NumPressZLib combines both.</p></td>
+</tr>
+<tr class="even">
+<td><p>StartRetentionTime</p></td>
+<td><p>None</p></td>
+<td><p>Same field as in MzMLToMzLite. Keep None, the spectra are copied as they are.</p></td>
+</tr>
+<tr class="odd">
+<td><p>EndRetentionTime</p></td>
+<td><p>None</p></td>
+<td><p>Same field as in MzMLToMzLite. Keep None.</p></td>
+</tr>
+<tr class="even">
+<td><p>MS1PeakPicking</p></td>
+<td><p>PeakPicking.Centroid (CentroidizationMode.Wavelet ms1Wavelet)</p></td>
+<td><p>Same field as in MzMLToMzLite. The default file carries the wavelet record shown in the script below, and the MS1 peaks are copied as they are.</p></td>
+</tr>
+<tr class="odd">
+<td><p>MS2PeakPicking</p></td>
+<td><p>PeakPicking.Centroid (CentroidizationMode.Wavelet ms2Wavelet)</p></td>
+<td><p>Same field as in MzMLToMzLite, with padding settings in the default file. The MS2 peaks are copied as they are.</p></td>
+</tr>
+</tbody>
+</table>
+
+<p>The wavelet parameters are explained on the <a href="https://csbiology.github.io/ProteomIQon/tools/MzMLToMzLite.html">MzMLToMzLite</a> page. The default file is <a href="https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/TIMsMzMLtoMzLiteParams.json">TIMsMzMLtoMzLiteParams.json</a>.</p>
+<h2><a name="Writing-a-parameter-file" class="anchor" href="#Writing-a-parameter-file">Writing a parameter file</a></h2>
+<pre class="fssnip highlighted"><code lang="fsharp"><span class="k">open</span> <span onmouseout="hideTip(event, 'fs1', 1)" onmouseover="showTip(event, 'fs1', 1)" class="id">ProteomIQon</span>
+<span class="k">open</span> <span onmouseout="hideTip(event, 'fs1', 2)" onmouseover="showTip(event, 'fs1', 2)" class="id">ProteomIQon</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs2', 3)" onmouseover="showTip(event, 'fs2', 3)" class="m">Domain</span>
+
+<span class="k">let</span> <span onmouseout="hideTip(event, 'fs3', 4)" onmouseover="showTip(event, 'fs3', 4)" class="id">ms1Wavelet</span> <span class="pn">:</span> <span onmouseout="hideTip(event, 'fs4', 5)" onmouseover="showTip(event, 'fs4', 5)" class="rt">WaveletPeakPickingParams</span> <span class="o">=</span>
+    <span class="pn">{</span>
+        <span class="prop">NumberOfScales</span>       <span class="o">=</span> <span class="n">3</span>
+        <span onmouseout="hideTip(event, 'fs5', 6)" onmouseover="showTip(event, 'fs5', 6)" class="prop">YThreshold</span>           <span class="o">=</span> <span onmouseout="hideTip(event, 'fs5', 7)" onmouseover="showTip(event, 'fs5', 7)" class="rt">YThreshold</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs6', 8)" onmouseover="showTip(event, 'fs6', 8)" class="id">Fixed</span> <span class="n">1.0</span>
+        <span class="prop">Centroid_MzTolerance</span> <span class="o">=</span> <span class="n">0.1</span>
+        <span class="prop">SNRS_Percentile</span>      <span class="o">=</span> <span class="n">95.0</span>
+        <span class="prop">MinSNR</span>               <span class="o">=</span> <span class="n">1.0</span>
+        <span class="prop">RefineMZ</span>             <span class="o">=</span> <span class="k">false</span>
+        <span class="prop">SumIntensities</span>       <span class="o">=</span> <span class="k">false</span>
+        <span onmouseout="hideTip(event, 'fs7', 9)" onmouseover="showTip(event, 'fs7', 9)" class="prop">PaddingParams</span>        <span class="o">=</span> <span onmouseout="hideTip(event, 'fs8', 10)" onmouseover="showTip(event, 'fs8', 10)" class="uc">None</span>
+    <span class="pn">}</span>
+
+<span class="k">let</span> <span onmouseout="hideTip(event, 'fs9', 11)" onmouseover="showTip(event, 'fs9', 11)" class="id">ms2Padding</span> <span class="pn">:</span> <span onmouseout="hideTip(event, 'fs7', 12)" onmouseover="showTip(event, 'fs7', 12)" class="rt">PaddingParams</span> <span class="o">=</span>
+    <span class="pn">{</span>
+        <span class="prop">MaximumPaddingPoints</span> <span class="o">=</span> <span onmouseout="hideTip(event, 'fs10', 13)" onmouseover="showTip(event, 'fs10', 13)" class="uc">Some</span> <span class="n">7</span>
+        <span class="prop">Padding_MzTolerance</span>  <span class="o">=</span> <span class="n">0.05</span>
+        <span onmouseout="hideTip(event, 'fs11', 14)" onmouseover="showTip(event, 'fs11', 14)" class="prop">WindowSize</span>           <span class="o">=</span> <span class="n">150</span>
+        <span class="prop">SpacingPerc</span>          <span class="o">=</span> <span class="n">95.0</span>
+    <span class="pn">}</span>
+
+<span class="k">let</span> <span onmouseout="hideTip(event, 'fs12', 15)" onmouseover="showTip(event, 'fs12', 15)" class="id">ms2Wavelet</span> <span class="pn">:</span> <span onmouseout="hideTip(event, 'fs4', 16)" onmouseover="showTip(event, 'fs4', 16)" class="rt">WaveletPeakPickingParams</span> <span class="o">=</span>
+    <span class="pn">{</span>
+        <span class="prop">NumberOfScales</span>       <span class="o">=</span> <span class="n">10</span>
+        <span onmouseout="hideTip(event, 'fs5', 17)" onmouseover="showTip(event, 'fs5', 17)" class="prop">YThreshold</span>           <span class="o">=</span> <span onmouseout="hideTip(event, 'fs5', 18)" onmouseover="showTip(event, 'fs5', 18)" class="rt">YThreshold</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs13', 19)" onmouseover="showTip(event, 'fs13', 19)" class="id">MinSpectrumIntensity</span>
+        <span class="prop">Centroid_MzTolerance</span> <span class="o">=</span> <span class="n">0.1</span>
+        <span class="prop">SNRS_Percentile</span>      <span class="o">=</span> <span class="n">95.0</span>
+        <span class="prop">MinSNR</span>               <span class="o">=</span> <span class="n">1.0</span>
+        <span class="prop">RefineMZ</span>             <span class="o">=</span> <span class="k">false</span>
+        <span class="prop">SumIntensities</span>       <span class="o">=</span> <span class="k">false</span>
+        <span onmouseout="hideTip(event, 'fs7', 20)" onmouseover="showTip(event, 'fs7', 20)" class="prop">PaddingParams</span>        <span class="o">=</span> <span onmouseout="hideTip(event, 'fs10', 21)" onmouseover="showTip(event, 'fs10', 21)" class="uc">Some</span> <span onmouseout="hideTip(event, 'fs9', 22)" onmouseover="showTip(event, 'fs9', 22)" class="id">ms2Padding</span>
+    <span class="pn">}</span>
+
+<span class="k">let</span> <span onmouseout="hideTip(event, 'fs14', 23)" onmouseover="showTip(event, 'fs14', 23)" class="id">timsMzMLToMzLiteParams</span> <span class="pn">:</span> <span onmouseout="hideTip(event, 'fs15', 24)" onmouseover="showTip(event, 'fs15', 24)" class="m">Dto</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs16', 25)" onmouseover="showTip(event, 'fs16', 25)" class="id">MzMLtoMzLiteParams</span> <span class="o">=</span>
+    <span class="pn">{</span>
+        <span class="prop">Compress</span>           <span class="o">=</span> <span onmouseout="hideTip(event, 'fs17', 26)" onmouseover="showTip(event, 'fs17', 26)" class="m">Compression</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs18', 27)" onmouseover="showTip(event, 'fs18', 27)" class="id">NoCompression</span>
+        <span class="prop">StartRetentionTime</span> <span class="o">=</span> <span onmouseout="hideTip(event, 'fs8', 28)" onmouseover="showTip(event, 'fs8', 28)" class="uc">None</span>
+        <span class="prop">EndRetentionTime</span>   <span class="o">=</span> <span onmouseout="hideTip(event, 'fs8', 29)" onmouseover="showTip(event, 'fs8', 29)" class="uc">None</span>
+        <span class="prop">MS1PeakPicking</span>     <span class="o">=</span> <span onmouseout="hideTip(event, 'fs19', 30)" onmouseover="showTip(event, 'fs19', 30)" class="rt">PeakPicking</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs20', 31)" onmouseover="showTip(event, 'fs20', 31)" class="id">Centroid</span> <span class="pn">(</span><span onmouseout="hideTip(event, 'fs21', 32)" onmouseover="showTip(event, 'fs21', 32)" class="rt">CentroidizationMode</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs22', 33)" onmouseover="showTip(event, 'fs22', 33)" class="id">Wavelet</span> <span onmouseout="hideTip(event, 'fs3', 34)" onmouseover="showTip(event, 'fs3', 34)" class="id">ms1Wavelet</span><span class="pn">)</span>
+        <span class="prop">MS2PeakPicking</span>     <span class="o">=</span> <span onmouseout="hideTip(event, 'fs19', 35)" onmouseover="showTip(event, 'fs19', 35)" class="rt">PeakPicking</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs20', 36)" onmouseover="showTip(event, 'fs20', 36)" class="id">Centroid</span> <span class="pn">(</span><span onmouseout="hideTip(event, 'fs21', 37)" onmouseover="showTip(event, 'fs21', 37)" class="rt">CentroidizationMode</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs22', 38)" onmouseover="showTip(event, 'fs22', 38)" class="id">Wavelet</span> <span onmouseout="hideTip(event, 'fs12', 39)" onmouseover="showTip(event, 'fs12', 39)" class="id">ms2Wavelet</span><span class="pn">)</span>
+    <span class="pn">}</span>
+
+<span class="c">// Replace the temp folder with your project folder.</span>
+<span class="k">let</span> <span onmouseout="hideTip(event, 'fs23', 40)" onmouseover="showTip(event, 'fs23', 40)" class="id">outputPath</span> <span class="o">=</span> <span onmouseout="hideTip(event, 'fs24', 41)" onmouseover="showTip(event, 'fs24', 41)" class="id">System</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs25', 42)" onmouseover="showTip(event, 'fs25', 42)" class="id">IO</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs26', 43)" onmouseover="showTip(event, 'fs26', 43)" class="rt">Path</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs27', 44)" onmouseover="showTip(event, 'fs27', 44)" class="id">Combine</span><span class="pn">(</span><span onmouseout="hideTip(event, 'fs24', 45)" onmouseover="showTip(event, 'fs24', 45)" class="id">System</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs25', 46)" onmouseover="showTip(event, 'fs25', 46)" class="id">IO</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs26', 47)" onmouseover="showTip(event, 'fs26', 47)" class="rt">Path</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs28', 48)" onmouseover="showTip(event, 'fs28', 48)" class="id">GetTempPath</span><span class="pn">(</span><span class="pn">)</span><span class="pn">,</span> <span class="s">&quot;TIMsMzMLtoMzLiteParams.json&quot;</span><span class="pn">)</span>
+
+<span onmouseout="hideTip(event, 'fs29', 49)" onmouseover="showTip(event, 'fs29', 49)" class="m">Json</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs30', 50)" onmouseover="showTip(event, 'fs30', 50)" class="id">serializeAndWrite</span> <span onmouseout="hideTip(event, 'fs23', 51)" onmouseover="showTip(event, 'fs23', 51)" class="id">outputPath</span> <span onmouseout="hideTip(event, 'fs14', 52)" onmouseover="showTip(event, 'fs14', 52)" class="id">timsMzMLToMzLiteParams</span>
+</code></pre>
+<h2><a name="Running-the-tool" class="anchor" href="#Running-the-tool">Running the tool</a></h2>
+<p>Install the tool with <code>dotnet tool install --global ProteomIQon.MzMLToMzLiteIonMobility</code>, then convert one run:</p>
+<table class="pre"><tr><td class="snippet"><pre class="fssnip"><code lang="text">proteomiqon-mzmltomzliteionmobility -i path/to/run.mzML -o path/to/output -p path/to/TIMsMzMLtoMzLiteParams.json
+</code></pre></td></tr></table>
+<p>Several runs, three of them converted at the same time:</p>
+<table class="pre"><tr><td class="snippet"><pre class="fssnip"><code lang="text">proteomiqon-mzmltomzliteionmobility -i path/to/run1.mzML path/to/run2.mzML path/to/run3.mzML -o path/to/output -p path/to/TIMsMzMLtoMzLiteParams.json -c 3
+</code></pre></td></tr></table>
+<p>A file that fails to parse because of a stray <code>&amp;quot</code>:</p>
+<table class="pre"><tr><td class="snippet"><pre class="fssnip"><code lang="text">proteomiqon-mzmltomzliteionmobility -i path/to/run.mzML -o path/to/output -p path/to/TIMsMzMLtoMzLiteParams.json -f
+</code></pre></td></tr></table>
+<p>All flags:</p>
+<table class="pre"><tr><td class="snippet"><pre class="fssnip"><code lang="text">proteomiqon-mzmltomzliteionmobility --help
+</code></pre></td></tr></table>
+
+                </div>
+            </div>
+        </div>
+        <div class="fsdocs-tip" id="fs1">namespace ProteomIQon</div>
+<div class="fsdocs-tip" id="fs2">module Domain
+
+from ProteomIQon</div>
+<div class="fsdocs-tip" id="fs3">val ms1Wavelet: WaveletPeakPickingParams</div>
+<div class="fsdocs-tip" id="fs4">type WaveletPeakPickingParams =
+  {
+    NumberOfScales: int
+    YThreshold: YThreshold
+    Centroid_MzTolerance: float
+    SNRS_Percentile: float
+    MinSNR: float
+    RefineMZ: bool
+    SumIntensities: bool
+    PaddingParams: PaddingParams option
+  }
+  member Equals: WaveletPeakPickingParams * IEqualityComparer -&gt; bool</div>
+<div class="fsdocs-tip" id="fs5">type YThreshold =
+  | Fixed of float
+  | MinSpectrumIntensity
+  member Equals: YThreshold * IEqualityComparer -&gt; bool
+  member IsFixed: bool
+  member IsMinSpectrumIntensity: bool</div>
+<div class="fsdocs-tip" id="fs6">union case YThreshold.Fixed: float -&gt; YThreshold</div>
+<div class="fsdocs-tip" id="fs7">type PaddingParams =
+  {
+    MaximumPaddingPoints: int option
+    Padding_MzTolerance: float
+    WindowSize: int
+    SpacingPerc: float
+  }
+  member Equals: PaddingParams * IEqualityComparer -&gt; bool</div>
+<div class="fsdocs-tip" id="fs8">union case Option.None: Option&lt;&#39;T&gt;</div>
+<div class="fsdocs-tip" id="fs9">val ms2Padding: PaddingParams</div>
+<div class="fsdocs-tip" id="fs10">union case Option.Some: Value: &#39;T -&gt; Option&lt;&#39;T&gt;</div>
+<div class="fsdocs-tip" id="fs11">type WindowSize =
+  | Fixed of int
+  | EstimateUsingAutoCorrelation of float
+  member Equals: WindowSize * IEqualityComparer -&gt; bool
+  member IsEstimateUsingAutoCorrelation: bool
+  member IsFixed: bool</div>
+<div class="fsdocs-tip" id="fs12">val ms2Wavelet: WaveletPeakPickingParams</div>
+<div class="fsdocs-tip" id="fs13">union case YThreshold.MinSpectrumIntensity: YThreshold</div>
+<div class="fsdocs-tip" id="fs14">val timsMzMLToMzLiteParams: Dto.MzMLtoMzLiteParams</div>
+<div class="fsdocs-tip" id="fs15">module Dto
+
+from ProteomIQon</div>
+<div class="fsdocs-tip" id="fs16">Multiple items<br />module MzMLtoMzLiteParams
+
+from ProteomIQon.Dto<br /><br />--------------------<br />type MzMLtoMzLiteParams = Dto.PreprocessingParams</div>
+<div class="fsdocs-tip" id="fs17">Multiple items<br />module Compression
+
+from ProteomIQon.Common<br /><br />--------------------<br />[&lt;Struct&gt;]
+type Compression =
+  | NoCompression = 0
+  | ZLib = 1
+  | NumPress = 2
+  | NumPressZLib = 3</div>
+<div class="fsdocs-tip" id="fs18">Compression.NoCompression: Compression = 0</div>
+<div class="fsdocs-tip" id="fs19">type PeakPicking =
+  | ProfilePeaks
+  | Centroid of CentroidizationMode
+  member Equals: PeakPicking * IEqualityComparer -&gt; bool
+  member IsCentroid: bool
+  member IsProfilePeaks: bool</div>
+<div class="fsdocs-tip" id="fs20">union case PeakPicking.Centroid: CentroidizationMode -&gt; PeakPicking</div>
+<div class="fsdocs-tip" id="fs21">type CentroidizationMode =
+  | Manufacturer
+  | Wavelet of WaveletPeakPickingParams
+  member Equals: CentroidizationMode * IEqualityComparer -&gt; bool
+  member IsManufacturer: bool
+  member IsWavelet: bool</div>
+<div class="fsdocs-tip" id="fs22">union case CentroidizationMode.Wavelet: WaveletPeakPickingParams -&gt; CentroidizationMode</div>
+<div class="fsdocs-tip" id="fs23">val outputPath: string</div>
+<div class="fsdocs-tip" id="fs24">namespace System</div>
+<div class="fsdocs-tip" id="fs25">namespace System.IO</div>
+<div class="fsdocs-tip" id="fs26">type Path =
+  static member ChangeExtension: path: string * extension: string -&gt; string
+  static member Combine: path1: string * path2: string -&gt; string + 4 overloads
+  static member EndsInDirectorySeparator: path: ReadOnlySpan&lt;char&gt; -&gt; bool + 1 overload
+  static member Exists: path: string -&gt; bool
+  static member GetDirectoryName: path: ReadOnlySpan&lt;char&gt; -&gt; ReadOnlySpan&lt;char&gt; + 1 overload
+  static member GetExtension: path: ReadOnlySpan&lt;char&gt; -&gt; ReadOnlySpan&lt;char&gt; + 1 overload
+  static member GetFileName: path: ReadOnlySpan&lt;char&gt; -&gt; ReadOnlySpan&lt;char&gt; + 1 overload
+  static member GetFileNameWithoutExtension: path: ReadOnlySpan&lt;char&gt; -&gt; ReadOnlySpan&lt;char&gt; + 1 overload
+  static member GetFullPath: path: string -&gt; string + 1 overload
+  static member GetInvalidFileNameChars: unit -&gt; char array
+  ...<br /><em>&lt;summary&gt;Performs operations on &lt;see cref=&quot;T:System.String&quot; /&gt; instances that contain file or directory path information. These operations are performed in a cross-platform manner.&lt;/summary&gt;</em></div>
+<div class="fsdocs-tip" id="fs27">System.IO.Path.Combine(paths: System.ReadOnlySpan&lt;string&gt;) : string<br />System.IO.Path.Combine([&lt;System.ParamArray&gt;] paths: string array) : string<br />System.IO.Path.Combine(path1: string, path2: string) : string<br />System.IO.Path.Combine(path1: string, path2: string, path3: string) : string<br />System.IO.Path.Combine(path1: string, path2: string, path3: string, path4: string) : string</div>
+<div class="fsdocs-tip" id="fs28">System.IO.Path.GetTempPath() : string</div>
+<div class="fsdocs-tip" id="fs29">module Json
+
+from ProteomIQon</div>
+<div class="fsdocs-tip" id="fs30">val serializeAndWrite: path: string -&gt; obj: &#39;a -&gt; unit</div>
+
+    </div>
+
+    <!-- BEGIN SEARCH BOX: this adds support for the search box -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/JavaScript-autoComplete/1.0.4/auto-complete.css" />
+    <script type="text/javascript">var fsdocs_search_baseurl = 'https://csbiology.github.io/ProteomIQon/'</script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/lunr.js/2.3.8/lunr.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/JavaScript-autoComplete/1.0.4/auto-complete.min.js"></script>
+    <script type="text/javascript" src="https://csbiology.github.io/ProteomIQon/content/fsdocs-search.js"></script>
+    <!-- END SEARCH BOX: this adds support for the search box -->
+</body>
+<footer>
+    <script>
+        bulmaCollapsible.attach('.is-collapsible');
+    </script>
+</footer>
+</html>

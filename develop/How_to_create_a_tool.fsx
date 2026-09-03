@@ -1,38 +1,45 @@
 (**
-// can't yet format YamlFrontmatter (["title: How to create your own tool"; "category: Developer Notes"; "categoryindex: 2"; "index: 1"], Some { StartLine = 2 StartColumn = 0 EndLine = 6 EndColumn = 8 }) to pynb markdown
-
 # How to create a tool
 
-If you want to extend the functionality of the ProteomIQon you can either submit a pull request to update
-an existing tool or - if the functionality is better encapsulated as a stand alone application - create a new tool.
-To make this as as easy as possible we created a tool template which sets up a basic scaffold for your new tool!
+Every ProteomIQon tool is a small console project under `src/` with the same three files:
+`CLIArgumentParsing.fs` declares the command line arguments with
+[Argu](https://fsprojects.github.io/Argu/), `Program.fs` parses them, reads the parameter JSON
+and loops over the input files, and a third file holds the actual work. Parameter records and
+result row types shared between tools live in the core project `src/ProteomIQon/`.
 
-## Installing the template:
-Assuming that you have cloned the ProteomIQon repository you can install the tool by navigating to the project root and calling: 
+## Scaffolding from the template
 
-	dotnet new --install ./ConsoleTemplate/template
+The repository ships a `dotnet new` template that creates this layout. Install it once from
+the repository root:
 
-The installation can then be verified by executing the following snippet:
+	dotnet new install ./ConsoleTemplate/template
 
-	dotnet new --list 
+`dotnet new list` should now show `pct` (prototypical proteomiqon console project). Create the
+project inside `src/` and add it to the solution:
 
-This should print a list of installed templates. If everything was successful you will find the line among the installed tools: 
+	cd src
+	dotnet new pct -n MyTool --force
+	cd ..
+	dotnet sln ProteomIQon.sln add src/MyTool/MyTool.fsproj
 
-	Templates                           Short Name               Language          Tags
-	------------------------------      -------------------      ------------      ----------------------------------------
-	...
-	prototypical proteomiqon co...      pct                      F#                proteomiqon console/proteomiqon/template
-	...
+Compare the new `.fsproj` with a current tool such as `src/PeptideDB/PeptideDB.fsproj` and take
+the target framework, the package versions, the `PackAsTool` and `ToolCommandName` properties
+from there.
 
-## Adding a new tool to the project:
-To initialize a new tool using the template, navigate into the 'src' folder, replace 'projectName' with your choice for a tool name and call:
+## Wiring the tool in
 
-	dotnet new pct -n "projectName" --force
+Four more places need to know about the tool:
 
-Afterwards navigate back to the project root and execute the following line to add your tool to the ProteomIQon solution:
+0 A parameter record in `src/ProteomIQon/DTO.fs` with a `toDomain` conversion, plus a default
+JSON file in `src/ProteomIQon/defaultParams/`. The tools read parameters with
+`Json.ReadAndDeserialize`.
 
-	dotnet sln ProteomIQon.sln add "./src/projectName/projectName.fsproj"
+1 A `RELEASE_NOTES.md` in the project folder. The build reads the package version from it.
 
-Afterwards you should be good to go! Have fun extending the ProteomIQon, we look forward to your contribution!
+2 An entry in the `projects` list of `build/ProjectInfo.fs`, so `Build` and `Pack` include it.
+
+3 A page in `docs/tools/`, see [How to document your work](https://csbiology.github.io/ProteomIQon/develop/How_to_document_your_work.html).
+
+Then open a pull request against `dev`.
 
 *)

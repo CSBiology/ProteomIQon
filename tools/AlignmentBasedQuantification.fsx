@@ -1,120 +1,134 @@
 (**
-// can't yet format YamlFrontmatter (["title: AlignmentbasedQuantification"; "category: Tools"; "categoryindex: 1"; "index:9"], Some { StartLine = 2 StartColumn = 0 EndLine = 6 EndColumn = 7 }) to pynb markdown
-
 [![Binder](https://csbiology.github.io/ProteomIQon/img/badge-binder.svg)](https://mybinder.org/v2/gh/csbiology/ProteomIQon/gh-pages?filepath=tools/AlignmentBasedQuantification.ipynb)&emsp;
 [![Script](https://csbiology.github.io/ProteomIQon/img/badge-script.svg)](https://csbiology.github.io/ProteomIQon/tools/AlignmentBasedQuantification.fsx)&emsp;
 [![Notebook](https://csbiology.github.io/ProteomIQon/img/badge-notebook.svg)](https://csbiology.github.io/ProteomIQon/tools/AlignmentBasedQuantification.ipynb)
 
-# Alignment based Quantification
-**Disclaimer** this tool needs a [peptide database](https://csbiology.github.io/ProteomIQon/tools/peptideDb.html), [quantified peptides](https://csbiology.github.io/ProteomIQon/tools/PSMbasedQuantification.html)
-and a list of peptides [deduced by alignment](https://csbiology.github.io/ProteomIQon/tools/QuantBasedAlignment.html).
+# AlignmentBasedQuantification
 
-Given an MS run in the mzLite or mzml format and a list of a list of peptides [deduced by alignment](https://csbiology.github.io/ProteomIQon/tools/QuantBasedAlignment.html)., 
-this tool iterates accross all and performs an XIC extration and quantification in similar to the [PSMbasedQuantification](https://csbiology.github.io/ProteomIQon/tools/PSMbasedQuantification.html) tool.
+[QuantBasedAlignment](https://csbiology.github.io/ProteomIQon/tools/QuantBasedAlignment.html) predicts where a peptide ion identified in another run should elute in this run.
+AlignmentBasedQuantification goes to that place. For every peptide ion in the .align file it extracts an ion chromatogram from the .mzlite file
+around the predicted scan time, and, with PerformLocalWarp set, moves the scan time estimate by dynamic time warping of the extracted chromatogram
+against the chromatogram the ion had in the source run. Baseline correction, peak detection, peak fitting and the labeled counterpart work as in
+[PSMBasedQuantification](https://csbiology.github.io/ProteomIQon/tools/PSMBasedQuantification.html). The result is a .quant file that holds the quantifications of this run's own
+identifications together with the transferred ones.
 
-One of the drawbacks of data-dependent acquisition is the stochastic nature of peptide ion selection for MSMS fragmentation as a prerequisite for peptide identification and quantification. 
-A way to overcome this drawback is the transfer of identified ions from one run to another using the assumption that the run is merely lacking a successful MSMS scan,
-but still containing the peptide itself.
+## Inputs and outputs
 
-For each peptide ion the tools uses the scan time prediction derived using the [quant based alignment tool](https://csbiology.github.io/ProteomIQon/tools/QuantBasedAlignment.html) to extract a
-XIC. To refine the derived scan time estimate, we then locally align the extracted XIC to the XIC of the aligned peptide using dynamic time warping.
+Flag | Meaning | Comes from
+--- | --- | ---
+`-i` | .mzlite of the run | [MzMLToMzLite](https://csbiology.github.io/ProteomIQon/tools/MzMLToMzLite.html)
+`-ii` | .align of the run | [QuantBasedAlignment](https://csbiology.github.io/ProteomIQon/tools/QuantBasedAlignment.html)
+`-iii` | .alignmetric of the run | [QuantBasedAlignment](https://csbiology.github.io/ProteomIQon/tools/QuantBasedAlignment.html)
+`-iv` | .quant of the same run | [PSMBasedQuantification](https://csbiology.github.io/ProteomIQon/tools/PSMBasedQuantification.html)
+`-d` | peptide database (SQLite) | [PeptideDB](https://csbiology.github.io/ProteomIQon/tools/PeptideDB.html)
+`-o` | output directory, created when missing | &#32;
+`-p` | parameter file (JSON) | this page
+`-mf` | switch: pair the four file lists by base name instead of by position | &#32;
+`-dc` | switch: write chromatogram and m/z correction charts | &#32;
+`-c` | number of runs processed in parallel, default 1, in the directory case | &#32;
 
-Using this scan time estimate, we use wavelet based peak detection techniques to identify all peaks present in the XIC and select the most probable peak as our target for quantification. 
-Using parameter estimation techniques we subsequently use peak fitting to fit a set of two gaussian models to the detected peak, from whom the one with the better fit is selected. This allows us not only to report how well the
-signal fitted to the theoretical expected peak shape but also to obtain accurate estimates for the peak area, our estimator for peptide ion abundance.
 
-<img src="https://csbiology.github.io/ProteomIQon/img/LabeledQuant.png" width="1000" height="750" />
-<img src="https://csbiology.github.io/ProteomIQon/img/LabeledQuant.png" width="1000" height="750" />
+Each of the four input flags takes exactly one path. When `-i` is an existing file, the tool processes that single run and expects single files for
+`-ii` through -iv as well. When `-i` and `-ii` are directories, the tool searches `-i` for *.mzlite, `-ii` for *.align, `-iii` for *.alignmetric and -iv for
+*.quant and processes every run it can pair. Without `-mf` the four file lists are paired by position. With `-mf` they are paired by file name
+without extension, and a run that lacks one of the four files is skipped with a note in the log.
 
-The quantification tool was designed to allow label-free quantification as well as quantification of full metabolic labeled samples. For this we 
-use the known identity of one of the the peptide ions and calculate the m/z of the unobserved differentially labeled counterpart to extract and 
-quantify the corresponding XIC. 
+The tool writes `<run>.quant` into the output directory, a tab separated table with the rows of the input .quant file followed by one row per
+transferred peptide ion. The column QuantificationSource tells them apart (PSM or Alignment). AlignmentScore and AlignmentQValue hold NaN
+until [AlignmentBasedQuantStatistics](https://csbiology.github.io/ProteomIQon/tools/AlignmentBasedQuantStatistics.html) fills them. The file is also read by
+[AddDeducedPeptides](https://csbiology.github.io/ProteomIQon/tools/AddDeducedPeptides.html) and
+[JoinQuantPepIonsWithProteins](https://csbiology.github.io/ProteomIQon/tools/JoinQuantPepIonsWithProteins.html). Next to it the tool writes `<run>.alignquantMetrics`, a
+table of the alignment metrics in quantification format.
+With `-dc` the chromatograms and the m/z correction go as HTML charts into `<run>_plots`. Delete an existing `<run>.quant` or `<run>.alignquantMetrics` in the
+output directory before a rerun, the tool appends to them. Logs go to `AlignmentBasedQuantification_log.txt` and one `<run>_log.txt` per run.
 
 ## Parameters
-The following table gives an overview of the parameter set:
 
-| **Parameter**                  | **Default Value**                                                                                                                         | **Description**                                                    |
-|--------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------|
-| PerformLabeledQuantification   | true                                                                                                                                      | Indicates if a labeled quantification should be performed          |
-| PerformLocalWarp               | true                                                                                                                                      | Indicates if dynamic time warping based scan time refinement should be performed |
-| XicExtraction                  | {TopKPSMs = None; ScanTimeWindow = 2.; MzWindow_Da = 0.07; XicProcessing = Wavelet waveletParams}                                         | Parameters to tune the Xic extraction                              |
-| BaseLineCorrection             | Some { MaxIterations = 10; Lambda = 6; P = 0.05 }                                                                                         | optional parameter, defines if and how baseline correction should be performed |
+Parameter | Default | Meaning
+--- | --- | ---
+PerformLabeledQuantification | true | Also extract and quantify the differentially labeled counterpart of every transferred ion.
+PerformLocalWarp | true | Refine the predicted scan time by dynamic time warping against the source chromatogram before peak detection.
+XicExtraction | see below | How the ion chromatogram is extracted and processed.
+BaseLineCorrection | Some { MaxIterations = 10; Lambda = 6; P = 0.05 } | Asymmetric least squares baseline correction of the chromatogram. None switches it off.
 
-        
-## Parameter Generation
 
-Parameters are handed to the cli tool as a .json file. you can download the default file [here](https://github.com/CSBiology/ProteomIQon/blob/master/src/ProteomIQon/defaultParams/AlignmentBasedQuantificationParams.json), 
-or use an F# script, which can be downloaded or run in Binder at the top of the page, to write your own parameter file:
+XicExtraction is the same record PSMBasedQuantification uses.
+
+Field | Default | Meaning
+--- | --- | ---
+ScanTimeWindow | 2.0 | Half width in minutes of the scan time range extracted around the predicted scan time.
+MzWindow_Da | Window.Estimate | Keep Window.Estimate. The tool estimates the m/z tolerance from the run itself.
+XicProcessing | XicProcessing.Wavelet waveletParams | Peak detection method. The wavelet fields are described on the [PSMBasedQuantification](https://csbiology.github.io/ProteomIQon/tools/PSMBasedQuantification.html) page.
+TopKPSMs | None | Keep None. Transferred ions have no identifications to rank.
+
+
+The default file is [AlignmentBasedQuantificationParams.json](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/AlignmentBasedQuantificationParams.json).
+
+## Writing a parameter file
 
 *)
-#r "nuget: BioFSharp.Mz, 0.1.5-beta"
-#r "nuget: ProteomIQon, 0.0.1"
-
 open ProteomIQon
 open ProteomIQon.Domain
 open FSharp.Stats.Signal
 
-open BioFSharp.Mz
+let waveletParams : WaveletParameters =
+    {
+        Borderpadding          = None
+        BorderPadMethod        = Padding.BorderPaddingMethod.Random
+        InternalPaddingMethod  = Padding.InternalPaddingMethod.LinearInterpolation
+        HugeGapPaddingMethod   = Padding.HugeGapPaddingMethod.Zero
+        HugeGapPaddingDistance = 100.
+        MinPeakDistance        = None
+        MinPeakLength          = Some 0.1
+        MaxPeakLength          = 1.5
+        NoiseQuantile          = 0.01
+        MinSNR                 = 0.01
+    }
 
-let defaultQuantificationParams :Dto.AlignmentBasedQuantificationParams = 
-    ///
-    let waveletParams :WaveletParameters = 
-        {
-            Borderpadding           = None    
-            BorderPadMethod         = Padding.BorderPaddingMethod.Random 
-            InternalPaddingMethod   = Padding.InternalPaddingMethod.LinearInterpolation 
-            HugeGapPaddingMethod    = Padding.HugeGapPaddingMethod.Zero
-            HugeGapPaddingDistance  = 100.
-            MinPeakDistance         = None
-            MinPeakLength           = Some 0.1
-            MaxPeakLength           = 1.5 
-            NoiseQuantile           = 0.01 
-            MinSNR                  = 0.01  
-        }
-
-    let XicExtraction = 
-        {
-            TopKPSMs                     = None
-            ScanTimeWindow               = 2.
-            MzWindow_Da                  = 0.07 
-            XicProcessing                = Wavelet waveletParams
-        }
-
-    let BaseLineCorrection = 
-        {
-            MaxIterations                = 10 
-            Lambda                       = 6 
-            P                            = 0.05
-        }
+let alignmentBasedQuantificationParams : Dto.AlignmentBasedQuantificationParams =
     {
         PerformLabeledQuantification = true
         PerformLocalWarp             = true
-        XicExtraction                = XicExtraction
-        BaseLineCorrection           = Some BaseLineCorrection
+        XicExtraction =
+            {
+                ScanTimeWindow = 2.
+                MzWindow_Da    = Window.Estimate
+                XicProcessing  = XicProcessing.Wavelet waveletParams
+                TopKPSMs       = None
+            }
+        BaseLineCorrection = Some { MaxIterations = 10; Lambda = 6; P = 0.05 }
     }
 
+// Replace the temp folder with your project folder.
+let outputPath =
+    System.IO.Path.Combine(System.IO.Path.GetTempPath(), "AlignmentBasedQuantificationParams.json")
 
-let serialized = 
-    defaultQuantificationParams
-    |> Json.serialize
+Json.serializeAndWrite outputPath alignmentBasedQuantificationParams
 (**
-## Executing the Tool
-**Disclaimer** this tool needs a [peptide database](https://csbiology.github.io/ProteomIQon/tools/peptideDb.html), [quantified peptides](https://csbiology.github.io/ProteomIQon/tools/PSMbasedQuantification.html)
-and a list of peptides [deduced by alignment](https://csbiology.github.io/ProteomIQon/tools/QuantBasedAlignment.html).
+## Running the tool
 
+Install the tool with `dotnet tool install --global ProteomIQon.AlignmentBasedQuantification`. The four run specific inputs share the run name, so the same base name appears four times.
 
-	proteomiqon-alignmentbasedquantification -i "path/to/your/run.mzlite" -ii "path/to/your/run.align" -iii "path/to/your/run.alignmetric" -iv "path/to/your/run.quant" -d "path/to/your/database.sqlite" -o "path/to/your/outDirectory" -p "path/to/your/params.json"
+```text
+proteomiqon-alignmentbasedquantification -i path/to/run.mzlite -ii path/to/run.align -iii path/to/run.alignmetric -iv path/to/run.quant -d path/to/peptides.db -o path/to/output -p path/to/AlignmentBasedQuantificationParams.json
+```
 
-It is also possible to call the tool on a lists of MS and scored psm files. If you have a multicore cpu it is possible to score multiple runs in parallel using the -c flag:
+Process every run in a set of directories, paired by position, three at a time.
 
-	proteomiqon-alignmentbasedquantification -i "path/to/your/run1.mzlite" "path/to/your/run2.mzlite" -ii "path/to/your/run1.align" "path/to/your/run2.align" -iii "path/to/your/run1.alignmetric" "path/to/your/run2.alignmetric" -iv "path/to/your/run1.quant" "path/to/your/run2.quant" -d "path/to/your/database.sqlite" -o "path/to/your/outDirectory" -p "path/to/your/params.json" -c 2
+```text
+proteomiqon-alignmentbasedquantification -i path/to/mzlite -ii path/to/align -iii path/to/alignmetric -iv path/to/quant -d path/to/peptides.db -o path/to/output -p path/to/AlignmentBasedQuantificationParams.json -c 3
+```
 
-By default files get matched by their position in the list. To perform a name based file match set the -mf flag:
+The same, paired by file name.
 
-	proteomiqon-alignmentbasedquantification -i "path/to/your/run1.mzlite" "path/to/your/run2.mzlite" -ii "path/to/your/run1.align" "path/to/your/run2.align" -iii "path/to/your/run1.alignmetric" "path/to/your/run2.alignmetric" -iv "path/to/your/run1.quant" "path/to/your/run2.quant" -d "path/to/your/database.sqlite" -o "path/to/your/outDirectory" -p "path/to/your/params.json" -c 2 -mf 
+```text
+proteomiqon-alignmentbasedquantification -i path/to/mzlite -ii path/to/align -iii path/to/alignmetric -iv path/to/quant -d path/to/peptides.db -o path/to/output -p path/to/AlignmentBasedQuantificationParams.json -c 3 -mf
+```
 
-A detailed description of the CLI arguments the tool expects can be obtained by calling the tool:
+Print the description of every argument.
 
-	proteomiqon-alignmentbasedquantification --help
+```text
+proteomiqon-alignmentbasedquantification --help
+```
 
 *)

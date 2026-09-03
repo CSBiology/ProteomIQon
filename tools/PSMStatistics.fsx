@@ -1,78 +1,105 @@
 (**
-// can't yet format YamlFrontmatter (["title: PSMStatistics"; "category: Tools"; "categoryindex: 1"; "index: 5"], Some { StartLine = 2 StartColumn = 0 EndLine = 6 EndColumn = 8 }) to pynb markdown
-
 [![Binder](https://csbiology.github.io/ProteomIQon/img/badge-binder.svg)](https://mybinder.org/v2/gh/csbiology/ProteomIQon/gh-pages?filepath=tools/PSMStatistics.ipynb)&emsp;
 [![Script](https://csbiology.github.io/ProteomIQon/img/badge-script.svg)](https://csbiology.github.io/ProteomIQon/tools/PSMStatistics.fsx)&emsp;
 [![Notebook](https://csbiology.github.io/ProteomIQon/img/badge-notebook.svg)](https://csbiology.github.io/ProteomIQon/tools/PSMStatistics.ipynb)
 
-# Peptide Spectrum Matching Statistics
-**Disclaimer** this tool relies on the output of the tools [PeptideDB](https://csbiology.github.io/ProteomIQon/tools/peptideDb.html) and [PeptideSpectrumMatching](https://csbiology.github.io/ProteomIQon/tools/PeptideSpectrumMatching.html).
+# PSMStatistics
 
-An established method to identify acquired MS/MS spectra is the [comparison](https://csbiology.github.io/ProteomIQon/tools/PeptideSpectrumMatching.html) of each spectrum with peptides in a [reference database](https://csbiology.github.io/ProteomIQon/tools/peptideDb.html). 
-
-To measure the similarity of in silico generated spectra and measured MS/MS scans we use our own implementations of three established search enginge scores: SEQUEST, Andromeda and XTandem. 
-Additionally, we also record quality control parameters such as the mass difference between the precursor ion and the theoretically calulated mass or the uniquness of each score in comparison to 'competing'
-peptides within the search space. The PSMStatistics tool utilizes semi supervised machine learning techniques to integrate search engine scores as well as the mentioned quality scores into one single consensus score. 
+[PeptideSpectrumMatching](https://csbiology.github.io/ProteomIQon/tools/PeptideSpectrumMatching.html) reports several scores for every spectrum (SEQUEST-like, Andromeda-like, X!Tandem-like, plus mass error, peptide length and how far the best candidate is ahead of the next one).
+PSMStatistics learns one combined score from these columns. It uses the target and decoy labels of the matches as training signal, retrains in iterations while the set of confident targets grows (semi supervised), and stops when an iteration adds too few new positives or the iteration limit is reached.
+From the combined score it computes a [q-value](https://www.biofsharp.com/BioFSharp.Mz/04_01_fdr_control.html#Computing-q-values-by-counting-decoys) and a [PEP value](https://www.biofsharp.com/BioFSharp.Mz/04_01_fdr_control.html#From-list-level-q-to-single-PSM-PEP) per match and keeps the PSMs under both thresholds.
 
 <img src="https://csbiology.github.io/ProteomIQon/img/SemiSupervisedScoring.png" width="1000" height="750" />
-<img src="https://csbiology.github.io/ProteomIQon/img/SemiSupervisedScoring.png" width="1000" height="750" />
+## Inputs and outputs
 
-Since the search space is extended by so called decoys - reversed counterparts of peptides within the search space - we can estimate the distribution of 'true negatives' and calculate local (PEP values) and global (Q values)
-false discovery rates at each consensus score. 
-The reported peptides at user defined local and global FDR cutoffs can then be used as inputs for any downstream analysis be it [ProteinInference](https://csbiology.github.io/ProteomIQon/tools/ProteinInference.html) or [PSMBasedQuantification](https://csbiology.github.io/ProteomIQon/tools/PSMBasedQuantification.html) 
+Flag | Meaning | Comes from
+--- | --- | ---
+`-i` | one or more `.psm` files, or a directory that is searched for `*.psm` (not recursive) | [PeptideSpectrumMatching](https://csbiology.github.io/ProteomIQon/tools/PeptideSpectrumMatching.html)
+`-d` | the SQLite peptide database | [PeptideDB](https://csbiology.github.io/ProteomIQon/tools/PeptideDB.html)
+`-o` | the output directory, created when missing | &#32;
+`-p` | the parameter file in JSON | this page
+`-dc` | switch: save diagnostic charts to the output directory | &#32;
+`-c` | number of files scored at the same time, default 1 | &#32;
+
+
+For every input `run.psm` the tool writes `run.qpsm` to the output directory. The file is tab separated with a header and holds one row per scan: the identifiers of the peptide and its modification state, the search scores, the combined `ModelScore`, `QValue`, `PEPValue`, the sequence and the protein names.
+[ProteinInference](https://csbiology.github.io/ProteomIQon/tools/ProteinInference.html) and [PSMBasedQuantification](https://csbiology.github.io/ProteomIQon/tools/PSMBasedQuantification.html) read `.qpsm` files.
+
+The tool also creates a `run_plots` directory per input. It stays empty unless you pass `-dc`, which adds `Metrics.html` and `InitialSeparation.html`, plus one `separationAtIteration_<n>.html` per training iteration. Charts exist only for the estimated threshold. Log output goes to `PSMStatistics_log.txt` and `run_log.txt` in the output directory.
 
 ## Parameters
-The following table gives an overview of the parameter set:
 
-| **Parameter**                  | **Default Value**                                                                                                                                                           | **Description**                                                    |
-|--------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------|
-| Threshold                      | Threshold.Estimate {QValueThreshold = 0.01; PepValueThreshold = 0.05;MaxIterations=15;MinimumIncreaseBetweenIterations=0.005; PepValueFittingMethod = LinearLogit}          | Parameters used for FDR based filtering of scored peptides         |
-| ParseProteinIDRegexPattern     | id                                                                                                                                                                          | Regex pattern for parsing of the protein IDs in the database       |
-| KeepTemporaryFiles             | false                                                                                                                                                                       | Indicates if temporary files should be kept or discarded           |
+Parameter | Default | Meaning
+--- | --- | ---
+`Threshold` | `Threshold.Estimate estimationParams` | Learn the combined score and filter by q-value and PEP value. The nested record is listed below.
+`Threshold` (alternative) | `Threshold.Fixed { SequestLike = 0.; Andromeda = 0. }` | Skip the learning. Keep the best match per scan among those whose `SequestScore` exceeds `SequestLike` and whose `AndroScore` exceeds `Andromeda`, and drop it when it is a decoy. `ModelScore`, `QValue` and `PEPValue` are written as `nan`. Pick your own cutoffs, the values here are placeholders.
+`ParseProteinIDRegexPattern` | `"id"` | Regex applied to the FASTA headers of the database to produce the `ProteinNames` column. Use the same pattern as in PeptideDB.
+`KeepTemporaryFiles` | `true` | Part of the parameter record. Keep it at `true`.
 
-## Parameter Generation
 
-Parameters are handed to the cli tool as a .json file. you can download the default file [here](https://github.com/CSBiology/ProteomIQon/blob/master/src/ProteomIQon/defaultParams/psmstatisticsparams.json), 
-or use an F# script, which can be downloaded or run in Binder at the top of the page, to write your own parameter file:
+The fields of `Threshold.Estimate`:
+
+Parameter | Default | Meaning
+--- | --- | ---
+`QValueThreshold` | `0.01` | Keep PSMs with a q-value below this value.
+`PepValueThreshold` | `0.05` | Keep PSMs with a PEP value below this value.
+`MaxIterations` | `15` | Upper limit for the retraining iterations.
+`MinimumIncreaseBetweenIterations` | `0.005` | Stop when the number of positives at the q-value threshold grows by less than this fraction from one iteration to the next.
+`PepValueFittingMethod` | `PepValueFittingMethod.IRLS` | How the PEP curve is fitted. `IRLS` (iteratively reweighted least squares) is the only case.
+
+
+The default file is [pSMStatisticsParams.json](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/pSMStatisticsParams.json).
+
+## Writing a parameter file
 
 *)
-#r "nuget: BioFSharp.Mz, 0.1.5-beta"
-#r "nuget: ProteomIQon, 0.0.6"
-
 open ProteomIQon
 open ProteomIQon.Domain
-open BioFSharp.Mz
 
-
-let defaultPSMStatistics : Dto.PSMStatisticsParams = 
+let psmStatisticsParams : Dto.PSMStatisticsParams =
     {
-        Threshold = Threshold.Estimate {QValueThreshold = 0.01; PepValueThreshold = 0.05;MaxIterations=15;MinimumIncreaseBetweenIterations=0.005; PepValueFittingMethod = LinearLogit}
-        ParseProteinIDRegexPattern  = "id"
-        KeepTemporaryFiles          = true
+        Threshold =
+            Threshold.Estimate
+                {
+                    QValueThreshold                  = 0.01
+                    PepValueThreshold                = 0.05
+                    MaxIterations                    = 15
+                    MinimumIncreaseBetweenIterations = 0.005
+                    PepValueFittingMethod            = PepValueFittingMethod.IRLS
+                }
+        ParseProteinIDRegexPattern = "id"
+        KeepTemporaryFiles         = true
     }
 
-let serialized = 
-    defaultPSMStatistics
-    |> Json.serialize
+// Replace the temp folder with your project folder.
+let outputPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "pSMStatisticsParams.json")
+
+Json.serializeAndWrite outputPath psmStatisticsParams
 (**
-## Executing the Tool
-**Disclaimer** this tool relies on the output of the tools [PeptideDB](https://csbiology.github.io/ProteomIQon/tools/peptideDb.html) and [PeptideSpectrumMatching](https://csbiology.github.io/ProteomIQon/tools/PeptideSpectrumMatching.html).
+## Running the tool
 
-To rescore all MS/MS to identify 'true' psms call: 
+Install with `dotnet tool install --global ProteomIQon.PSMStatistics`, then score one run:
 
+```text
+proteomiqon-psmstatistics -i path/to/run.psm -d path/to/database.db -o path/to/output -p path/to/pSMStatisticsParams.json
+```
 
-	proteomiqon-psmstatistics -i "path/to/your/run.psm" -d "path/to/your/database.sqlite" -o "path/to/your/outDirectory" -p "path/to/your/params.json"
+Several runs at once, three of them in parallel:
 
-It is also possible to call the tool on a list of .psm files. If you have a mulitcore cpu it is possible to rescore multiple runs in parallel using the -c flag:
+```text
+proteomiqon-psmstatistics -i path/to/run1.psm path/to/run2.psm path/to/run3.psm -d path/to/database.db -o path/to/output -p path/to/pSMStatisticsParams.json -c 3
+```
 
-	proteomiqon-psmstatistics -i "path/to/your/run1.psm" "path/to/your/run2.psm" "path/to/your/run3.psm" -d "path/to/your/database.sqlite" -o "path/to/your/outDirectory" -p "path/to/your/params.json" -c 3
+Add `-dc` to write the separation charts for each iteration:
 
-To create diagnostic plots which show the performance of the psm scorer after a iteration, you can specify the -dc flag:
+```text
+proteomiqon-psmstatistics -i path/to/psmFolder -d path/to/database.db -o path/to/output -p path/to/pSMStatisticsParams.json -c 3 -dc
+```
 
-	proteomiqon-psmstatistics -i "path/to/your/run1.psm" "path/to/your/run2.psm" "path/to/your/run3.psm" -d "path/to/your/database.sqlite" -o "path/to/your/outDirectory" -p "path/to/your/params.json" -c 3 -dc
+All flags:
 
-A detailed description of the CLI arguments the tool expects can be obtained by calling the tool:
-
-	proteomiqon-psmstatistics --help
+```text
+proteomiqon-psmstatistics --help
+```
 
 *)

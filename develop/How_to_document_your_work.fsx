@@ -1,35 +1,55 @@
 (**
-// can't yet format YamlFrontmatter (["title: How to document your work"; "category: Developer Notes"; "categoryindex: 2"; "index: 2"], Some { StartLine = 2 StartColumn = 0 EndLine = 6 EndColumn = 8 }) to pynb markdown
-
 # How to document your work
-**Disclaimer** This page gives only an overview of the FSharp.Formatting functionality needed to contribute to the ProteomIQon, for details please visit 
-the documentation of [FSharp.Formatting](https://fsprojects.github.io/FSharp.Formatting/).
 
-The web page that you are just reading was created using the [fsdocs](https://fsprojects.github.io/FSharp.Formatting/commandline.html) dotnet tool!
-Thanks to the effort of the FSharp.Formatting team documenting the ProteomIQon is a straightforward process.
+The pages on this site are literate F# scripts under `docs/`, rendered with the
+[fsdocs](https://fsprojects.github.io/FSharp.Formatting/) tool. Prose lives in `(** ... *)`
+comment blocks as markdown, code between the blocks is shown with syntax highlighting and
+tooltips.
 
-## Building the docs:
-Assuming that you have cloned the ProteomIQon repository you can build the docs by navigating to the project root and calling: 
+## Building the docs locally
 
-	dotnet fsdocs watch --eval --noapidocs
+From the repository root, restore the tools once and then run the docs target. It builds the
+core project in Release and renders the site into `output/`:
 
-Executing this command will lead to parsing of all .fsx files in the docs folder, this will finally lead to formatting of every .fsx as a html documents and notebooks.
-This is all done behind the scenes orchestrated by the fsdocs cli tool. Once this process is finished your default browser should start and automatically navigate to 
-the adress of the index.html hosted on a local webserver.
+```text
+dotnet tool restore
+.\build.cmd builddocs
+```
 
-## How to change exisiting content:
-The fsdocs tool enables you to manipulate the docs and immediately observe the effects of your actions. To try out the hot reload functionality simply change the content of a 
-fsx file placed in the ./docs folder of the proteomiqon repository and save your changes. After a short while, this should trigger a reload in you webbrowser and you should be able to 
-see an updated .html file with your changes incorporated.
+On Linux or macOS use `./build.sh builddocs`. For editing with hot reload use the watch target.
+It serves the site on a local port and re-renders a page whenever you save it:
 
-## How to add a tool documentation:
-If you are working on your own tool, chances are high that you want to add a new .html to the docs. A suggested workflow to add a docs page for your tool could look like this:
+```text
+.\build.cmd watchdocs
+```
 
-1. Navigate to ./docs/tools
-2. Copy one of the existing .fsx files and rename it
-3. Replace the content with the content fitting to your tool.
+The rendered pages link their stylesheet with the absolute site root. Open them through the
+watch server. Opened from disk they load without a stylesheet.
 
-## Update the online documentation:
-Once you are happy with your contribution simply open a pull request. Upon acceptance of your commit, a github action is triggered and the new version of the docs are automatically released.
+## Adding a page for a tool
+
+Copy an existing file from `docs/tools/`, for example `PeptideDB.fsx`, rename it after the tool
+folder in `src/`, and adjust the frontmatter at the top. `index` sets the position in the
+sidebar. The pages are ordered along the processing chain, so pick the slot where the new tool
+fits and shift the later ones if needed.
+
+Each tool page has the same four parts: a short description of what the tool does and where it
+sits in the chain, an inputs and outputs section, the parameter table with the defaults from
+`src/ProteomIQon/defaultParams/`, and the script that writes a parameter file followed by the
+command line calls. Tools without a parameter file skip the table and the script. Keep the parameter script runnable. It references the core assembly built
+by `builddocs`, so this proves it before you publish:
+
+	dotnet fsi docs/tools/YourTool.fsx
+
+BioFSharp.Mz already explains the theory, and the pages link to it. The
+[BioFSharp.Mz documentation](https://www.biofsharp.com/BioFSharp.Mz/) covers signal detection,
+search databases, scoring, FDR control, quantification and protein inference.
+
+## Publishing
+
+Pushing changes under `docs/`, `build/` or `src/ProteomIQon/` to the `dev` branch triggers the `Deploy Docs` GitHub Action.
+It runs the same `builddocs` target and pushes `output/` to the `gh-pages` branch, which
+GitHub Pages serves at [csbiology.github.io/ProteomIQon](https://csbiology.github.io/ProteomIQon/).
+The workflow can also be started by hand from the Actions tab.
 
 *)
