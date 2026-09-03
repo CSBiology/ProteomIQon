@@ -121,6 +121,7 @@ module JoinQuantPepIonsWithProteins =
             IntensityTrace_Corrected_Heavy              = s.GetAs<float[]>("IntensityTrace_Corrected_Heavy",[||]) 
             AlignmentScore                              = s.GetAs<float>("AlignmentScore", nan)
             AlignmentQValue                             = s.GetAs<float>("AlignmentQValue", nan)
+            IonMobility                                 = s.GetAs<float>("IonMobility", nan)
             }
             )
         |> Series.values

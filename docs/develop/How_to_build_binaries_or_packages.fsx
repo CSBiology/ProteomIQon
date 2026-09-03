@@ -7,27 +7,71 @@ index: 3
 ---
 *)
 (**
-# How to build the binaries
+# How to build binaries or packages
 
-If you want to build the binaries for all tools at one, you can simply navigate to the project root in the console and call:
+The build is a [FAKE](https://fake.build/) project under `build/`. `build.cmd` and `build.sh`
+run it with the target name as the first argument. Without a target it builds the whole
+solution.
 
-	build.cmd
+## Building
 
-If you want to build only a singe project, then you can use the "BuildProj" target like this:
+The `Build` target compiles every released tool listed in `build/ProjectInfo.fs`:
+*)
 
-	build.cmd -t BuildProj
+(**
+```text
+.\build.cmd build
+```
+*)
 
-After the "Clean" target you will then be prompted to enter the name of the project you wish to build.
+(**
+The `Preprocessing` project references packages from the CSBiology feed on GitHub Packages.
+`nuget.config` reads the credentials for that feed from the environment variables `GithubUser`
+and `PackageToken`. Set both before building the full solution, which includes that project. The
+released tools restore from nuget.org alone.
 
-# How to pack a nuget package
+To build a single tool, call `dotnet` on its project file:
+*)
 
-If you want to pack a nuget package or build a dotnet tool, you can do this for all tools at once by invoking the "Pack" or "PackPrerelease" target.
+(**
+	dotnet build src/PeptideDB/PeptideDB.fsproj -c Release
+*)
 
-	build.cmd -t Pack
+(**
+## Packing
 
-Packing only a single project works similar to the same case for the binaries. The targets for this are calles "PackProj" and "PackPrereleaseProj":
+The `Pack` target creates a NuGet package for every released project in `pkg/`. The version
+comes from the top entry of each project's `RELEASE_NOTES.md`, so bump that file first:
+*)
 
-	build.cmd -t PackProj
+(**
+```text
+.\build.cmd pack
+```
+*)
 
-After the "Clean" target you will then be prompted to enter the name of the project you wish to build.
+(**
+`PackPrerelease` does the same with a suffix it asks for on the console. Every tool packs as a
+.NET tool with the package id `ProteomIQon.<ToolName>` and the command name
+`proteomiqon-<toolname>`. A package from `pkg/` can be installed locally to try it out before
+publishing:
+*)
+
+(**
+	dotnet tool install --global ProteomIQon.PeptideDB --add-source ./pkg --version 0.0.10
+*)
+
+(**
+Published versions are on [nuget.org](https://www.nuget.org/profiles/CSBiology).
+
+## Tests
+
+`RunTests` builds and runs `tests/ProteomIQon.Tests.fsproj`. The end to end pipeline tests
+start the tool assemblies, so this target needs the full build to succeed first:
+*)
+
+(**
+```text
+.\build.cmd runtests
+```
 *)

@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFrameworks>net5.0;netstandard2.0</TargetFrameworks>
+    <TargetFrameworks>net10.0;netstandard2.0</TargetFrameworks>
     <RootNamespace>ProteomIQon</RootNamespace>
     <AssemblyName>ProteomIQon</AssemblyName>
     <Name>ProteomIQon</Name>
@@ -67,21 +67,20 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Argu" Version="6.1.1" />
-    <PackageReference Include="NLog" Version="4.7.8" />
-	<PackageReference Include="MzIO" Version="[0.1.4]" />
-	<PackageReference Include="MzIO.Processing" Version="[0.1.4]" />
-	<PackageReference Include="MzIO.SQL" Version="[0.1.6]" />
-	<PackageReference Include="MzIO.MzML" Version="[0.1.7]" />
+    <PackageReference Include="NLog" Version="4.7.11" />
+	<PackageReference Include="MzIO" Version="[0.1.7]" />
+	<PackageReference Include="MzIO.Processing" Version="[0.1.7]" />
+	<PackageReference Include="MzIO.SQL" Version="[0.1.9]" />
+	<PackageReference Include="MzIO.MzML" Version="[0.1.10]" />
     <PackageReference Include="Deedle" Version="2.3.0" />
-    <PackageReference Include="BioFSharp" Version="2.0.0-beta4" />
-    <PackageReference Include="BioFSharp.IO" Version="2.0.0-beta4" />
-    <PackageReference Include="BioFSharp.Mz" Version="0.1.5-beta" />
-    <PackageReference Include="FSharpAux" Version="1.0.0" />
-    <PackageReference Include="FSharpAux.IO" Version="1.0.0" />
-    <PackageReference Include="FSharp.Stats" Version="0.4.0" />
-    <PackageReference Include="System.Data.SQLite.Core" Version="1.0.113.7" />
-    <PackageReference Include="Plotly.NET" Version="2.0.0-alpha5" />
-    <PackageReference Include="DynamicObj" Version="0.0.3" />
-	<PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
+    <PackageReference Include="BioFSharp" Version="2.0.0" />
+    <PackageReference Include="BioFSharp.Mz" Version="0.2.1" />
+    <PackageReference Include="FSharpAux" Version="2.1.0" />
+    <PackageReference Include="FSharpAux.IO" Version="2.1.0" />
+    <PackageReference Include="FSharp.Stats" Version="0.6.0" />
+    <PackageReference Include="System.Data.SQLite.Core" Version="1.0.119" />
+    <PackageReference Include="Plotly.NET" Version="6.0.0-preview.2" />
+    <PackageReference Include="DynamicObj" Version="7.0.1" />
+	<PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
   </ItemGroup>
 </Project>

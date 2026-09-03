@@ -91,22 +91,6 @@ module MzMLIonMobilityToMzLite =
                     BioFSharp.Mz.SignalDetection.Wavelet.toCentroidWithRicker2D waveletParameters mzData intensityData
         | PeakPicking.Centroid CentroidizationMode.Manufacturer ->
             failwith "Manufacturer peak picking is only supported for .baf (Bruker) files."
-    
-    let binBy (projection: 'a -> float) bandwidth (data: seq<'a>) =
-        if bandwidth = 0. then raise (System.DivideByZeroException("Bandwidth cannot be 0."))
-        let halfBw = bandwidth / 2.0
-        let decBandwidth = decimal bandwidth
-        let tmp = 
-            data
-            |> Seq.groupBy (fun x -> (decimal (projection x) / decBandwidth) |> float |> floor) 
-            |> Seq.map (fun (k,values) -> 
-                let count = (Seq.length(values)) |> float
-                if k < 0. then
-                    ((k  * bandwidth) + halfBw, values)   
-                else
-                    ((k + 1.) * bandwidth) - halfBw, values)
-            |> Seq.sortBy fst
-        tmp
 
     let fixSpectrum (m:MzIO.Model.MassSpectrum) =
         if isNull(m.Precursors) then
@@ -124,31 +108,21 @@ module MzMLIonMobilityToMzLite =
         pa.MzDataType <- source.MzDataType
         pa
 
-    let createBinnedPeaks (copyMirim: bool) (binSize: float) (peakArray: MzIO.Binary.Peak1DArray) = 
-
-        let zippedPeaks = peakArray.Peaks |> Seq.zip (peakArray?Mirim |> unbox<float array>)
-
-        let binnedPeakData =
-            zippedPeaks
-            |> binBy (fun (mirim, peak) -> mirim) binSize
-
-        binnedPeakData
-        |> Seq.map(fun (bin, binnedData) ->
-            let pa = createPeak1DArrayCopy peakArray
-            pa.Peaks <-
-                MzIO.Commons.Arrays.ArrayWrapper(
-                    binnedData
-                    |> Seq.map (fun (ionMobility,peak) -> Peak1D(peak.Intensity,peak.Mz,ionMobility))
-                    |> Seq.toArray
+    let toIMPeaks (peakArray: MzIO.Binary.Peak1DArray) = 
+        let imArray = (peakArray?Mirim |> unbox<float array>)
+        let peaks = peakArray.Peaks
+        let zipped = Seq.zip imArray peaks
+        let pa = createPeak1DArrayCopy peakArray
+        pa.Peaks <-
+            MzIO.Commons.Arrays.ArrayWrapper(
+                zipped
+                |> Seq.map(fun (ionMobility, peak) ->
+                    Peak1D(peak.Intensity,peak.Mz,ionMobility)
                 )
-            if copyMirim then
-                pa?Mirim <-
-                    binnedData
-                    |> Seq.map fst
-                    |> Array.ofSeq
-            bin,pa
-        )
-
+                |> Seq.toArray
+            )
+        pa
+        
     let unzipIonMobilityMzliteArray (a:Commons.Arrays.IMzIOArray<Peak1D>) = 
         let mzData = Array.zeroCreate a.Length
         let intensityData = Array.zeroCreate a.Length
@@ -208,7 +182,7 @@ module MzMLIonMobilityToMzLite =
         | :? MzML.MzMLReader as r       -> "sample=0"
         | :? MzMLReaderMIRIM as r       -> "sample=0"
 
-    let processFile (processParams:MzMLtoMzLiteParams) (outputDir:string) (instrumentOutput:string) =
+    let processFile (processParams:MzMLtoMzLiteParams) (fixFile: bool) (outputDir:string) (instrumentOutput:string) =
 
         let logger = Logging.createLogger (Path.GetFileNameWithoutExtension instrumentOutput)
 
@@ -216,7 +190,12 @@ module MzMLIonMobilityToMzLite =
         logger.Trace (sprintf "Output directory: %s" outputDir)
         logger.Trace (sprintf "Parameters: %A" processParams)
 
-    
+        if fixFile then
+            logger.Trace "Fixing file."
+            File.ReadAllLines instrumentOutput
+            |> Array.map (fun s -> s.Replace ("&quot",""))
+            |> fun c -> File.WriteAllLines (instrumentOutput,c)
+
         //let tmp = File.ReadAllText instrumentOutput
         //File.WriteAllText(instrumentOutput, tmp.Replace("&quot;", ""))
 
@@ -229,13 +208,13 @@ module MzMLIonMobilityToMzLite =
         let ms1PeakPicking = initPeakPicking logger processParams.MS1PeakPicking
         let ms2PeakPicking = initPeakPicking logger processParams.MS2PeakPicking
 
-        let outDirPath =
+        let outFilePath =
             let fileName = Path.GetFileNameWithoutExtension instrumentOutput
-            Path.Combine(outputDir, fileName)
+            Path.Combine(outputDir, (fileName + ".mzlite"))
             
-        logger.Trace $"Creating directory {outDirPath} for binned results of {instrumentOutput}"
+        logger.Trace $"Creating directory {outFilePath} for binned results of {instrumentOutput}"
         
-        Directory.CreateDirectory outDirPath |> ignore
+        Directory.CreateDirectory outputDir |> ignore
 
         logger.Trace $"Reading model from {instrumentOutput}"
 
@@ -251,39 +230,26 @@ module MzMLIonMobilityToMzLite =
         logger.Trace "Done reading spectra"
 
         logger.Trace $"Start writing binned mzlite files"
-        let connectionMap = new Dictionary<string, MzSQL.MzSQL*System.Data.SQLite.SQLiteTransaction>()
+        let outReader = new MzSQL(outFilePath)
+        let _ = outReader.Open()
+        let outTr = outReader.BeginTransaction()
+        let outRunID  = getDefaultRunID outReader
         spectra
         |> Seq.iteri (fun i spectrum ->
             if i % 1000 = 0 then logger.Trace $"{i}"
             let data = inReaderPeaks.getSpecificPeak1DArraySequentialWithMIRIM(spectrum.ID)
-            let binResult = createBinnedPeaks false 2. data
-            binResult
-            |> Seq.iter(fun (bin, peaks) ->
-                let outFile = Path.Combine(outDirPath, $"binned_spectra_%.3f{bin}.mzlite")
-                let outReader,outTr =
-                    if connectionMap.ContainsKey(outFile) then
-                        connectionMap.[outFile]
-                    else
-                        let outReader = new MzSQL(outFile)
-                        let _ = outReader.Open()
-                        let outTr = outReader.BeginTransaction()
-                        connectionMap.Add(outFile, (outReader, outTr))
-                        outReader, outTr
-                let outRunID  = getDefaultRunID outReader
-                insertSpectrum processParams.Compress outReader outRunID ms1PeakPicking ms2PeakPicking (changeScanTimeToMinutes (fixSpectrum spectrum)) peaks
-            )
+            let dataIM = toIMPeaks data
+            insertSpectrum processParams.Compress outReader outRunID ms1PeakPicking ms2PeakPicking (changeScanTimeToMinutes (fixSpectrum spectrum)) dataIM
+            
         )
-        for x in connectionMap do
-            let outReader = fst x.Value
-            let outTr = snd x.Value
-            try
-                outReader.InsertModel model
-                logger.Trace $"Model inserted for {x.Key}."
-            with
-                | ex -> failwith $"Inserting model failed: {ex}"
-            outTr.Commit()
-            outTr.Dispose()
-            outReader.Dispose()
+        try
+            outReader.InsertModel model
+            logger.Trace $"Model inserted for {outFilePath}."
+        with
+            | ex -> failwith $"Inserting model failed: {ex}"
+        outTr.Commit()
+        outTr.Dispose()
+        outReader.Dispose()
         inTrPeaks.Commit()
         inTrPeaks.Dispose()
         inTrMS.Commit()

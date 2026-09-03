@@ -30,18 +30,47 @@ module AlignmentBasedQuantification =
         /// Extract a rt profile for specified target mass and rt range.
         /// Mz range peak aggregation is closest lock mz.
         /// Profile array with index corresponding to continous mass spectra over rt range and mz range given.
-        let initRTProfile (readspecPeaks:string -> Peak1DArray)  (rtIndex: IMzIOArray<RtIndexEntry>) (rtRange: RangeQuery) (mzRange: RangeQuery) =
-            let entries = RtIndexEntry.Search(rtIndex, rtRange).ToArray()
-            //printfn "RtProfile %i" entries.Length
-            let profile = Array.zeroCreate<Peak2D> entries.Length
-            for rtIdx = 0 to entries.Length-1 do
-                let entry = entries.[rtIdx]
-                let peaks = (readspecPeaks entry.SpectrumID).Peaks
-                let p = (RtIndexEntry.MzSearch (peaks, mzRange)).DefaultIfEmpty(Peak1D(0., mzRange.LockValue))
-                        |> fun x -> RtIndexEntry.ClosestMz (x, mzRange.LockValue)
-                        |> fun x -> RtIndexEntry.AsPeak2D (x, entry.Rt)
-                profile.[rtIdx] <- p
-            profile
+        let initRTProfile (readspecPeaks:string -> Peak1DArray)  (rtIndex: IMzIOArray<RtIndexEntry>) (rtRange: RangeQuery) (mzRange: RangeQuery) (ionMobilityRange: RangeQuery option) =
+            match ionMobilityRange with
+            | None ->
+                let entries = RtIndexEntry.Search(rtIndex, rtRange).ToArray()
+                //printfn "RtProfile %i" entries.Length
+                let profile = Array.zeroCreate<Peak2D> entries.Length
+                for rtIdx = 0 to entries.Length-1 do
+                    let entry = entries.[rtIdx]
+                    let peaks = (readspecPeaks entry.SpectrumID).Peaks
+                    let p = (RtIndexEntry.MzSearch (peaks, mzRange)).DefaultIfEmpty(Peak1D(0., mzRange.LockValue))
+                            |> fun x -> RtIndexEntry.ClosestMz (x, mzRange.LockValue)
+                            |> fun x -> RtIndexEntry.AsPeak2D (x, entry.Rt)
+                    profile.[rtIdx] <- p
+                profile
+            | Some imRange ->
+                let entries = RtIndexEntry.Search(rtIndex, rtRange)
+                entries
+                |>Seq.map (fun entry ->
+                    let peaks = (readspecPeaks entry.SpectrumID).Peaks
+                    let p = 
+                        peaks
+                        |> Seq.filter (fun x ->
+                            x.IonMobility.Value < imRange.HighValue && x.IonMobility.Value > imRange.LowValue &&
+                            x.Mz < mzRange.HighValue && x.Mz > mzRange.LowValue
+                        )
+                        |> fun s ->
+                            if (s |> Seq.tryHead).IsNone then
+                                RtIndexEntry.AsPeak2D ((new Peak1D(0., mzRange.LockValue, imRange.LockValue)),entry.Rt)
+                            else
+                                s
+                                |> Seq.groupBy (fun x -> x.Mz)
+                                |> Seq.map (fun (mz,peaks) -> 
+                                    let i = peaks |> Seq.sumBy (fun x -> x.Intensity)
+                                    new Peak1D(i, mz)
+                                )
+                                |> fun x -> 
+                                    RtIndexEntry.ClosestMz (x, mzRange.LockValue)
+                                |> fun x -> RtIndexEntry.AsPeak2D (x, entry.Rt)
+                    p
+                )
+                |> Array.ofSeq
 
     ///
     type AlignmentQuantMetrics = 
@@ -186,7 +215,7 @@ module AlignmentBasedQuantification =
                 let apexNorm = x.MeasuredApex_Light / medianApexIntensities
                 let quantNorm =  x.Quant_Light / medianQuantIntensities
                 quantNorm / apexNorm
-                |> log2
+                |> FSharp.Stats.Ops.log2
             (qualR > lowerBorder && qualR < upperBorder) || (nan.Equals(qualR) )
             ) 
 
@@ -208,7 +237,7 @@ module AlignmentBasedQuantification =
                 let apexNorm = x.MeasuredApex_Heavy / medianApexIntensities
                 let quantNorm =  x.Quant_Heavy / medianQuantIntensities
                 quantNorm / apexNorm
-                |> log2
+                |> FSharp.Stats.Ops.log2
             (qualR > lowerBorder && qualR < upperBorder) || (nan.Equals(qualR) )
             )
     
@@ -260,12 +289,18 @@ module AlignmentBasedQuantification =
                            if c < 0. then 0. else c
                        ) yData baseLine
     ///
-    let initGetProcessedXIC logger (baseLineCorrection:Domain.BaseLineCorrection option) getPeaks idx scanTimeWindow mzWindow_Da meanScanTime meanPrecMz =
+    let initGetProcessedXIC logger (baseLineCorrection:Domain.BaseLineCorrection option) getPeaks idx scanTimeWindow mzWindow_Da (imWindow: float) meanScanTime meanPrecMz (meanIM: float option) =
         let rtQuery = Query.createRangeQuery meanScanTime scanTimeWindow
         let mzQuery = Query.createRangeQuery meanPrecMz mzWindow_Da
+        let imQuery =
+            match meanIM with
+            | Some meanIM' -> 
+                Query.createRangeQuery meanIM' imWindow
+                |> Some
+            | _ -> None
         let retData',itzData' =
             let tmp =
-                getPeaks idx rtQuery mzQuery
+                getPeaks idx rtQuery mzQuery imQuery
                 |> Array.map (fun (p:MzIO.Binary.Peak2D) -> p.Rt , p.Intensity)
             tmp
             |> Array.mapi (fun i (rt,intensity) ->
@@ -334,9 +369,9 @@ module AlignmentBasedQuantification =
         }
 
     ///
-    let getRefinedXic refineByDTW getXic xSource ySource sourceScanTime scanTimeToMzCorrection theoMz scanTimePrediciton =
+    let getRefinedXic refineByDTW getXic xSource ySource sourceScanTime scanTimeToMzCorrection theoMz scanTimePrediciton (ionMobility: float option) =
             let correctedMz = scanTimeToMzCorrection scanTimePrediciton + theoMz
-            let (retData,itzDataCorrected,ItzDataUncorrected) = getXic scanTimePrediciton correctedMz
+            let (retData,itzDataCorrected,ItzDataUncorrected) = getXic scanTimePrediciton correctedMz ionMobility
             let maxItz = itzDataCorrected |> Array.max
             let inferredScanTime, alignedSource = 
                 if not refineByDTW then 
@@ -363,9 +398,9 @@ module AlignmentBasedQuantification =
         Y_Xic_uncorrected           :float[]
         }
 
-    let getInferredXic getXic targetScanTime targetMz =
+    let getInferredXic getXic targetScanTime targetMz (ionMobility: float option) =
         let (retData,itzData,uncorrectedItzData)   =
-                getXic targetScanTime targetMz 
+                getXic targetScanTime targetMz ionMobility
         {
         X_Xic               = retData
         Y_Xic               = itzData
@@ -404,30 +439,30 @@ module AlignmentBasedQuantification =
                 (pattern:PeakComparison []) plotDirectory =
         let xic = 
             [
-            Chart.Point(xXic, yXic)                     |> Chart.withTraceName "Target XIC"
-            Chart.Point(alignedSource)                  |> Chart.withTraceName "Aligned Source XIC"
-            Chart.Point([avgScanTime],[1.])             |> Chart.withTraceName "Inferred Scan Time"
-            Chart.Point([inferredScanTimeRefined],[1.]) |> Chart.withTraceName "Inferred Scan Time Refined"
-            Chart.Point([xScantime],[1.])               |> Chart.withTraceName "ScanTime Source"
-            Chart.Point((xToQuantify), (ypToQuantify))  |> Chart.withTraceName "Identified Target Peak"
-            Chart.Line(xToQuantify,fitY)                |> Chart.withTraceName "Fit of target Peak"
-            Chart.Point(xXicInferred, yXicinferred)     |> Chart.withTraceName "Inferred XIC"
-            Chart.Line(xInferred,inferredFit)           |> Chart.withTraceName "Fit of inferred Peak"
+            Chart.Point(xXic, yXic)                     |> Chart.withTraceInfo "Target XIC"
+            Chart.Point(alignedSource)                  |> Chart.withTraceInfo "Aligned Source XIC"
+            Chart.Point([avgScanTime],[1.])             |> Chart.withTraceInfo "Inferred Scan Time"
+            Chart.Point([inferredScanTimeRefined],[1.]) |> Chart.withTraceInfo "Inferred Scan Time Refined"
+            Chart.Point([xScantime],[1.])               |> Chart.withTraceInfo "ScanTime Source"
+            Chart.Point((xToQuantify), (ypToQuantify))  |> Chart.withTraceInfo "Identified Target Peak"
+            Chart.Line(xToQuantify,fitY)                |> Chart.withTraceInfo "Fit of target Peak"
+            Chart.Point(xXicInferred, yXicinferred)     |> Chart.withTraceInfo "Inferred XIC"
+            Chart.Line(xInferred,inferredFit)           |> Chart.withTraceInfo "Fit of inferred Peak"
 
             ]
-            |> Chart.Combine
+            |> Chart.combine
         let pattern = 
             [
-            Chart.Point(pattern |> Array.map (fun x -> x.Mz), pattern |> Array.map (fun x -> x.MeasuredIntensity))          |> Chart.withTraceName "Measured"
-            Chart.Point(pattern |> Array.map (fun x -> x.Mz), pattern |> Array.map (fun x -> x.MeasuredIntensityCorrected)) |> Chart.withTraceName "Measured Corrected"
-            Chart.Point(pattern |> Array.map (fun x -> x.Mz), pattern |> Array.map (fun x -> x.PredictedRelFrequency))      |> Chart.withTraceName "Predicted Relative Frequency"
+            Chart.Point(pattern |> Array.map (fun x -> x.Mz), pattern |> Array.map (fun x -> x.MeasuredIntensity))          |> Chart.withTraceInfo "Measured"
+            Chart.Point(pattern |> Array.map (fun x -> x.Mz), pattern |> Array.map (fun x -> x.MeasuredIntensityCorrected)) |> Chart.withTraceInfo "Measured Corrected"
+            Chart.Point(pattern |> Array.map (fun x -> x.Mz), pattern |> Array.map (fun x -> x.PredictedRelFrequency))      |> Chart.withTraceInfo "Predicted Relative Frequency"
             ]
-            |> Chart.Combine
+            |> Chart.combine
         [xic;pattern]
-        |> Chart.Stack(2, 0.1)
+        |> Chart.Grid(1, 2, XGap = 0.1, YGap = 0.1)
         |> Chart.withTitle(sprintf "Sequence= %s,globalMod = %i" sequence globalMod)
-        |> Chart.withSize(2500.,800.)
-        |> Chart.SaveHtmlAs(Path.Combine[|plotDirectory; ((sequence |> String.filter (fun x -> x <> '*')) + "_GMod_" + globalMod.ToString() + "Ch" + ch.ToString())|])
+        |> Chart.withSize(2500,800)
+        |> Chart.saveHtml(Path.Combine[|plotDirectory; ((sequence |> String.filter (fun x -> x <> '*')) + "_GMod_" + globalMod.ToString() + "Ch" + ch.ToString())|])
         
     ///
     let saveChart sequence globalMod ch (xXic:float[]) (yXic:float[]) avgScanTime 
@@ -437,35 +472,35 @@ module AlignmentBasedQuantification =
                 (pattern:PeakComparison []) plotDirectory =
         let xic = 
             [
-            Chart.Point(xXic, yXic)                     |> Chart.withTraceName "Target XIC"
-            Chart.Point(alignedSource)                  |> Chart.withTraceName "Aligned Source XIC"
-            Chart.Point([avgScanTime],[1.])             |> Chart.withTraceName "Inferred Scan Time"
-            Chart.Point([inferredScanTimeRefined],[1.]) |> Chart.withTraceName "Inferred Scan Time Refined"
-            Chart.Point((xToQuantify), (ypToQuantify))  |> Chart.withTraceName "Identified Target Peak"
-            Chart.Line(xToQuantify,fitY)                |> Chart.withTraceName "Fit of target Peak"
-            Chart.Point(xXicInferred, yXicinferred)     |> Chart.withTraceName "Inferred XIC"
-            Chart.Line(xInferred,inferredFit)           |> Chart.withTraceName "Fit of inferred Peak"
+            Chart.Point(xXic, yXic)                     |> Chart.withTraceInfo "Target XIC"
+            Chart.Point(alignedSource)                  |> Chart.withTraceInfo "Aligned Source XIC"
+            Chart.Point([avgScanTime],[1.])             |> Chart.withTraceInfo "Inferred Scan Time"
+            Chart.Point([inferredScanTimeRefined],[1.]) |> Chart.withTraceInfo "Inferred Scan Time Refined"
+            Chart.Point((xToQuantify), (ypToQuantify))  |> Chart.withTraceInfo "Identified Target Peak"
+            Chart.Line(xToQuantify,fitY)                |> Chart.withTraceInfo "Fit of target Peak"
+            Chart.Point(xXicInferred, yXicinferred)     |> Chart.withTraceInfo "Inferred XIC"
+            Chart.Line(xInferred,inferredFit)           |> Chart.withTraceInfo "Fit of inferred Peak"
 
             ]
-            |> Chart.Combine
+            |> Chart.combine
         let pattern = 
             [
-            Chart.Point(pattern |> Array.map (fun x -> x.Mz), pattern |> Array.map (fun x -> x.MeasuredIntensity))          |> Chart.withTraceName "Measured"
-            Chart.Point(pattern |> Array.map (fun x -> x.Mz), pattern |> Array.map (fun x -> x.MeasuredIntensityCorrected)) |> Chart.withTraceName "Measured Corrected"
-            Chart.Point(pattern |> Array.map (fun x -> x.Mz), pattern |> Array.map (fun x -> x.PredictedRelFrequency))      |> Chart.withTraceName "Predicted Relative Frequency"
+            Chart.Point(pattern |> Array.map (fun x -> x.Mz), pattern |> Array.map (fun x -> x.MeasuredIntensity))          |> Chart.withTraceInfo "Measured"
+            Chart.Point(pattern |> Array.map (fun x -> x.Mz), pattern |> Array.map (fun x -> x.MeasuredIntensityCorrected)) |> Chart.withTraceInfo "Measured Corrected"
+            Chart.Point(pattern |> Array.map (fun x -> x.Mz), pattern |> Array.map (fun x -> x.PredictedRelFrequency))      |> Chart.withTraceInfo "Predicted Relative Frequency"
             ]
-            |> Chart.Combine
+            |> Chart.combine
         [xic;pattern]
-        |> Chart.Stack(2, 0.1)
+        |> Chart.Grid(1, 2, XGap = 0.1, YGap = 0.1)
         |> Chart.withTitle(sprintf "Sequence= %s,globalMod = %i" sequence globalMod)
-        |> Chart.withSize(2500.,800.)
-        |> Chart.SaveHtmlAs(Path.Combine[|plotDirectory; ((sequence |> String.filter (fun x -> x <> '*')) + "_GMod_" + globalMod.ToString() + "Ch" + ch.ToString())|])
+        |> Chart.withSize(2500,800)
+        |> Chart.saveHtml(Path.Combine[|plotDirectory; ((sequence |> String.filter (fun x -> x <> '*')) + "_GMod_" + globalMod.ToString() + "Ch" + ch.ToString())|])
             
     let saveErrorChart (xXic:float[]) (yXic:float[]) pepSeq gMod ch desc plotDirectory =      
         Chart.Point(xXic, yXic)
         |> Chart.withTitle(sprintf "Sequence= %s,globalMod = %i_%s" pepSeq gMod desc)
-        |> Chart.withSize(1500.,800.)
-        |> Chart.SaveHtmlAs(Path.Combine[|plotDirectory; ((pepSeq |> String.filter (fun x -> x <> '*')) + "_GMod_" + gMod.ToString() + "Ch" + ch.ToString() + "_notQuantified")|])
+        |> Chart.withSize(1500,800)
+        |> Chart.saveHtml(Path.Combine[|plotDirectory; ((pepSeq |> String.filter (fun x -> x <> '*')) + "_GMod_" + gMod.ToString() + "Ch" + ch.ToString() + "_notQuantified")|])
                
     // Method is based on: https://doi.org/10.1021/ac0600196
     /// Estimates the autocorrelation at lag 1 of a blank signal (containing only noise). Subsequently, the signal of interest is smoothed
@@ -647,8 +682,8 @@ module AlignmentBasedQuantification =
         logger.Trace "Copy peptide DB into Memory: finished"
         
         logger.Trace "Get peptide lookUp function"
-        let dBParams = SearchDB'.getSDBParams memoryDB
-        let peptideLookUp = SearchDB'.getThreadSafePeptideLookUpFromFileBySequenceAndGMod memoryDB dBParams
+        let dBParams = BioFSharp.Mz.SearchDB.getSDBParamsByCn memoryDB
+        let peptideLookUp = SearchDB.getThreadSafePeptideLookUpFromFileBySequenceAndGMod memoryDB dBParams
         let calcIonSeries aal = Fragmentation.Series.fragmentMasses Fragmentation.Series.bOfBioList Fragmentation.Series.yOfBioList dBParams.MassFunction aal
         logger.Trace "Get peptide lookUp function: finished"
         // initialize Reader and Transaction
@@ -730,21 +765,30 @@ module AlignmentBasedQuantification =
                     |> Array.filter (fun (s,d) -> d <= borders.Upper && d >= borders.Lower)
             [
             Chart.Point(scanTimeVsDelta)
-            |> Chart.withTraceName "Raw"
+            |> Chart.withTraceInfo "Raw"
             Chart.Point(filteredValues)
-            |> Chart.withTraceName "Filtered"
+            |> Chart.withTraceInfo "Filtered"
             ]
-            |> Chart.Combine
+            |> Chart.combine
             |> Chart.withTitle (sprintf "upper border:%f, lower border:%f" borders.Upper borders.Lower)
-            |> Chart.SaveHtmlAs(Path.Combine[|plotDirectory; "mzCorrectionData"|])
+            |> Chart.saveHtml(Path.Combine[|plotDirectory; "mzCorrectionData"|])
             let scanTimeToMzCorrection =
                 let runTime = scanTimeVsDelta |> Array.maxBy fst |> fst
                 if runTime > 20. && psmbasedQuant.Length > 500 then
-                    let binWidth = 
+                    let binWidth =
                         System.Math.Min(runTime / 2., 20.)
                     let stabw = filteredValues |> Seq.stDevBy snd
-                    let r,f = initSpline binWidth filteredValues
-                    f
+                    try
+                        let r,f = initSpline binWidth filteredValues
+                        f
+                    with ex ->
+                        // the smoothing spline needs enough filtered points per bin; sparse samples fall back to the median correction below
+                        logger.Trace (sprintf "Mz correction spline failed (%s), falling back to median correction." ex.Message)
+                        let m =
+                            filteredValues
+                            |> Seq.map snd
+                            |> Seq.median
+                        fun scanTime -> m
                 else 
                     let m = 
                         filteredValues 
@@ -758,11 +802,11 @@ module AlignmentBasedQuantification =
             if diagCharts then 
                 [
                 Chart.Point(scanTimeVsDelta)
-                |> Chart.withTraceName "Raw"
+                |> Chart.withTraceInfo "Raw"
                 Chart.Line(scanTimeVsDelta |> Array.sortBy fst |> Array.map (fun (st,d) -> st, scanTimeToMzCorrection st))
                 ]
-                |> Chart.Combine
-                |> Chart.SaveHtmlAs(Path.Combine[|plotDirectory; "mzErrorAndCorrection"|])
+                |> Chart.combine
+                |> Chart.saveHtml(Path.Combine[|plotDirectory; "mzErrorAndCorrection"|])
             //stDev, scanTimeToMzCorrection 
             0.05, scanTimeToMzCorrection 
             
@@ -776,7 +820,7 @@ module AlignmentBasedQuantification =
         let readSpecPeaksWithMem = FSharpAux.Memoization.memoize inReader.ReadSpectrumPeaks
         let getPeaks = Query.initRTProfile readSpecPeaksWithMem
         ///
-        let getXIC = initGetProcessedXIC logger processParams.BaseLineCorrection getPeaks retTimeIdxed processParams.XicExtraction.ScanTimeWindow ms1AccuracyEstimate     
+        let getXIC = initGetProcessedXIC logger processParams.BaseLineCorrection getPeaks retTimeIdxed processParams.XicExtraction.ScanTimeWindow ms1AccuracyEstimate 0.05
         
         ///
         let identifyPeaks = initIdentifyPeaks processParams.XicExtraction.XicProcessing
@@ -792,10 +836,13 @@ module AlignmentBasedQuantification =
                 let labeledPeptide  = peptideLookUp testPep.Sequence 1
                 let targetPeptide = if testPep.GlobalMod = 0 then unlabledPeptide else labeledPeptide            
                 let targetMz = Mass.toMZ (targetPeptide.Mass) (testPep.Charge|> float)
+                let ionMobility =
+                    if System.Double.IsNaN testPep.IonMobility then None
+                    else Some testPep.IonMobility
                 let refinedXIC = 
                     getRefinedXic processParams.PerformLocalWarp getXIC 
                         testPep.X_RtTrace testPep.X_IntensityTrace testPep.X_Test 
-                            scanTimeToMzCorrection targetMz testPep.YHat_Test
+                            scanTimeToMzCorrection targetMz testPep.YHat_Test ionMobility
                 let avgMass = Mass.ofMZ (targetMz) (testPep.Charge |> float)
                 let peaks = identifyPeaks refinedXIC.X_Xic refinedXIC.Y_Xic
                 if Array.isEmpty peaks then 
@@ -856,10 +903,13 @@ module AlignmentBasedQuantification =
             let labeledPeptide  = peptideLookUp alignmentResult.StringSequence 1
             let targetPeptide = if alignmentResult.GlobalMod = 0 then unlabledPeptide else labeledPeptide            
             let targetMz = Mass.toMZ (targetPeptide.Mass) (alignmentResult.Charge|> float)
+            let ionMobility =
+                if System.Double.IsNaN alignmentResult.IonMobility then None
+                else Some alignmentResult.IonMobility
             let refinedXIC = 
                 getRefinedXic processParams.PerformLocalWarp getXIC 
                     alignmentResult.RtTrace_SourceFile alignmentResult.IntensityTrace_SourceFile alignmentResult.ScanTime_SourceFile 
-                        scanTimeToMzCorrection targetMz alignmentResult.PredictedScanTime
+                        scanTimeToMzCorrection targetMz alignmentResult.PredictedScanTime ionMobility
             let avgMass = Mass.ofMZ (targetMz) (alignmentResult.Charge |> float)
             let peaks = identifyPeaks refinedXIC.X_Xic refinedXIC.Y_Xic
             if Array.isEmpty peaks then 
@@ -883,7 +933,7 @@ module AlignmentBasedQuantification =
                     let correctedMz = scanTimeToMzCorrection inferredScanTime + mz
                     correctedMz 
                 let inferredQuant = 
-                    let inferredXicHeavy = getInferredXic getXIC refinedXIC.FinalTargetScanTime mzHeavy    
+                    let inferredXicHeavy = getInferredXic getXIC refinedXIC.FinalTargetScanTime mzHeavy ionMobility
                     let inferredPeaksHeavy = identifyPeaks inferredXicHeavy.X_Xic inferredXicHeavy.Y_Xic
                     if Array.isEmpty inferredPeaksHeavy then 
                         if diagCharts then saveErrorChart refinedXIC.X_Xic refinedXIC.Y_Xic alignmentResult.StringSequence alignmentResult.GlobalMod alignmentResult.Charge "noInferredPeaks" plotDirectory
@@ -971,6 +1021,7 @@ module AlignmentBasedQuantification =
                     IntensityTrace_Corrected_Heavy              = successfulQuant.Y_Xic
                     AlignmentScore                              = nan
                     AlignmentQValue                             = nan
+                    IonMobility                                 = alignmentResult.IonMobility
                     }
                     |> Option.Some
                 | None -> 
@@ -1026,6 +1077,7 @@ module AlignmentBasedQuantification =
                     IntensityTrace_Corrected_Heavy              = [||]
                     AlignmentScore                              = nan
                     AlignmentQValue                             = nan
+                    IonMobility                                 = alignmentResult.IonMobility
                     }
                     |> Option.Some
             else
@@ -1034,7 +1086,7 @@ module AlignmentBasedQuantification =
                     let correctedMz = scanTimeToMzCorrection inferredScanTime + mz
                     correctedMz   
                 let inferredQuant = 
-                    let inferredXicLight = getInferredXic getXIC refinedXIC.FinalTargetScanTime mzLight    
+                    let inferredXicLight = getInferredXic getXIC refinedXIC.FinalTargetScanTime mzLight ionMobility
                     let inferredPeaksLight = identifyPeaks inferredXicLight.X_Xic inferredXicLight.Y_Xic
                     if Array.isEmpty inferredPeaksLight then 
                         if diagCharts then saveErrorChart refinedXIC.X_Xic refinedXIC.Y_Xic alignmentResult.StringSequence alignmentResult.GlobalMod alignmentResult.Charge "noInferredPeaks" plotDirectory
@@ -1122,6 +1174,7 @@ module AlignmentBasedQuantification =
                     IntensityTrace_Corrected_Heavy              = refinedXIC.Y_Xic
                     AlignmentScore                              = nan
                     AlignmentQValue                             = nan
+                    IonMobility                                 = alignmentResult.IonMobility
                     }
                     |> Option.Some
                 | None -> 
@@ -1176,6 +1229,7 @@ module AlignmentBasedQuantification =
                     IntensityTrace_Corrected_Heavy              = refinedXIC.Y_Xic
                     AlignmentScore                              = nan
                     AlignmentQValue                             = nan
+                    IonMobility                                 = alignmentResult.IonMobility
                     }
                     |> Option.Some
             with
@@ -1190,10 +1244,13 @@ module AlignmentBasedQuantification =
             else
                 let targetPeptide  = peptideLookUp alignmentResult.StringSequence 0          
                 let targetMz = Mass.toMZ (targetPeptide.Mass) (alignmentResult.Charge|> float)
+                let ionMobility =
+                    if System.Double.IsNaN alignmentResult.IonMobility then None
+                    else Some alignmentResult.IonMobility
                 let refinedXIC = 
                     getRefinedXic processParams.PerformLocalWarp getXIC 
                         alignmentResult.RtTrace_SourceFile alignmentResult.IntensityTrace_SourceFile alignmentResult.ScanTime_SourceFile 
-                            scanTimeToMzCorrection targetMz alignmentResult.PredictedScanTime
+                            scanTimeToMzCorrection targetMz alignmentResult.PredictedScanTime ionMobility
                 let avgMass = Mass.ofMZ (targetMz) (alignmentResult.Charge |> float)
                 let peaks = identifyPeaks refinedXIC.X_Xic refinedXIC.Y_Xic
                 if Array.isEmpty peaks then 
@@ -1263,6 +1320,7 @@ module AlignmentBasedQuantification =
                 IntensityTrace_Corrected_Heavy              = [||]
                 AlignmentScore                              = nan
                 AlignmentQValue                             = nan
+                IonMobility                                 = alignmentResult.IonMobility
                 }
                 |> Option.Some
             with

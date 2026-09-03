@@ -1,3 +1,15 @@
+#### 0.0.10 - Wednesday, September 2, 2026
+* Use protein inference and FDR control from BioFSharp.Mz instead of the local copies
+* Update to .NET 10
+* Update System.Data.SQLite.Core to 1.0.119 for the memory access fix
+* Update BioFSharp to 2.0.0, BioFSharp.Mz to 0.2.1, FSharpAux to 2.1.0, FSharp.Stats to 0.6.0 and Plotly.NET to 6.0.0-preview.2
+
+#### 0.0.9 - Monday, March 10, 2025
+* Don't bin with no qvalue alculation
+
+#### 0.0.8 - Monday, March 10, 2025
+* Update to .NET 8
+
 #### 0.0.7 - Wednesday, July 14, 2021
 * Reworked Regex parsing to a common pattern. 
 

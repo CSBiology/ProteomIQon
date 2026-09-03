@@ -264,7 +264,7 @@ module PSMStatistics =
                         ]
                         )
                     |> Chart.withTitle "Metrics"
-                    |> Chart.SaveHtmlAs (Path.Combine [|plotDirectory;"Metrics"|])
+                    |> Chart.saveHtml (Path.Combine [|plotDirectory;"Metrics"|])
                 let predF = ctx.Model.CreatePredictionEngine<PSMToLearn,PSMPrediction>(model)
                 let predict psm = 
                     psm 
@@ -303,22 +303,22 @@ module PSMStatistics =
                 [
                     [
                     Chart.Histogram(tar)
-                    |> Chart.withTraceName "positives"
+                    |> Chart.withTraceInfo "positives"
 
                     Chart.Histogram(decoy)
-                    |> Chart.withTraceName "negatives"
+                    |> Chart.withTraceInfo "negatives"
                     ]
-                    |> Chart.Combine
+                    |> Chart.combine
                     |> Chart.withAxisAnchor(Y=1)
                     Chart.Point(scoreVsQ)
                     |> Chart.withAxisAnchor(Y=2)
                 ]
-                |> Chart.Combine
-                |> Chart.withX_AxisStyle("Score")
-                |> Chart.withY_AxisStyle("Count",Side=StyleParam.Side.Left,Id=1,Showgrid=false)
-                |> Chart.withY_AxisStyle("FDR",Side=StyleParam.Side.Right,Id=2,Overlaying=StyleParam.AxisAnchorId.Y 1,Showgrid=false,MinMax=(0.,0.5))
+                |> Chart.combine
+                |> Chart.withXAxisStyle("Score")
+                |> Chart.withYAxisStyle("Count",Side=StyleParam.Side.Left,Id=StyleParam.SubPlotId.YAxis 1,ShowGrid=false)
+                |> Chart.withYAxisStyle("FDR",Side=StyleParam.Side.Right,Id=StyleParam.SubPlotId.YAxis 2,Overlaying=StyleParam.LinearAxisId.Y 1,ShowGrid=false,MinMax=(0.,0.5))
                 |> Chart.withTitle (sprintf "#%i with q < 0.01" (scoreVsQ |> Array.filter (fun x -> snd x <= 0.01) |> Array.length))
-                |> Chart.SaveHtmlAs (Path.Combine [|plotDirectory;"InitialSeparation"|])
+                |> Chart.saveHtml (Path.Combine [|plotDirectory;"InitialSeparation"|])
             logger.Trace "Selecting positives for training"
             let positives' = 
                 bestPSMPerScan 
@@ -377,26 +377,26 @@ module PSMStatistics =
                     [
                         [
                         Chart.Histogram(tar)
-                        |> Chart.withTraceName "positives"
+                        |> Chart.withTraceInfo "positives"
 
                         Chart.Histogram(decoy)
-                        |> Chart.withTraceName "negatives"
+                        |> Chart.withTraceInfo "negatives"
                         ]
-                        |> Chart.Combine
+                        |> Chart.combine
                         |> Chart.withAxisAnchor(Y=1)
                         Chart.Line(scoreVsQ |> Array.sortBy fst)
                         |> Chart.withAxisAnchor(Y=2)
-                        |> Chart.withTraceName "QValue"
+                        |> Chart.withTraceInfo "QValue"
                         Chart.Line(scoreVSPep |> Array.sortBy fst)
                         |> Chart.withAxisAnchor(Y=2)
-                        |> Chart.withTraceName "PepValue"
+                        |> Chart.withTraceInfo "PepValue"
                     ]
-                    |> Chart.Combine
-                    |> Chart.withX_AxisStyle("Score")
-                    |> Chart.withY_AxisStyle("Count",Side=StyleParam.Side.Left,Id=1,Showgrid=false)
-                    |> Chart.withY_AxisStyle("FDR",Side=StyleParam.Side.Right,Id=2,Overlaying=StyleParam.AxisAnchorId.Y 1,Showgrid=false,MinMax=(0.,0.5))
+                    |> Chart.combine
+                    |> Chart.withXAxisStyle("Score")
+                    |> Chart.withYAxisStyle("Count",Side=StyleParam.Side.Left,Id=StyleParam.SubPlotId.YAxis 1,ShowGrid=false)
+                    |> Chart.withYAxisStyle("FDR",Side=StyleParam.Side.Right,Id=StyleParam.SubPlotId.YAxis 2,Overlaying=StyleParam.LinearAxisId.Y 1,ShowGrid=false,MinMax=(0.,0.5))
                     |> Chart.withTitle (sprintf "#iteration: %i, %i with q < 0.01" iteration (scoreVsQ |> Array.filter (fun x -> snd x <= 0.01) |> Array.length))
-                    |> Chart.SaveHtmlAs (Path.Combine [|plotDirectory;"separationAtIteration_" + iteration.ToString()|])
+                    |> Chart.saveHtml (Path.Combine [|plotDirectory;"separationAtIteration_" + iteration.ToString()|])
                 {
                     NPositivesAtFDR = nPosTar
                     CalcQValue     = getQ

@@ -2,32 +2,81 @@
 [![Made with F#](https://img.shields.io/badge/Made%20with-FSharp-rgb(184,69,252).svg)](https://fsharp.org/)
 ![GitHub contributors](https://img.shields.io/github/contributors/CSBiology/ProteomIQon)
 
-The ProteomIQon 
+The ProteomIQon
 ----------------------
 
-The ProteomIQon is a collection of open source computational proteomics tools to build pipelines for the evaluation of MS derived proteomics data
-written in F#. The current state of the tool chain allows handle tasks like signal detection, peptide identification, quantification and protein inference.
+ProteomIQon is a set of command line tools for the analysis of mass spectrometry based proteomics data, written in F#.
+Each tool does one step and writes plain files that the next tool reads, so a pipeline is a sequence of tool calls
+that can be rerun from any point. Most tools append to an output file that already exists, so delete the old
+file before rerunning a step into the same directory. The chain covers signal detection, peptide identification,
+quantification, retention time alignment between runs and protein inference.
 
 <img src="{{root}}img/PillarsOfCompProt.png" width="1000" height="750" />
 
-Each ProteomIQon tool is concerned with a specific task. This makes the tool-chain flexibel and easily extendable. 
-An example of a prototypical chaining of tools to identify and quantify a mix of 14N and 15N labeled proteins can be found in the [here]().
-We are currently working on the [cwl tool and workflow descriptions](https://github.com/common-workflow-language), so you can expect a to see more workflow graphs in the near future!
-   
-All tools are available using [nuget](https://www.nuget.org/profiles/CSBiology) and soon via BioConda. 
-Each tool is described in detail on its corresponding documentation page, accessible via the navigation pane, if you think a functionality is missing, feel free to contact us or to join us as a contributor!
+The proteomics theory behind the steps is documented in [BioFSharp.Mz](https://www.biofsharp.com/BioFSharp.Mz/), the
+library most tools build on. The tool pages here link to it where a concept needs more than a sentence.
 
+Installing a tool
+-----------------
 
-The Core Project
+Every tool is a .NET tool on [nuget.org](https://www.nuget.org/profiles/CSBiology), package `ProteomIQon.<ToolName>`,
+command `proteomiqon-<toolname>`. The one exception is QuantBasedAlignment, which ships as
+`ProteomIQon.QuantBasedAlignment_win_x64` and `ProteomIQon.QuantBasedAlignment_linux_x64`. The package
+`ProteomIQon.QuantBasedAlignment` is the library both wrap and installs no command.
+
+```text
+dotnet tool install --global ProteomIQon.PeptideDB
+proteomiqon-peptidedb --help
+```
+
+Tools that take parameters read them from a JSON file. Each tool page shows the parameters with a script that writes
+the file, and the command line calls.
+
+How the tools chain
+-------------------
+
+A run of a data dependent acquisition experiment goes through these steps. Each tool writes the files in its last
+column, and the next tool reads them.
+
+| Step | Tool | Reads | Writes |
+|------|------|-------|--------|
+| Convert raw data | [MzMLToMzLite]({{root}}tools/MzMLToMzLite.html) | .mzML (from msconvert) | .mzlite |
+| Build the search space | [PeptideDB]({{root}}tools/PeptideDB.html) | FASTA | .db (SQLite) |
+| Identify spectra | [PeptideSpectrumMatching]({{root}}tools/PeptideSpectrumMatching.html) | .mzlite, .db | .psm |
+| Control the FDR | [PSMStatistics]({{root}}tools/PSMStatistics.html) | .psm, .db | .qpsm |
+| Quantify identified peptide ions | [PSMBasedQuantification]({{root}}tools/PSMBasedQuantification.html) | .mzlite, .qpsm, .db | .quant |
+| Infer proteins | [ProteinInference]({{root}}tools/ProteinInference.html) | .qpsm, .db | .prot |
+| Join peptides and proteins | [JoinQuantPepIonsWithProteins]({{root}}tools/JoinQuantPepIonsWithProteins.html) | .quant, .prot | .quantAndProt |
+| Aggregate to proteins | [LabelFreeProteinQuantification]({{root}}tools/LabelFreeProteinQuantification.html) or [LabeledProteinQuantification]({{root}}tools/LabeledProteinQuantification.html) | .quantAndProt | LabelFreeQuant.txt or LabeledQuant.txt |
+
+With several runs, the alignment tools transfer identifications between runs before the join. They sit between
+PSMBasedQuantification and JoinQuantPepIonsWithProteins:
+
+| Step | Tool | Reads | Writes |
+|------|------|-------|--------|
+| Map scan times between runs | [QuantBasedAlignment]({{root}}tools/QuantBasedAlignment.html) | .quant of all runs | .align, .alignmetric |
+| Quantify transferred peptide ions | [AlignmentBasedQuantification]({{root}}tools/AlignmentBasedQuantification.html) | .mzlite, .align, .alignmetric, .quant, .db | .quant |
+| Score the transfers | [AlignmentBasedQuantStatistics]({{root}}tools/AlignmentBasedQuantStatistics.html) | .quant, .align | .quant |
+| Reassign protein groups | [AddDeducedPeptides]({{root}}tools/AddDeducedPeptides.html) | .quant, .prot | .prot |
+
+Four more tools cover other inputs. For 15N labeled samples, [RatioLFQ]({{root}}tools/RatioLFQ.html) turns the
+light to heavy ratios in LabeledQuant.txt into one intensity per run and protein. For timsTOF data with ion mobility,
+[MzMLToMzLiteIonMobility]({{root}}tools/MzMLToMzLiteIonMobility.html) converts the mzML,
+[MsFraggerToPSM]({{root}}tools/MsFraggerToPSM.html) imports an MSFragger search, and
+[PSMBasedQuantificationTIMs]({{root}}tools/PSMBasedQuantificationTIMs.html) quantifies in retention time and ion
+mobility.
+
+The core project
 ------------------
 
-The ProteomIQon core is referenced by all tools. It contains mainly serializable data transfer objects such as tool results and tool parameters, as well as their mapping to domain specific types. 
-This is also the place for any kind of code reusable across tools such as thin wrappers around data readers, logging or CLI formatting. 
+The ProteomIQon core is referenced by all tools. It contains mainly serializable data transfer objects such as tool results and tool parameters, as well as their mapping to domain specific types.
+This is also the place for any kind of code reusable across tools such as thin wrappers around data readers, logging or CLI formatting.
 
 Documentation
 -------------
 
-The documentation and tutorials for this library are automatically generated (using the F# Formatting) from .fsx and .md files in the docs folder. If you find a typo, please submit a pull request!
+The documentation is generated with [fsdocs](https://fsprojects.github.io/FSharp.Formatting/) from the .fsx files in the docs folder.
+If you find a typo, please submit a pull request. [How to document your work]({{root}}develop/How_to_document_your_work.html) explains the setup.
 
 Contributing
 ------------
@@ -39,4 +88,11 @@ Community/Social
 Want to get in touch with us? We recently joined the twitter crowd:
 
 [![Twitter Follow](https://img.shields.io/twitter/follow/cs_biology.svg?style=social)](https://twitter.com/cs_biology)
+
+Citation
+--------
+
+When using ProteomIQon in scientific or commercial releases, please cite us using the DOI `10.5281/zenodo.6335068`.
+
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.6335068.svg)](https://doi.org/10.5281/zenodo.6335068)
 *)

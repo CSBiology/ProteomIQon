@@ -1,16 +1,16 @@
-#r "nuget: ProteomIQon, 0.0.8"
-#r "nuget: MzIO, 0.1.1"
-#r "nuget: MzIO.Processing, 0.1.2"
-#r "nuget: MzIO.SQL, 0.1.4"
-#r "nuget: MzIO.MzML, 0.1.6"
+//#r "nuget: ProteomIQon, 0.0.8"
+#r "nuget: MzIO, 0.1.7"
+#r "nuget: MzIO.Processing, 0.1.6"
+#r "nuget: MzIO.SQL, 0.1.8"
+#r "nuget: MzIO.MzML, 0.1.9"
 #r "nuget: System.Data.SQLite.Core, 1.0.118"
 
-open ProteomIQon
-open ProteomIQon.Domain
-open ProteomIQon.Core
+//open ProteomIQon
+//open ProteomIQon.Domain
+//open ProteomIQon.Core
 open System.IO
 open System.Collections.Generic
-open BioFSharp.Mz
+//open BioFSharp.Mz
 open MzIO
 open MzIO.Binary
 open MzIO.Model
@@ -18,11 +18,25 @@ open MzIO.Processing
 open MzIO.IO
 open MzIO.MzSQL
 open MzIO.IO.MzML
-open ProteomIQon.Core.MzIO.Processing
-open ProteomIQon.Dto
-open ProteomIQon.Domain
+//open ProteomIQon.Core.MzIO.Processing
+//open ProteomIQon.Dto
+//open ProteomIQon.Domain
 
 
+
+new Peak1D()
+let inReader = new MzMLReader(@"D:\Testfiles\HYE124_TTOF6600_DDA_1ug_Yeast_lgillet_I150212_004.mzML")
+let spectrum = inReader.ReadMassSpectrum("sample=1 period=1 cycle=1 experiment=1")
+Json.MzIOJson.MassSpectrumToJson spectrum
+let peaks = inReader.ReadSpectrumPeaks("sample=1 period=1 cycle=1 experiment=1")
+let p1 =Json.MzIOJson.ToJson (new Peak1DArray())
+let p2 = Json.MzIOJson.FromJson<Peak1DArray>(p1)
+p2.IonMobilityDataType
+let t = new Peak1DArray(BinaryDataCompressionType.NoCompression, BinaryDataType.Float64, BinaryDataType.Float64, Commons.Arrays.ArrayWrapper<Peak1D>([||]))
+let s = t.IonMobilityDataType <- Some BinaryDataType.Float64
+t.IonMobilityDataType
+
+new Peak1D()
     ///
 let private initPeakPicking (*(logger: NLog.Logger)*) (peakPickingParams:PeakPicking) (peaks: Peak1DArray) =
 
