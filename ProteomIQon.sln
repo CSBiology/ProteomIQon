@@ -114,6 +114,8 @@ Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "RatioLFQ", "src\RatioLFQ\Ra
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "MsFraggerToPSM", "src\MsFraggerToPSM\MsFraggerToPSM.fsproj", "{45CB73EE-C1E0-E628-802E-B72FC85DE670}"
 EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "PeptideSpectrumMatchingTIMs", "src\PeptideSpectrumMatchingTIMs\PeptideSpectrumMatchingTIMs.fsproj", "{6D344E73-F840-43D7-A2A3-DCC88920114F}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -236,6 +238,10 @@ Global
 		{45CB73EE-C1E0-E628-802E-B72FC85DE670}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{45CB73EE-C1E0-E628-802E-B72FC85DE670}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{45CB73EE-C1E0-E628-802E-B72FC85DE670}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6D344E73-F840-43D7-A2A3-DCC88920114F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6D344E73-F840-43D7-A2A3-DCC88920114F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6D344E73-F840-43D7-A2A3-DCC88920114F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6D344E73-F840-43D7-A2A3-DCC88920114F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

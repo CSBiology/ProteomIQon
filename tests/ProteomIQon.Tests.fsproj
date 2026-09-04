@@ -9,6 +9,7 @@
   <ItemGroup>
     <Compile Include="Pipeline.fs" />
     <Compile Include="Unit_Tests\PSMBasedQuantificationTIMs.fs"/>
+    <Compile Include="Unit_Tests\PeptideSpectrumMatchingTIMs.fs"/>
     <Compile Include="Main.fs" />
   </ItemGroup>
 
@@ -29,6 +30,7 @@
   <ItemGroup>
     <ProjectReference Include="..\src\PeptideDB\PeptideDB.fsproj" ReferenceOutputAssembly="false" />
     <ProjectReference Include="..\src\PeptideSpectrumMatching\PeptideSpectrumMatching.fsproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\src\PeptideSpectrumMatchingTIMs\PeptideSpectrumMatchingTIMs.fsproj" ReferenceOutputAssembly="true" />
     <ProjectReference Include="..\src\PSMStatistics\PSMStatistics.fsproj" ReferenceOutputAssembly="false" />
     <ProjectReference Include="..\src\PSMBasedQuantification\PSMBasedQuantification.fsproj" ReferenceOutputAssembly="false" />
     <ProjectReference Include="..\src\QuantBasedAlignment_win-x64\QuantBasedAlignment_win-x64.fsproj" ReferenceOutputAssembly="false" Condition="'$(OS)' == 'Windows_NT'" />

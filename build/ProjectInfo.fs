@@ -62,6 +62,7 @@ let projects =
         ProjectInfo.create("MzMLToMzLite", "src/MzMLToMzLite/MzMLToMzLite.fsproj", "src/MzMLToMzLite/RELEASE_NOTES.md")
         ProjectInfo.create("PeptideDB", "src/PeptideDB/PeptideDB.fsproj", "src/PeptideDB/RELEASE_NOTES.md")
         ProjectInfo.create("PeptideSpectrumMatching", "src/PeptideSpectrumMatching/PeptideSpectrumMatching.fsproj", "src/PeptideSpectrumMatching/RELEASE_NOTES.md")
+        ProjectInfo.create("PeptideSpectrumMatchingTIMs", "src/PeptideSpectrumMatchingTIMs/PeptideSpectrumMatchingTIMs.fsproj", "src/PeptideSpectrumMatchingTIMs/RELEASE_NOTES.md")
         ProjectInfo.create("PSMStatistics", "src/PSMStatistics/PSMStatistics.fsproj", "src/PSMStatistics/RELEASE_NOTES.md")
         ProjectInfo.create("PSMBasedQuantification", "src/PSMBasedQuantification/PSMBasedQuantification.fsproj", "src/PSMBasedQuantification/RELEASE_NOTES.md")
         ProjectInfo.create("PSMBasedQuantificationTIMs", "src/PSMBasedQuantificationTIMs/PSMBasedQuantificationTIMs.fsproj", "src/PSMBasedQuantificationTIMs/RELEASE_NOTES.md")
