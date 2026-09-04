@@ -1,3 +1,7 @@
+#### 0.0.12 - Friday, September 4, 2026
+* Extend PeptideSpectrumMatchingResult with IonMobility, Hyperscore, Expectscore, MatchedIons and TotalIons. Breaking: .psm files written by earlier releases have 23 columns and have to be regenerated before PSMStatistics of this release reads them
+* Add the PeptideSpectrumMatchingTIMs parameter record and default parameters
+
 #### 0.0.11 - Wednesday, September 2, 2026
 * Add Gabor3D parameters and default params for PSMBasedQuantificationTIMs
 * Write a header only csv instead of failing when a result sequence is empty
