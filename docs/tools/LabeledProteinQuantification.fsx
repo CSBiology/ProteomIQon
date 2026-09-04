@@ -3,7 +3,7 @@
 title: LabeledProteinQuantification
 category: Tools
 categoryindex: 1
-index: 16
+index: 17
 ---
 *)
 

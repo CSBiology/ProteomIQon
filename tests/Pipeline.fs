@@ -156,6 +156,40 @@ let pipelineTests =
             File.Delete (relToDirectory "../../../data/PeptideSpectrumMatching/out/PeptideSpectrumMatching_log.txt")
             Expect.isTrue compare "PSMs are different"
 
+        testCase "PeptideSpectrumMatchingTIMs" <| fun _ ->
+            let relToDirectory = getRelativePath baseDir
+            let db = relToDirectory "../../../data/PeptideSpectrumMatching/in/Minimal.db"
+            let mzlite = relToDirectory "../../../data/PeptideSpectrumMatching/in/minimal.mzlite"
+            let psmParams = relToDirectory "../../../data/PeptideSpectrumMatchingTIMs/in/defaultParams.json"
+            let outDirectory = relToDirectory "../../../data/PeptideSpectrumMatchingTIMs/out/"
+            let psmExe = toolDll "PeptideSpectrumMatchingTIMs"
+            runDotNet (sprintf "%s -i %s -o %s -p %s -d %s" psmExe mzlite outDirectory psmParams db) baseDir
+            let compare =
+                tsvFilesEqual 1e-6
+                    (relToDirectory "../../../data/PeptideSpectrumMatchingTIMs/out/minimalReference.psm")
+                    (relToDirectory "../../../data/PeptideSpectrumMatchingTIMs/out/minimal.psm")
+            File.Delete (relToDirectory "../../../data/PeptideSpectrumMatchingTIMs/out/minimal.psm")
+            File.Delete (relToDirectory "../../../data/PeptideSpectrumMatchingTIMs/out/minimal_log.txt")
+            File.Delete (relToDirectory "../../../data/PeptideSpectrumMatchingTIMs/out/PeptideSpectrumMatchingTIMs_log.txt")
+            Expect.isTrue compare "PSMs are different"
+
+        testCase "PeptideSpectrumMatchingTIMsIonMobility" <| fun _ ->
+            let relToDirectory = getRelativePath baseDir
+            let db = relToDirectory "../../../data/PeptideSpectrumMatchingTIMs/in/MinimalTIMs.db"
+            let mzlite = relToDirectory "../../../data/PeptideSpectrumMatchingTIMs/in/minimalTIMs.mzlite"
+            let psmParams = relToDirectory "../../../data/PeptideSpectrumMatchingTIMs/in/defaultParams.json"
+            // its own folder, because the test without ion mobility runs at the same time and writes
+            // and deletes the tool log in out/
+            let outDirectory = relToDirectory "../../../data/PeptideSpectrumMatchingTIMs/out/ionMobility/"
+            let psmExe = toolDll "PeptideSpectrumMatchingTIMs"
+            runDotNet (sprintf "%s -i %s -o %s -p %s -d %s" psmExe mzlite outDirectory psmParams db) baseDir
+            let compare =
+                tsvFilesEqual 1e-6
+                    (relToDirectory "../../../data/PeptideSpectrumMatchingTIMs/out/minimalTIMsReference.psm")
+                    (relToDirectory "../../../data/PeptideSpectrumMatchingTIMs/out/ionMobility/minimalTIMs.psm")
+            Directory.Delete(outDirectory, true)
+            Expect.isTrue compare "PSMs are different"
+
         testCase "PSMStatistics" <| fun _ ->
             let relToDirectory = getRelativePath baseDir
             let dbEstimate = relToDirectory "../../../data/PSMStatistics/in/MinimalEstimate.db"
