@@ -222,6 +222,27 @@ let pipelineTests =
             Directory.Delete (relToDirectory "../../../data/PSMStatistics/out/estimateOut/minimalEstimate_plots")
             Expect.isTrue compare "QPSMs are different"
 
+        testCase "PSMStatisticsTIMs" <| fun _ ->
+            // a .psm of PeptideSpectrumMatchingTIMs, which carries the hyperscore and the expectation value
+            let relToDirectory = getRelativePath baseDir
+            let db = relToDirectory "../../../data/PSMStatistics/in/MinimalTIMs.db"
+            let psm = relToDirectory "../../../data/PSMStatistics/in/minimalTIMs.psm"
+            let psmStatsParams = relToDirectory "../../../data/PSMStatistics/in/pSMStatisticsParamsEstimate.json"
+            let outDirectory = relToDirectory "../../../data/PSMStatistics/out/timsOut"
+            let psmStatsExe = toolDll "PSMStatistics"
+            runDotNet (sprintf "%s -i %s -o %s -p %s -d %s" psmStatsExe psm outDirectory psmStatsParams db) baseDir
+            let log = File.ReadAllText (relToDirectory "../../../data/PSMStatistics/out/timsOut/minimalTIMs_log.txt")
+            let compare =
+                tsvFilesEqual 1e-9
+                    (relToDirectory "../../../data/PSMStatistics/out/timsOut/minimalReference.qpsm")
+                    (relToDirectory "../../../data/PSMStatistics/out/timsOut/minimalTIMs.qpsm")
+            File.Delete (relToDirectory "../../../data/PSMStatistics/out/timsOut/minimalTIMs.qpsm")
+            File.Delete (relToDirectory "../../../data/PSMStatistics/out/timsOut/minimalTIMs_log.txt")
+            File.Delete (relToDirectory "../../../data/PSMStatistics/out/timsOut/PSMStatistics_log.txt")
+            Directory.Delete (relToDirectory "../../../data/PSMStatistics/out/timsOut/minimalTIMs_plots")
+            Expect.stringContains log "Hyperscore and expectation value present: true" "the hyperscore and the expectation value are used"
+            Expect.isTrue compare "QPSMs are different"
+
         testCase "PSMBasedQuantification" <| fun _ ->
             let relToDirectory = getRelativePath baseDir
             let db = relToDirectory "../../../data/PSMBasedQuantification/in/Minimal.db"
