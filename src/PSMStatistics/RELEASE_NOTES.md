@@ -1,3 +1,7 @@
+#### 0.0.11 - Friday, September 4, 2026
+* Use Hyperscore and Expectscore as features and seed the training with the expectation value when the input carries them
+* Breaking: read the 28 column .psm layout of this release, .psm files of earlier releases have to be regenerated with PeptideSpectrumMatching
+
 #### 0.0.10 - Wednesday, September 2, 2026
 * Update to .NET 10
 * Update BioFSharp to 2.0.0, BioFSharp.Mz to 0.2.1, FSharpAux to 2.1.0, FSharp.Stats to 0.6.0 and Plotly.NET to 6.0.0-preview.2
