@@ -1,0 +1,26 @@
+namespace ProteomIQon
+
+open System.IO
+open Argu
+
+module CLIArgumentParsing = 
+
+    type CLIArguments =
+        | [<Mandatory>] [<AltCommandLine("-i")>] InstrumentOutput of path:string list
+        | [<Mandatory>] [<AltCommandLine("-d")>] PeptideDataBase of path:string 
+        | [<Mandatory>] [<AltCommandLine("-o")>] OutputDirectory  of path:string 
+        | [<Mandatory>] [<AltCommandLine("-p")>] ParamFile of path:string
+        | [<Unique>]    [<AltCommandLine("-c")>] Parallelism_Level of level:int
+        | [<Unique>]    [<AltCommandLine("-l")>] Log_Level of level:int
+        | [<Unique>]    [<AltCommandLine("-v")>] Verbosity_Level of level:int
+    with
+        interface IArgParserTemplate with
+            member s.Usage =
+                match s with
+                | InstrumentOutput _    -> "Specify the mass spectrometry output, either a directory that contains mzlite files or the paths of single mzlite files."
+                | PeptideDataBase  _    -> "Specify the file path of the peptide data base."
+                | OutputDirectory  _    -> "Specify the output directory."
+                | ParamFile _           -> "Specify the parameter file for peptide spectrum matching."
+                | Parallelism_Level _   -> "Set the number of cores the programm can use. Parallelization occurs on file level. This flag is only of effect if a input directory (-i) is specified."
+                | Log_Level _           -> "Set the log level."
+                | Verbosity_Level _     -> "Set the verbosity level."
