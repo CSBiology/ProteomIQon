@@ -1,4 +1,4 @@
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.6335068.svg)](https://doi.org/10.5281/zenodo.6335068)
+
 [![Made with F#](https://img.shields.io/badge/Made%20with-FSharp-rgb(184,69,252).svg)](https://fsharp.org/)
 ![GitHub contributors](https://img.shields.io/github/contributors/CSBiology/ProteomIQon)
 
@@ -8,8 +8,6 @@ The ProteomIQon
 The ProteomIQon is a collection of open source computational proteomics tools to build pipelines for the evaluation of MS derived proteomics data
 written in F#. Each tool is described in detail on its corresponding [documentation page](http://csbiology.github.io/ProteomIQon).
 
-<img src="https://github.com/CSBiology/ProteomIQon/blob/main/docs/img/PillarsOfCompProt.png" width="750" height="400" />
-
 The Core Project
 ------------------
 
@@ -17,8 +15,8 @@ The ProteomIQon core is referenced by all tools. It contains mainly serializable
 
 Documentation
 -------------
-
-The documentation and tutorials for this library are automatically generated (using the F# Formatting) from *.fsx and *.md files in the docs folder. If you find a typo, please submit a pull request!
+An introductory documentation you can find [here](https://csbiology.github.io/ProteomIQon/)
+More detailed documentation and tutorials for this library are automatically generated (using F# formatting) from the *.fsx and *.md files in the ‘docs’ folder. If you spot a typo, please submit a pull request!
 
 Contributing
 ------------
