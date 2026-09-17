@@ -18,7 +18,9 @@ The ProteomIQon core is referenced by all tools. It contains mainly serializable
 Documentation
 -------------
 
-The documentation and tutorials for this library are automatically generated (using the F# Formatting) from *.fsx and *.md files in the docs folder. If you find a typo, please submit a pull request!
+An introductory documentation you can find [here](https://csbiology.github.io/ProteomIQon/)
+More detailed documentation and tutorials for this library are automatically generated (using F# formatting) from the *.fsx and *.md files in the ‘docs’ folder. If you spot a typo, please submit a pull request!
+
 
 Contributing
 ------------
