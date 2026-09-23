@@ -340,21 +340,28 @@ module PepValueCalculation =
                     cv2
             iterativeReweightedLeastSquares(alpha)
 
-        let revLogitAndPi01 (peps: float[])=
-            let top = Math.Min(1., Math.Exp(peps |> Array.max))
-            let mutable crap = false
-            peps
-            |> Array.map (fun x ->
-                if crap then
-                    top
-                else
-                    let temp = Math.Exp x
-                    if temp >= top then
-                        crap <- true
-                        top
-                    else
-                        temp
-            )
+        // Makes the PEPs, ordered from the highest score down, non-decreasing by pooling
+        // adjacent violators. Percolator sets every PEP after the first one that reaches the
+        // maximum to that maximum, so a few high scoring decoys push almost every PEP to 1.
+        let poolAdjacentViolators (peps: float[]) =
+            let sums = ResizeArray<float>()
+            let counts = ResizeArray<int>()
+            for pep in peps do
+                sums.Add pep
+                counts.Add 1
+                let mutable last = sums.Count - 1
+                while last > 0 && sums.[last - 1] / float counts.[last - 1] > sums.[last] / float counts.[last] do
+                    sums.[last - 1] <- sums.[last - 1] + sums.[last]
+                    counts.[last - 1] <- counts.[last - 1] + counts.[last]
+                    sums.RemoveAt last
+                    counts.RemoveAt last
+                    last <- last - 1
+            let pooled = Array.zeroCreate peps.Length
+            let mutable start = 0
+            for block = 0 to sums.Count - 1 do
+                Array.fill pooled start counts.[block] (sums.[block] / float counts.[block])
+                start <- start + counts.[block]
+            pooled
 
         lrInitg()
         limitg()
@@ -376,18 +383,8 @@ module PepValueCalculation =
         |> fun (x, y) ->
             x,
             y
-            |> revLogitAndPi01
-            |> fun arr ->
-                let head::tail = arr |> Array.rev |> Array.toList
-                tail
-                |> List.fold (fun (acc: float list) newPEPValue ->
-                    let pepValue = acc.Head
-                    if newPEPValue > pepValue then
-                        pepValue::acc
-                    else
-                        newPEPValue::acc
-                )[head]
-                |> Array.ofList
+            |> Array.map (fun logOdds -> Math.Min(1., Math.Exp logOdds))
+            |> poolAdjacentViolators
         |> fun (x, y) ->
             // A linear spline returns NaN at a repeated knot, and tree models give many PSMs the
             // same score. Every score keeps one knot with the highest PEP found at that score.
