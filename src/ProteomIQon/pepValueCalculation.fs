@@ -389,6 +389,19 @@ module PepValueCalculation =
                 )[head]
                 |> Array.ofList
         |> fun (x, y) ->
-            let coeff = FSharp.Stats.Interpolation.LinearSpline.initInterpolate x y
-            let fitLinSp = Interpolation.LinearSpline.predict coeff
-            fitLinSp
+            // A linear spline returns NaN at a repeated knot, and tree models give many PSMs the
+            // same score. Every score keeps one knot with the highest PEP found at that score.
+            let x, y =
+                Array.zip x y
+                |> Array.groupBy fst
+                |> Array.map (fun (score, peps) -> score, peps |> Array.map snd |> Array.max)
+                |> Array.sortBy fst
+                |> Array.unzip
+            // One distinct target score, or none, leaves no line to interpolate
+            if x.Length < 2 then
+                let pep = if x.Length = 1 then y.[0] else 1.
+                fun (_: float) -> pep
+            else
+                let coeff = FSharp.Stats.Interpolation.LinearSpline.initInterpolate x y
+                let fitLinSp = Interpolation.LinearSpline.predict coeff
+                fitLinSp

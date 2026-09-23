@@ -10,6 +10,7 @@
     <Compile Include="Pipeline.fs" />
     <Compile Include="Unit_Tests\PSMBasedQuantificationTIMs.fs"/>
     <Compile Include="Unit_Tests\PeptideSpectrumMatchingTIMs.fs"/>
+    <Compile Include="Unit_Tests\PepValueCalculation.fs"/>
     <Compile Include="Main.fs" />
   </ItemGroup>
 
