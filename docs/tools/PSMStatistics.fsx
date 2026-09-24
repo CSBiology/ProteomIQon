@@ -89,6 +89,43 @@ let psmStatisticsParams : Dto.PSMStatisticsParams =
         KeepTemporaryFiles         = true
     }
 
+// Describing the outputs 
+(**
+## Outputs
+The resulting `.qpsm` file is generated as a tab-delimited text file.
+These columns can be inspected individually to examine specific search results, scoring metrics, and identification parameters.
+| Column                     | Description                                                                                               |
+|----------------------------|-----------------------------------------------------------------------------------------------------------|
+| PSMId                      | Identifier of the MS/MS spectrum (and corresponding peptide–spectrum match, PSM)                          |
+| Global Mod                 | Indicator for a labelled MS experiment: 1 = labelled, 0 = unlabelled                                      |
+| PepSequenceID              | Unique identifier of the unmodified peptide sequence                                                      |
+| ModSequenceID              | Unique identifier of the modified peptide sequence (including PTMs, e.g., methylation)                    |
+| Label                      | Target/decoy label: 1 = target, −1 = decoy                                                                |
+| ScanNr                     | Scan identifier, combining the spectrum ID in the raw file with an ascending MS2 ID                       |
+| ScanTime                   | Retention time (RT) of the MS/MS scan                                                                     |
+| Charge                     | Precursor ion charge state                                                                                | 
+| PrecursorMZ                | Precursor ion mass-to-charge ratio (m/z)                                                                  |
+| TheoMass                   | Theoretical peptide mass in spectrum (based on PeptideDB)                                                 |
+| AbsDeltaMass               | Absolute mass deviation between theoretical and measured mass (mass error)                                | 
+| PeptideLength              | Peptide Length                                                                                            |
+| MissCleavages              | Number of missed cleavages                                                                                |
+| SequestScore               | SEQUEST similarity score (e.g., XCorr) quantifying agreement between theoretical and experimental spectra |
+| SequestNormDeltaBestToRest | Normalized separation of the best SEQUEST score from the remaining candidate scores                       |
+| SequestNormDeltaNext       | Normalized separation between the best and second-best SEQUEST scores                                     |
+| AndroScore                 | Andromeda score quantifying the match between theoretical and experimental spectra                        |
+| AndroNormDeltaBestToRest   | Normalized separation of the best Andromeda score from the remaining candidate scores                     |
+| AndroNormDeltaNext         | Normalized separation between the best and second-best Andromeda scores                                   |
+| XtandemScore               | XTandem score quantifying the match between theoretical and experimental spectra                          |
+| XtandemNormDeltaBestToRest | Normalized separation of the best XTandem score from the remaining candidate scores                       |
+| XtandemNormDeltaNext       | Normalized separation between the best and second-best XTandem scores                                     |
+| ModelScore                 | Best score value achieved by iterative model to distinguish between target & decoy                        |
+| Qvalue                     | Qvalue (False-Discovery-Rate)                                                                             |
+| PEPValue                   | Posterior Error Probability                                                                               |
+| StringSequence             | Sequence of fragment ions                                                                                 |
+| ProteinNames               | Protein Names                                                                                             |
+
+**)
+
 // Replace the temp folder with your project folder.
 let outputPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "pSMStatisticsParams.json")
 

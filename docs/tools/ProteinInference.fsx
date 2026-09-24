@@ -79,6 +79,24 @@ let proteinInferenceParams : Dto.ProteinInferenceParams =
         GetQValue              = QValueMethod.LogisticRegression FDRMethod.MAYU
     }
 
+// Describing the output 
+(**
+## Outputs
+
+The resulting `.prot` file is generated as a tab-delimited text file.
+These columns can be inspected individually to examine specific search results, scoring metrics, and identification parameters.
+
+| Column          | Description                                                       |   
+|-----------------|-------------------------------------------------------------------|
+| ProteinGroup    | String sequence to determine to which protein the peptide belongs |
+| PeptideSequence | Peptide Sequence                                                  |
+| Class           | C1A or C3B                                                        |
+| TargetScore     | Target Score                                                      |
+| DecoyScore      | Decoy Score                                                       |
+| Qvalue          | Qvalue (False-Discovery-Rate) for every identified protein        |
+ 
+**)
+
 // Replace the temp folder with your project folder.
 let outputPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "ProteinInferenceParams.json")
 

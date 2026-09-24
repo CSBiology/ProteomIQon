@@ -117,6 +117,62 @@ let quantificationParams : Dto.QuantificationParams =
             }
         BaseLineCorrection = Some { MaxIterations = 10; Lambda = 6; P = 0.05 }
     }
+// Description of the output
+(**
+## Outputs 
+The resulting `.quant` file is generated as a tab-delimited text file.
+These columns can be inspected individually to examine specific search results, scoring metrics, and identification parameters.
+
+| Column                                   | Description                                                                                                                                                      |
+|------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| StringSequence                           | Sequence of fragment ions                                                                                                                                        |
+| GlobalMod                                | Indicator for a labelled MS experiment: 1 = labelled, 0 = unlabelled                                                                                             |
+| Charge                                   | Precursor ion charge state                                                                                                                                       |
+| PepSequenceID                            | Unique identifier of the unmodified peptide sequence                                                                                                             |
+| ModSequenceID                            | Unique identifier of the modified peptide sequence (including PTMs, e.g., methylation)                                                                           |
+| PrecursorMZ                              | Precursor ion mass-to-charge ratio (m/z)                                                                                                                         |
+| MeasuredMass                             | Measured mass of precursor ions                                                                                                                                  |
+| TheoMass                                 | Theoretical peptide mass in spectrum (based on PeptideDB)                                                                                                        |
+| AbsDeltaMass                             | Absolute mass deviation between theoretical and measured mass (mass error)                                                                                       |
+| MeanPercolatorScore                      | The peptide spectrum matches (PSMs) are re-scored based on several parameters. This value corresponds to the average consensus score determined in the process   |
+| Qvalue                                   | Qvalue (False-Discovery-Rate)                                                                                                                                    |
+| PEPValue                                 | Posterior Error Probability                                                                                                                                      |
+| ProteinNames                             | Protein Names                                                                                                                                                    |
+| QuantMZ_Light                            | unlabled m/z data                                                                                                                                                |
+| Quant_Light                              | unlabled peak data                                                                                                                                               |
+| MeasuredApex_Light                       | Measured Apex of unlabled data spectras                                                                                                                          |
+| Seo_Light                                | Standard Error of Prediction for quantification                                                                                                                  |
+| Params_Light                             | best scan time estimate when quanitfying a inferred peak for labled data                                                                                         |
+| Diffrence_SearchRT_FittedRT_Light        | Difference between the retention time originally determined using PSMs and the retention time calculated using alignment                                         |
+| KLDiv_Observed_Theoretical_Light         | Kullback-Leibler divergence for unlabled data                                                                                                                    |
+| KLDiv_CorrectObserved_Theoretical_Light  | Corrected Kullback-Leiber divergence for unlabled data                                                                                                           |
+| QuantMZ_Heavy                            | labled m/z data                                                                                                                                                  |
+| Quant_Heavy                              | labled data                                                                                                                                                      |
+| MeasuredApex_Heavy                       | Measured Apex of labled data spectras                                                                                                                            |
+| Seo_Heavy                                | Standard Error of Prediction of quantification                                                                                                                   |
+| Params_Heavy                             | best scan time estimate when quanitfying a inferred peak for labled data                                                                                         |
+| Diffrence_SearchRT_FittedRT_Heavy        | Difference between the retention time originally determined using PSMs and the retention time calculated using alignment                                         |
+| KLDiv_Observed_Theoretical_Heavy         | Kullback-Leibler divergence for labled data                                                                                                                      |
+| KLDiv_CorrectObserved_Theoretical_Heavy  | Corrected Kullback-Leiber divergence for labled data                                                                                                             |
+| Correlation_Light_Heavy                  | Correlation calculated based on Pearson between unlabled and labled data                                                                                         |
+| QuantificationSource                     | if spectra are found over Alignments or Peptide Spectrum Matching                                                                                                |
+| IsotopicPatternMz_Light                  | m/z-range of isotope cluster in spectra for unlabled data                                                                                                        |
+| IsotopicPatternIntensity_Observed_Light  | observed intensity range of unlabled isotopic clusters                                                                                                           |
+| IsotopicPatternIntensity_Corrected_Light | corrected intensity range of unlabled isotopic clusters                                                                                                          |
+| RtTrace_Light                            | Retentime couse of unlabled data                                                                                                                                 |
+| IntensityTrace_Observed_Light            | Itensity course for observed unlabled data                                                                                                                       |
+| IntensityTrace_Corrected_Light           | Intensity course for corrected unlabled data                                                                                                                     |
+| IsotopicPatternMZ_Heavy                  | m/z-range of isotope cluster in spectra for labled data                                                                                                          |
+| IsotopicPatternIntensity_Observed_Heavy  | observed intensity range of labled isotopic clusters                                                                                                             |
+| IsotopicPatternIntensity_Corrected_Heavy | corrected intensity range of labled isotopic clusters                                                                                                            |
+| RtTrace_Heavy                            | Retentime couse of 15N data                                                                                                                                      |
+| IntensityTrace_Observed_Heavy            | Itensity course for observed 15N data                                                                                                                            |
+| IntensityTrace_Corrected_Heavy           | Intensity course for corrected 15N data                                                                                                                          |
+| AlignmentScore                           | properties of spectras in relation to the spectras                                                                                                               |
+| AlignmentQValue                          | Q-value, which is calculated based on the alignment score                                                                                                        |
+ 
+**)
+
 
 // Replace the temp folder with your project folder.
 let outputPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "QuantificationParams.json")
