@@ -86,15 +86,17 @@ let proteinInferenceParams : Dto.ProteinInferenceParams =
 The resulting `.prot` file is generated as a tab-delimited text file.
 These columns can be inspected individually to examine specific search results, scoring metrics, and identification parameters.
 
-| Column          | Description                                                       |   
-|-----------------|-------------------------------------------------------------------|
-| ProteinGroup    | String sequence to determine to which protein the peptide belongs |
-| PeptideSequence | Peptide Sequence                                                  |
-| Class           | C1A or C3B                                                        |
-| TargetScore     | Target Score                                                      |
-| DecoyScore      | Decoy Score                                                       |
-| Qvalue          | Qvalue (False-Discovery-Rate) for every identified protein        |
- 
+| Column          | Description                                                          |   
+|-----------------|----------------------------------------------------------------------|
+| ProteinGroup    | String sequence to determine to which proteins the peptide belongs   |
+| PeptideSequence | Peptide Sequence                                                     |
+| Class           | C1A, C1B, C2A, C2B, C3A, C3B                                         |
+| TargetScore     | Target Score calculated based on the individual peptide scores of PSM|
+| DecoyScore      | Decoy Score calculated based on the individual peptide scores of PSM |
+| Qvalue          | Qvalue (False-Discovery-Rate) for every identified protein           |
+
+
+For more information on the columns, please refer to the [Protein Inference](https://www.biofsharp.com/BioFSharp.Mz/04_02_protein_inference.html)the BioFSharp.Mz documentation.
 **)
 
 // Replace the temp folder with your project folder.

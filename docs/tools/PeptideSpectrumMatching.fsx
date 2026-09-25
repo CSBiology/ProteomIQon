@@ -117,18 +117,18 @@ These columns can be inspected individually to examine specific search results, 
 
 | Column                     | Description                                                                                                 |
 |----------------------------|-------------------------------------------------------------------------------------------------------------|
-| PSMId                      | Identifier of the MS/MS spectrum (and corresponding peptide–spectrum match, PSM)                            |
-| GlobalMod                  | Indicator for a labelled MS experiment: 1 = labelled, 0 = unlabelled                                        |
-| PepSequenceID              | Unique identifier of the unmodified peptide sequence                                                        |
+| PSMId                      | Identifier of the MS/MS spectrum (and corresponding peptide spectrum match, PSM), which points to PeptideDB |
+| GlobalMod                  | Indicator for a labeled MS experiment: 1 = labeled, 0 = unlabeled                                           |
+| PepSequenceID              | Unique identifier of the unmodified peptide sequence coming from PeptideDB                                  |
 | ModSequenceID              | Unique identifier of the modified peptide sequence (including PTMs, e.g., methylation)                      |
 | Label                      | Target/decoy label: 1 = target, −1 = decoy                                                                  |
 | ScanNR                     | Scan identifier, combining the spectrum ID in the raw file with an ascending MS2 ID                         |
-| ScanTime                   | Retention time (RT) of the MS/MS scan                                                                       |
+| ScanTime                   | Retention time (RT) in minutes of the MS/MS scan                                                            |
 | Charge                     | Precursor ion charge state                                                                                  |
-| PercursorMZ                | Precursor ion mass-to-charge ratio (m/z)                                                                    |
+| PercursorMZ                | Precursor ion mass-to-charge ratio (m/z) in Dalton                                                          |
 | TheoMass                   | Theoretical peptide mass in spectrum (based on PeptideDB)                                                   |
 | AbsDeltaMass               | Absolute mass deviation between theoretical and measured mass (mass error)                                  |
-| PeptideLength              | Peptide Length                                                                                              |
+| PeptideLength              | Peptide Length in Amino Acid count                                                                          |
 | MissCleavages              | Number of missed cleavages                                                                                  |
 | SequestScore               | SEQUEST similarity score (e.g., XCorr) quantifying agreement between theoretical and experimental spectra   |
 | SequestNormDeltaBestToRest | Normalized separation of the best SEQUEST score from the remaining candidate scores                         |

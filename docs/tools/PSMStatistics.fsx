@@ -97,7 +97,7 @@ These columns can be inspected individually to examine specific search results, 
 | Column                     | Description                                                                                               |
 |----------------------------|-----------------------------------------------------------------------------------------------------------|
 | PSMId                      | Identifier of the MS/MS spectrum (and corresponding peptide–spectrum match, PSM)                          |
-| Global Mod                 | Indicator for a labelled MS experiment: 1 = labelled, 0 = unlabelled                                      |
+| Global Mod                 | Indicator for a labeled MS experiment: 1 = labeled, 0 = unlabeled                                      |
 | PepSequenceID              | Unique identifier of the unmodified peptide sequence                                                      |
 | ModSequenceID              | Unique identifier of the modified peptide sequence (including PTMs, e.g., methylation)                    |
 | Label                      | Target/decoy label: 1 = target, −1 = decoy                                                                |
