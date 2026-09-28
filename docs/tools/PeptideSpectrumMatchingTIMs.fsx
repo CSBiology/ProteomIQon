@@ -10,7 +10,7 @@ index: 5
 (*** hide ***)
 
 (*** condition: prepare ***)
-#r "nuget: BioFSharp.Mz, 0.2.1"
+#r "nuget: BioFSharp.Mz, 0.2.2"
 #r "nuget: Newtonsoft.Json, 13.0.4"
 #r "../../src/ProteomIQon/bin/Release/net10.0/ProteomIQon.dll"
 
