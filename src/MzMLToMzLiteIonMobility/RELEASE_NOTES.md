@@ -1,3 +1,6 @@
+#### Unreleased
+* Update BioFSharp.Mz to 0.2.2
+
 #### 0.0.3 - Wednesday, September 2, 2026
 * Add the FixFiles flag (-f) from MzMLToMzLite to strip "&quot" from mzML files before conversion
 * Update to .NET 10

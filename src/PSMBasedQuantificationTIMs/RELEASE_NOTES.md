@@ -1,3 +1,6 @@
+#### Unreleased
+* Update BioFSharp.Mz to 0.2.2
+
 #### 0.0.13 - Wednesday, September 2, 2026
 * Add Gabor3D algorithm for peak detection
 * Fall back to a median mz correction when the smoothing spline cannot be fitted on sparse data
