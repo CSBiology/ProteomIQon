@@ -1,5 +1,6 @@
-#### 0.0.10 - Friday, September 4, 2026
+#### 0.0.10 - Monday, September 28, 2026
 * Write the ion mobility and hyperscore columns of the shared result record as NaN and 0
+* Update BioFSharp.Mz to 0.2.2
 
 #### 0.0.9 - Wednesday, September 2, 2026
 * Update to .NET 10

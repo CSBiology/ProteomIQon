@@ -1,3 +1,6 @@
+#### Unreleased
+* Update BioFSharp.Mz to 0.2.2
+
 #### 0.0.6 - Wednesday, September 2, 2026
 * Update to .NET 10
 * Update NLog to 4.7.11, BioFSharp to 2.0.0 and BioFSharp.Mz to 0.2.1
