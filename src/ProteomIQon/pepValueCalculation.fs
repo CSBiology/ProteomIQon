@@ -212,6 +212,13 @@ module PepValueCalculation =
             Algebra.LinearAlgebra.SolveLinearSystem mat res
 
         
+        // Known defect: the knots x hold the transformed scores (setData log-transforms them when
+        // every bin score is at least 0), and xx is transformed only to find the neighbouring knots.
+        // The interpolation below then mixes the raw xx with the transformed knots, which gives wrong
+        // PEPs for a model whose scores are all at least 0. It does not affect PSMStatistics on our
+        // data: the FastTree scores it passes are margins that are negative for decoy-like PSMs, so
+        // the lowest bin score of every fit lies far below 0 (-32 to -210 on the full timsTOF run,
+        // -38 to -52 on the test data) and the knots stay untransformed.
         let splineEval (xx: float) =
             let xxLogit = transf xx
             let n = x.Length
