@@ -32,32 +32,46 @@ module PeptideIndex =
             Masses : float[]
         }
 
-    /// Peptides sorted by neutral mass. Sequences are stored as residue codes in one flat array.
+    /// Peptides in ascending mass order. Only the masses are held in that order. Every other
+    /// column stays in the order the database returned it and is reached through Order, so
+    /// loading the table does not need a second copy of the columns. A rank is a position in
+    /// mass order, a row is a position in database order.
     type PeptideTable =
         {
-            Count         : int
-            ModSequenceId : int[]
-            PepSequenceId : int[]
-            Mass          : float[]
-            GlobalMod     : byte[]
-            SeqStart      : int[]
-            Residues      : byte[]
-            Codes         : ResidueCode[]
+            Count            : int
+            /// Neutral masses in ascending order, indexed by rank.
+            Mass             : float[]
+            /// Row of a rank.
+            Order            : int[]
+            ModSequenceIdRow : int[]
+            PepSequenceIdRow : int[]
+            GlobalModRow     : byte[]
+            /// Start of the residues of a row, with one entry past the last row.
+            SeqStartRow      : int[]
+            Residues         : byte[]
+            Codes            : ResidueCode[]
             /// Longest residue count of any peptide.
-            MaxLength     : int
+            MaxLength        : int
             /// ModSequence strings of the peptides whose string holds tokens without a residue
-            /// (the terminator "*" and the gap "-"), keyed by rank. All other strings can be
+            /// (the terminator "*" and the gap "-"), keyed by row. All other strings can be
             /// rebuilt from the residue codes.
-            RawSequence   : IDictionary<int, string>
+            RawSequenceRow   : IDictionary<int, string>
         }
-        member this.Length (rank: int) = this.SeqStart.[rank + 1] - this.SeqStart.[rank]
+        member this.ModSequenceId (rank: int) = this.ModSequenceIdRow.[this.Order.[rank]]
+        member this.PepSequenceId (rank: int) = this.PepSequenceIdRow.[this.Order.[rank]]
+        member this.GlobalMod (rank: int) = this.GlobalModRow.[this.Order.[rank]]
+        member this.Start (rank: int) = this.SeqStartRow.[this.Order.[rank]]
+        member this.Length (rank: int) =
+            let row = this.Order.[rank]
+            this.SeqStartRow.[row + 1] - this.SeqStartRow.[row]
 
         /// The ModSequence string of a peptide as stored in the database.
         member this.SequenceString (rank: int) =
-            match this.RawSequence.TryGetValue rank with
+            let row = this.Order.[rank]
+            match this.RawSequenceRow.TryGetValue row with
             | true, raw -> raw
             | _ ->
-                Array.sub this.Residues this.SeqStart.[rank] (this.Length rank)
+                Array.sub this.Residues this.SeqStartRow.[row] (this.Length rank)
                 |> Array.map (fun code -> this.Codes.[int code].Token)
                 |> String.concat ""
 
@@ -105,21 +119,11 @@ module PeptideIndex =
                 | _ -> failwithf "Token '%s' does not parse to a single residue." token)
         { Token = token; Masses = masses }
 
-    [<Struct>]
-    type private PeptideRow =
-        {
-            ModSequenceId : int
-            PepSequenceId : int
-            RealMass      : float
-            GlobalMod     : byte
-            Sequence      : byte[]
-            /// The database string when it holds tokens that are not residues, otherwise null.
-            Raw           : string
-        }
-
-    /// Reads every ModSequence row of the peptide database into a mass sorted table. Tokens
-    /// that the BioFSharp parser drops (the terminator "*" and the gap "-", both of mass 0)
-    /// are left out, so the residues match what the scoring functions see.
+    /// Reads every ModSequence row of the peptide database into the table. The rows are written
+    /// straight into the columns while the reader walks them, and the mass order is built
+    /// afterwards as an array of row numbers, so no column exists twice. Tokens that the
+    /// BioFSharp parser drops (the terminator "*" and the gap "-", both of mass 0) are left out,
+    /// so the residues match what the scoring functions see.
     let loadPeptideTable (cn: SQLiteConnection) (sdbParams: SearchDB.SearchDbParams) (log: string -> unit) =
         let parse = SearchDB.initOfModAminoAcidString sdbParams.IsotopicMod (sdbParams.FixedMods @ sdbParams.VariableMods) 0
         let codeIndex = Dictionary<string, int option>()
@@ -135,64 +139,82 @@ module PeptideIndex =
                         Some assigned
                 codeIndex.[token] <- code
                 code
-        let encode (sequence: string) =
-            let codes = tokenize sequence |> List.map codeOf
-            let residues = codes |> List.choose (Option.map byte) |> Array.ofList
-            residues, (if codes |> List.exists Option.isNone then sequence else null)
         log "Reading the ModSequence table."
-        let rows =
+        // The sequence strings hold the modification tokens as well, so their total length is an
+        // upper bound for the residues and the residue array can be allocated once.
+        let count, residueBound =
+            use cmd = new SQLiteCommand("SELECT COUNT(*), SUM(LENGTH(Sequence)) FROM ModSequence", cn)
+            use reader = cmd.ExecuteReader()
+            if not (reader.Read()) then failwith "The peptide data base holds no modified sequences."
+            reader.GetInt64 0, reader.GetInt64 1
+        if count = 0L then failwith "The peptide data base holds no modified sequences."
+        if residueBound > int64 Int32.MaxValue then failwith "The concatenated peptide sequences exceed the supported size."
+        let count = int count
+        let modSequenceIdRow = Array.zeroCreate<int> count
+        let pepSequenceIdRow = Array.zeroCreate<int> count
+        let massRow = Array.zeroCreate<float> count
+        let globalModRow = Array.zeroCreate<byte> count
+        let seqStartRow = Array.zeroCreate<int> (count + 1)
+        let residues = Array.zeroCreate<byte> (int residueBound)
+        let rawSequenceRow = Dictionary<int, string>()
+        let mutable used = 0
+        let mutable maxLength = 0
+        let mutable row = 0
+        do
             use cmd = new SQLiteCommand("SELECT ID, PepSequenceID, RealMass, Sequence, GlobalMod FROM ModSequence", cn)
             use reader = cmd.ExecuteReader()
-            [|
-                while reader.Read() do
-                    let residues, raw = encode (reader.GetString 3)
-                    yield
-                        {
-                            ModSequenceId = reader.GetInt32 0
-                            PepSequenceId = reader.GetInt32 1
-                            RealMass = reader.GetDouble 2
-                            GlobalMod = byte (reader.GetInt32 4)
-                            Sequence = residues
-                            Raw = raw
-                        }
-            |]
-            |> Array.sortBy (fun row -> row.RealMass)
-        log (sprintf "%i mod sequences read and sorted by mass." rows.Length)
-        let globalMods = 1 + (rows |> Array.fold (fun acc row -> max acc (int row.GlobalMod)) 0)
+            while reader.Read() do
+                let sequence = reader.GetString 3
+                let start = used
+                let mutable dropped = false
+                for token in tokenize sequence do
+                    match codeOf token with
+                    | Some code ->
+                        residues.[used] <- byte code
+                        used <- used + 1
+                    | None -> dropped <- true
+                if dropped then rawSequenceRow.[row] <- sequence
+                modSequenceIdRow.[row] <- reader.GetInt32 0
+                pepSequenceIdRow.[row] <- reader.GetInt32 1
+                massRow.[row] <- reader.GetDouble 2
+                globalModRow.[row] <- byte (reader.GetInt32 4)
+                seqStartRow.[row] <- start
+                maxLength <- max maxLength (used - start)
+                row <- row + 1
+        if row <> count then failwithf "The ModSequence table returned %i rows, %i were expected." row count
+        seqStartRow.[count] <- used
+        log (sprintf "%i mod sequences read." count)
+        let order = Array.init count id
+        Array.sortInPlaceBy (fun row -> massRow.[row]) order
+        let mass = order |> Array.map (fun row -> massRow.[row])
+        let globalMods = 1 + (globalModRow |> Array.fold (fun acc g -> max acc (int g)) 0)
         let codes =
             codeIndex
             |> Seq.choose (fun kv -> kv.Value |> Option.map (fun code -> code, kv.Key))
             |> Seq.sortBy fst
             |> Seq.map (fun (_, token) -> createResidueCode sdbParams globalMods token)
             |> Array.ofSeq
-        let total = rows |> Array.sumBy (fun row -> int64 row.Sequence.Length)
-        if total > int64 Int32.MaxValue then failwith "The concatenated peptide sequences exceed the supported size."
-        let seqStart = rows |> Array.scan (fun start row -> start + row.Sequence.Length) 0
-        let rawSequences =
-            rows
-            |> Array.indexed
-            |> Array.choose (fun (rank, row) -> if isNull row.Raw then None else Some (rank, row.Raw))
-            |> dict
         let table =
             {
-                Count = rows.Length
-                ModSequenceId = rows |> Array.map (fun row -> row.ModSequenceId)
-                PepSequenceId = rows |> Array.map (fun row -> row.PepSequenceId)
-                Mass = rows |> Array.map (fun row -> row.RealMass)
-                GlobalMod = rows |> Array.map (fun row -> row.GlobalMod)
-                SeqStart = seqStart
-                Residues = rows |> Array.collect (fun row -> row.Sequence)
+                Count = count
+                Mass = mass
+                Order = order
+                ModSequenceIdRow = modSequenceIdRow
+                PepSequenceIdRow = pepSequenceIdRow
+                GlobalModRow = globalModRow
+                SeqStartRow = seqStartRow
+                Residues = residues
                 Codes = codes
-                MaxLength = rows |> Array.fold (fun acc row -> max acc row.Sequence.Length) 0
-                RawSequence = rawSequences
+                MaxLength = maxLength
+                RawSequenceRow = rawSequenceRow
             }
         log (sprintf "Peptide table ready: %i peptides, %i residue codes, mass %.3f to %.3f." table.Count codes.Length table.Mass.[0] table.Mass.[table.Count - 1])
         table
 
     /// Neutral mass of a peptide from its residue codes.
     let peptideMass (table: PeptideTable) (rank: int) =
-        let globalMod = int table.GlobalMod.[rank]
-        Array.sub table.Residues table.SeqStart.[rank] (table.Length rank)
+        let globalMod = int (table.GlobalMod rank)
+        Array.sub table.Residues (table.Start rank) (table.Length rank)
         |> Array.sumBy (fun code -> table.Codes.[int code].Masses.[globalMod])
         |> (+) waterMass
 
@@ -212,9 +234,9 @@ module PeptideIndex =
     /// neutral y ion masses (y1 .. y(L-1)) into positions L-1 .. 2L-3. Returns 2(L-1).
     /// Runs for every peptide and every reported hit, so it fills a reused buffer in place.
     let fragmentMasses (table: PeptideTable) (rank: int) (buffer: float[]) =
-        let start = table.SeqStart.[rank]
-        let length = table.SeqStart.[rank + 1] - start
-        let globalMod = int table.GlobalMod.[rank]
+        let start = table.Start rank
+        let length = table.Length rank
+        let globalMod = int (table.GlobalMod rank)
         let residueMass i = table.Codes.[int table.Residues.[start + i]].Masses.[globalMod]
         let mutable acc = 0.
         for i = 0 to length - 2 do
@@ -226,20 +248,62 @@ module PeptideIndex =
             buffer.[length - 1 + i] <- acc
         2 * (length - 1)
 
-    /// Builds the fragment index with the given number of workers. Target b and y ions are
+    /// The number of bins of an index up to the fragment mass ceiling. The last bin holds the
+    /// ceiling itself, one more absorbs the rounding of a mass on the edge.
+    let binCountOf (binWidth: float) (maxFragmentMass: float) = int (maxFragmentMass / binWidth) + 2
+
+    /// The bin of a fragment mass, or -1 when the index does not admit the mass. The one rule the
+    /// slice boundaries and the index build share.
+    let binOf (binWidth: float) (binCount: int) (mass: float) =
+        let bin = int (mass / binWidth)
+        if bin < 0 || bin >= binCount then -1 else bin
+
+    /// Rank boundaries of the given number of slices, so that every slice holds about the same
+    /// number of index entries, counted with the admission rule of the index build.
+    let sliceBoundariesFor (eligible: bool[]) (table: PeptideTable) (slices: int) (binWidth: float) (maxFragmentMass: float) =
+        if slices <= 0 then invalidArg "slices" "Must be positive."
+        if slices = 1 then [| 0; table.Count |]
+        else
+            let binCount = binCountOf binWidth maxFragmentMass
+            let buffer = Array.zeroCreate<float> (2 * max 1 table.MaxLength)
+            let counts = Array.zeroCreate<int> table.Count
+            let mutable total = 0L
+            for rank = 0 to table.Count - 1 do
+                let count = if isNull eligible || eligible.[rank] then fragmentMasses table rank buffer else 0
+                let mutable admitted = 0
+                for i = 0 to count - 1 do
+                    if binOf binWidth binCount buffer.[i] >= 0 then admitted <- admitted + 1
+                counts.[rank] <- admitted
+                total <- total + int64 admitted
+            let boundaries = Array.zeroCreate<int> (slices + 1)
+            let mutable rank = 0
+            let mutable cumulative = 0L
+            for slice = 1 to slices - 1 do
+                let target = total * int64 slice / int64 slices
+                while rank < table.Count && cumulative < target do
+                    cumulative <- cumulative + int64 counts.[rank]
+                    rank <- rank + 1
+                boundaries.[slice] <- rank
+            boundaries.[slices] <- table.Count
+            boundaries
+
+    let sliceBoundaries table slices binWidth maxFragmentMass =
+        sliceBoundariesFor null table slices binWidth maxFragmentMass
+
+    /// Builds the fragment index of the peptides with ranks rankLo to rankHi - 1 with the given
+    /// number of workers. Target b and y ions are
     /// binned by neutral mass. Entries inside a bin end up in peptide rank order because every
     /// worker owns a contiguous rank range and processes it in order, and the workers write to
     /// disjoint offsets inside every bin.
-    let buildFragmentIndex (table: PeptideTable) (binWidth: float) (maxFragmentMass: float) (workers: int) (log: string -> unit) =
-        let binCount = int (maxFragmentMass / binWidth) + 2
+    let buildFragmentIndexFor (eligible: bool[]) (table: PeptideTable) (binWidth: float) (maxFragmentMass: float) (workers: int) (rankLo: int) (rankHi: int) (log: string -> unit) =
+        let binCount = binCountOf binWidth maxFragmentMass
         let workers = max 1 (min workers 64)
         let bufferSize = 2 * max 1 table.MaxLength
-        let rankOfWorker = Array.init (workers + 1) (fun w -> int (int64 table.Count * int64 w / int64 workers))
-        let binOf (mass: float) =
-            let bin = int (mass / binWidth)
-            if bin < 0 || bin >= binCount then -1 else bin
+        let span = int64 (rankHi - rankLo)
+        let rankOfWorker = Array.init (workers + 1) (fun w -> rankLo + int (span * int64 w / int64 workers))
+        let binOf (mass: float) = binOf binWidth binCount mass
         let visit (rank: int) (buffer: float[]) (f: int -> int -> unit) =
-            let count = fragmentMasses table rank buffer
+            let count = if isNull eligible || eligible.[rank] then fragmentMasses table rank buffer else 0
             let half = count / 2
             for i = 0 to half - 1 do
                 let b = binOf buffer.[i]
@@ -254,8 +318,7 @@ module PeptideIndex =
             for rank = rankOfWorker.[w] to rankOfWorker.[w + 1] - 1 do
                 visit rank buffer (fun b _ -> c.[b] <- c.[b] + 1)) |> ignore
         let binTotal = Array.init binCount (fun b -> counts |> Array.sumBy (fun c -> int64 c.[b]))
-        let binStart = Array.scan (+) 0L binTotal
-        let total = binStart.[binCount]
+        let total = Array.sum binTotal
         log (sprintf "%i fragment entries (%.2f GB)." total (float total * 4. / 1e9))
         // Bins are grouped into chunks so that no chunk exceeds the array length limit.
         let maxChunk = int64 (1 <<< 30)
@@ -298,6 +361,9 @@ module PeptideIndex =
             EntryCount = total
         }
 
+    let buildFragmentIndex table binWidth maxFragmentMass workers rankLo rankHi log =
+        buildFragmentIndexFor null table binWidth maxFragmentMass workers rankLo rankHi log
+
     /// First position in [lo, hi) of the chunk whose rank is at least the given rank.
     let lowerBound (chunk: int[]) (lo: int) (hi: int) (rank: int) =
         let rec loop l h =
@@ -314,4 +380,13 @@ module PeptideIndex =
             else
                 let m = l + ((h - l) >>> 1)
                 if table.Mass.[m] < mass then loop (m + 1) h else loop l m
+        loop 0 table.Count
+
+    /// First rank whose mass is strictly greater than the inclusive upper mass bound.
+    let rankUpperBound (table: PeptideTable) (mass: float) =
+        let rec loop l h =
+            if l >= h then l
+            else
+                let m = l + ((h - l) >>> 1)
+                if table.Mass.[m] <= mass then loop (m + 1) h else loop l m
         loop 0 table.Count
