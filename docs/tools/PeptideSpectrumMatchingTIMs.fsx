@@ -28,7 +28,11 @@ index: 5
 
 PeptideSpectrumMatchingTIMs identifies peptides in timsTOF runs with precursor ion mobility. It accepts mzlite input and follows the search pattern used by MSFragger. [PeptideSpectrumMatching]({{root}}tools/PeptideSpectrumMatching.html) performs the corresponding search for mzlite and mzML files.
 
-The fragment index holds the b and y ions of target peptides only. Reversed decoy peptides use the same index through a water shift. A decoy b ion is a target y ion minus water, and a decoy y ion is a target b ion plus water. The index uses 4 bytes per fragment entry.
+An mzlite file of a timsTOF run keeps the peaks of every mobility scan of an MS2 spectrum. The fragments of a precursor carry the mobility of that precursor, so the tool first sums every spectrum over its mobility scans. Starting at the lowest m/z, all peaks within `--mobility-merge-ppm` of the first peak of a group become one peak with the summed intensity and the intensity weighted m/z. The width defaults to `FragmentTolerancePPM`. `--mobility-merge-ppm 0` sums only peaks at exactly the same m/z. It does not turn the summation off. Spectra without ion mobility per peak are searched as they are. Repeated PASEF measurements of one precursor stay separate spectra, as they are in the mzlite file.
+
+The fragment index holds the b and y ions of target peptides only. Reversed decoy peptides use the same index through a water shift. A decoy b ion is a target y ion minus water, and a decoy y ion is a target b ion plus water. Only peptides inside a precursor window of the searched runs, including the isotope errors and the tolerance, enter the index. Fragments above the heaviest of these windows plus 1 Da stay out of it, and `-f` sets this ceiling explicitly. The index uses 4 bytes per fragment entry.
+
+With `-s` the tool builds and searches the index in that many slices of the peptide table, one after the other, so only one slice is in memory at a time. Every further slice reads the spectra again, unless `-k` keeps the preprocessed spectra in memory, at about 2.4 kB per spectrum and charge. The result does not depend on the number of slices.
 
 For each MS2 spectrum, the tool removes the peaks around the precursor m/z and the peaks below `MinimumPeakRatio` of the base peak. It removes isotope partner peaks and keeps the `TopNPeaks` most intense peaks. Every remaining peak is looked up in the index, restricted to the peptides whose precursor mass fits one of the configured isotope errors. The precursor charge and the selected ion m/z come from the mzlite file. When a spectrum carries no charge, the charge states in `FallbackChargeStates` are searched. The tool reports the `ReportedHitsPerLabel` best targets and the same number of best decoys.
 
@@ -38,7 +42,7 @@ The expectation value follows the model of X!Tandem, which MSFragger also follow
 
 The reported targets and decoys then receive the SEQUEST-like score used by PeptideSpectrumMatching. The tool also computes its Andromeda-like and X!Tandem-like scores for these hits. The `NormDeltaBestToRest` and `NormDeltaNext` columns are computed over the target and the decoy form of every peptide the index pass selected, as a target or as a decoy, which includes candidates that the exact rescoring drops afterwards. PeptideSpectrumMatching computes these columns over every peptide in the precursor window, so values from the two tools are not comparable.
 
-Parallelization follows the library convention at the file level. `-c` sets the number of runs processed at the same time and defaults to 1, as in PeptideSpectrumMatching. The index build at the start of an invocation uses that many workers as well, after that the tool searches one run on one thread. The peptide database has to use monoisotopic masses. Most of the time per spectrum goes into the classic scoring of the reported hits, so the run time scales with `ReportedHitsPerLabel`.
+`-c` sets how many runs are searched together, one thread per run, and defaults to 1. The tool splits the runs into groups of that size. The runs of a group share one fragment index, which is built with one worker per run, and the next group starts when every run of the group is done. The peptide database has to use monoisotopic masses. The classic scoring of the reported hits takes the largest share of the search time, so the run time grows with `ReportedHitsPerLabel`.
 
 ## Inputs and outputs
 
@@ -48,9 +52,13 @@ Parallelization follows the library convention at the file level. `-c` sets the 
 | `-d` | the SQLite peptide database | [PeptideDB]({{root}}tools/PeptideDB.html) |
 | `-o` | the output directory, created when missing | |
 | `-p` | the parameter file in JSON | this page |
-| `-c` | number of runs processed at the same time, default 1 | |
+| `-c` | number of runs searched together, one thread per run, default 1 | |
+| `-s` | number of slices the fragment index is built and searched in, default 1 | |
+| `-k` | keeps the preprocessed spectra in memory between the slices | |
+| `-f` | highest fragment mass in the index in Da, default the heaviest precursor window plus 1 Da | |
+| `--mobility-merge-ppm` | m/z width of the mobility summation in ppm, default `FragmentTolerancePPM` | |
 
-All flags except `-c` are mandatory. The input directory search is not recursive.
+`-i`, `-d`, `-o` and `-p` are mandatory. The input directory search is not recursive.
 
 The tool accepts `.mzlite` files and directories. An mzML path stops the tool with a message.
 
@@ -80,7 +88,7 @@ The output directory receives `PeptideSpectrumMatchingTIMs_log.txt` and one `<ru
 | `FragmentTolerancePPM` | `20.0` | Fragment m/z tolerance in ppm. |
 | `IsotopeErrors` | `[0, 1, 2]` | Precursor isotope errors searched. `0` is the monoisotopic peak. |
 | `MaxFragmentCharge` | `2` | Highest fragment charge, at most the precursor charge minus one and at least 1. |
-| `FallbackChargeStates` | `[2, 3]` | Charge states searched when the spectrum has no precursor charge. |
+| `FallbackChargeStates` | `[2, 3]` | Charge states searched when the spectrum has no precursor charge. At least one is required. |
 | `TopNPeaks` | `150` | Number of most intense peaks kept per spectrum after filtering. |
 | `MinimumPeakRatio` | `0.01` | Peaks below this fraction of the base peak are removed. |
 | `RemovePrecursorRange` | `1.5` | Peaks within this m/z distance of the precursor m/z are removed. |
@@ -152,10 +160,16 @@ Install the tool with `dotnet tool install --global ProteomIQon.PeptideSpectrumM
 proteomiqon-peptidespectrummatchingtims -i path/to/run.mzlite -d path/to/AraTest.db -o path/to/output -p path/to/peptideSpectrumMatchingTIMsParams.json
 ```
 
-Process three runs with `-c 3`, so three runs are processed at the same time:
+Search three runs together against one index with `-c 3`, one thread per run:
 
 ```text
 proteomiqon-peptidespectrummatchingtims -i path/to/run1.mzlite path/to/run2.mzlite path/to/run3.mzlite -d path/to/AraTest.db -o path/to/output -p path/to/peptideSpectrumMatchingTIMsParams.json -c 3
+```
+
+With a large database, build the index in four slices and keep the spectra in memory between them:
+
+```text
+proteomiqon-peptidespectrummatchingtims -i path/to/run.mzlite -d path/to/AraTest.db -o path/to/output -p path/to/peptideSpectrumMatchingTIMsParams.json -s 4 -k
 ```
 
 All flags:
