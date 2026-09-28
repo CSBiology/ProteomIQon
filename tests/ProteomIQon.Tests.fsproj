@@ -10,6 +10,8 @@
     <Compile Include="Pipeline.fs" />
     <Compile Include="Unit_Tests\PSMBasedQuantificationTIMs.fs"/>
     <Compile Include="Unit_Tests\PeptideSpectrumMatchingTIMs.fs"/>
+    <Compile Include="Unit_Tests\PeptideSpectrumMatchingTIMsSearch.fs"/>
+    <Compile Include="Unit_Tests\PeptideSpectrumMatchingTIMsRegressions.fs"/>
     <Compile Include="Unit_Tests\PepValueCalculation.fs"/>
     <Compile Include="Main.fs" />
   </ItemGroup>
@@ -18,7 +20,15 @@
     <PackageReference Include="Expecto" Version="10.*" />
     <PackageReference Include="YoloDev.Expecto.TestSdk" Version="0.*" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.*" />
-    <PackageReference Include="BioFSharp.Mz" Version="0.2.1" />
+    <PackageReference Include="BioFSharp.Mz" Version="0.2.2" />
+  </ItemGroup>
+
+  <!-- Inputs the PeptideSpectrumMatchingTIMs unit tests read from the output folder. -->
+  <ItemGroup>
+    <None Include="data\PeptideSpectrumMatchingTIMs\in\MinimalTIMs.db" Link="MinimalTIMs.db" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="data\PeptideSpectrumMatchingTIMs\in\defaultParams.json" Link="defaultParams.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="data\PeptideSpectrumMatchingTIMs\in\minimalTIMs.mzlite" Link="minimalTIMs.mzlite" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="data\PeptideSpectrumMatchingTIMs\in\sample_description.json" Link="sample_description.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>
