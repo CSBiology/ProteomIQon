@@ -2,6 +2,21 @@
 
 open Fake.Core
 
+/// Reads release notes that may start with an "Unreleased" section without a version. That
+/// section is skipped, so the version comes from the uppermost entry that has a version.
+let loadReleaseNotes (path: string) =
+    let isHeading (line: string) = line.TrimStart().StartsWith "#"
+    let isUnreleased (line: string) =
+        isHeading line && System.String.Equals(line.Trim().TrimStart('#').Trim(), "Unreleased", System.StringComparison.OrdinalIgnoreCase)
+    let lines = System.IO.File.ReadAllLines path |> Array.toList |> List.skipWhile System.String.IsNullOrWhiteSpace
+    let released =
+        match lines with
+        | first :: rest when isUnreleased first -> rest |> List.skipWhile (isHeading >> not)
+        | _ -> lines
+    if List.isEmpty released then
+        failwithf "%s has no entry with a version below its Unreleased section." path
+    ReleaseNotes.parse released
+
 
 /// Contains relevant information about a project (e.g. version info, project location)
 type ProjectInfo = {
@@ -14,14 +29,14 @@ type ProjectInfo = {
     AssemblyInformationalVersion: string
 } with 
     /// creates a ProjectInfo given a name, project file path, and release notes file path.
-    /// version info is created from the version header of the uppermost release notes entry.
+    /// version info is created from the version header of the uppermost release notes entry that has a version.
     /// Assembly version is set to X.0.0, where X is the major version from the releas enotes.
     static member create(
         name: string,
         projFile: string,
         releaseNotesPath: string
     ): ProjectInfo = 
-        let release = releaseNotesPath |> ReleaseNotes.load
+        let release = releaseNotesPath |> loadReleaseNotes
         let stableVersion = release.NugetVersion |> SemVer.parse
         let stableVersionTag = $"{stableVersion.Major}.{stableVersion.Minor}.{stableVersion.Patch}"
         let assemblyVersion = $"{stableVersion.Major}.0.0"

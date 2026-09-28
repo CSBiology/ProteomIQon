@@ -41,7 +41,9 @@ To build a single tool, call `dotnet` on its project file:
 ## Packing
 
 The `Pack` target creates a NuGet package for every released project in `pkg/`. The version
-comes from the top entry of each project's `RELEASE_NOTES.md`, so bump that file first:
+comes from the top entry of each project's `RELEASE_NOTES.md` that has a version, so bump that file
+first. A leading `#### Unreleased` section without a version collects changes until the next release
+and is skipped; replace it with the version and the date when you release:
 *)
 
 (**
