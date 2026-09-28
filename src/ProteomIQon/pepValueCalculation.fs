@@ -60,29 +60,31 @@ module PepValueCalculation =
 
         let setData (xx: Vector<float>) =
             x <- Vector.zeroCreate xx.Length
-            let minV = xx |> Vector.toArray |> Array.min
-            let maxV = xx |> Vector.toArray |> Array.max
-            if minV >= 0. && maxV <= 1. then
-                transf <-
-                    transform
-                        (
-                            if minV > 0. then 0. else 1e-20
-                        )
-                        (
-                            if maxV < 1. then 0. else 1e-10
-                        )
-                        true
-                        false
-            if minV >= 0. then
-                transf <-
-                    transform
-                        (
-                            if minV > 0. then 0. else 1e-20
-                        )
-                        0.
-                        false
-                        true
-            x <- xx |> Vector.map transf
+            // without scores there is nothing to transform
+            if xx.Length > 0 then
+                let minV = xx |> Vector.toArray |> Array.min
+                let maxV = xx |> Vector.toArray |> Array.max
+                if minV >= 0. && maxV <= 1. then
+                    transf <-
+                        transform
+                            (
+                                if minV > 0. then 0. else 1e-20
+                            )
+                            (
+                                if maxV < 1. then 0. else 1e-10
+                            )
+                            true
+                            false
+                if minV >= 0. then
+                    transf <-
+                        transform
+                            (
+                                if minV > 0. then 0. else 1e-20
+                            )
+                            0.
+                            false
+                            true
+                x <- xx |> Vector.map transf
 
         let lrSetData (xx: Vector<float>) (yy: Vector<float>) (mm: Vector<float>) =
             y <- yy
@@ -123,7 +125,7 @@ module PepValueCalculation =
         // Change back to zerocreate
         let mutable w = Vector.init x.Length (fun x -> 1.)
         let mutable z = Vector.init x.Length (fun x -> 0.5)
-        let mutable gamma = Vector.zeroCreate (x.Length - 2)
+        let mutable gamma = Vector.zeroCreate (max 0 (x.Length - 2))
 
         let mutable Q: Matrix<float> = Matrix.zero 1 1
         let mutable Qt: Matrix<float> = Matrix.zero 1 1
@@ -363,10 +365,34 @@ module PepValueCalculation =
                 start <- start + counts.[block]
             pooled
 
-        lrInitg()
-        limitg()
-        limitgamma()
-        roughnessPenaltyIRLS()
+        // The smoothing spline needs at least four histogram bins. Saturated model scores can fill
+        // fewer, then the log-odds of the decoy share of each bin, from which the spline fit starts,
+        // are interpolated linearly instead.
+        let logOddsOf =
+            if scores.Length >= 4 then
+                lrInitg()
+                limitg()
+                limitgamma()
+                roughnessPenaltyIRLS()
+                splineEval
+            else
+                logger.Trace (sprintf "%i histogram bins are too few for the spline fit, the bin log-odds are interpolated." scores.Length)
+                let knots =
+                    Array.zip3 scores negativeCounts binSize
+                    |> Array.map (fun (score, decoys, total) ->
+                        let p = (decoys + 0.05) / (total + 0.1)
+                        score, log (p / (1. - p)))
+                    |> Array.groupBy fst
+                    |> Array.map (fun (score, logOdds) -> score, logOdds |> Array.averageBy snd)
+                    |> Array.sortBy fst
+                match knots with
+                | [||] -> fun (_: float) -> 0.
+                | [| (_, logOdds) |] -> fun (_: float) -> logOdds
+                | _ ->
+                    let knotScores, knotLogOdds = Array.unzip knots
+                    let coeff = FSharp.Stats.Interpolation.LinearSpline.initInterpolate knotScores knotLogOdds
+                    let lowest, highest = knotScores.[0], knotScores.[knotScores.Length - 1]
+                    fun (xx: float) -> Interpolation.LinearSpline.predict coeff (max lowest (min highest xx))
         data
         |> Array.filter (isDecoy >> not)
         |> Array.sortByDescending targetScoreF
@@ -377,7 +403,7 @@ module PepValueCalculation =
                 |> targetScoreF,
                 x
                 |> targetScoreF
-                |> splineEval
+                |> logOddsOf
             )
         |> Array.unzip
         |> fun (x, y) ->

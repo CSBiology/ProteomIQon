@@ -47,4 +47,35 @@ let pepValueTests =
             let targetScores = data |> Array.filter (snd >> not) |> Array.map fst |> Array.sort
             for low, high in Array.pairwise targetScores do
                 Expect.isTrue (pep high <= pep low) (sprintf "The PEP does not rise from score %g to %g" low high)
+
+        testCase "gives PEPs when the scores fill fewer than four histogram bins" <| fun _ ->
+            // A saturated tree model puts almost every PSM at one of two scores
+            let data =
+                Array.concat [ Array.replicate 600 (51.918, false); Array.replicate 5 (51.918, true)
+                               Array.replicate 300 (-51.918, true); Array.replicate 40 (-51.918, false) ]
+            let pep = pepOf data
+            Expect.isTrue (pep 51.918 < 0.05) (sprintf "The high score with few decoys has a low PEP, got %g" (pep 51.918))
+            Expect.isTrue (pep -51.918 > 0.5) (sprintf "The low score dominated by decoys has a high PEP, got %g" (pep -51.918))
+
+        testCase "gives PEPs when all scores fill one histogram bin" <| fun _ ->
+            let data = Array.append (Array.replicate 600 (51.918, false)) (Array.replicate 5 (51.918, true))
+            let pep = pepOf data
+            // the decoy/target ratio of the bin, with the pseudo counts of the spline start
+            let expected = 5.05 / 600.05
+            for score in [ -10.; 51.918; 80. ] do
+                Expect.floatClose Accuracy.high (pep score) expected (sprintf "The single bin gives its decoy/target ratio at score %g" score)
+
+        testCase "gives PEPs through the middle bin when the scores fill three histogram bins" <| fun _ ->
+            let data =
+                Array.concat [ Array.replicate 600 (50., false); Array.replicate 5 (50., true)
+                               Array.replicate 200 (0., false); Array.replicate 20 (0., true)
+                               Array.replicate 40 (-50., false); Array.replicate 300 (-50., true) ]
+            let pep = pepOf data
+            Expect.floatClose Accuracy.high (pep 0.) (20.05 / 200.05) "The middle bin gives its decoy/target ratio"
+            Expect.isTrue (pep 50. < pep 25. && pep 25. < pep 0.) (sprintf "Between two bins the PEP lies between theirs, got %g < %g < %g" (pep 50.) (pep 25.) (pep 0.))
+            Expect.equal (pep -50.) 1. "The bin dominated by decoys has PEP 1"
+
+        testCase "gives PEP 1 without any PSM" <| fun _ ->
+            let pep = pepOf [||]
+            Expect.equal (pep 10.) 1. "Without PSMs every PEP is 1"
     ]
