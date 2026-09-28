@@ -10,7 +10,7 @@
     <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
-    <ServerGarbageCollection>true</ServerGarbageCollection>
+    <ServerGarbageCollection>false</ServerGarbageCollection>
     <InvariantGlobalization>true</InvariantGlobalization>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
@@ -27,6 +27,7 @@
     <FsDocsReleaseNotesLink>https://github.com/CSBiology/ProteomIQon/blob/master/RELEASE_NOTES.md</FsDocsReleaseNotesLink>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="SpectrumHeader.fs" />
     <Compile Include="PeptideIndex.fs" />
     <Compile Include="SpectrumSearch.fs" />
     <Compile Include="PeptideSpectrumMatchingTIMs.fs" />
@@ -44,7 +45,7 @@
     <PackageReference Include="MzIO.SQL" Version="[0.1.9]" />
     <PackageReference Include="MzIO.MzML" Version="[0.1.10]" />
     <PackageReference Include="BioFSharp" Version="2.0.0" />
-    <PackageReference Include="BioFSharp.Mz" Version="0.2.1" />
+    <PackageReference Include="BioFSharp.Mz" Version="0.2.2" />
     <PackageReference Include="FSharp.Stats" Version="0.6.0" />
     <PackageReference Include="FSharpAux" Version="2.1.0" />
     <PackageReference Include="FSharpAux.IO" Version="2.1.0" />
