@@ -87,7 +87,7 @@ The output directory receives `PeptideSpectrumMatchingTIMs_log.txt` and one `<ru
 | `Deisotope` | `true` | Removes isotope partner peaks before matching. |
 | `MinimumPeaks` | `15` | Spectra with fewer peaks after preprocessing are skipped. |
 | `MinMatchedFragments` | `4` | Minimum matched fragments for a candidate to be reported. |
-| `MinFragmentsModelling` | `2` | Minimum matched fragments for a candidate to enter the expectation value model. |
+| `MinFragmentsModelling` | `1` | Minimum matched fragments for a candidate to enter the expectation value model. |
 | `ReportedHitsPerLabel` | `10` | Number of best targets and best decoys reported per spectrum. The run time scales with this number. |
 | `FragmentIndexBinWidth` | `0.01` | Fragment index bin width in Da. |
 | `nTerminalSeries` | `B` | N-terminal ion series used by the classic scoring functions. |
@@ -130,7 +130,7 @@ let peptideSpectrumMatchingTIMsParams : Dto.PeptideSpectrumMatchingTIMsParams =
         Deisotope               = true
         MinimumPeaks            = 15
         MinMatchedFragments     = 4
-        MinFragmentsModelling   = 2
+        MinFragmentsModelling   = 1
         ReportedHitsPerLabel    = 10
         FragmentIndexBinWidth   = 0.01
         nTerminalSeries         = NTerminalSeries.B
