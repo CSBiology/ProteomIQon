@@ -70,6 +70,60 @@ let tsvFilesEqual (relTolerance: float) (referencePath: string) (testPath: strin
         rc.Length = tc.Length && Array.forall2 cellsEqual rc tc
     ) reference test
 
+/// The problems of a .qpsm of an estimated threshold, empty when there are none. The trained
+/// model, and with it every score, differs between operating systems and with the row order, so
+/// the result is checked by properties any correct one has. The bounds cover the spread of runs
+/// with shuffled rows, rounded features or another seed: the accepted count stays within 12% of
+/// the reference, at most 15% of all accepted PSMs are accepted by only one of the two, every
+/// accepted PSM passes the q-value and PEP cutoffs with finite values, the PEPs sum to no more
+/// false PSMs than the q-value cutoff allows, and the PEP does not rise as the model score rises.
+/// Small results may differ by five PSMs.
+let qpsmProblems (qValueThreshold: float) (pepThreshold: float) (referencePath: string) (testPath: string) =
+    let read (path: string) =
+        let lines = File.ReadAllLines path |> Array.filter (fun line -> line <> "")
+        let header = lines.[0].Split '\t'
+        let missing = [ "PSMId"; "StringSequence"; "ModelScore"; "QValue"; "PEPValue" ] |> List.filter (fun name -> not (Array.contains name header))
+        if not missing.IsEmpty then Error (sprintf "%s lacks the columns %s" path (String.concat ", " missing)) else
+        let column name = Array.findIndex ((=) name) header
+        let psmId, sequence, score, qValue, pep = column "PSMId", column "StringSequence", column "ModelScore", column "QValue", column "PEPValue"
+        let number (s: string) =
+            match Double.TryParse(s, Globalization.NumberStyles.Float, Globalization.CultureInfo.InvariantCulture) with
+            | true, v -> v
+            | _ -> nan
+        lines.[1..]
+        |> Array.map (fun line ->
+            let cells = line.Split '\t'
+            (cells.[psmId], cells.[sequence]), number cells.[score], number cells.[qValue], number cells.[pep])
+        |> Ok
+    match read referencePath, read testPath with
+    | Error problem, _ | _, Error problem -> [ problem ]
+    | Ok reference, Ok test ->
+        let keys rows = rows |> Array.map (fun (key, _, _, _) -> key) |> Set.ofArray
+        let union = Set.union (keys reference) (keys test)
+        let oneSided = union.Count - (Set.intersect (keys reference) (keys test)).Count
+        let summedPep = test |> Array.sumBy (fun (_, _, _, pep) -> pep)
+        let byScore = test |> Array.sortBy (fun (_, score, _, _) -> score)
+        // PEPs are compared with the relative tolerance of the exact comparisons
+        let differs (a: float) (b: float) = abs (a - b) > 1e-9 * max (abs a) (abs b)
+        let problems =
+            [
+                if abs (float test.Length - float reference.Length) > max 5. (0.12 * float reference.Length) then
+                    sprintf "%i accepted PSMs, the reference has %i" test.Length reference.Length
+                if float oneSided > max 5. (0.15 * float union.Count) then
+                    sprintf "%i of %i accepted PSMs are accepted by only the result or the reference" oneSided union.Count
+                if summedPep > qValueThreshold * float test.Length then
+                    sprintf "The PEPs sum to %g expected false PSMs among %i accepted ones" summedPep test.Length
+                for (id, _), score, qValue, pep in test do
+                    if not (Array.forall Double.IsFinite [| score; qValue; pep |]) then sprintf "%s has a value that is not finite" id
+                    elif qValue > qValueThreshold || pep > pepThreshold then sprintf "%s has q-value %g and PEP %g" id qValue pep
+                for (_, lowScore, _, lowPep), ((highId, _), highScore, _, highPep) in Array.pairwise byScore do
+                    if highScore > lowScore && highPep > lowPep && differs highPep lowPep then
+                        sprintf "The PEP rises from %g at score %g to %g at score %g (%s)" lowPep lowScore highPep highScore highId
+                    elif highScore = lowScore && differs highPep lowPep then
+                        sprintf "The score %g has the PEPs %g and %g (%s)" highScore lowPep highPep highId
+            ]
+        if problems.Length > 10 then List.truncate 10 problems @ [ sprintf "and %i more" (problems.Length - 10) ] else problems
+
 let selectAllModSequence cn =
     let querystring = "SELECT * FROM ModSequence"
     use cmd = new SQLiteCommand(querystring, cn)
@@ -204,10 +258,12 @@ let pipelineTests =
             // run tool
             runDotNet (sprintf "%s -i %s -o %s -p %s -d %s" psmStatsExe psmEstimate outDirectoryEstimate psmStatsParamsEstimate dbEstimate) baseDir
             runDotNet (sprintf "%s -i %s -o %s -p %s -d %s" psmStatsExe psmFixed outDirectoryFixed psmStatsParamsFixed dbFixed) baseDir
-            let compare =
-                tsvFilesEqual 1e-9
+            // the cutoffs of pSMStatisticsParamsEstimate.json
+            let estimateProblems =
+                qpsmProblems 0.01 0.05
                     (relToDirectory "../../../data/PSMStatistics/out/estimateOut/minimalReference.qpsm")
-                    (relToDirectory "../../../data/PSMStatistics/out/estimateOut/minimalEstimate.qpsm") &&
+                    (relToDirectory "../../../data/PSMStatistics/out/estimateOut/minimalEstimate.qpsm")
+            let fixedEqual =
                 tsvFilesEqual 1e-9
                     (relToDirectory "../../../data/PSMStatistics/out/fixedOut/minimalReference.qpsm")
                     (relToDirectory "../../../data/PSMStatistics/out/fixedOut/minimalFixed.qpsm")
@@ -220,7 +276,8 @@ let pipelineTests =
             File.Delete (relToDirectory "../../../data/PSMStatistics/out/estimateOut/minimalEstimate_log.txt")
             File.Delete (relToDirectory "../../../data/PSMStatistics/out/estimateOut/PSMStatistics_log.txt")
             Directory.Delete (relToDirectory "../../../data/PSMStatistics/out/estimateOut/minimalEstimate_plots")
-            Expect.isTrue compare "QPSMs are different"
+            Expect.isTrue (List.isEmpty estimateProblems) (String.concat "; " estimateProblems)
+            Expect.isTrue fixedEqual "QPSMs are different"
 
         testCase "PSMStatisticsTIMs" <| fun _ ->
             // a .psm of PeptideSpectrumMatchingTIMs, which carries the hyperscore and the expectation value
@@ -232,8 +289,9 @@ let pipelineTests =
             let psmStatsExe = toolDll "PSMStatistics"
             runDotNet (sprintf "%s -i %s -o %s -p %s -d %s" psmStatsExe psm outDirectory psmStatsParams db) baseDir
             let log = File.ReadAllText (relToDirectory "../../../data/PSMStatistics/out/timsOut/minimalTIMs_log.txt")
-            let compare =
-                tsvFilesEqual 1e-9
+            // the cutoffs of pSMStatisticsParamsEstimate.json
+            let problems =
+                qpsmProblems 0.01 0.05
                     (relToDirectory "../../../data/PSMStatistics/out/timsOut/minimalReference.qpsm")
                     (relToDirectory "../../../data/PSMStatistics/out/timsOut/minimalTIMs.qpsm")
             File.Delete (relToDirectory "../../../data/PSMStatistics/out/timsOut/minimalTIMs.qpsm")
@@ -241,7 +299,7 @@ let pipelineTests =
             File.Delete (relToDirectory "../../../data/PSMStatistics/out/timsOut/PSMStatistics_log.txt")
             Directory.Delete (relToDirectory "../../../data/PSMStatistics/out/timsOut/minimalTIMs_plots")
             Expect.stringContains log "Hyperscore and expectation value present: true" "the hyperscore and the expectation value are used"
-            Expect.isTrue compare "QPSMs are different"
+            Expect.isTrue (List.isEmpty problems) (String.concat "; " problems)
 
         testCase "PSMBasedQuantification" <| fun _ ->
             let relToDirectory = getRelativePath baseDir
