@@ -130,14 +130,23 @@ module PeptideSpectrumMatchingTIMs =
             | _ -> None)
         |> Option.defaultValue nan
 
-    /// Time spent per phase of a run, for finding out where the time goes. One run is searched on
-    /// one thread, so plain accumulators are enough.
+    /// Time spent per phase of a run, for finding out where the time goes. Every run has its own
+    /// counters. A run is searched on one thread at a time, which counts into the counters of that
+    /// run, so plain accumulators are enough.
     module Profile =
         let names = [| "headers"; "peaks"; "preprocess"; "windows"; "scatter"; "collect"; "expectation"; "classic"; "rescore"; "write"; "lookups"; "sequest"; "xscoring"; "parse"; "ionseries" |]
-        let ticks : int64[] = Array.zeroCreate names.Length
-        let inline add (phase: int) (start: int64) =
+        let create () : int64[] = Array.zeroCreate names.Length
+        /// The counters of the run this thread works on.
+        let private current = new Threading.ThreadLocal<int64[]>(fun () -> create ())
+        /// Runs f with the given counters as the counters of this thread.
+        let countInto (ticks: int64[]) (f: unit -> 'T) =
+            let previous = current.Value
+            current.Value <- ticks
+            try f () finally current.Value <- previous
+        let add (phase: int) (start: int64) =
+            let ticks = current.Value
             ticks.[phase] <- ticks.[phase] + (Diagnostics.Stopwatch.GetTimestamp() - start)
-        let summary () =
+        let summary (ticks: int64[]) =
             let seconds (t: int64) = float t / float Diagnostics.Stopwatch.Frequency
             names
             |> Array.mapi (fun i name -> sprintf "%s %.1f s" name (seconds ticks.[i]))
@@ -541,6 +550,8 @@ module PeptideSpectrumMatchingTIMs =
             /// The result file, opened when every run of the group has opened, null before.
             mutable Writer : StreamWriter
             Stopwatch    : Diagnostics.Stopwatch
+            /// Time spent per phase of this run, see Profile.
+            PhaseTicks   : int64[]
         }
 
     let private chargesOf (fallbackCharges: int[]) (header: Ms2Header) =
@@ -564,7 +575,8 @@ module PeptideSpectrumMatchingTIMs =
             log (sprintf "Run ID: %s" runId)
             log "Starting peptide spectrum matching."
             let stopwatch = Diagnostics.Stopwatch.StartNew()
-            let headers = readMs2Headers reader runId log
+            let phaseTicks = Profile.create ()
+            let headers = Profile.countInto phaseTicks (fun () -> readMs2Headers reader runId log)
             let attemptStart = headers |> Array.scan (fun start header -> start + (chargesOf fallbackCharges header).Length) 0
             let attempts = Array.init attemptStart.[headers.Length] (fun _ -> { TooFewPeaks = false; Failed = false; Searched = false; Histogram = Array.zeroCreate 64; Targets = [||]; Decoys = [||] })
             log (sprintf "%i MS2 spectra, %i spectrum and charge attempts." headers.Length attempts.Length)
@@ -579,6 +591,7 @@ module PeptideSpectrumMatchingTIMs =
                 Scratch = Scratch()
                 Writer = null
                 Stopwatch = stopwatch
+                PhaseTicks = phaseTicks
             }
         with _ ->
             reader.Dispose()
@@ -620,102 +633,104 @@ module PeptideSpectrumMatchingTIMs =
     /// spectrum. With kept spectra the later slices search those and read nothing.
     let searchSliceWith (read: IMzIODataReader -> Ms2Header[] -> int -> Result<Ms2Spectrum, exn>) (settings: SearchSettings) (table: PeptideTable) (fallbackCharges: int[]) (maxFragments: int)
                             (index: FragmentIndex) (rankLo: int) (rankHi: int) (slice: int) (run: Run) =
-        let log = run.Log
-        let searchAttempt (spectrumId: string) (precursorMz: float) (charge: int) (attempt: Attempt) (processed: ProcessedSpectrum) =
-            try
-                match indexPass settings table index run.Scratch maxFragments precursorMz processed charge rankLo rankHi with
-                | SliceTooFewPeaks -> attempt.TooFewPeaks <- true
-                | SliceNoCandidates -> ()
-                | SliceFound (scores, targets, decoys) ->
-                    attempt.Searched <- true
-                    addHistogram attempt scores
-                    attempt.Targets <- mergeTop attempt.Targets targets settings.ReportedHitsPerLabel
-                    attempt.Decoys <- mergeTop attempt.Decoys decoys settings.ReportedHitsPerLabel
-            with ex ->
-                attempt.Failed <- true
-                log (sprintf "spec with id: %s at charge %i fails in slice %i with: %A" spectrumId charge (slice + 1) ex)
-        let progress (i: int) =
-            if i % 50000 = 0 && i > 0 then
-                log (sprintf "slice %i: %i spectra searched, %.1f s." (slice + 1) i run.Stopwatch.Elapsed.TotalSeconds)
-        if slice > 0 && not (isNull run.Kept) then
-            run.Headers
-            |> Array.iteri (fun i header ->
-                progress i
-                chargesOf fallbackCharges header
-                |> Array.iteri (fun c charge ->
-                    let a = run.AttemptStart.[i] + c
-                    if not run.Attempts.[a].Failed && not (isNull (box run.Kept.[a])) then
-                        searchAttempt header.Id header.PrecursorMz charge run.Attempts.[a] run.Kept.[a]))
-        else
-            run.Headers |> Array.iteri (fun i header ->
-                progress i
-                match read run.Reader run.Headers i with
-                | Error ex -> markReadFailure run i ex
-                | Ok spectrum ->
+        Profile.countInto run.PhaseTicks (fun () ->
+            let log = run.Log
+            let searchAttempt (spectrumId: string) (precursorMz: float) (charge: int) (attempt: Attempt) (processed: ProcessedSpectrum) =
+                try
+                    match indexPass settings table index run.Scratch maxFragments precursorMz processed charge rankLo rankHi with
+                    | SliceTooFewPeaks -> attempt.TooFewPeaks <- true
+                    | SliceNoCandidates -> ()
+                    | SliceFound (scores, targets, decoys) ->
+                        attempt.Searched <- true
+                        addHistogram attempt scores
+                        attempt.Targets <- mergeTop attempt.Targets targets settings.ReportedHitsPerLabel
+                        attempt.Decoys <- mergeTop attempt.Decoys decoys settings.ReportedHitsPerLabel
+                with ex ->
+                    attempt.Failed <- true
+                    log (sprintf "spec with id: %s at charge %i fails in slice %i with: %A" spectrumId charge (slice + 1) ex)
+            let progress (i: int) =
+                if i % 50000 = 0 && i > 0 then
+                    log (sprintf "slice %i: %i spectra searched, %.1f s." (slice + 1) i run.Stopwatch.Elapsed.TotalSeconds)
+            if slice > 0 && not (isNull run.Kept) then
+                run.Headers
+                |> Array.iteri (fun i header ->
+                    progress i
                     chargesOf fallbackCharges header
                     |> Array.iteri (fun c charge ->
                         let a = run.AttemptStart.[i] + c
-                        if not run.Attempts.[a].Failed then
-                            try
-                                let t = Diagnostics.Stopwatch.GetTimestamp()
-                                let processed = preprocess settings spectrum.PrecursorMz charge spectrum.Mz spectrum.Intensity
-                                Profile.add 2 t
-                                if not (isNull run.Kept) then run.Kept.[a] <- processed
-                                searchAttempt spectrum.Id spectrum.PrecursorMz charge run.Attempts.[a] processed
-                            with ex ->
-                                run.Attempts.[a].Failed <- true
-                                log (sprintf "spec with id: %s fails preprocessing at charge %i: %A" spectrum.Id charge ex)))
-        log (sprintf "Slice %i searched, %.1f s." (slice + 1) run.Stopwatch.Elapsed.TotalSeconds)
+                        if not run.Attempts.[a].Failed && not (isNull (box run.Kept.[a])) then
+                            searchAttempt header.Id header.PrecursorMz charge run.Attempts.[a] run.Kept.[a]))
+            else
+                run.Headers |> Array.iteri (fun i header ->
+                    progress i
+                    match read run.Reader run.Headers i with
+                    | Error ex -> markReadFailure run i ex
+                    | Ok spectrum ->
+                        chargesOf fallbackCharges header
+                        |> Array.iteri (fun c charge ->
+                            let a = run.AttemptStart.[i] + c
+                            if not run.Attempts.[a].Failed then
+                                try
+                                    let t = Diagnostics.Stopwatch.GetTimestamp()
+                                    let processed = preprocess settings spectrum.PrecursorMz charge spectrum.Mz spectrum.Intensity
+                                    Profile.add 2 t
+                                    if not (isNull run.Kept) then run.Kept.[a] <- processed
+                                    searchAttempt spectrum.Id spectrum.PrecursorMz charge run.Attempts.[a] processed
+                                with ex ->
+                                    run.Attempts.[a].Failed <- true
+                                    log (sprintf "spec with id: %s fails preprocessing at charge %i: %A" spectrum.Id charge ex)))
+            log (sprintf "Slice %i searched, %.1f s." (slice + 1) run.Stopwatch.Elapsed.TotalSeconds))
 
     /// The final pass over one run: the expectation model from the histogram, the classic scores
     /// of the kept candidates, the rows.
     let finishRunWith (read: IMzIODataReader -> Ms2Header[] -> int -> Result<Ms2Spectrum, exn>) (settings: SearchSettings) (classic: ClassicScoring) (table: PeptideTable) (fallbackCharges: int[]) (run: Run) =
-        let log = run.Log
-        log "Final scoring of the kept candidates."
-        let results = ResizeArray<SearchOutcome>()
-        let withoutScoring (attempt: Attempt) =
-            if attempt.Failed then Some Failed
-            elif attempt.TooFewPeaks then Some TooFewPeaks
-            elif not attempt.Searched then Some NoCandidates
-            elif not (Array.exists (fun c -> c.ExactMatched >= settings.MinMatchedFragments) attempt.Targets ||
-                      Array.exists (fun c -> c.ExactMatched >= settings.MinMatchedFragments) attempt.Decoys) then Some NoHits
-            else None
-        run.Headers |> Array.iteri (fun i header ->
-            let charges = chargesOf fallbackCharges header
-            let known = charges |> Array.mapi (fun c _ -> withoutScoring run.Attempts.[run.AttemptStart.[i] + c])
-            if Array.forall Option.isSome known then
-                for outcome in known do results.Add outcome.Value
-            else
-                match read run.Reader run.Headers i with
-                | Error ex ->
-                    markReadFailure run i ex
-                    for _ in charges do results.Add Failed
-                | Ok spectrum ->
-                    charges |> Array.iteri (fun c charge ->
-                        let attempt = run.Attempts.[run.AttemptStart.[i] + c]
-                        let outcome =
-                            match known.[c] with
-                            | Some outcome -> outcome
-                            | None ->
-                                try
-                                    let outcome, rows = finishSpectrum settings classic table spectrum charge (trimmedHistogram attempt) attempt.Targets attempt.Decoys
-                                    let t = Diagnostics.Stopwatch.GetTimestamp()
-                                    rows |> Array.iter (writeRow run.Writer)
-                                    Profile.add 9 t
-                                    outcome
-                                with ex ->
-                                    attempt.Failed <- true
-                                    log (sprintf "spec with id: %s at charge %i fails with: %A" spectrum.Id charge ex)
-                                    Failed
-                        results.Add outcome))
-        let outcomes = results |> Seq.countBy id |> Map.ofSeq
-        let count outcome = outcomes |> Map.tryFind outcome |> Option.defaultValue 0
-        let rows = outcomes |> Map.toSeq |> Seq.sumBy (fun (outcome, n) -> match outcome with Rows r -> r * n | _ -> 0)
-        log (sprintf "Finished peptide spectrum matching: %i rows, %.1f s." rows run.Stopwatch.Elapsed.TotalSeconds)
-        log (sprintf "Time by phase: %s." (Profile.summary ()))
-        log (sprintf "Spectrum and charge attempts without rows: %i with too few peaks, %i without candidate peptides, %i without matching candidates, %i failed." (count TooFewPeaks) (count NoCandidates) (count NoHits) (count Failed))
-        run.Writer.Flush()
-        log "Done."
+        Profile.countInto run.PhaseTicks (fun () ->
+            let log = run.Log
+            log "Final scoring of the kept candidates."
+            let results = ResizeArray<SearchOutcome>()
+            let withoutScoring (attempt: Attempt) =
+                if attempt.Failed then Some Failed
+                elif attempt.TooFewPeaks then Some TooFewPeaks
+                elif not attempt.Searched then Some NoCandidates
+                elif not (Array.exists (fun c -> c.ExactMatched >= settings.MinMatchedFragments) attempt.Targets ||
+                          Array.exists (fun c -> c.ExactMatched >= settings.MinMatchedFragments) attempt.Decoys) then Some NoHits
+                else None
+            run.Headers |> Array.iteri (fun i header ->
+                let charges = chargesOf fallbackCharges header
+                let known = charges |> Array.mapi (fun c _ -> withoutScoring run.Attempts.[run.AttemptStart.[i] + c])
+                if Array.forall Option.isSome known then
+                    for outcome in known do results.Add outcome.Value
+                else
+                    match read run.Reader run.Headers i with
+                    | Error ex ->
+                        markReadFailure run i ex
+                        for _ in charges do results.Add Failed
+                    | Ok spectrum ->
+                        charges |> Array.iteri (fun c charge ->
+                            let attempt = run.Attempts.[run.AttemptStart.[i] + c]
+                            let outcome =
+                                match known.[c] with
+                                | Some outcome -> outcome
+                                | None ->
+                                    try
+                                        let outcome, rows = finishSpectrum settings classic table spectrum charge (trimmedHistogram attempt) attempt.Targets attempt.Decoys
+                                        let t = Diagnostics.Stopwatch.GetTimestamp()
+                                        rows |> Array.iter (writeRow run.Writer)
+                                        Profile.add 9 t
+                                        outcome
+                                    with ex ->
+                                        attempt.Failed <- true
+                                        log (sprintf "spec with id: %s at charge %i fails with: %A" spectrum.Id charge ex)
+                                        Failed
+                            results.Add outcome))
+            let outcomes = results |> Seq.countBy id |> Map.ofSeq
+            let count outcome = outcomes |> Map.tryFind outcome |> Option.defaultValue 0
+            let rows = outcomes |> Map.toSeq |> Seq.sumBy (fun (outcome, n) -> match outcome with Rows r -> r * n | _ -> 0)
+            log (sprintf "Finished peptide spectrum matching: %i rows, %.1f s." rows run.Stopwatch.Elapsed.TotalSeconds)
+            log (sprintf "Time by phase: %s." (Profile.summary run.PhaseTicks))
+            log (sprintf "Spectrum and charge attempts without rows: %i with too few peaks, %i without candidate peptides, %i without matching candidates, %i failed." (count TooFewPeaks) (count NoCandidates) (count NoHits) (count Failed))
+            run.Writer.Flush()
+            log "Done.")
 
     /// Reject invalid settings before input or output resources are acquired.
     let validateParameters (p: PeptideSpectrumMatchingTIMsParams) (ceiling: float) (slices: int) =

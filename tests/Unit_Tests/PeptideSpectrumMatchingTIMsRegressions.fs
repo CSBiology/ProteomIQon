@@ -122,7 +122,7 @@ let all = testList "PeptideSpectrumMatchingTIMs regressions" [
         let logs=ResizeArray<string>()
         use stream=new IO.MemoryStream()
         use writer=new IO.StreamWriter(stream)
-        let run={Path="test";Log=logs.Add;Reader=Unchecked.defaultof<_>;Headers=[|header|];AttemptStart=[|0;1|];Attempts=[|attempt|];Kept=null;Scratch=Scratch();Writer=writer;Stopwatch=Diagnostics.Stopwatch.StartNew()}
+        let run={Path="test";Log=logs.Add;Reader=Unchecked.defaultof<_>;Headers=[|header|];AttemptStart=[|0;1|];Attempts=[|attempt|];Kept=null;Scratch=Scratch();Writer=writer;Stopwatch=Diagnostics.Stopwatch.StartNew();PhaseTicks=Profile.create()}
         let index1=buildFragmentIndex table 0.01 500. 1 0 10 ignore
         searchSliceWith (fun _ _ _ -> Ok spectrum) settings table [|2|] 10 index1 0 10 0 run
         Expect.isTrue attempt.Searched "first slice searched"
@@ -269,7 +269,7 @@ let all = testList "PeptideSpectrumMatchingTIMs regressions" [
         let header id = {Id=id;Position=0;ScanTime=1.;PrecursorMz=500.;Charge=0;IonMobility=nan}
         let run={Path="test";Log=ignore;Reader=Unchecked.defaultof<_>;Headers=[|header "a";header "b"|]
                  AttemptStart=[|0;2;3|];Attempts=Array.init 3 (fun _ -> attempt());Kept=null;Scratch=Scratch();Writer=null
-                 Stopwatch=Diagnostics.Stopwatch.StartNew()}
+                 Stopwatch=Diagnostics.Stopwatch.StartNew();PhaseTicks=Profile.create()}
         match readMs2Spectrum run.Reader run.Headers 0 with
         | Ok _ -> failtest "read should fail"
         | Error ex -> markReadFailure run 0 ex
