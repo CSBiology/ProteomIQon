@@ -125,14 +125,14 @@ These columns can be inspected individually to examine specific search results, 
 
 | Column                                   | Description                                                                                                                                                      |
 |------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| StringSequence                           | Sequence of fragment ions                                                                                                                                        |
+| StringSequence                           | One letter amino acid sequence from MS2 spectrum                                                                                                                 |
 | GlobalMod                                | Indicator for a labeled MS experiment: 1 = labeled, 0 = unlabeled                                                                                                |
 | Charge                                   | Precursor ion charge state                                                                                                                                       |
 | PepSequenceID                            | Unique identifier of the unmodified peptide sequence                                                                                                             |
 | ModSequenceID                            | Unique identifier of the modified peptide sequence (including PTMs, e.g., methylation)                                                                           |
 | PrecursorMZ                              | Precursor ion mass-to-charge ratio (m/z)                                                                                                                         |
-| MeasuredMass                             | Measured mass of precursor ions                                                                                                                                  |
-| TheoMass                                 | Theoretical peptide mass in spectrum (based on PeptideDB)                                                                                                        |
+| MeasuredMass                             | Measured mass of precursor ions in Dalton                                                                                                                        |
+| TheoMass                                 | Theoretical peptide mass in the spectrum (based on PeptideDB) in Dalton                                                                                          |
 | AbsDeltaMass                             | Absolute mass deviation between theoretical and measured mass (mass error)                                                                                       |
 | MeanPercolatorScore                      | The peptide spectrum matches (PSMs) are re-scored based on several parameters. This value corresponds to the average consensus score determined in the process   |
 | Qvalue                                   | Qvalue (False-Discovery-Rate)                                                                                                                                    |
@@ -168,7 +168,7 @@ These columns can be inspected individually to examine specific search results, 
 | RtTrace_Heavy                            | Retentime couse of 15N data                                                                                                                                      |
 | IntensityTrace_Observed_Heavy            | Itensity course for observed 15N data                                                                                                                            |
 | IntensityTrace_Corrected_Heavy           | Intensity course for corrected 15N data                                                                                                                          |
-| AlignmentScore                           | properties of spectras in relation to the spectras                                                                                                               |
+| AlignmentScore                           | Actual known alignments compared with the observed alignments                                                                                                    |
 | AlignmentQValue                          | Q-value, which is calculated based on the alignment score                                                                                                        |
  
 **)
