@@ -125,10 +125,10 @@ These columns can be inspected individually to examine specific search results, 
 | ScanNR                     | Scan identifier, combining the spectrum ID in the raw file with an ascending MS2 ID                         |
 | ScanTime                   | Retention time (RT) in minutes of the MS/MS scan                                                            |
 | Charge                     | Precursor ion charge state                                                                                  |
-| PercursorMZ                | Precursor ion mass-to-charge ratio (m/z) in Dalton                                                          |
-| TheoMass                   | Theoretical peptide mass in spectrum (based on PeptideDB)                                                   |
+| PercursorMZ                | Precursor ion mass-to-charge ratio (m/z)                                                                    |
+| TheoMass                   | Theoretical peptide mass in the spectrum (based on PeptideDB) in Dalton                                     |
 | AbsDeltaMass               | Absolute mass deviation between theoretical and measured mass (mass error)                                  |
-| PeptideLength              | Peptide Length in Amino Acid count                                                                          |
+| PeptideLength              | Peptide length in Amino Acid count                                                                          |
 | MissCleavages              | Number of missed cleavages                                                                                  |
 | SequestScore               | SEQUEST similarity score (e.g., XCorr) quantifying agreement between theoretical and experimental spectra   |
 | SequestNormDeltaBestToRest | Normalized separation of the best SEQUEST score from the remaining candidate scores                         |
@@ -139,7 +139,7 @@ These columns can be inspected individually to examine specific search results, 
 | XTandemScore               | XTandem score quantifying the match between theoretical and experimental spectra                            |
 | XtandemNormDeltaBestToRest | Normalized separation of the best XTandem score from the remaining candidate scores                         |
 | XtandemNormDeltaNext       | Normalized separation between the best and second-best XTandem scores                                       |
-| StringSequence             | Sequence of fragment ions                                                                                   |
+| StringSequence             | One letter amino acid sequence from MS2 spectrum                                                            |
 **)
 
 // Replace the temp folder with your project folder.
