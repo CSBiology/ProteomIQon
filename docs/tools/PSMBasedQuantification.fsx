@@ -128,8 +128,8 @@ These columns can be inspected individually to examine specific search results, 
 | StringSequence                           | One letter amino acid sequence from MS2 spectrum                                                                                                                 |
 | GlobalMod                                | Indicator for a labeled MS experiment: 1 = labeled, 0 = unlabeled                                                                                                |
 | Charge                                   | Precursor ion charge state                                                                                                                                       |
-| PepSequenceID                            | Unique identifier of the unmodified peptide sequence                                                                                                             |
-| ModSequenceID                            | Unique identifier of the modified peptide sequence (including PTMs, e.g., methylation)                                                                           |
+| PepSequenceID                            | Unique identifier of the unmodified peptide sequence, which points to PeptideDB                                                                                  |
+| ModSequenceID                            | Unique identifier of the modified peptide sequence (including PTMs, e.g., methylation), which points to PeptideDB                                                |
 | PrecursorMZ                              | Precursor ion mass-to-charge ratio (m/z)                                                                                                                         |
 | MeasuredMass                             | Measured mass of precursor ions in Dalton                                                                                                                        |
 | TheoMass                                 | Theoretical peptide mass in the spectrum (based on PeptideDB) in Dalton                                                                                          |
@@ -137,7 +137,7 @@ These columns can be inspected individually to examine specific search results, 
 | MeanPercolatorScore                      | The peptide spectrum matches (PSMs) are re-scored based on several parameters. This value corresponds to the average consensus score determined in the process   |
 | Qvalue                                   | Qvalue (False-Discovery-Rate)                                                                                                                                    |
 | PEPValue                                 | Posterior Error Probability                                                                                                                                      |
-| ProteinNames                             | Protein Names                                                                                                                                                    |
+| ProteinNames                             | Protein Names out of the PeptideDB                                                                                                                               |
 | QuantMZ_Light                            | the m/z of the peak of unlabeled data                                                                                                                            |
 | Quant_Light                              | intensity peak data of unlabeled data                                                                                                                            |
 | MeasuredApex_Light                       | Measured Apex of unlabled data spectras                                                                                                                          |
