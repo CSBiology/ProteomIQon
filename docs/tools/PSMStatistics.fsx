@@ -96,16 +96,16 @@ The resulting `.qpsm` file is generated as a tab-delimited text file.
 These columns can be inspected individually to examine specific search results, scoring metrics, and identification parameters.
 | Column                     | Description                                                                                                      |
 |----------------------------|------------------------------------------------------------------------------------------------------------------|
-| PSMId                      | Identifier of the MS/MS spectrum (and corresponding peptide–spectrum match, PSM), which points to PeptideDB      |
-| Global Mod                 | Indicator for a labeled MS experiment: 1 = labeled, 0 = unlabeled                                                |
-| PepSequenceID              | Unique identifier of the unmodified peptide sequence, which points to PeptideDB                                  |
+| PSMId                      | Identifier of the MS/MS spectrum                                                                                 |
+| Global Mod                 | Indicator, if a peptide ion species is labeled or unlabeled                                                      |
+| PepSequenceID              | Unique identifier of the unmodified peptide sequence, which points to PeptideDB                                 |
 | ModSequenceID              | Unique identifier of the modified peptide sequence (including PTMs, e.g., methylation), which points to PeptideDB|
 | Label                      | Target/decoy label: 1 = target, −1 = decoy                                                                       |
 | ScanNr                     | Scan identifier, combining the spectrum ID in the raw file with an ascending MS2 ID                              |
 | ScanTime                   | Retention time (RT) of the MS/MS scan                                                                            |
 | Charge                     | Precursor ion charge state                                                                                       |    
 | PrecursorMZ                | Precursor ion mass-to-charge ratio (m/z)                                                                         |
-| TheoMass                   | Theoretical peptide mass in the spectrum (based on PeptideDB) in Dalton                                          |
+| TheoMass                   | Theoretical peptide mass in the spectrum (based on amino acid composition) in Dalton                             |
 | AbsDeltaMass               | Absolute mass deviation between theoretical and measured mass (mass error)                                       |   
 | PeptideLength              | Peptide length based on the amino acid sequence as a one-letter code                                             | 
 | MissCleavages              | Number of missed cleavages                                                                                       |
@@ -119,9 +119,9 @@ These columns can be inspected individually to examine specific search results, 
 | XtandemNormDeltaBestToRest | Normalized separation of the best XTandem score from the remaining candidate scores                              |
 | XtandemNormDeltaNext       | Normalized separation between the best and second-best XTandem scores                                            |  
 | ModelScore                 | Best score value achieved by iterative model to distinguish between target & decoy                               |
-| Qvalue                     | Qvalue (False-Discovery-Rate)                                                                                    |
+| Qvalue                     | Qvalue (False-Discovery-Rate) based on combined model scores                                                                                                                                   |
 | PEPValue                   | Posterior Error Probability                                                                                      |
-| StringSequence             | One letter amino acid sequence from MS2 spectrum                                                                 |
+| StringSequence             | Amino Acid sequence (one-letter code) from PeptideDB which matches the psm candidate                             |
 | ProteinNames               | Protein Names out of the PeptideDB                                                                               |
 
 **)
