@@ -79,7 +79,11 @@ let proteinInferenceParams : Dto.ProteinInferenceParams =
         GetQValue              = QValueMethod.LogisticRegression FDRMethod.MAYU
     }
 
-// Describing the output 
+// Replace the temp folder with your project folder.
+let outputPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "ProteinInferenceParams.json")
+
+Json.serializeAndWrite outputPath proteinInferenceParams
+
 (**
 ## Outputs
 
@@ -98,11 +102,6 @@ These columns can be inspected individually to examine specific search results, 
 
 For more information on the columns, please refer to the [Protein Inference](https://www.biofsharp.com/BioFSharp.Mz/04_02_protein_inference.html)the BioFSharp.Mz documentation.
 **)
-
-// Replace the temp folder with your project folder.
-let outputPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "ProteinInferenceParams.json")
-
-Json.serializeAndWrite outputPath proteinInferenceParams
 
 (**
 ## Running the tool

@@ -89,7 +89,11 @@ let psmStatisticsParams : Dto.PSMStatisticsParams =
         KeepTemporaryFiles         = true
     }
 
-// Describing the outputs 
+// Replace the temp folder with your project folder.
+let outputPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "pSMStatisticsParams.json")
+
+Json.serializeAndWrite outputPath psmStatisticsParams
+
 (**
 ## Outputs
 The resulting `.qpsm` file is generated as a tab-delimited text file.
@@ -98,11 +102,11 @@ These columns can be inspected individually to examine specific search results, 
 |----------------------------|------------------------------------------------------------------------------------------------------------------|
 | PSMId                      | Identifier of the MS/MS spectrum                                                                                 |
 | Global Mod                 | Indicator, if a peptide ion species is labeled or unlabeled                                                      |
-| PepSequenceID              | Unique identifier of the unmodified peptide sequence, which points to PeptideDB                                 |
+| PepSequenceID              | Unique identifier of the unmodified peptide sequence, which points to PeptideDB                                  |
 | ModSequenceID              | Unique identifier of the modified peptide sequence (including PTMs, e.g., methylation), which points to PeptideDB|
 | Label                      | Target/decoy label: 1 = target, −1 = decoy                                                                       |
 | ScanNr                     | Scan identifier, combining the spectrum ID in the raw file with an ascending MS2 ID                              |
-| ScanTime                   | Retention time (RT) of the MS/MS scan                                                                            |
+| ScanTime                   | Retention time (RT) in minutes of the MS/MS scan                                                                 s|
 | Charge                     | Precursor ion charge state                                                                                       |    
 | PrecursorMZ                | Precursor ion mass-to-charge ratio (m/z)                                                                         |
 | TheoMass                   | Theoretical peptide mass in the spectrum (based on amino acid composition) in Dalton                             |
@@ -115,21 +119,16 @@ These columns can be inspected individually to examine specific search results, 
 | AndroScore                 | Andromeda score quantifying the match between theoretical and experimental spectra                               |
 | AndroNormDeltaBestToRest   | Normalized separation of the best Andromeda score from the remaining candidate scores                            |
 | AndroNormDeltaNext         | Normalized separation between the best and second-best Andromeda scores                                          |
-| XtandemScore               | XTandem score quantifying the match between theoretical and experimental spectra                                 |
+| XTandemScore               | XTandem score quantifying the match between theoretical and experimental spectra                                 |
 | XtandemNormDeltaBestToRest | Normalized separation of the best XTandem score from the remaining candidate scores                              |
 | XtandemNormDeltaNext       | Normalized separation between the best and second-best XTandem scores                                            |  
 | ModelScore                 | Best score value achieved by iterative model to distinguish between target & decoy                               |
-| Qvalue                     | Qvalue (False-Discovery-Rate) based on combined model scores                                                                                                                                   |
+| Qvalue                     | Qvalue (False-Discovery-Rate) based on combined model scores                                                     |
 | PEPValue                   | Posterior Error Probability                                                                                      |
 | StringSequence             | Amino Acid sequence (one-letter code) from PeptideDB which matches the psm candidate                             |
 | ProteinNames               | Protein Names out of the PeptideDB                                                                               |
+*)
 
-**)
-
-// Replace the temp folder with your project folder.
-let outputPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "pSMStatisticsParams.json")
-
-Json.serializeAndWrite outputPath psmStatisticsParams
 
 (**
 ## Running the tool
