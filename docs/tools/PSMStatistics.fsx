@@ -101,7 +101,7 @@ These columns can be inspected individually to examine specific search results, 
 | Column                     | Description                                                                                                      |
 |----------------------------|------------------------------------------------------------------------------------------------------------------|
 | PSMId                      | Identifier of the MS/MS spectrum                                                                                 |
-| Global Mod                 | Indicator, if a peptide ion species is labeled or unlabeled                                                      |
+| GlobalMod                  | Indicator, if a peptide ion species is labeled or unlabeled                                                      |
 | PepSequenceID              | Unique identifier of the unmodified peptide sequence, which points to PeptideDB                                  |
 | ModSequenceID              | Unique identifier of the modified peptide sequence (including PTMs, e.g., methylation), which points to PeptideDB|
 | Label                      | Target/decoy label: 1 = target, −1 = decoy                                                                       |
@@ -111,7 +111,7 @@ These columns can be inspected individually to examine specific search results, 
 | PrecursorMZ                | Precursor ion mass-to-charge ratio (m/z)                                                                         |
 | TheoMass                   | Theoretical peptide mass in the spectrum (based on amino acid composition) in Dalton                             |
 | AbsDeltaMass               | Absolute mass deviation between theoretical and measured mass (mass error)                                       |   
-| PeptideLength              | Peptide length based on the amino acid sequence as a one-letter code                                             | 
+| PeptideLength              | Peptide length in Amino Acid count                                                                               | 
 | MissCleavages              | Number of missed cleavages                                                                                       |
 | SequestScore               | SEQUEST similarity score (e.g., XCorr) quantifying agreement between theoretical and experimental spectra        |
 | SequestNormDeltaBestToRest | Normalized separation of the best SEQUEST score from the remaining candidate scores                              |
