@@ -106,7 +106,7 @@ These columns can be inspected individually to examine specific search results, 
 | ModSequenceID              | Unique identifier of the modified peptide sequence (including PTMs, e.g., methylation), which points to PeptideDB|
 | Label                      | Target/decoy label: 1 = target, −1 = decoy                                                                       |
 | ScanNr                     | Scan identifier, combining the spectrum ID in the raw file with an ascending MS2 ID                              |
-| ScanTime                   | Retention time (RT) in minutes of the MS/MS scan                                                                 s|
+| ScanTime                   | Retention time (RT) in minutes of the MS/MS scan                                                                 |
 | Charge                     | Precursor ion charge state                                                                                       |    
 | PrecursorMZ                | Precursor ion mass-to-charge ratio (m/z)                                                                         |
 | TheoMass                   | Theoretical peptide mass in the spectrum (based on amino acid composition) in Dalton                             |
