@@ -141,7 +141,7 @@ These columns can be inspected individually to examine specific search results, 
 | TheoMass                                 | Theoretical peptide mass in the spectrum (based on amino acid composition) in Dalton                                                                             |
 | AbsDeltaMass                             | Absolute mass deviation between theoretical and measured mass (mass error)                                                                                       |
 | MeanPercolatorScore                      | The peptide spectrum matches (PSMs) are re-scored based on several parameters. This value corresponds to the average consensus score determined in the process   |
-| Qvalue                                   | Qvalue (False-Discovery-Rate) based on combined model scores                                                                                                     |
+| QValue                                   | Q-value (False-Discovery-Rate) based on combined model scores                                                                                                     |
 | PEPValue                                 | Posterior Error Probability                                                                                                                                      |
 | ProteinNames                             | Protein Names out of the PeptideDB                                                                                                                               |
 | QuantMZ_Light                            | Mass-to-charge ratio from the extracted XIC of the unlabeled peptide ion                                                                                         |
