@@ -1,4 +1,5 @@
 #### Unreleased
+* Bug when using single file option, because of switched parameters in CLI  
 * Update BioFSharp.Mz to 0.2.2
 
 #### 0.0.4 - Wednesday, September 2, 2026
