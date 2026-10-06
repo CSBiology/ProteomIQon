@@ -158,8 +158,6 @@ AlignmentScore | Actual known alignments compared with the observed alignments
 AlignmentQValue | Q-value, which is calculated based on the alignment score
 
 
-*
-
 ## Running the tool
 
 Install with `dotnet tool install --global ProteomIQon.PSMBasedQuantification`, then quantify one run:

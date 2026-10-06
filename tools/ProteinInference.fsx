@@ -80,7 +80,6 @@ QValue | Q-value (False-Discovery-Rate) for every identified protein
 
 
 For more information on the columns, please refer to the [Protein Inference](https://www.biofsharp.com/BioFSharp.Mz/04_02_protein_inference.html)the BioFSharp.Mz documentation.
-*
 
 ## Running the tool
 
