@@ -97,7 +97,7 @@ These columns can be inspected individually to examine specific search results, 
 | Class           | Peptide Evidence Classes (C1A, C1B, C2A, C2B, C3A, C3B) which define how a peptide has been assigned to its corresponding protein |
 | TargetScore     | Target Score calculated based on the individual peptide scores of PSM                                                             |
 | DecoyScore      | Decoy Score calculated based on the individual peptide scores of PSM                                                              |
-| Qvalue          | Qvalue (False-Discovery-Rate) for every identified protein                                                                        |
+| QValue          | Q-value (False-Discovery-Rate) for every identified protein                                                                        |
 
 
 For more information on the columns, please refer to the [Protein Inference](https://www.biofsharp.com/BioFSharp.Mz/04_02_protein_inference.html)the BioFSharp.Mz documentation.
