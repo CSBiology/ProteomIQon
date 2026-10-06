@@ -91,6 +91,42 @@ module Domain =
             ///
         }
 
+    /// Settings of the fragment index search used for ion mobility data.
+    type PeptideSpectrumMatchingTIMsParams =
+        {
+            /// Tolerance of the precursor neutral mass in ppm.
+            PrecursorTolerancePPM           : float
+            /// Tolerance of fragment m/z values in ppm.
+            FragmentTolerancePPM            : float
+            /// Precursor isotope errors that are searched, 0 for the monoisotopic peak.
+            IsotopeErrors                   : int list
+            /// Highest fragment charge state, at most the precursor charge minus one and at least 1.
+            MaxFragmentCharge               : int
+            /// Charge states searched when the spectrum carries no precursor charge.
+            FallbackChargeStates            : int list
+            /// Number of most intense peaks kept per spectrum.
+            TopNPeaks                       : int
+            /// Peaks below this fraction of the base peak are removed.
+            MinimumPeakRatio                : float
+            /// Peaks within this m/z distance of the precursor m/z are removed.
+            RemovePrecursorRange            : float
+            /// Removes isotope partner peaks before matching.
+            Deisotope                       : bool
+            /// Spectra with fewer peaks after preprocessing are skipped.
+            MinimumPeaks                    : int
+            /// Matched fragments a candidate needs to be reported.
+            MinMatchedFragments             : int
+            /// Matched fragments a candidate needs to enter the expectation value model.
+            MinFragmentsModelling           : int
+            /// Best targets and best decoys reported per spectrum.
+            ReportedHitsPerLabel            : int
+            /// Width in Da of the fragment index bins.
+            FragmentIndexBinWidth           : float
+            nTerminalSeries                 : NTerminalSeries
+            cTerminalSeries                 : CTerminalSeries
+            AndromedaParams                 : AndromedaParams
+        }
+
     type PepValueFittingMethod = 
         //| LinearLogit
         | IRLS

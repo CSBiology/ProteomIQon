@@ -1,3 +1,6 @@
+#### Unreleased
+* Update BioFSharp.Mz to 0.2.2
+
 #### 0.0.12 - Wednesday, September 2, 2026
 * Fall back to a median mz correction when the smoothing spline cannot be fitted on sparse data
 * Write a header only output file instead of failing when no peptide ion could be quantified

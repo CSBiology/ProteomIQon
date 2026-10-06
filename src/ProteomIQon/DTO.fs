@@ -642,8 +642,66 @@ module Dto =
         XtandemNormDeltaNext         : float
         [<FieldAttribute(22)>]
         StringSequence               : string
+        /// Inverse reduced ion mobility (1/K0) of the precursor. NaN when the run has none.
+        [<FieldAttribute(23)>]
+        IonMobility                  : float
+        /// X!Tandem hyperscore of the exact rescoring of PeptideSpectrumMatchingTIMs, 0 when nothing matches. NaN from PeptideSpectrumMatching.
+        [<FieldAttribute(24)>]
+        Hyperscore                   : float
+        /// Expected number of random candidates with at least the index pass hyperscore of the hit. NaN from PeptideSpectrumMatching.
+        [<FieldAttribute(25)>]
+        Expectscore                  : float
+        /// Matched b and y ions of the hyperscore. 0 from PeptideSpectrumMatching.
+        [<FieldAttribute(26)>]
+        MatchedIons                  : int
+        /// Theoretical b and y ions of the peptide. 0 from PeptideSpectrumMatching.
+        [<FieldAttribute(27)>]
+        TotalIons                    : int
         }
 
+    type PeptideSpectrumMatchingTIMsParams =
+        {
+            PrecursorTolerancePPM         : float
+            FragmentTolerancePPM          : float
+            IsotopeErrors                 : int list
+            MaxFragmentCharge             : int
+            FallbackChargeStates          : int list
+            TopNPeaks                     : int
+            MinimumPeakRatio              : float
+            RemovePrecursorRange          : float
+            Deisotope                     : bool
+            MinimumPeaks                  : int
+            MinMatchedFragments           : int
+            MinFragmentsModelling         : int
+            ReportedHitsPerLabel          : int
+            FragmentIndexBinWidth         : float
+            nTerminalSeries               : NTerminalSeries
+            cTerminalSeries               : CTerminalSeries
+            Andromeda                     : AndromedaParams
+        }
+
+    module PeptideSpectrumMatchingTIMsParams =
+
+        let toDomain (dto: PeptideSpectrumMatchingTIMsParams) : Domain.PeptideSpectrumMatchingTIMsParams =
+            {
+                PrecursorTolerancePPM   = dto.PrecursorTolerancePPM
+                FragmentTolerancePPM    = dto.FragmentTolerancePPM
+                IsotopeErrors           = dto.IsotopeErrors
+                MaxFragmentCharge       = dto.MaxFragmentCharge
+                FallbackChargeStates    = dto.FallbackChargeStates
+                TopNPeaks               = dto.TopNPeaks
+                MinimumPeakRatio        = dto.MinimumPeakRatio
+                RemovePrecursorRange    = dto.RemovePrecursorRange
+                Deisotope               = dto.Deisotope
+                MinimumPeaks            = dto.MinimumPeaks
+                MinMatchedFragments     = dto.MinMatchedFragments
+                MinFragmentsModelling   = dto.MinFragmentsModelling
+                ReportedHitsPerLabel    = dto.ReportedHitsPerLabel
+                FragmentIndexBinWidth   = dto.FragmentIndexBinWidth
+                nTerminalSeries         = NTerminalSeries.toDomain dto.nTerminalSeries
+                cTerminalSeries         = CTerminalSeries.toDomain dto.cTerminalSeries
+                AndromedaParams         = dto.Andromeda
+            }
 
     type PSMStatisticsParams = 
         {
