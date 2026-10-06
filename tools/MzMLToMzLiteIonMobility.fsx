@@ -23,7 +23,7 @@ Flag | Meaning | Comes from
 The reader fails on mzML without ion mobility data. `-f` rewrites every input file in place and removes the string `&quot`, for mzML exports where that string breaks the XML reader.
 
 The tool writes one `<run>.mzlite` per input into the output directory. Spectra with an MS level other than 1 or 2 stop the conversion with an error. Scan times are stored in minutes.
-The mzlite is read by [MsFraggerToPSM](https://csbiology.github.io/ProteomIQon/tools/MsFraggerToPSM.html) and [PSMBasedQuantificationTIMs](https://csbiology.github.io/ProteomIQon/tools/PSMBasedQuantificationTIMs.html).
+The mzlite is read by [PeptideSpectrumMatchingTIMs](https://csbiology.github.io/ProteomIQon/tools/PeptideSpectrumMatchingTIMs.html) and [PSMBasedQuantificationTIMs](https://csbiology.github.io/ProteomIQon/tools/PSMBasedQuantificationTIMs.html), and by [MsFraggerToPSM](https://csbiology.github.io/ProteomIQon/tools/MsFraggerToPSM.html) when the identification comes from FragPipe.
 The output directory also receives `MzMLToMzLite_log.txt` and one `<run>_log.txt` per input.
 
 ## Parameters

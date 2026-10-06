@@ -78,6 +78,11 @@
   </a>
 </li>             
 <li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/PeptideSpectrumMatchingTIMs.html">
+    PeptideSpectrumMatchingTIMs
+  </a>
+</li>             
+<li class="nav-item ">
   <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/MsFraggerToPSM.html">
     MsFraggerToPSM
   </a>
@@ -288,6 +293,46 @@ Each group gets a score from its peptides and a decoy score from the reversed pr
 
 <span onmouseout="hideTip(event, 'fs23', 28)" onmouseover="showTip(event, 'fs23', 28)" class="m">Json</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs24', 29)" onmouseover="showTip(event, 'fs24', 29)" class="id">serializeAndWrite</span> <span onmouseout="hideTip(event, 'fs17', 30)" onmouseover="showTip(event, 'fs17', 30)" class="id">outputPath</span> <span onmouseout="hideTip(event, 'fs5', 31)" onmouseover="showTip(event, 'fs5', 31)" class="id">proteinInferenceParams</span>
 </code></pre>
+<h2><a name="Outputs" class="anchor" href="#Outputs">Outputs</a></h2>
+<p>The resulting <code>.prot</code> file is generated as a tab-delimited text file.
+These columns can be inspected individually to examine specific search results, scoring metrics, and identification parameters.</p>
+<table>
+<thead>
+<tr class="header">
+<th><p>Column</p></th>
+<th><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><p>ProteinGroup</p></td>
+<td><p>Protein Identifier Collection</p></td>
+</tr>
+<tr class="even">
+<td><p>PeptideSequence</p></td>
+<td><p>List of all peptides assigned to this protein group</p></td>
+</tr>
+<tr class="odd">
+<td><p>Class</p></td>
+<td><p>Peptide Evidence Classes (C1A, C1B, C2A, C2B, C3A, C3B) which define how a peptide has been assigned to its corresponding protein</p></td>
+</tr>
+<tr class="even">
+<td><p>TargetScore</p></td>
+<td><p>Target Score calculated based on the individual peptide scores of PSM</p></td>
+</tr>
+<tr class="odd">
+<td><p>DecoyScore</p></td>
+<td><p>Decoy Score calculated based on the individual peptide scores of PSM</p></td>
+</tr>
+<tr class="even">
+<td><p>QValue</p></td>
+<td><p>Q-value (False-Discovery-Rate) for every identified protein</p></td>
+</tr>
+</tbody>
+</table>
+
+<p>For more information on the columns, please refer to the <a href="https://www.biofsharp.com/BioFSharp.Mz/04_02_protein_inference.html">Protein Inference</a>the BioFSharp.Mz documentation.
+*</p>
 <h2><a name="Running-the-tool" class="anchor" href="#Running-the-tool">Running the tool</a></h2>
 <p>Install with <code>dotnet tool install --global ProteomIQon.ProteinInference</code>, then infer the proteins of one run:</p>
 <table class="pre"><tr><td class="snippet"><pre class="fssnip"><code lang="text">proteomiqon-proteininference -i path/to/run.qpsm -d path/to/database.db -o path/to/output -p path/to/ProteinInferenceParams.json

@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <title>PeptideSpectrumMatchingTIMs</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="author" content="David Zimmer, Caroline Ott, Heinrich Lukas Weil, Timo Muehlhaus">
+    <link rel="shortcut icon" type="image/x-icon" href="https://csbiology.github.io/ProteomIQon/img/favicon.ico">
+    <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <!-- <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML"></script> -->
+
+    <link type="text/css" rel="stylesheet" href="https://csbiology.github.io/ProteomIQon/content/fsdocs-legacy.css" />
+    <link type="text/css" rel="stylesheet" href="https://csbiology.github.io/ProteomIQon/content/fsdocs-custom.css" />
+    <script type="text/javascript" src="https://csbiology.github.io/ProteomIQon/content/fsdocs-tips.js"></script>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@creativebulma/bulma-collapsible@1.0.4/dist/js/bulma-collapsible.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@creativebulma/bulma-collapsible@1.0.4/dist/css/bulma-collapsible.min.css">
+    <!-- HTML5 shim, for IE6-8 support of HTML5 elements -->
+    <!--[if lt IE 9]>
+      <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <!-- BEGIN SEARCH BOX: this adds support for the search box -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/JavaScript-autoComplete/1.0.4/auto-complete.css" />
+    <!-- END SEARCH BOX: this adds support for the search box -->
+    
+</head> 
+
+<body>
+    <div class="columns is-fullheight m-0">
+        <div id="fsdocs-menu" class="column is-2 is-paddingless">
+            <aside class="menu">
+                <div class="container is-paddingless is-marginless has-background-dark">
+                    <a href="https://csbiology.github.io/ProteomIQon/">
+                        <figure class="image is-128x128 container">
+                            <img src="https://csbiology.github.io/ProteomIQon/img/logo.png">
+                        </figure>
+                    </a>
+                    <h2 class="title has-text-centered has-text-white pb-4">ProteomIQon</h2>
+                </div>
+                <div class="content">
+                    <!-- BEGIN SEARCH BOX: this adds support for the search box -->
+                    <div id="header">
+                        <div class="field">
+                            <div class="control has-icons-left has-icons-right searchbox" id="fsdocs-searchbox">
+                                <input data-search-input="" id="search-by" type="search" placeholder="Search..." class="input"/>
+                                <span class="icon is-small is-left">
+                                    <i class="fas fa-search"></i>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- END SEARCH BOX: this adds support for the search box -->
+                    <ul class="navbar-nav">
+                        <li class="nav-header">General</li>
+                        <li class="nav-item"><a href="https://csbiology.github.io/ProteomIQon/">Home</a></li>
+                        <li class="nav-header active">
+  Tools
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/MzMLToMzLite.html">
+    MzMLToMzLite
+  </a>
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/MzMLToMzLiteIonMobility.html">
+    MzMLToMzLiteIonMobility
+  </a>
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/PeptideDB.html">
+    PeptideDB
+  </a>
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/PeptideSpectrumMatching.html">
+    PeptideSpectrumMatching
+  </a>
+</li>             
+<li class="nav-item active">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/PeptideSpectrumMatchingTIMs.html">
+    PeptideSpectrumMatchingTIMs
+  </a>
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/MsFraggerToPSM.html">
+    MsFraggerToPSM
+  </a>
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/PSMStatistics.html">
+    PSMStatistics
+  </a>
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/PSMBasedQuantification.html">
+    PSMBasedQuantification
+  </a>
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/PSMBasedQuantificationTIMs.html">
+    PSMBasedQuantificationTIMs
+  </a>
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/ProteinInference.html">
+    ProteinInference
+  </a>
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/QuantBasedAlignment.html">
+    QuantBasedAlignment
+  </a>
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/AlignmentBasedQuantification.html">
+    AlignmentBasedQuantification
+  </a>
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/AlignmentBasedQuantStatistics.html">
+    AlignmentBasedQuantStatistics
+  </a>
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/AddDeducedPeptides.html">
+    AddDeducedPeptides
+  </a>
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/JoinQuantPepIonsWithProteins.html">
+    JoinQuantPepIonsWithProteins
+  </a>
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/LabelFreeProteinQuantification.html">
+    LabelFreeProteinQuantification
+  </a>
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/LabeledProteinQuantification.html">
+    LabeledProteinQuantification
+  </a>
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/RatioLFQ.html">
+    RatioLFQ
+  </a>
+</li>             
+<li class="nav-header ">
+  Developer Notes
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/develop/How_to_create_a_tool.html">
+    How to create your own tool
+  </a>
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/develop/How_to_document_your_work.html">
+    How to document your work
+  </a>
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/develop/How_to_build_binaries_or_packages.html">
+    How to build binaries or packages
+  </a>
+</li>
+                        <li class="nav-header">Powered By</li>
+                        <li class="nav-item"><a href="https://github.com/CSBiology/MzIO">MzIO</a></li>
+                        <li class="nav-item"><a href="https://github.com/CSBiology/BioFSharp">BioFSharp</a></li>
+                        <li class="nav-item"><a href="https://github.com/CSBiology/BioFSharp.Mz">BioFSharp.Mz</a></li>
+                        <li class="nav-item"><a href="https://github.com/fslaborg/FSharp.Stats">FSharp.Stats</a></li>
+                        <li class="nav-item"><a href="https://github.com/fslaborg/Deedle">Deedle</a></li>
+                        <li class="nav-item"><a href="https://fsharp.org">FSharp</a></li>
+                    </ul>
+                </div>
+            </aside>
+        </div>
+        <div class="column is-10 is-paddingless">
+            <div class="section pt-4">
+                <div class="container" id="fsdocs-content">
+                    
+<p><a href="https://mybinder.org/v2/gh/csbiology/ProteomIQon/gh-pages?filepath=tools/PeptideSpectrumMatchingTIMs.ipynb"><img src="https://csbiology.github.io/ProteomIQon/img/badge-binder.svg" alt="Binder" /></a>&emsp;
+<a href="https://csbiology.github.io/ProteomIQon/tools/PeptideSpectrumMatchingTIMs.fsx"><img src="https://csbiology.github.io/ProteomIQon/img/badge-script.svg" alt="Script" /></a>&emsp;
+<a href="https://csbiology.github.io/ProteomIQon/tools/PeptideSpectrumMatchingTIMs.ipynb"><img src="https://csbiology.github.io/ProteomIQon/img/badge-notebook.svg" alt="Notebook" /></a></p>
+<h1><a name="PeptideSpectrumMatchingTIMs" class="anchor" href="#PeptideSpectrumMatchingTIMs">PeptideSpectrumMatchingTIMs</a></h1>
+<p>PeptideSpectrumMatchingTIMs identifies peptides in timsTOF runs with precursor ion mobility. It accepts mzlite input and follows the search pattern used by MSFragger. <a href="https://csbiology.github.io/ProteomIQon/tools/PeptideSpectrumMatching.html">PeptideSpectrumMatching</a> performs the corresponding search for mzlite and mzML files.</p>
+<p>An mzlite file of a timsTOF run keeps the peaks of every mobility scan of an MS2 spectrum. The fragments of a precursor carry the mobility of that precursor, so the tool first sums every spectrum over its mobility scans. Starting at the lowest m/z, all peaks within <code>--mobility-merge-ppm</code> of the first peak of a group become one peak with the summed intensity and the intensity weighted m/z. The width defaults to <code>FragmentTolerancePPM</code>. <code>--mobility-merge-ppm 0</code> sums only peaks at exactly the same m/z. It does not turn the summation off. Spectra without ion mobility per peak are searched as they are. Repeated PASEF measurements of one precursor stay separate spectra, as they are in the mzlite file.</p>
+<p>The fragment index holds the b and y ions of target peptides only. Reversed decoy peptides use the same index through a water shift. A decoy b ion is a target y ion minus water, and a decoy y ion is a target b ion plus water. Only peptides inside a precursor window of the searched runs, including the isotope errors and the tolerance, enter the index. Fragments above the heaviest of these windows plus 1 Da, or above the mass given with <code>-f</code>, stay out of it, and the ceiling never exceeds the heaviest peptide of the database plus 1 Da. The index uses 4 bytes per fragment entry.</p>
+<p>With <code>-s</code> the tool builds and searches the index in that many slices of the peptide table, one after the other, so only one slice is in memory at a time. Every further slice reads the spectra again, unless <code>-k</code> keeps the preprocessed spectra in memory, at about 2.4 kB per spectrum and charge. The result does not depend on the number of slices.</p>
+<p>For each MS2 spectrum, the tool removes the peaks around the precursor m/z and the peaks below <code>MinimumPeakRatio</code> of the base peak. It removes isotope partner peaks and keeps the <code>TopNPeaks</code> most intense peaks. Every remaining peak is looked up in the index, restricted to the peptides whose precursor mass fits one of the configured isotope errors. The precursor charge and the selected ion m/z come from the mzlite file. When a spectrum carries no charge, the charge states in <code>FallbackChargeStates</code> are searched. The tool reports the <code>ReportedHitsPerLabel</code> best targets and the same number of best decoys.</p>
+<p>The index matches whole bins of <code>FragmentIndexBinWidth</code>, so a peak reaches every fragment within its tolerance plus up to one bin width on either side. Peaks whose tolerance windows lie closer than one bin are merged with the larger intensity before the lookup, so every fragment of a candidate is counted at most once in the index pass. The hyperscore is the X!Tandem hyperscore of BioFSharp.Mz, <code>ln(sum of matched intensities) + ln(Nb!) + ln(Ny!)</code>, with intensities relative to a base peak of 100 and a floor of 0. For the reported hits the tool computes it again exactly with the fragment tolerance, which gives the <code>Hyperscore</code> and <code>MatchedIons</code> columns and decides the rank. <code>MinMatchedFragments</code> applies to that exact count.</p>
+<p>The expectation value follows the model of X!Tandem, which MSFragger also follows. The index pass hyperscores of all candidates of a spectrum with at least <code>MinFragmentsModelling</code> matched fragments form a histogram with unit bins on the X!Tandem scale, which is 4 log10 of the product form, so 4 / ln 10 times the natural log form above. The <code>Expectscore</code> of a hit is evaluated at its index pass hyperscore, the same quantity the model was built from, so it can order the hits of a spectrum differently from <code>Hyperscore</code>. The model removes candidates that sit above a gap in the upper part of the survival function. It fits a line to the log10 survival function from half of the remaining count down to ten survivors. When fewer than 200 candidates remain, the model uses X!Tandem's default line, <code>10^(3.5 - 0.18 x)</code>. The expectation value has a floor of <code>1e-15</code>.</p>
+<p>The reported targets and decoys then receive the SEQUEST-like score used by PeptideSpectrumMatching. The tool also computes its Andromeda-like and X!Tandem-like scores for these hits. The <code>NormDeltaBestToRest</code> and <code>NormDeltaNext</code> columns are computed over the target and the decoy form of every peptide the index pass selected, as a target or as a decoy, which includes candidates that the exact rescoring drops afterwards. PeptideSpectrumMatching computes these columns over every peptide in the precursor window, so values from the two tools are not comparable.</p>
+<p><code>-c</code> sets how many runs are searched together, one thread per run, and defaults to 1. The tool splits the runs into groups of that size. The runs of a group share one fragment index, which is built with one worker per run, and the next group starts when every run of the group is done. The peptide database has to use monoisotopic masses. The classic scoring of the reported hits takes the largest share of the search time, so the run time grows with <code>ReportedHitsPerLabel</code>.</p>
+<h2><a name="Inputs-and-outputs" class="anchor" href="#Inputs-and-outputs">Inputs and outputs</a></h2>
+<table>
+<thead>
+<tr class="header">
+<th><p>Flag</p></th>
+<th><p>Meaning</p></th>
+<th><p>Comes from</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><p><code>-i</code></p></td>
+<td><p>one or more <code>.mzlite</code> files, or a directory that is searched for <code>*.mzlite</code></p></td>
+<td><p><a href="https://csbiology.github.io/ProteomIQon/tools/MzMLToMzLiteIonMobility.html">MzMLToMzLiteIonMobility</a></p></td>
+</tr>
+<tr class="even">
+<td><p><code>-d</code></p></td>
+<td><p>the SQLite peptide database</p></td>
+<td><p><a href="https://csbiology.github.io/ProteomIQon/tools/PeptideDB.html">PeptideDB</a></p></td>
+</tr>
+<tr class="odd">
+<td><p><code>-o</code></p></td>
+<td><p>the output directory, created when missing</p></td>
+<td></td>
+</tr>
+<tr class="even">
+<td><p><code>-p</code></p></td>
+<td><p>the parameter file in JSON</p></td>
+<td><p>this page</p></td>
+</tr>
+<tr class="odd">
+<td><p><code>-c</code></p></td>
+<td><p>number of runs searched together, one thread per run, default 1</p></td>
+<td></td>
+</tr>
+<tr class="even">
+<td><p><code>-s</code></p></td>
+<td><p>number of slices the fragment index is built and searched in, default 1</p></td>
+<td></td>
+</tr>
+<tr class="odd">
+<td><p><code>-k</code></p></td>
+<td><p>keeps the preprocessed spectra in memory between the slices</p></td>
+<td></td>
+</tr>
+<tr class="even">
+<td><p><code>-f</code></p></td>
+<td><p>highest fragment mass in the index in Da, default the heaviest precursor window plus 1 Da</p></td>
+<td></td>
+</tr>
+<tr class="odd">
+<td><p><code>--mobility-merge-ppm</code></p></td>
+<td><p>m/z width of the mobility summation in ppm, default <code>FragmentTolerancePPM</code></p></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+
+<p><code>-i</code>, <code>-d</code>, <code>-o</code> and <code>-p</code> are mandatory. The input directory search is not recursive.</p>
+<p>The tool accepts <code>.mzlite</code> files and directories. An mzML path stops the tool with a message.</p>
+<p>The tool writes one <code>&lt;run&gt;.psm</code> per input into the output directory. The file is a tab separated table with a header. The tool overwrites it when it already exists. Label is 1 for a target and -1 for a reversed decoy. <code>MissCleavages</code> is -1, as in PeptideSpectrumMatching. PSMStatistics recomputes it.</p>
+<p>The output record is <code>Dto.PeptideSpectrumMatchingResult</code>, the same record written by <a href="https://csbiology.github.io/ProteomIQon/tools/PeptideSpectrumMatching.html">PeptideSpectrumMatching</a>. It has 28 columns. The record has the 23 classic PeptideSpectrumMatching columns, followed by these five columns.</p>
+<table>
+<thead>
+<tr class="header">
+<th><p>Column</p></th>
+<th><p>Meaning</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><p><code>IonMobility</code></p></td>
+<td><p>Inverse reduced ion mobility, 1/K0, of the precursor. It is <code>NaN</code> when the run has no ion mobility value.</p></td>
+</tr>
+<tr class="even">
+<td><p><code>Hyperscore</code></p></td>
+<td><p>Hyperscore from the matched b and y ions.</p></td>
+</tr>
+<tr class="odd">
+<td><p><code>Expectscore</code></p></td>
+<td><p>Expectation value from the candidate hyperscore model.</p></td>
+</tr>
+<tr class="even">
+<td><p><code>MatchedIons</code></p></td>
+<td><p>Number of matched b and y ions used for the hyperscore.</p></td>
+</tr>
+<tr class="odd">
+<td><p><code>TotalIons</code></p></td>
+<td><p>Number of theoretical b and y ions of the peptide.</p></td>
+</tr>
+</tbody>
+</table>
+
+<p><code>ScanNr</code> is the position of the MS2 spectrum in scan time order. <code>PSMId</code> is the spectrum id with spaces replaced by "-", followed by <code>_ScanNr_charge_rank</code>. The rank is the position among the reported targets or decoys of that spectrum, with the best hyperscore first. <code>AbsDeltaMass</code> is the mass error after the isotope error that fits the candidate best.</p>
+<p>PSMStatistics reads it directly and uses <code>Hyperscore</code> and <code>Expectscore</code> when they are present. Its <code>.qpsm</code> output does not carry the ion mobility yet, and <a href="https://csbiology.github.io/ProteomIQon/tools/PSMBasedQuantificationTIMs.html">PSMBasedQuantificationTIMs</a> still expects the FragPipe column layout of <a href="https://csbiology.github.io/ProteomIQon/tools/MsFraggerToPSM.html">MsFraggerToPSM</a>, so the quantification of a run identified with this tool needs those two tools to be adapted first.</p>
+<p>The output directory receives <code>PeptideSpectrumMatchingTIMs_log.txt</code> and one <code>&lt;run&gt;_log.txt</code> per input.</p>
+<h2><a name="Parameters" class="anchor" href="#Parameters">Parameters</a></h2>
+<table>
+<thead>
+<tr class="header">
+<th><p>Parameter</p></th>
+<th><p>Default</p></th>
+<th><p>Meaning</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><p><code>PrecursorTolerancePPM</code></p></td>
+<td><p><code>20.0</code></p></td>
+<td><p>Precursor neutral mass tolerance in ppm.</p></td>
+</tr>
+<tr class="even">
+<td><p><code>FragmentTolerancePPM</code></p></td>
+<td><p><code>20.0</code></p></td>
+<td><p>Fragment m/z tolerance in ppm.</p></td>
+</tr>
+<tr class="odd">
+<td><p><code>IsotopeErrors</code></p></td>
+<td><p><code>[0, 1, 2]</code></p></td>
+<td><p>Precursor isotope errors searched. <code>0</code> is the monoisotopic peak.</p></td>
+</tr>
+<tr class="even">
+<td><p><code>MaxFragmentCharge</code></p></td>
+<td><p><code>2</code></p></td>
+<td><p>Highest fragment charge, at most the precursor charge minus one and at least 1.</p></td>
+</tr>
+<tr class="odd">
+<td><p><code>FallbackChargeStates</code></p></td>
+<td><p><code>[2, 3]</code></p></td>
+<td><p>Charge states searched when the spectrum has no precursor charge. At least one is required.</p></td>
+</tr>
+<tr class="even">
+<td><p><code>TopNPeaks</code></p></td>
+<td><p><code>150</code></p></td>
+<td><p>Number of most intense peaks kept per spectrum after filtering.</p></td>
+</tr>
+<tr class="odd">
+<td><p><code>MinimumPeakRatio</code></p></td>
+<td><p><code>0.01</code></p></td>
+<td><p>Peaks below this fraction of the base peak are removed.</p></td>
+</tr>
+<tr class="even">
+<td><p><code>RemovePrecursorRange</code></p></td>
+<td><p><code>1.5</code></p></td>
+<td><p>Peaks within this m/z distance of the precursor m/z are removed.</p></td>
+</tr>
+<tr class="odd">
+<td><p><code>Deisotope</code></p></td>
+<td><p><code>true</code></p></td>
+<td><p>Removes isotope partner peaks before matching.</p></td>
+</tr>
+<tr class="even">
+<td><p><code>MinimumPeaks</code></p></td>
+<td><p><code>15</code></p></td>
+<td><p>Spectra with fewer peaks after preprocessing are skipped.</p></td>
+</tr>
+<tr class="odd">
+<td><p><code>MinMatchedFragments</code></p></td>
+<td><p><code>4</code></p></td>
+<td><p>Minimum matched fragments for a candidate to be reported.</p></td>
+</tr>
+<tr class="even">
+<td><p><code>MinFragmentsModelling</code></p></td>
+<td><p><code>1</code></p></td>
+<td><p>Minimum matched fragments for a candidate to enter the expectation value model.</p></td>
+</tr>
+<tr class="odd">
+<td><p><code>ReportedHitsPerLabel</code></p></td>
+<td><p><code>10</code></p></td>
+<td><p>Number of best targets and best decoys reported per spectrum. The run time scales with this number.</p></td>
+</tr>
+<tr class="even">
+<td><p><code>FragmentIndexBinWidth</code></p></td>
+<td><p><code>0.01</code></p></td>
+<td><p>Fragment index bin width in Da.</p></td>
+</tr>
+<tr class="odd">
+<td><p><code>nTerminalSeries</code></p></td>
+<td><p><code>B</code></p></td>
+<td><p>N-terminal ion series used by the classic scoring functions.</p></td>
+</tr>
+<tr class="even">
+<td><p><code>cTerminalSeries</code></p></td>
+<td><p><code>Y</code></p></td>
+<td><p>C-terminal ion series used by the classic scoring functions.</p></td>
+</tr>
+<tr class="odd">
+<td><p><code>Andromeda</code></p></td>
+<td><p><code>{ PMinPMax = 4, 10; MatchingIonTolerancePPM = 100.0 }</code></p></td>
+<td><p>Andromeda-like scoring settings.</p></td>
+</tr>
+</tbody>
+</table>
+
+<p><code>nTerminalSeries</code> and <code>cTerminalSeries</code> only affect the classic scores of the reported hits. The fragment index always uses b and y ions.</p>
+<p>Andromeda is a <code>ProteomIQon.Domain.AndromedaParams</code> record.</p>
+<table>
+<thead>
+<tr class="header">
+<th><p>Parameter</p></th>
+<th><p>Default</p></th>
+<th><p>Meaning</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><p><code>PMinPMax</code></p></td>
+<td><p><code>4, 10</code></p></td>
+<td><p>Lowest and highest number of most intense peaks kept per 100 Da window. Every count in this range is tried and the best score is kept.</p></td>
+</tr>
+<tr class="even">
+<td><p><code>MatchingIonTolerancePPM</code></p></td>
+<td><p><code>100.0</code></p></td>
+<td><p>Tolerance in ppm for matching a theoretical fragment to a measured peak.</p></td>
+</tr>
+</tbody>
+</table>
+
+<p>The default file is <a href="https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/peptideSpectrumMatchingTIMsParams.json">peptideSpectrumMatchingTIMsParams.json</a>.</p>
+<h2><a name="Writing-a-parameter-file" class="anchor" href="#Writing-a-parameter-file">Writing a parameter file</a></h2>
+<pre class="fssnip highlighted"><code lang="fsharp"><span class="k">open</span> <span onmouseout="hideTip(event, 'fs1', 1)" onmouseover="showTip(event, 'fs1', 1)" class="id">BioFSharp</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs2', 2)" onmouseover="showTip(event, 'fs2', 2)" class="id">Mz</span>
+<span class="k">open</span> <span onmouseout="hideTip(event, 'fs3', 3)" onmouseover="showTip(event, 'fs3', 3)" class="id">ProteomIQon</span>
+
+<span class="k">let</span> <span onmouseout="hideTip(event, 'fs4', 4)" onmouseover="showTip(event, 'fs4', 4)" class="id">andromedaParams</span> <span class="pn">:</span> <span onmouseout="hideTip(event, 'fs5', 5)" onmouseover="showTip(event, 'fs5', 5)" class="m">Domain</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs6', 6)" onmouseover="showTip(event, 'fs6', 6)" class="id">AndromedaParams</span> <span class="o">=</span>
+    <span class="pn">{</span>
+        <span class="prop">PMinPMax</span>                <span class="o">=</span> <span class="n">4</span><span class="pn">,</span> <span class="n">10</span>
+        <span class="prop">MatchingIonTolerancePPM</span> <span class="o">=</span> <span class="n">100.0</span>
+    <span class="pn">}</span>
+
+<span class="k">let</span> <span onmouseout="hideTip(event, 'fs7', 7)" onmouseover="showTip(event, 'fs7', 7)" class="id">peptideSpectrumMatchingTIMsParams</span> <span class="pn">:</span> <span onmouseout="hideTip(event, 'fs8', 8)" onmouseover="showTip(event, 'fs8', 8)" class="m">Dto</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs9', 9)" onmouseover="showTip(event, 'fs9', 9)" class="id">PeptideSpectrumMatchingTIMsParams</span> <span class="o">=</span>
+    <span class="pn">{</span>
+        <span class="prop">PrecursorTolerancePPM</span>  <span class="o">=</span> <span class="n">20.0</span>
+        <span class="prop">FragmentTolerancePPM</span>   <span class="o">=</span> <span class="n">20.0</span>
+        <span class="prop">IsotopeErrors</span>          <span class="o">=</span> <span class="pn">[</span><span class="n">0</span><span class="pn">;</span> <span class="n">1</span><span class="pn">;</span> <span class="n">2</span><span class="pn">]</span>
+        <span class="prop">MaxFragmentCharge</span>      <span class="o">=</span> <span class="n">2</span>
+        <span class="prop">FallbackChargeStates</span>   <span class="o">=</span> <span class="pn">[</span><span class="n">2</span><span class="pn">;</span> <span class="n">3</span><span class="pn">]</span>
+        <span class="prop">TopNPeaks</span>               <span class="o">=</span> <span class="n">150</span>
+        <span class="prop">MinimumPeakRatio</span>        <span class="o">=</span> <span class="n">0.01</span>
+        <span class="prop">RemovePrecursorRange</span>    <span class="o">=</span> <span class="n">1.5</span>
+        <span class="prop">Deisotope</span>               <span class="o">=</span> <span class="k">true</span>
+        <span class="prop">MinimumPeaks</span>            <span class="o">=</span> <span class="n">15</span>
+        <span class="prop">MinMatchedFragments</span>     <span class="o">=</span> <span class="n">4</span>
+        <span class="prop">MinFragmentsModelling</span>   <span class="o">=</span> <span class="n">1</span>
+        <span class="prop">ReportedHitsPerLabel</span>    <span class="o">=</span> <span class="n">10</span>
+        <span class="prop">FragmentIndexBinWidth</span>   <span class="o">=</span> <span class="n">0.01</span>
+        <span class="prop">nTerminalSeries</span>         <span class="o">=</span> <span onmouseout="hideTip(event, 'fs10', 10)" onmouseover="showTip(event, 'fs10', 10)" class="m">NTerminalSeries</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs11', 11)" onmouseover="showTip(event, 'fs11', 11)" class="id">B</span>
+        <span class="prop">cTerminalSeries</span>         <span class="o">=</span> <span onmouseout="hideTip(event, 'fs12', 12)" onmouseover="showTip(event, 'fs12', 12)" class="m">CTerminalSeries</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs13', 13)" onmouseover="showTip(event, 'fs13', 13)" class="id">Y</span>
+        <span class="prop">Andromeda</span>               <span class="o">=</span> <span onmouseout="hideTip(event, 'fs4', 14)" onmouseover="showTip(event, 'fs4', 14)" class="id">andromedaParams</span>
+    <span class="pn">}</span>
+
+<span class="c">// Replace the temp folder with your project folder.</span>
+<span class="k">let</span> <span onmouseout="hideTip(event, 'fs14', 15)" onmouseover="showTip(event, 'fs14', 15)" class="id">outputPath</span> <span class="o">=</span> <span onmouseout="hideTip(event, 'fs15', 16)" onmouseover="showTip(event, 'fs15', 16)" class="id">System</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs16', 17)" onmouseover="showTip(event, 'fs16', 17)" class="id">IO</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs17', 18)" onmouseover="showTip(event, 'fs17', 18)" class="rt">Path</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs18', 19)" onmouseover="showTip(event, 'fs18', 19)" class="id">Combine</span><span class="pn">(</span><span onmouseout="hideTip(event, 'fs15', 20)" onmouseover="showTip(event, 'fs15', 20)" class="id">System</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs16', 21)" onmouseover="showTip(event, 'fs16', 21)" class="id">IO</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs17', 22)" onmouseover="showTip(event, 'fs17', 22)" class="rt">Path</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs19', 23)" onmouseover="showTip(event, 'fs19', 23)" class="id">GetTempPath</span><span class="pn">(</span><span class="pn">)</span><span class="pn">,</span> <span class="s">&quot;peptideSpectrumMatchingTIMsParams.json&quot;</span><span class="pn">)</span>
+
+<span onmouseout="hideTip(event, 'fs20', 24)" onmouseover="showTip(event, 'fs20', 24)" class="m">Json</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs21', 25)" onmouseover="showTip(event, 'fs21', 25)" class="id">serializeAndWrite</span> <span onmouseout="hideTip(event, 'fs14', 26)" onmouseover="showTip(event, 'fs14', 26)" class="id">outputPath</span> <span onmouseout="hideTip(event, 'fs7', 27)" onmouseover="showTip(event, 'fs7', 27)" class="id">peptideSpectrumMatchingTIMsParams</span>
+</code></pre>
+<h2><a name="Running-the-tool" class="anchor" href="#Running-the-tool">Running the tool</a></h2>
+<p>Install the tool with <code>dotnet tool install --global ProteomIQon.PeptideSpectrumMatchingTIMs</code>, then score one run:</p>
+<table class="pre"><tr><td class="snippet"><pre class="fssnip"><code lang="text">proteomiqon-peptidespectrummatchingtims -i path/to/run.mzlite -d path/to/AraTest.db -o path/to/output -p path/to/peptideSpectrumMatchingTIMsParams.json
+</code></pre></td></tr></table>
+<p>Search three runs together against one index with <code>-c 3</code>, one thread per run:</p>
+<table class="pre"><tr><td class="snippet"><pre class="fssnip"><code lang="text">proteomiqon-peptidespectrummatchingtims -i path/to/run1.mzlite path/to/run2.mzlite path/to/run3.mzlite -d path/to/AraTest.db -o path/to/output -p path/to/peptideSpectrumMatchingTIMsParams.json -c 3
+</code></pre></td></tr></table>
+<p>With a large database, build the index in four slices and keep the spectra in memory between them:</p>
+<table class="pre"><tr><td class="snippet"><pre class="fssnip"><code lang="text">proteomiqon-peptidespectrummatchingtims -i path/to/run.mzlite -d path/to/AraTest.db -o path/to/output -p path/to/peptideSpectrumMatchingTIMsParams.json -s 4 -k
+</code></pre></td></tr></table>
+<p>All flags:</p>
+<table class="pre"><tr><td class="snippet"><pre class="fssnip"><code lang="text">proteomiqon-peptidespectrummatchingtims --help
+</code></pre></td></tr></table>
+
+                </div>
+            </div>
+        </div>
+        <div class="fsdocs-tip" id="fs1">namespace BioFSharp</div>
+<div class="fsdocs-tip" id="fs2">namespace BioFSharp.Mz</div>
+<div class="fsdocs-tip" id="fs3">namespace ProteomIQon</div>
+<div class="fsdocs-tip" id="fs4">val andromedaParams: Domain.AndromedaParams</div>
+<div class="fsdocs-tip" id="fs5">module Domain
+
+from ProteomIQon</div>
+<div class="fsdocs-tip" id="fs6">type AndromedaParams =
+  {
+    PMinPMax: int * int
+    MatchingIonTolerancePPM: float
+  }
+  member Equals: AndromedaParams * IEqualityComparer -&gt; bool</div>
+<div class="fsdocs-tip" id="fs7">val peptideSpectrumMatchingTIMsParams: Dto.PeptideSpectrumMatchingTIMsParams</div>
+<div class="fsdocs-tip" id="fs8">module Dto
+
+from ProteomIQon</div>
+<div class="fsdocs-tip" id="fs9">Multiple items<br />module PeptideSpectrumMatchingTIMsParams
+
+from ProteomIQon.Dto<br /><br />--------------------<br />type PeptideSpectrumMatchingTIMsParams =
+  {
+    PrecursorTolerancePPM: float
+    FragmentTolerancePPM: float
+    IsotopeErrors: int list
+    MaxFragmentCharge: int
+    FallbackChargeStates: int list
+    TopNPeaks: int
+    MinimumPeakRatio: float
+    RemovePrecursorRange: float
+    Deisotope: bool
+    MinimumPeaks: int
+    ...
+  }
+  member Equals: PeptideSpectrumMatchingTIMsParams * IEqualityComparer -&gt; bool</div>
+<div class="fsdocs-tip" id="fs10">Multiple items<br />module NTerminalSeries
+
+from ProteomIQon.Common<br /><br />--------------------<br />type NTerminalSeries =
+  | A
+  | B
+  | C
+  | AB
+  | AC
+  | BC
+  | ABC
+  member Equals: NTerminalSeries * IEqualityComparer -&gt; bool
+  member IsA: bool
+  member IsAB: bool
+  member IsABC: bool
+  member IsAC: bool
+  member IsB: bool
+  member IsBC: bool
+  member IsC: bool</div>
+<div class="fsdocs-tip" id="fs11">union case NTerminalSeries.B: NTerminalSeries</div>
+<div class="fsdocs-tip" id="fs12">Multiple items<br />module CTerminalSeries
+
+from ProteomIQon.Common<br /><br />--------------------<br />type CTerminalSeries =
+  | X
+  | Y
+  | Z
+  | XY
+  | XZ
+  | YZ
+  | XYZ
+  member Equals: CTerminalSeries * IEqualityComparer -&gt; bool
+  member IsX: bool
+  member IsXY: bool
+  member IsXYZ: bool
+  member IsXZ: bool
+  member IsY: bool
+  member IsYZ: bool
+  member IsZ: bool</div>
+<div class="fsdocs-tip" id="fs13">union case CTerminalSeries.Y: CTerminalSeries</div>
+<div class="fsdocs-tip" id="fs14">val outputPath: string</div>
+<div class="fsdocs-tip" id="fs15">namespace System</div>
+<div class="fsdocs-tip" id="fs16">namespace System.IO</div>
+<div class="fsdocs-tip" id="fs17">type Path =
+  static member ChangeExtension: path: string * extension: string -&gt; string
+  static member Combine: path1: string * path2: string -&gt; string + 4 overloads
+  static member EndsInDirectorySeparator: path: ReadOnlySpan&lt;char&gt; -&gt; bool + 1 overload
+  static member Exists: path: string -&gt; bool
+  static member GetDirectoryName: path: ReadOnlySpan&lt;char&gt; -&gt; ReadOnlySpan&lt;char&gt; + 1 overload
+  static member GetExtension: path: ReadOnlySpan&lt;char&gt; -&gt; ReadOnlySpan&lt;char&gt; + 1 overload
+  static member GetFileName: path: ReadOnlySpan&lt;char&gt; -&gt; ReadOnlySpan&lt;char&gt; + 1 overload
+  static member GetFileNameWithoutExtension: path: ReadOnlySpan&lt;char&gt; -&gt; ReadOnlySpan&lt;char&gt; + 1 overload
+  static member GetFullPath: path: string -&gt; string + 1 overload
+  static member GetInvalidFileNameChars: unit -&gt; char array
+  ...<br /><em>&lt;summary&gt;Performs operations on &lt;see cref=&quot;T:System.String&quot; /&gt; instances that contain file or directory path information. These operations are performed in a cross-platform manner.&lt;/summary&gt;</em></div>
+<div class="fsdocs-tip" id="fs18">System.IO.Path.Combine(paths: System.ReadOnlySpan&lt;string&gt;) : string<br />System.IO.Path.Combine([&lt;System.ParamArray&gt;] paths: string array) : string<br />System.IO.Path.Combine(path1: string, path2: string) : string<br />System.IO.Path.Combine(path1: string, path2: string, path3: string) : string<br />System.IO.Path.Combine(path1: string, path2: string, path3: string, path4: string) : string</div>
+<div class="fsdocs-tip" id="fs19">System.IO.Path.GetTempPath() : string</div>
+<div class="fsdocs-tip" id="fs20">module Json
+
+from ProteomIQon</div>
+<div class="fsdocs-tip" id="fs21">val serializeAndWrite: path: string -&gt; obj: &#39;a -&gt; unit</div>
+
+    </div>
+
+    <!-- BEGIN SEARCH BOX: this adds support for the search box -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/JavaScript-autoComplete/1.0.4/auto-complete.css" />
+    <script type="text/javascript">var fsdocs_search_baseurl = 'https://csbiology.github.io/ProteomIQon/'</script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/lunr.js/2.3.8/lunr.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/JavaScript-autoComplete/1.0.4/auto-complete.min.js"></script>
+    <script type="text/javascript" src="https://csbiology.github.io/ProteomIQon/content/fsdocs-search.js"></script>
+    <!-- END SEARCH BOX: this adds support for the search box -->
+</body>
+<footer>
+    <script>
+        bulmaCollapsible.attach('.is-collapsible');
+    </script>
+</footer>
+</html>

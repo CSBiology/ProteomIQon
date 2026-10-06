@@ -78,6 +78,11 @@
   </a>
 </li>             
 <li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/PeptideSpectrumMatchingTIMs.html">
+    PeptideSpectrumMatchingTIMs
+  </a>
+</li>             
+<li class="nav-item ">
   <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/MsFraggerToPSM.html">
     MsFraggerToPSM
   </a>
@@ -192,7 +197,9 @@ released tools restore from nuget.org alone.</p>
 </code></pre>
 <h2><a name="Packing" class="anchor" href="#Packing">Packing</a></h2>
 <p>The <code>Pack</code> target creates a NuGet package for every released project in <code>pkg/</code>. The version
-comes from the top entry of each project's <code>RELEASE_NOTES.md</code>, so bump that file first:</p>
+comes from the top entry of each project's <code>RELEASE_NOTES.md</code> that has a version, so bump that file
+first. A leading <code>#### Unreleased</code> section without a version collects changes until the next release
+and is skipped; replace it with the version and the date when you release:</p>
 <table class="pre"><tr><td class="snippet"><pre class="fssnip"><code lang="text">.\build.cmd pack
 </code></pre></td></tr></table>
 <p><code>PackPrerelease</code> does the same with a suffix it asks for on the console. Every tool packs as a

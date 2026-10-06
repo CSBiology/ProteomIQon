@@ -78,6 +78,11 @@
   </a>
 </li>             
 <li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/PeptideSpectrumMatchingTIMs.html">
+    PeptideSpectrumMatchingTIMs
+  </a>
+</li>             
+<li class="nav-item ">
   <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/MsFraggerToPSM.html">
     MsFraggerToPSM
   </a>
@@ -222,7 +227,7 @@ The tool reads the same parameter record as MzMLToMzLite. The spectra are writte
 
 <p>The reader fails on mzML without ion mobility data. <code>-f</code> rewrites every input file in place and removes the string <code>&amp;quot</code>, for mzML exports where that string breaks the XML reader.</p>
 <p>The tool writes one <code>&lt;run&gt;.mzlite</code> per input into the output directory. Spectra with an MS level other than 1 or 2 stop the conversion with an error. Scan times are stored in minutes.
-The mzlite is read by <a href="https://csbiology.github.io/ProteomIQon/tools/MsFraggerToPSM.html">MsFraggerToPSM</a> and <a href="https://csbiology.github.io/ProteomIQon/tools/PSMBasedQuantificationTIMs.html">PSMBasedQuantificationTIMs</a>.
+The mzlite is read by <a href="https://csbiology.github.io/ProteomIQon/tools/PeptideSpectrumMatchingTIMs.html">PeptideSpectrumMatchingTIMs</a> and <a href="https://csbiology.github.io/ProteomIQon/tools/PSMBasedQuantificationTIMs.html">PSMBasedQuantificationTIMs</a>, and by <a href="https://csbiology.github.io/ProteomIQon/tools/MsFraggerToPSM.html">MsFraggerToPSM</a> when the identification comes from FragPipe.
 The output directory also receives <code>MzMLToMzLite_log.txt</code> and one <code>&lt;run&gt;_log.txt</code> per input.</p>
 <h2><a name="Parameters" class="anchor" href="#Parameters">Parameters</a></h2>
 <table>

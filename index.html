@@ -78,6 +78,11 @@
   </a>
 </li>             
 <li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/PeptideSpectrumMatchingTIMs.html">
+    PeptideSpectrumMatchingTIMs
+  </a>
+</li>             
+<li class="nav-item ">
   <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/MsFraggerToPSM.html">
     MsFraggerToPSM
   </a>
@@ -298,12 +303,14 @@ PSMBasedQuantification and JoinQuantPepIonsWithProteins:</p>
 </tbody>
 </table>
 
-<p>Four more tools cover other inputs. For 15N labeled samples, <a href="https://csbiology.github.io/ProteomIQon/tools/RatioLFQ.html">RatioLFQ</a> turns the
+<p>Five more tools cover other inputs. For 15N labeled samples, <a href="https://csbiology.github.io/ProteomIQon/tools/RatioLFQ.html">RatioLFQ</a> turns the
 light to heavy ratios in LabeledQuant.txt into one intensity per run and protein. For timsTOF data with ion mobility,
-<a href="https://csbiology.github.io/ProteomIQon/tools/MzMLToMzLiteIonMobility.html">MzMLToMzLiteIonMobility</a> converts the mzML,
-<a href="https://csbiology.github.io/ProteomIQon/tools/MsFraggerToPSM.html">MsFraggerToPSM</a> imports an MSFragger search, and
+<a href="https://csbiology.github.io/ProteomIQon/tools/MzMLToMzLiteIonMobility.html">MzMLToMzLiteIonMobility</a> converts the mzML, and
+<a href="https://csbiology.github.io/ProteomIQon/tools/MsFraggerToPSM.html">MsFraggerToPSM</a> imports an MSFragger search. <a href="https://csbiology.github.io/ProteomIQon/tools/PeptideSpectrumMatchingTIMs.html">PeptideSpectrumMatchingTIMs</a> identifies the spectra of an ion
+mobility run without MSFragger and writes the <code>.psm</code> that <a href="https://csbiology.github.io/ProteomIQon/tools/PSMStatistics.html">PSMStatistics</a> reads.
 <a href="https://csbiology.github.io/ProteomIQon/tools/PSMBasedQuantificationTIMs.html">PSMBasedQuantificationTIMs</a> quantifies in retention time and ion
-mobility.</p>
+mobility from the FragPipe layout of MsFraggerToPSM. The <code>.qpsm</code> of PSMStatistics carries no ion mobility yet, so that
+link from PeptideSpectrumMatchingTIMs to the quantification is still open.</p>
 <h2><a name="The-core-project" class="anchor" href="#The-core-project">The core project</a></h2>
 <p>The ProteomIQon core is referenced by all tools. It contains mainly serializable data transfer objects such as tool results and tool parameters, as well as their mapping to domain specific types.
 This is also the place for any kind of code reusable across tools such as thin wrappers around data readers, logging or CLI formatting.</p>

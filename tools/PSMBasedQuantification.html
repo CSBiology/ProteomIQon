@@ -78,6 +78,11 @@
   </a>
 </li>             
 <li class="nav-item ">
+  <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/PeptideSpectrumMatchingTIMs.html">
+    PeptideSpectrumMatchingTIMs
+  </a>
+</li>             
+<li class="nav-item ">
   <a class="nav-link" href="https://csbiology.github.io/ProteomIQon/tools/MsFraggerToPSM.html">
     MsFraggerToPSM
   </a>
@@ -396,6 +401,201 @@ With one file per flag the pair is used as given. With lists, the n-th mzlite fi
 
 <span onmouseout="hideTip(event, 'fs35', 46)" onmouseover="showTip(event, 'fs35', 46)" class="m">Json</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs36', 47)" onmouseover="showTip(event, 'fs36', 47)" class="id">serializeAndWrite</span> <span onmouseout="hideTip(event, 'fs29', 48)" onmouseover="showTip(event, 'fs29', 48)" class="id">outputPath</span> <span onmouseout="hideTip(event, 'fs17', 49)" onmouseover="showTip(event, 'fs17', 49)" class="id">quantificationParams</span>
 </code></pre>
+<h2><a name="Outputs" class="anchor" href="#Outputs">Outputs</a></h2>
+<p>The resulting <code>.quant</code> file is generated as a tab-delimited text file.
+These columns can be inspected individually to examine specific search results, scoring metrics, and identification parameters.</p>
+<table>
+<thead>
+<tr class="header">
+<th><p>Column</p></th>
+<th><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><p>StringSequence</p></td>
+<td><p>Amino Acid sequence (one-letter code) from PeptideDB which matches the psm candidate</p></td>
+</tr>
+<tr class="even">
+<td><p>GlobalMod</p></td>
+<td><p>Indicator, if a peptide ion species is labeled or unlabeled</p></td>
+</tr>
+<tr class="odd">
+<td><p>Charge</p></td>
+<td><p>Precursor ion charge state</p></td>
+</tr>
+<tr class="even">
+<td><p>PepSequenceID</p></td>
+<td><p>Unique identifier of the unmodified peptide sequence, which points to PeptideDB</p></td>
+</tr>
+<tr class="odd">
+<td><p>ModSequenceID</p></td>
+<td><p>Unique identifier of the modified peptide sequence (including PTMs, e.g., methylation), which points to PeptideDB</p></td>
+</tr>
+<tr class="even">
+<td><p>PrecursorMZ</p></td>
+<td><p>Precursor ion mass-to-charge ratio (m/z)</p></td>
+</tr>
+<tr class="odd">
+<td><p>MeasuredMass</p></td>
+<td><p>Measured mass of precursor ions in Dalton</p></td>
+</tr>
+<tr class="even">
+<td><p>TheoMass</p></td>
+<td><p>Theoretical peptide mass in the spectrum (based on amino acid composition) in Dalton</p></td>
+</tr>
+<tr class="odd">
+<td><p>AbsDeltaMass</p></td>
+<td><p>Absolute mass deviation between theoretical and measured mass (mass error)</p></td>
+</tr>
+<tr class="even">
+<td><p>MeanPercolatorScore</p></td>
+<td><p>The peptide spectrum matches (PSMs) are re-scored based on several parameters. This value corresponds to the average consensus score determined in the process</p></td>
+</tr>
+<tr class="odd">
+<td><p>QValue</p></td>
+<td><p>Q-value (False-Discovery-Rate) based on combined model scores</p></td>
+</tr>
+<tr class="even">
+<td><p>PEPValue</p></td>
+<td><p>Posterior Error Probability</p></td>
+</tr>
+<tr class="odd">
+<td><p>ProteinNames</p></td>
+<td><p>Protein Names out of the PeptideDB</p></td>
+</tr>
+<tr class="even">
+<td><p>QuantMZ_Light</p></td>
+<td><p>Mass-to-charge ratio from the extracted XIC of the unlabeled peptide ion</p></td>
+</tr>
+<tr class="odd">
+<td><p>Quant_Light</p></td>
+<td><p>Peak area from the extracted XIC of the unlabeled peptide ion</p></td>
+</tr>
+<tr class="even">
+<td><p>MeasuredApex_Light</p></td>
+<td><p>Measured Apex of unlabeled peak</p></td>
+</tr>
+<tr class="odd">
+<td><p>Seo_Light</p></td>
+<td><p>Standard Error of Prediction for quantification</p></td>
+</tr>
+<tr class="even">
+<td><p>Params_Light</p></td>
+<td><p>Describes the shape of the fitted peak for the unlabeled version of a peptide. Contains information about peak height, estimated peak time, and peak width.</p></td>
+</tr>
+<tr class="odd">
+<td><p>Diffrence_SearchRT_FittedRT_Light</p></td>
+<td><p>Difference between the retention time originally determined using PSMs and the retention time calculated from the measured peak</p></td>
+</tr>
+<tr class="even">
+<td><p>KLDiv_Observed_Theoretical_Light</p></td>
+<td><p>Describes how well the measured unlabeled isotope pattern matches the theoretically expected pattern.</p></td>
+</tr>
+<tr class="odd">
+<td><p>KLDiv_CorrectObserved_Theoretical_Light</p></td>
+<td><p>Corrected Kullback-Leiber divergence of isotopic pattern of unlabeled peptide ion versus the measured pattern</p></td>
+</tr>
+<tr class="even">
+<td><p>QuantMZ_Heavy</p></td>
+<td><p>Mass-to-charge ratio from the extracted XIC of the labeled peptide ion</p></td>
+</tr>
+<tr class="odd">
+<td><p>Quant_Heavy</p></td>
+<td><p>Peak area from the extracted XIC of the labeled peptide ion</p></td>
+</tr>
+<tr class="even">
+<td><p>MeasuredApex_Heavy</p></td>
+<td><p>Measured Apex of labeled peak</p></td>
+</tr>
+<tr class="odd">
+<td><p>Seo_Heavy</p></td>
+<td><p>Standard Error of Prediction of quantification</p></td>
+</tr>
+<tr class="even">
+<td><p>Params_Heavy</p></td>
+<td><p>Describes the shape of the fitted peak for the labeled version of a peptide. Contains information about peak height, estimated peak time, and peak width.</p></td>
+</tr>
+<tr class="odd">
+<td><p>Diffrence_SearchRT_FittedRT_Heavy</p></td>
+<td><p>Difference between the retention time originally determined using PSMs and the retention time calculated from the measured peak</p></td>
+</tr>
+<tr class="even">
+<td><p>KLDiv_Observed_Theoretical_Heavy</p></td>
+<td><p>Describes how well the measured labeled isotope pattern matches the theoretically expected pattern.</p></td>
+</tr>
+<tr class="odd">
+<td><p>KLDiv_CorrectObserved_Theoretical_Heavy</p></td>
+<td><p>Corrected Kullback-Leiber divergence of isotopic pattern of labeled peptide ion versus the measured pattern</p></td>
+</tr>
+<tr class="even">
+<td><p>Correlation_Light_Heavy</p></td>
+<td><p>Correlation calculated based on Pearson between unlabeled and labeled peaks</p></td>
+</tr>
+<tr class="odd">
+<td><p>QuantificationSource</p></td>
+<td><p>If spectra are found over Alignments or Peptide Spectrum Matching</p></td>
+</tr>
+<tr class="even">
+<td><p>IsotopicPatternMz_Light</p></td>
+<td><p>M/z-distribution of isotope cluster in spectra for unlabeled peaks</p></td>
+</tr>
+<tr class="odd">
+<td><p>IsotopicPatternIntensity_Observed_Light</p></td>
+<td><p>Observed intensity distribution of unlabeled isotopic clusters</p></td>
+</tr>
+<tr class="even">
+<td><p>IsotopicPatternIntensity_Corrected_Light</p></td>
+<td><p>Corrected intensity distribution of unlabeled isotopic clusters</p></td>
+</tr>
+<tr class="odd">
+<td><p>RtTrace_Light</p></td>
+<td><p>Retention Time Profile of unlabeled peptide ion</p></td>
+</tr>
+<tr class="even">
+<td><p>IntensityTrace_Observed_Light</p></td>
+<td><p>Intensity trace over for an observed unlabeled isotopic peak cluster</p></td>
+</tr>
+<tr class="odd">
+<td><p>IntensityTrace_Corrected_Light</p></td>
+<td><p>Corrected intensity trace between an unlabeled peak and a measured isotopic peak cluster</p></td>
+</tr>
+<tr class="even">
+<td><p>IsotopicPatternMZ_Heavy</p></td>
+<td><p>M/z-distribution of isotope cluster in spectra for labeled peaks</p></td>
+</tr>
+<tr class="odd">
+<td><p>IsotopicPatternIntensity_Observed_Heavy</p></td>
+<td><p>Observed intensity distribution of labeled isotopic clusters</p></td>
+</tr>
+<tr class="even">
+<td><p>IsotopicPatternIntensity_Corrected_Heavy</p></td>
+<td><p>Corrected intensity distribution of labeled isotopic clusters</p></td>
+</tr>
+<tr class="odd">
+<td><p>RtTrace_Heavy</p></td>
+<td><p>Retention Time Profile of labeled peptide ion</p></td>
+</tr>
+<tr class="even">
+<td><p>IntensityTrace_Observed_Heavy</p></td>
+<td><p>Intensity trace for an observed labeled isotopic peak cluster</p></td>
+</tr>
+<tr class="odd">
+<td><p>IntensityTrace_Corrected_Heavy</p></td>
+<td><p>Corrected intensity trace between a labeled peak and a measured isotopic peak cluster</p></td>
+</tr>
+<tr class="even">
+<td><p>AlignmentScore</p></td>
+<td><p>Actual known alignments compared with the observed alignments</p></td>
+</tr>
+<tr class="odd">
+<td><p>AlignmentQValue</p></td>
+<td><p>Q-value, which is calculated based on the alignment score</p></td>
+</tr>
+</tbody>
+</table>
+
+<p>*</p>
 <h2><a name="Running-the-tool" class="anchor" href="#Running-the-tool">Running the tool</a></h2>
 <p>Install with <code>dotnet tool install --global ProteomIQon.PSMBasedQuantification</code>, then quantify one run:</p>
 <table class="pre"><tr><td class="snippet"><pre class="fssnip"><code lang="text">proteomiqon-psmbasedquantification -i path/to/run.mzlite -ii path/to/run.qpsm -d path/to/database.db -o path/to/output -p path/to/QuantificationParams.json

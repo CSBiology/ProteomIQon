@@ -9,6 +9,8 @@
 PSMStatistics learns one combined score from these columns. It uses the target and decoy labels of the matches as training signal, retrains in iterations while the set of confident targets grows (semi supervised), and stops when an iteration adds too few new positives or the iteration limit is reached.
 From the combined score it computes a [q-value](https://www.biofsharp.com/BioFSharp.Mz/04_01_fdr_control.html#Computing-q-values-by-counting-decoys) and a [PEP value](https://www.biofsharp.com/BioFSharp.Mz/04_01_fdr_control.html#From-list-level-q-to-single-PSM-PEP) per match and keeps the PSMs under both thresholds.
 
+PSMStatistics also reads the output of [PeptideSpectrumMatchingTIMs](https://csbiology.github.io/ProteomIQon/tools/PeptideSpectrumMatchingTIMs.html). Both tools write the 28 column layout of this release, and `.psm` files written by earlier releases (23 columns) have to be regenerated before this release of PSMStatistics reads them. When every row carries finite `Hyperscore` and `Expectscore` values, it uses both as model features, with `Expectscore` represented by its negative log10, and seeds the first training round with the expectation value. Without them the SEQUEST-like score seeds it, as before.
+
 <img src="https://csbiology.github.io/ProteomIQon/img/SemiSupervisedScoring.png" width="1000" height="750" />
 ## Inputs and outputs
 
@@ -76,6 +78,40 @@ let outputPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "pSMStatis
 
 Json.serializeAndWrite outputPath psmStatisticsParams
 (**
+## Outputs
+
+The resulting `.qpsm` file is generated as a tab-delimited text file.
+These columns can be inspected individually to examine specific search results, scoring metrics, and identification parameters.
+| Column                     | Description                                                                                                      |
+|----------------------------|------------------------------------------------------------------------------------------------------------------|
+| PSMId                      | Identifier of the MS/MS spectrum                                                                                 |
+| GlobalMod                  | Indicator, if a peptide ion species is labeled or unlabeled                                                      |
+| PepSequenceID              | Unique identifier of the unmodified peptide sequence, which points to PeptideDB                                  |
+| ModSequenceID              | Unique identifier of the modified peptide sequence (including PTMs, e.g., methylation), which points to PeptideDB|
+| Label                      | Target/decoy label: 1 = target, −1 = decoy                                                                       |
+| ScanNr                     | Scan identifier, combining the spectrum ID in the raw file with an ascending MS2 ID                              |
+| ScanTime                   | Retention time (RT) in minutes of the MS/MS scan                                                                 |
+| Charge                     | Precursor ion charge state                                                                                       |
+| PrecursorMZ                | Precursor ion mass-to-charge ratio (m/z)                                                                         |
+| TheoMass                   | Theoretical peptide mass in the spectrum (based on amino acid composition) in Dalton                             |
+| AbsDeltaMass               | Absolute mass deviation between theoretical and measured mass (mass error)                                       |
+| PeptideLength              | Peptide length in Amino Acid count                                                                               |
+| MissCleavages              | Number of missed cleavages                                                                                       |
+| SequestScore               | SEQUEST similarity score (e.g., XCorr) quantifying agreement between theoretical and experimental spectra        |
+| SequestNormDeltaBestToRest | Normalized separation of the best SEQUEST score from the remaining candidate scores                              |
+| SequestNormDeltaNext       | Normalized separation between the best and second-best SEQUEST scores                                            |
+| AndroScore                 | Andromeda score quantifying the match between theoretical and experimental spectra                               |
+| AndroNormDeltaBestToRest   | Normalized separation of the best Andromeda score from the remaining candidate scores                            |
+| AndroNormDeltaNext         | Normalized separation between the best and second-best Andromeda scores                                          |
+| XTandemScore               | XTandem score quantifying the match between theoretical and experimental spectra                                 |
+| XtandemNormDeltaBestToRest | Normalized separation of the best XTandem score from the remaining candidate scores                              |
+| XtandemNormDeltaNext       | Normalized separation between the best and second-best XTandem scores                                            |
+| ModelScore                 | Best score value achieved by iterative model to distinguish between target &amp; decoy                               |
+| QValue                     | Q-value (False-Discovery-Rate) based on combined model scores                                                     |
+| PEPValue                   | Posterior Error Probability                                                                                      |
+| StringSequence             | Amino Acid sequence (one-letter code) from PeptideDB which matches the psm candidate                             |
+| ProteinNames               | Protein Names out of the PeptideDB                                                                               |
+
 ## Running the tool
 
 Install with `dotnet tool install --global ProteomIQon.PSMStatistics`, then score one run:
