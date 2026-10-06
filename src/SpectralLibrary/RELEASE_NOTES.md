@@ -1,3 +1,6 @@
+#### Unreleased
+* Update BioFSharp.Mz to 0.2.2
+
 #### 0.0.6 - Wednesday, September 2, 2026
 * Fix database connection
 * Update to .NET 10

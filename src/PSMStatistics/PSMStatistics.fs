@@ -1,5 +1,6 @@
 namespace ProteomIQon
 
+open System
 open System.Data.SQLite
 open BioFSharp
 open BioFSharp.Mz.SearchDB
@@ -64,6 +65,12 @@ module PSMStatistics =
         XtandemNormDeltaBestToRest   : float32
         [<ColumnName("XtandemNormDeltaNext")>]
         XtandemNormDeltaNext         : float32
+        /// Hyperscore of PeptideSpectrumMatchingTIMs, 0 when the input has none.
+        [<ColumnName("Hyperscore")>]
+        Hyperscore                   : float32
+        /// Negative log10 of the expectation value of PeptideSpectrumMatchingTIMs, 0 when the input has none.
+        [<ColumnName("LogExpectscore")>]
+        LogExpectscore               : float32
         [<ColumnName("Peptide")>]
         Peptide                      : string
         [<ColumnName("Protein")>]
@@ -173,6 +180,8 @@ module PSMStatistics =
             XtandemScore                 = float32 psm.XtandemScore
             XtandemNormDeltaBestToRest   = float32 psm.XtandemNormDeltaBestToRest
             XtandemNormDeltaNext         = float32 psm.XtandemNormDeltaNext
+            Hyperscore                   = if Double.IsFinite psm.Hyperscore then float32 psm.Hyperscore else 0.f
+            LogExpectscore               = if Double.IsFinite psm.Expectscore && psm.Expectscore > 0. then float32 (-log10 psm.Expectscore) else 0.f
             Peptide                      = flankedPepSequence
             Protein                      = proteinNames
         }
@@ -212,6 +221,11 @@ module PSMStatistics =
         logger.Trace "Read scored PSMs: finished"
 
         logger.Trace "Prepare processing functions."
+        // PeptideSpectrumMatchingTIMs fills Hyperscore and Expectscore, PeptideSpectrumMatching writes NaN.
+        // With finite values the two become features and the expectation value seeds the training.
+        let useTimsScores = psms |> Array.forall (fun x -> Double.IsFinite x.Hyperscore && Double.IsFinite x.Expectscore)
+        logger.Trace (sprintf "Hyperscore and expectation value present: %b" useTimsScores)
+        let seedScore (x: PSMToLearn) = if useTimsScores then x.LogExpectscore else x.SequestScore
         let maxCharge = psms |> Array.map (fun x -> x.Charge) |> Array.max
         let proteinAndClvIdxLookUp = initProteinAndClvIdxLookUp memoryDB pepDBTr
         let toPSMToLearn = initToPSMToLearn maxCharge processParams.FastaHeaderToName proteinAndClvIdxLookUp
@@ -225,28 +239,30 @@ module PSMStatistics =
             let trainModel positives' negatives' =
                 let data = ctx.Data.LoadFromEnumerable(positives' + negatives')
                 let split = ctx.Data.TrainTestSplit(data, testFraction= 0.1)
+                let featureColumns =
+                    [|
+                        "OneHotCharge"
+                        "PrecursorMZ"
+                        "TheoMass"
+                        "AbsDeltaMass"
+                        "PeptideLength"
+                        "MissCleavages"
+                        "SequestScore"
+                        "SequestNormDeltaBestToRest"
+                        "SequestNormDeltaNext"
+                        "AndroScore"
+                        "AndroNormDeltaBestToRest"
+                        "AndroNormDeltaNext"
+                        "XtandemScore"
+                        "XtandemNormDeltaBestToRest"
+                        "XtandemNormDeltaNext"
+                        if useTimsScores then
+                            "Hyperscore"
+                            "LogExpectscore"
+                    |]
                 let pipeline =    
                     (ctx.Transforms.Categorical.OneHotEncoding("OneHotCharge","Charge") |> downcastPipeline)
-                        .Append(
-                            ctx.Transforms.Concatenate(
-                                "Features",
-                                "OneHotCharge",
-                                "PrecursorMZ",
-                                "TheoMass",
-                                "AbsDeltaMass",
-                                "PeptideLength",
-                                "MissCleavages",
-                                "SequestScore",
-                                "SequestNormDeltaBestToRest",
-                                "SequestNormDeltaNext",
-                                "AndroScore",
-                                "AndroNormDeltaBestToRest",
-                                "AndroNormDeltaNext",
-                                "XtandemScore",
-                                "XtandemNormDeltaBestToRest",
-                                "XtandemNormDeltaNext"
-                                )
-                            )
+                        .Append(ctx.Transforms.Concatenate("Features", featureColumns))
                         .Append(ctx.Transforms.NormalizeMeanVariance("featuresNorm","Features"))
                         .Append(ctx.BinaryClassification.Trainers.FastTree(featureColumnName="featuresNorm",labelColumnName="Label"))
              
@@ -282,23 +298,23 @@ module PSMStatistics =
                 psmsToLearn
                 |> Array.groupBy (fun x -> x.ScanNr)
                 |> Array.map (fun (psmId,psms) -> 
-                    psms |> Array.maxBy (fun x -> x.SequestScore)
+                    psms |> Array.maxBy seedScore
                     )
-            let q = BioFSharp.Mz.FDRControl.calculateQValueStorey bestPSMPerScan (fun s -> s.Label |> not) (fun s -> float s.SequestScore) (fun s -> float s.SequestScore) 
+            let q = BioFSharp.Mz.FDRControl.calculateQValueStorey bestPSMPerScan (fun s -> s.Label |> not) (fun s -> float (seedScore s)) (fun s -> float (seedScore s)) 
 
             let scoreVsQ = 
                 bestPSMPerScan
-                |> Array.map (fun x -> x.SequestScore,q (float x.SequestScore))
+                |> Array.map (fun x -> seedScore x,q (float (seedScore x)))
 
             let tar = 
                 bestPSMPerScan 
                 |> Array.filter (fun x -> x.Label) 
-                |> Array.map (fun x -> x.SequestScore )
+                |> Array.map seedScore
 
             let decoy = 
                 bestPSMPerScan 
                 |> Array.filter (fun x -> x.Label |> not) 
-                |> Array.map (fun x -> x.SequestScore)
+                |> Array.map seedScore
             if diagCharts then
                 [
                     [
@@ -322,7 +338,7 @@ module PSMStatistics =
             logger.Trace "Selecting positives for training"
             let positives' = 
                 bestPSMPerScan 
-                |> Array.filter (fun x -> q (float x.SequestScore) < 0.001)
+                |> Array.filter (fun x -> q (float (seedScore x)) < 0.001)
                 |> Array.filter (fun x -> x.Label = true)
                 |> Array.map (fun x -> x.ScanNr,x)
                 |> Map.ofArray

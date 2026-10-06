@@ -3,7 +3,7 @@
 title: AlignmentBasedQuantStatistics
 category: Tools
 categoryindex: 1
-index: 12
+index: 13
 ---
 *)
 
