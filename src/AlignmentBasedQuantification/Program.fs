@@ -49,7 +49,7 @@ module console1 =
         logger.Trace "Set Index on data base if not present: finished"
         if File.Exists i then
             logger.Info "single file"
-            quantifyPeptides dc p o d i iii iv ii 
+            quantifyPeptides dc p o d i iv iii ii 
         elif Directory.Exists i && Directory.Exists ii then
             logger.Info "multiple files"
             let mzfiles =
