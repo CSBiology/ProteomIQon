@@ -3,14 +3,14 @@
 title: ProteinInference
 category: Tools
 categoryindex: 1
-index: 9
+index: 10
 ---
 *)
 
 (*** hide ***)
 
 (*** condition: prepare ***)
-#r "nuget: BioFSharp.Mz, 0.2.1"
+#r "nuget: BioFSharp.Mz, 0.2.2"
 #r "nuget: Newtonsoft.Json, 13.0.4"
 #r "../../src/ProteomIQon/bin/Release/net10.0/ProteomIQon.dll"
 
@@ -83,6 +83,25 @@ let proteinInferenceParams : Dto.ProteinInferenceParams =
 let outputPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "ProteinInferenceParams.json")
 
 Json.serializeAndWrite outputPath proteinInferenceParams
+
+(**
+## Outputs
+
+The resulting `.prot` file is generated as a tab-delimited text file.
+These columns can be inspected individually to examine specific search results, scoring metrics, and identification parameters.
+
+| Column          | Description                                                                                                                       |   
+|-----------------|-----------------------------------------------------------------------------------------------------------------------------------|
+| ProteinGroup    | Protein Identifier Collection                                                                                                     |
+| PeptideSequence | List of all peptides assigned to this protein group                                                                               |
+| Class           | Peptide Evidence Classes (C1A, C1B, C2A, C2B, C3A, C3B) which define how a peptide has been assigned to its corresponding protein |
+| TargetScore     | Target Score calculated based on the individual peptide scores of PSM                                                             |
+| DecoyScore      | Decoy Score calculated based on the individual peptide scores of PSM                                                              |
+| QValue          | Q-value (False-Discovery-Rate) for every identified protein                                                                        |
+
+
+For more information on the columns, please refer to the [Protein Inference](https://www.biofsharp.com/BioFSharp.Mz/04_02_protein_inference.html)the BioFSharp.Mz documentation.
+**)
 
 (**
 ## Running the tool

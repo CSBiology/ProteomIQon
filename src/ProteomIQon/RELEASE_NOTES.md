@@ -1,3 +1,10 @@
+#### 0.0.12 - Monday, September 28, 2026
+* Extend PeptideSpectrumMatchingResult with IonMobility, Hyperscore, Expectscore, MatchedIons and TotalIons. Breaking: .psm files written by earlier releases have 23 columns and have to be regenerated before PSMStatistics of this release reads them
+* Add the PeptideSpectrumMatchingTIMs parameter record and default parameters, with MinFragmentsModelling 1
+* Keep one spline knot per score in the PEP estimation, so tied scores no longer get a NaN PEP
+* Make the PEPs monotone by pooling adjacent violators, so a few high scoring decoys no longer set almost every PEP to 1
+* Update BioFSharp.Mz to 0.2.2
+
 #### 0.0.11 - Wednesday, September 2, 2026
 * Add Gabor3D parameters and default params for PSMBasedQuantificationTIMs
 * Write a header only csv instead of failing when a result sequence is empty

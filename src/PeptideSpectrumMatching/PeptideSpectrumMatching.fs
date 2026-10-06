@@ -261,6 +261,11 @@ module PeptideSpectrumMatching =
                                                                     XtandemNormDeltaBestToRest   = xTandemRes.NormDeltaBestToRest  
                                                                     XtandemNormDeltaNext         = xTandemRes.NormDeltaNext  
                                                                     StringSequence               = androRes.StringSequence
+                                                                    IonMobility                  = nan
+                                                                    Hyperscore                   = nan
+                                                                    Expectscore                  = nan
+                                                                    MatchedIons                  = 0
+                                                                    TotalIons                    = 0
                                                                 }
                                                             Some (label,res)
                                                         | None -> None 
@@ -294,6 +299,11 @@ module PeptideSpectrumMatching =
                                                                     XtandemNormDeltaBestToRest   = xTandemRes.NormDeltaBestToRest  
                                                                     XtandemNormDeltaNext         = xTandemRes.NormDeltaNext 
                                                                     StringSequence               = androRes.StringSequence
+                                                                    IonMobility                  = nan
+                                                                    Hyperscore                   = nan
+                                                                    Expectscore                  = nan
+                                                                    MatchedIons                  = 0
+                                                                    TotalIons                    = 0
                                                                 }
                                                             Some (label,res)
                                                         | None -> None 
