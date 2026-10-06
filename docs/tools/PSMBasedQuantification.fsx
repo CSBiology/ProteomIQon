@@ -123,6 +123,63 @@ let outputPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "Quantific
 
 Json.serializeAndWrite outputPath quantificationParams
 
+
+(**
+## Outputs 
+The resulting `.quant` file is generated as a tab-delimited text file.
+These columns can be inspected individually to examine specific search results, scoring metrics, and identification parameters.
+
+| Column                                   | Description                                                                                                                                                      |
+|------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| StringSequence                           | Amino Acid sequence (one-letter code) from PeptideDB which matches the psm candidate                                                                             |
+| GlobalMod                                | Indicator, if a peptide ion species is labeled or unlabeled                                                                                                      |
+| Charge                                   | Precursor ion charge state                                                                                                                                       |
+| PepSequenceID                            | Unique identifier of the unmodified peptide sequence, which points to PeptideDB                                                                                  |
+| ModSequenceID                            | Unique identifier of the modified peptide sequence (including PTMs, e.g., methylation), which points to PeptideDB                                                |
+| PrecursorMZ                              | Precursor ion mass-to-charge ratio (m/z)                                                                                                                         |
+| MeasuredMass                             | Measured mass of precursor ions in Dalton                                                                                                                        |
+| TheoMass                                 | Theoretical peptide mass in the spectrum (based on amino acid composition) in Dalton                                                                             |
+| AbsDeltaMass                             | Absolute mass deviation between theoretical and measured mass (mass error)                                                                                       |
+| MeanPercolatorScore                      | The peptide spectrum matches (PSMs) are re-scored based on several parameters. This value corresponds to the average consensus score determined in the process   |
+| QValue                                   | Q-value (False-Discovery-Rate) based on combined model scores                                                                                                     |
+| PEPValue                                 | Posterior Error Probability                                                                                                                                      |
+| ProteinNames                             | Protein Names out of the PeptideDB                                                                                                                               |
+| QuantMZ_Light                            | Mass-to-charge ratio from the extracted XIC of the unlabeled peptide ion                                                                                         |
+| Quant_Light                              | Peak area from the extracted XIC of the unlabeled peptide ion                                                                                                    |
+| MeasuredApex_Light                       | Measured Apex of unlabeled peak                                                                                                                                  |
+| Seo_Light                                | Standard Error of Prediction for quantification                                                                                                                  |
+| Params_Light                             | Describes the shape of the fitted peak for the unlabeled version of a peptide. Contains information about peak height, estimated peak time, and peak width.      |
+| Diffrence_SearchRT_FittedRT_Light        | Difference between the retention time originally determined using PSMs and the retention time calculated from the measured peak                                  |
+| KLDiv_Observed_Theoretical_Light         | Describes how well the measured unlabeled isotope pattern matches the theoretically expected pattern.                                                            |
+| KLDiv_CorrectObserved_Theoretical_Light  | Corrected Kullback-Leiber divergence of isotopic pattern of unlabeled peptide ion versus the measured pattern                                                    |
+| QuantMZ_Heavy                            | Mass-to-charge ratio from the extracted XIC of the labeled peptide ion                                                                                           |
+| Quant_Heavy                              | Peak area from the extracted XIC of the labeled peptide ion                                                                                                      |
+| MeasuredApex_Heavy                       | Measured Apex of labeled peak                                                                                                                                    |
+| Seo_Heavy                                | Standard Error of Prediction of quantification                                                                                                                   |
+| Params_Heavy                             | Describes the shape of the fitted peak for the labeled version of a peptide. Contains information about peak height, estimated peak time, and peak width.        |
+| Diffrence_SearchRT_FittedRT_Heavy        | Difference between the retention time originally determined using PSMs and the retention time calculated from the measured peak                                  |
+| KLDiv_Observed_Theoretical_Heavy         | Describes how well the measured labeled isotope pattern matches the theoretically expected pattern.                                                              |
+| KLDiv_CorrectObserved_Theoretical_Heavy  | Corrected Kullback-Leiber divergence of isotopic pattern of labeled peptide ion versus the measured pattern                                                      |
+| Correlation_Light_Heavy                  | Correlation calculated based on Pearson between unlabeled and labeled peaks                                                                                      |
+| QuantificationSource                     | If spectra are found over Alignments or Peptide Spectrum Matching                                                                                                |
+| IsotopicPatternMz_Light                  | M/z-distribution of isotope cluster in spectra for unlabeled peaks                                                                                               |
+| IsotopicPatternIntensity_Observed_Light  | Observed intensity distribution of unlabeled isotopic clusters                                                                                                   |
+| IsotopicPatternIntensity_Corrected_Light | Corrected intensity distribution of unlabeled isotopic clusters                                                                                                  |
+| RtTrace_Light                            | Retention Time Profile of unlabeled peptide ion                                                                                                                  |
+| IntensityTrace_Observed_Light            | Intensity trace over for an observed unlabeled isotopic peak cluster                                                                                          |
+| IntensityTrace_Corrected_Light           | Corrected intensity trace between an unlabeled peak and a measured isotopic peak cluster                                                                        |
+| IsotopicPatternMZ_Heavy                  | M/z-distribution of isotope cluster in spectra for labeled peaks                                                                                                 |
+| IsotopicPatternIntensity_Observed_Heavy  | Observed intensity distribution of labeled isotopic clusters                                                                                                     |
+| IsotopicPatternIntensity_Corrected_Heavy | Corrected intensity distribution of labeled isotopic clusters                                                                                                    |
+| RtTrace_Heavy                            | Retention Time Profile of labeled peptide ion                                                                                                                    |
+| IntensityTrace_Observed_Heavy            | Intensity trace for an observed labeled isotopic peak cluster                                                                                            |
+| IntensityTrace_Corrected_Heavy           | Corrected intensity trace between a labeled peak and a measured isotopic peak cluster                                                                           |
+| AlignmentScore                           | Actual known alignments compared with the observed alignments                                                                                                    |
+| AlignmentQValue                          | Q-value, which is calculated based on the alignment score                                                                                                        |
+ 
+**)
+
+
 (**
 ## Running the tool
 
