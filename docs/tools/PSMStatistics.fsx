@@ -100,6 +100,7 @@ Json.serializeAndWrite outputPath psmStatisticsParams
 ## Outputs
 The resulting `.qpsm` file is generated as a tab-delimited text file.
 These columns can be inspected individually to examine specific search results, scoring metrics, and identification parameters.
+
 | Column                     | Description                                                                                                      |
 |----------------------------|------------------------------------------------------------------------------------------------------------------|
 | PSMId                      | Identifier of the MS/MS spectrum                                                                                 |
@@ -125,10 +126,11 @@ These columns can be inspected individually to examine specific search results, 
 | XtandemNormDeltaBestToRest | Normalized separation of the best XTandem score from the remaining candidate scores                              |
 | XtandemNormDeltaNext       | Normalized separation between the best and second-best XTandem scores                                            |  
 | ModelScore                 | Best score value achieved by iterative model to distinguish between target & decoy                               |
-| QValue                     | Q-value (False-Discovery-Rate) based on combined model scores                                                     |
+| QValue                     | Q-value (False-Discovery-Rate) based on combined model scores                                                    |
 | PEPValue                   | Posterior Error Probability                                                                                      |
 | StringSequence             | Amino Acid sequence (one-letter code) from PeptideDB which matches the psm candidate                             |
 | ProteinNames               | Protein Names out of the PeptideDB                                                                               |
+
 *)
 
 
