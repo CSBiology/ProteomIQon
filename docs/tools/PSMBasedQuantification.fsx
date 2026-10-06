@@ -176,8 +176,8 @@ These columns can be inspected individually to examine specific search results, 
 | IntensityTrace_Corrected_Heavy           | Corrected intensity trace between a labeled peak and a measured isotopic peak cluster                                                                           |
 | AlignmentScore                           | Actual known alignments compared with the observed alignments                                                                                                    |
 | AlignmentQValue                          | Q-value, which is calculated based on the alignment score                                                                                                        |
- 
-**)
+
+*)
 
 
 (**
