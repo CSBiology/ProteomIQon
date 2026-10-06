@@ -42,7 +42,7 @@ The tool reads the same parameter record as MzMLToMzLite. The spectra are writte
 The reader fails on mzML without ion mobility data. `-f` rewrites every input file in place and removes the string `&quot`, for mzML exports where that string breaks the XML reader.
 
 The tool writes one `<run>.mzlite` per input into the output directory. Spectra with an MS level other than 1 or 2 stop the conversion with an error. Scan times are stored in minutes.
-The mzlite is read by [MsFraggerToPSM]({{root}}tools/MsFraggerToPSM.html) and [PSMBasedQuantificationTIMs]({{root}}tools/PSMBasedQuantificationTIMs.html).
+The mzlite is read by [PeptideSpectrumMatchingTIMs]({{root}}tools/PeptideSpectrumMatchingTIMs.html) and [PSMBasedQuantificationTIMs]({{root}}tools/PSMBasedQuantificationTIMs.html), and by [MsFraggerToPSM]({{root}}tools/MsFraggerToPSM.html) when the identification comes from FragPipe.
 The output directory also receives `MzMLToMzLite_log.txt` and one `<run>_log.txt` per input.
 ## Parameters
 

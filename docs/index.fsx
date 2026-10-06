@@ -59,12 +59,14 @@ PSMBasedQuantification and JoinQuantPepIonsWithProteins:
 | Score the transfers | [AlignmentBasedQuantStatistics]({{root}}tools/AlignmentBasedQuantStatistics.html) | .quant, .align | .quant |
 | Reassign protein groups | [AddDeducedPeptides]({{root}}tools/AddDeducedPeptides.html) | .quant, .prot | .prot |
 
-Four more tools cover other inputs. For 15N labeled samples, [RatioLFQ]({{root}}tools/RatioLFQ.html) turns the
+Five more tools cover other inputs. For 15N labeled samples, [RatioLFQ]({{root}}tools/RatioLFQ.html) turns the
 light to heavy ratios in LabeledQuant.txt into one intensity per run and protein. For timsTOF data with ion mobility,
-[MzMLToMzLiteIonMobility]({{root}}tools/MzMLToMzLiteIonMobility.html) converts the mzML,
-[MsFraggerToPSM]({{root}}tools/MsFraggerToPSM.html) imports an MSFragger search, and
+[MzMLToMzLiteIonMobility]({{root}}tools/MzMLToMzLiteIonMobility.html) converts the mzML, and
+[MsFraggerToPSM]({{root}}tools/MsFraggerToPSM.html) imports an MSFragger search. [PeptideSpectrumMatchingTIMs]({{root}}tools/PeptideSpectrumMatchingTIMs.html) identifies the spectra of an ion
+mobility run without MSFragger and writes the `.psm` that [PSMStatistics]({{root}}tools/PSMStatistics.html) reads.
 [PSMBasedQuantificationTIMs]({{root}}tools/PSMBasedQuantificationTIMs.html) quantifies in retention time and ion
-mobility.
+mobility from the FragPipe layout of MsFraggerToPSM. The `.qpsm` of PSMStatistics carries no ion mobility yet, so that
+link from PeptideSpectrumMatchingTIMs to the quantification is still open.
 
 The core project
 ------------------

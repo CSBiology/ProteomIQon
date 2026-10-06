@@ -3,7 +3,7 @@
 title: PSMStatistics
 category: Tools
 categoryindex: 1
-index: 6
+index: 7
 ---
 *)
 
@@ -28,6 +28,8 @@ index: 6
 [PeptideSpectrumMatching]({{root}}tools/PeptideSpectrumMatching.html) reports several scores for every spectrum (SEQUEST-like, Andromeda-like, X!Tandem-like, plus mass error, peptide length and how far the best candidate is ahead of the next one).
 PSMStatistics learns one combined score from these columns. It uses the target and decoy labels of the matches as training signal, retrains in iterations while the set of confident targets grows (semi supervised), and stops when an iteration adds too few new positives or the iteration limit is reached.
 From the combined score it computes a [q-value](https://www.biofsharp.com/BioFSharp.Mz/04_01_fdr_control.html#Computing-q-values-by-counting-decoys) and a [PEP value](https://www.biofsharp.com/BioFSharp.Mz/04_01_fdr_control.html#From-list-level-q-to-single-PSM-PEP) per match and keeps the PSMs under both thresholds.
+
+PSMStatistics also reads the output of [PeptideSpectrumMatchingTIMs]({{root}}tools/PeptideSpectrumMatchingTIMs.html). Both tools write the 28 column layout of this release, and `.psm` files written by earlier releases (23 columns) have to be regenerated before this release of PSMStatistics reads them. When every row carries finite `Hyperscore` and `Expectscore` values, it uses both as model features, with `Expectscore` represented by its negative log10, and seeds the first training round with the expectation value. Without them the SEQUEST-like score seeds it, as before.
 
 <img src="{{root}}img/SemiSupervisedScoring.png" width="1000" height="750" />
 
