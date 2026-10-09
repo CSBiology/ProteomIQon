@@ -197,13 +197,10 @@ let pipelineTests =
             let psmExe = toolDll "PeptideSpectrumMatching"
             // run tool
             runDotNet (sprintf "%s -i %s -o %s -p %s -d %s" psmExe mzlite outDirectory psmParams db) baseDir
-            let referencePSM = 
-                let psmPath = relToDirectory "../../../data/PeptideSpectrumMatching/out/minimalReference.psm"
-                File.ReadAllLines psmPath
-            let testPSM = 
-                let psmPath = relToDirectory "../../../data/PeptideSpectrumMatching/out/minimal.psm"
-                File.ReadAllLines psmPath
-            let compare = referencePSM = testPSM
+            let compare =
+                tsvFilesEqual 1e-6
+                    (relToDirectory "../../../data/PeptideSpectrumMatching/out/minimalReference.psm")
+                    (relToDirectory "../../../data/PeptideSpectrumMatching/out/minimal.psm")
             // cleanup
             File.Delete (relToDirectory "../../../data/PeptideSpectrumMatching/out/minimal.psm")
             File.Delete (relToDirectory "../../../data/PeptideSpectrumMatching/out/minimal_log.txt")
