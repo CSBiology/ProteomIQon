@@ -1,7 +1,7 @@
 namespace ProteomIQon
 
 // A streaming parser of the spectrum description that reads only the fields the search needs.
-module TimSpectrumHeader =
+module SpectrumDescription =
 
     open Newtonsoft.Json
 

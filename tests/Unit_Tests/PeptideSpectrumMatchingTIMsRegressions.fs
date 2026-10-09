@@ -256,14 +256,14 @@ let all = testList "PeptideSpectrumMatchingTIMs regressions" [
         Expect.equal (windows |> Array.sumBy (fun w -> w.Hi-w.Lo)) 3 "include upper and lower boundary"
     testCase "truncated root at a token boundary is rejected" <| fun _ ->
         let json="""{"ID":"x","properties":{"MS:1000511":{"Values":["2"]}}"""
-        Expect.isNotNull (TimSpectrumHeader.tryParse json).Error "missing final brace is an error"
+        Expect.isNotNull (SpectrumDescription.tryParse json).Error "missing final brace is an error"
     testCase "empty, scalar, array and multiple-root descriptions are rejected" <| fun _ ->
         for json in ["";"null";"[]";"{}{}";"{\"ID\":\"x\""] do
-            Expect.isNotNull (TimSpectrumHeader.tryParse json).Error json
+            Expect.isNotNull (SpectrumDescription.tryParse json).Error json
     testCase "every truncation of a real description is rejected" <| fun _ ->
         let json=IO.File.ReadAllText(IO.Path.Combine(AppContext.BaseDirectory,"sample_description.json")).Trim()
         for length in 0 .. json.Length-1 do
-            Expect.isNotNull (TimSpectrumHeader.tryParse (json.Substring(0,length))).Error (sprintf "prefix length %i" length)
+            Expect.isNotNull (SpectrumDescription.tryParse (json.Substring(0,length))).Error (sprintf "prefix length %i" length)
     testCase "a read failure marks all charges of only the affected spectrum" <| fun _ ->
         let attempt () = {TooFewPeaks=false; Failed=false; Searched=true; Histogram=[|0;1;0|];Targets=[||];Decoys=[||]}
         let header id = {Id=id;Position=0;ScanTime=1.;PrecursorMz=500.;Charge=0;IonMobility=nan}
