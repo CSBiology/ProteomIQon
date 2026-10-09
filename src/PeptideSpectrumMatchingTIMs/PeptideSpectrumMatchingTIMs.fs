@@ -177,7 +177,7 @@ module PeptideSpectrumMatchingTIMs =
                     use cmd = new System.Data.SQLite.SQLiteCommand("SELECT Description FROM Spectrum WHERE RunID = @runID ORDER BY rowid", sql.Connection)
                     cmd.Parameters.AddWithValue("@runID", runId) |> ignore
                     use rows = cmd.ExecuteReader()
-                    while rows.Read() do yield TimSpectrumHeader.tryParse (rows.GetString 0)
+                    while rows.Read() do yield SpectrumDescription.tryParse (rows.GetString 0)
                 }
             | _ -> failwith "PeptideSpectrumMatchingTIMs reads mzlite files, which MzIO serves one spectrum at a time."
         let headers = ResizeArray<Ms2Header>()
