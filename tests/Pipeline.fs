@@ -415,6 +415,32 @@ let pipelineTests =
                 if unequalFields |> Array.isEmpty then true , ""
                 else false, unequalFields |> String.concat ";"
             Expect.isTrue compare (sprintf "Quants are different in the following fields: %s" fields)
+        testCase "MsFraggerToPSM" <| fun _ ->
+            let relToDirectory = getRelativePath baseDir
+            let tsv = relToDirectory "../../../data/MsFraggerToPSM/in/minimal.tsv"
+            let db = relToDirectory "../../../data/PSMBasedQuantificationTIMs/in/minimal.db"
+            let outDirectory = relToDirectory "../../../data/MsFraggerToPSM/out/test/"
+            let msFraggerExe = toolDll "MsFraggerToPSM"
+            if Directory.Exists outDirectory then Directory.Delete(outDirectory, true)
+            Directory.CreateDirectory outDirectory |> ignore
+            // a copy, because the PSMBasedQuantificationTIMs test locks the mzlite at the same time
+            let mzlite = Path.Combine(outDirectory, "minimal.mzlite")
+            File.Copy(relToDirectory "../../../data/PSMBasedQuantificationTIMs/in/minimal.mzlite", mzlite)
+            runDotNet (sprintf "%s -i %s -ii %s -o %s -d %s" msFraggerExe tsv mzlite outDirectory db) baseDir
+            let testPath = relToDirectory "../../../data/MsFraggerToPSM/out/test/minimal.qpsm"
+            // the output has the column layout of PSMStatistics
+            let header = (File.ReadLines testPath |> Seq.head).Split '\t'
+            let expectedHeader =
+                Reflection.FSharpType.GetRecordFields(typeof<ProteomIQon.Dto.PSMStatisticsResult>)
+                |> Array.map (fun field -> field.Name)
+            let compare =
+                tsvFilesEqual 1e-9
+                    (relToDirectory "../../../data/MsFraggerToPSM/out/minimalReference.qpsm")
+                    testPath
+            Directory.Delete(outDirectory, true)
+            Expect.equal header expectedHeader "the header is the one of PSMStatisticsResult"
+            Expect.isTrue compare "QPSMs are different"
+
         testCase "PSMBasedQuantificationTIMs" <| fun _ -> 
             let relToDirectory = getRelativePath baseDir
             let db = relToDirectory "../../../data/PSMBasedQuantificationTIMs/in/minimal.db"
