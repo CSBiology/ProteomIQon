@@ -43,6 +43,7 @@
     <ProjectReference Include="..\src\PeptideSpectrumMatching\PeptideSpectrumMatching.fsproj" ReferenceOutputAssembly="false" />
     <ProjectReference Include="..\src\PeptideSpectrumMatchingTIMs\PeptideSpectrumMatchingTIMs.fsproj" ReferenceOutputAssembly="true" />
     <ProjectReference Include="..\src\PSMStatistics\PSMStatistics.fsproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\src\MsFraggerToPSM\MsFraggerToPSM.fsproj" ReferenceOutputAssembly="false" />
     <ProjectReference Include="..\src\PSMBasedQuantification\PSMBasedQuantification.fsproj" ReferenceOutputAssembly="false" />
     <ProjectReference Include="..\src\QuantBasedAlignment_win-x64\QuantBasedAlignment_win-x64.fsproj" ReferenceOutputAssembly="false" Condition="'$(OS)' == 'Windows_NT'" />
     <ProjectReference Include="..\src\QuantBasedAlignment_linux-x64\QuantBasedAlignment_linux-x64.fsproj" ReferenceOutputAssembly="false" Condition="'$(OS)' != 'Windows_NT'" />
