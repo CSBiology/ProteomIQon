@@ -47,7 +47,7 @@ All four flags are mandatory. The reader opens files by extension and knows `.mz
 
 The tool writes one `<run>.psm` per input into the output directory. It is a tab separated table with a header. Each row is one candidate peptide for one spectrum with its charge, precursor m/z, theoretical mass, the three scores with their delta values to the next candidates, the peptide sequence and a Label of 1 for a target peptide and -1 for a decoy.
 The row ends with the five columns `IonMobility`, `Hyperscore`, `Expectscore`, `MatchedIons` and `TotalIons`, which PeptideSpectrumMatchingTIMs fills while this tool writes `NaN` in the float columns and `0` in the integer columns.
-The file is opened in append mode, so running the tool twice into the same directory adds a second header and a second set of rows. Delete the old file first.
+Running the tool again into the same directory replaces the file.
 The `.psm` is read by [PSMStatistics]({{root}}tools/PSMStatistics.html). The output directory also receives `PeptideSpectrumMatching_log.txt` and one `<run>_log.txt` per input.
 ## Parameters
 
