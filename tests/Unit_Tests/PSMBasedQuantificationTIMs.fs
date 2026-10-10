@@ -34,3 +34,33 @@ let gaborGridTest =
             Expect.equal grid.MobilityBinCount 1 "Unexpected Ionmobility bin count"
             Expect.equal grid.Intensities.[0].[0] 5.0 "Peaks are not aggregated correctly"
     ]
+
+[<Tests>]
+let qpsmHeaderTest =
+    testList "QpsmInput.checkHeader" [
+        testCase "accepts the PSMStatistics layout and rejects the former FragPipe layout" <| fun _ ->
+            let withHeader (header: string) f =
+                let path = System.IO.Path.GetTempFileName()
+                try
+                    System.IO.File.WriteAllText(path, header + "\n")
+                    f path
+                finally
+                    System.IO.File.Delete path
+            withHeader (String.concat "\t" QpsmInput.expectedColumns) QpsmInput.checkHeader
+            let fragPipeHeader =
+                "PSMId\tPepSequenceID\tModSequenceID\tScanTime\tCharge\tPrecursorMZ\tTheoMass\tAbsDeltaMass\tIonMobility\tPeptideLength\tMissCleavages\tExpectscore\tHyperscore\tProbability\tStringSequence\tProteinNames\tGlobalMod"
+            withHeader fragPipeHeader (fun path ->
+                Expect.throws (fun () -> QpsmInput.checkHeader path) "the FragPipe layout is rejected")
+    ]
+[<Tests>]
+let qpsmEmptyTest =
+    testList "QpsmInput.read" [
+        testCase "an empty file and a file with the header only have no PSMs" <| fun _ ->
+            for content in [ ""; String.concat "\t" QpsmInput.expectedColumns + "\n" ] do
+                let path = System.IO.Path.GetTempFileName()
+                try
+                    System.IO.File.WriteAllText(path, content)
+                    Expect.isEmpty (QpsmInput.read path) "no PSMs"
+                finally
+                    System.IO.File.Delete path
+    ]

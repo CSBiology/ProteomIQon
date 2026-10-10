@@ -59,7 +59,7 @@ With `-dc` the tool writes one chart per peptide ion into `run_plots`, plus `mzE
 | Parameter | Default | Meaning |
 |-----------|---------|---------|
 | `PerformLabeledQuantification` | `Labeling.N15Labeling` | `Unlabeled` quantifies only the identified ion. `N15Labeling` quantifies the partner ion too and keeps rows where both fits pass the quality filter. `N15LabelingOnly` applies the filter to the heavy channel alone. `Labelshift` quantifies both and skips the filter. |
-| `FragPipe` | `false` | Marks qpsm input in the FragPipe layout, which [PSMBasedQuantificationTIMs]({{root}}tools/PSMBasedQuantificationTIMs.html) reads. Keep it at `false` for this tool. |
+| `FragPipe` | `false` | Not read by this tool. |
 | `XicExtraction.ScanTimeWindow` | `2.0` | Half width of the scan time window around the identification that is extracted and searched for the peak, in the scan time unit of the run. |
 | `XicExtraction.MzWindow_Da` | `Window.Estimate` | Half width of the m/z window of the trace, in Da. `Estimate` uses four times the MS1 mass error the tool measures on the precursor m/z of the identifications. `Window.Fixed 0.07` sets it to 0.07 Da. |
 | `XicExtraction.XicProcessing` | `XicProcessing.Wavelet waveletParams` | Peak detection on the trace. The wavelet parameters are listed below. `SecondDerivative` is the other supported case. `Gabor3D` belongs to the TIMs tool and makes this tool fail. |

@@ -497,6 +497,12 @@ let pipelineTests =
                                 ,test.TheoMass = reference.TheoMass
                             "AbsDeltaMass",
                                 nanCasesForUnlabledData 0.7 1.3 test.AbsDeltaMass reference.AbsDeltaMass
+                            "MeanPercolatorScore",
+                                nanCasesForUnlabledData 0.99 1.01 test.MeanPercolatorScore reference.MeanPercolatorScore
+                            "QValue",
+                                nanCasesForUnlabledData 0.99 1.01 test.QValue reference.QValue
+                            "PEPValue",
+                                nanCasesForUnlabledData 0.99 1.01 test.PEPValue reference.PEPValue
                             "ProteinNames",
                                 test.ProteinNames = reference.ProteinNames
                             "QuantMz_Light",
