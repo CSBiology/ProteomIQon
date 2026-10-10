@@ -28,31 +28,99 @@ module PSMBasedQuantificationTIMs =
         /// Extract a rt profile for specified target mass and rt range.
         /// Mz range peak aggregation is closest lock mz.
         /// Profile array with index corresponding to continous mass spectra over rt range and mz range given.
-        let initRTProfile (readspecPeaks:string -> Peak1DArray)  (rtIndex: IMzIOArray<RtIndexEntry>) (rtRange: RangeQuery) (mzRange: RangeQuery) (ionMobilityRange: RangeQuery)=
+        /// The peaks of a spectrum sorted by m/z, ties in file order. Index is the position of the
+        /// peak in the file, peaks without a m/z are left out.
+        type MzSortedPeaks =
+            {
+                Mz          : float[]
+                Intensity   : float[]
+                IonMobility : float[]
+                Index       : int[]
+            }
+
+        /// Sorts the peaks of a spectrum, given as arrays in file order, by m/z. TIMS peaks are stored per mobility
+        /// scan and are not sorted.
+        let sortPeakArraysByMz (mzs: float[]) (intensities: float[]) (ionMobilities: float[]) =
+            let order =
+                Array.init mzs.Length id
+                |> Array.filter (fun i -> not (Double.IsNaN mzs.[i]))
+            let mz = order |> Array.map (fun i -> mzs.[i])
+            Array.Sort(mz, order)
+            // equal m/z in file order
+            let mutable first = 0
+            while first < mz.Length do
+                let mutable last = first + 1
+                while last < mz.Length && mz.[last] = mz.[first] do
+                    last <- last + 1
+                if last - first > 1 then Array.Sort(order, first, last - first)
+                first <- last
+            {
+                Mz          = mz
+                Intensity   = order |> Array.map (fun i -> intensities.[i])
+                IonMobility = order |> Array.map (fun i -> ionMobilities.[i])
+                Index       = order
+            }
+
+        /// Sorts the peaks of a spectrum by m/z.
+        let sortPeaksByMz (peaks: Peak1DArray) =
+            let ps = peaks.Peaks |> Seq.toArray
+            sortPeakArraysByMz
+                (ps |> Array.map (fun p -> p.Mz))
+                (ps |> Array.map (fun p -> p.Intensity))
+                (ps |> Array.map (fun p -> if Double.IsNaN p.Mz then nan else p.IonMobility.Value))
+
+        /// Reads the peaks of a spectrum sorted by m/z. The layout of TIMS spectra is decoded from the peak data directly
+        /// (TimsPeaks), other layouts are read by MzIO.
+        /// Returns the read function and its command, which the caller disposes when the file is done.
+        let initReadSortedPeaks (reader: MzIO.MzSQL.MzSQL) =
+            TimsPeaks.initReadPeakArrays reader sortPeaksByMz sortPeakArraysByMz
+
+        /// Extract a rt profile for specified target mass and rt range.
+        /// Mz range peak aggregation is closest lock mz.
+        /// Profile array with index corresponding to continous mass spectra over rt range and mz range given.
+        /// The peaks inside the m/z and ion mobility range are summed per exact m/z and the sum closest
+        /// to the lock m/z is taken, the first in file order on a tie.
+        let initRTProfile (readSortedPeaks:string -> MzSortedPeaks)  (rtIndex: IMzIOArray<RtIndexEntry>) (rtRange: RangeQuery) (mzRange: RangeQuery) (ionMobilityRange: RangeQuery)=
             let entries = RtIndexEntry.Search(rtIndex, rtRange)
             entries
             |>Seq.map (fun entry ->
-                let peaks = (readspecPeaks entry.SpectrumID).Peaks
-                let p = 
-                    peaks
-                    |> Seq.filter (fun x ->
-                        x.IonMobility.Value < ionMobilityRange.HighValue && x.IonMobility.Value > ionMobilityRange.LowValue &&
-                        x.Mz < mzRange.HighValue && x.Mz > mzRange.LowValue
-                    )
-                    |> fun s ->
-                        if (s |> Seq.tryHead).IsNone then
-                            RtIndexEntry.AsPeak2D ((new Peak1D(0., mzRange.LockValue, ionMobilityRange.LockValue)),entry.Rt)
-                        else
-                            s
-                            |> Seq.groupBy (fun x -> x.Mz)
-                            |> Seq.map (fun (mz,peaks) -> 
-                                let i = peaks |> Seq.sumBy (fun x -> x.Intensity)
-                                new Peak1D(i, mz)
-                            )
-                            |> fun x -> 
-                                RtIndexEntry.ClosestMz (x, mzRange.LockValue)
-                            |> fun x -> RtIndexEntry.AsPeak2D (x, entry.Rt)
-                p
+                let peaks = readSortedPeaks entry.SpectrumID
+                let n = peaks.Mz.Length
+                // first peak with Mz > mzRange.LowValue
+                let mutable lo = 0
+                let mutable hi = n
+                while lo < hi do
+                    let mid = (lo + hi) / 2
+                    if peaks.Mz.[mid] > mzRange.LowValue then hi <- mid else lo <- mid + 1
+                let mutable k = lo
+                let mutable found = false
+                let mutable bestMz = nan
+                let mutable bestIntensity = 0.
+                let mutable bestDistance = nan
+                let mutable bestFirst = Int32.MaxValue
+                while k < n && peaks.Mz.[k] < mzRange.HighValue do
+                    let mz = peaks.Mz.[k]
+                    let mutable sum = 0.
+                    let mutable first = -1
+                    while k < n && peaks.Mz.[k] = mz do
+                        let im = peaks.IonMobility.[k]
+                        if im < ionMobilityRange.HighValue && im > ionMobilityRange.LowValue then
+                            sum <- sum + peaks.Intensity.[k]
+                            if first < 0 then first <- peaks.Index.[k]
+                        k <- k + 1
+                    if first >= 0 then
+                        let distance = Math.Abs(mz - mzRange.LockValue)
+                        let c = if found then distance.CompareTo bestDistance else -1
+                        if c < 0 || (c = 0 && first < bestFirst) then
+                            found <- true
+                            bestMz <- mz
+                            bestIntensity <- sum
+                            bestDistance <- distance
+                            bestFirst <- first
+                if not found then
+                    RtIndexEntry.AsPeak2D ((new Peak1D(0., mzRange.LockValue, ionMobilityRange.LockValue)),entry.Rt)
+                else
+                    RtIndexEntry.AsPeak2D (new Peak1D(bestIntensity, bestMz), entry.Rt)
             )
             |> Array.ofSeq
 
@@ -257,6 +325,22 @@ module PSMBasedQuantificationTIMs =
     let getSpec (reader:MzIO.IO.IMzIODataReader) (ms1ID: string)  =
         Peaks.unzipIMzliteArray (reader.ReadSpectrumPeaks(ms1ID).Peaks)
         |> fun (mzData,intensityData) -> PeakArray.zip mzData intensityData
+
+    /// The peaks of a spectrum with lowMz < m/z < highMz, in file order.
+    let getPeaksInMzRange (peaks: Query.MzSortedPeaks) lowMz highMz =
+        let n = peaks.Mz.Length
+        // first peak with Mz > lowMz
+        let mutable lo = 0
+        let mutable hi = n
+        while lo < hi do
+            let mid = (lo + hi) / 2
+            if peaks.Mz.[mid] > lowMz then hi <- mid else lo <- mid + 1
+        let mutable last = lo
+        while last < n && peaks.Mz.[last] < highMz do
+            last <- last + 1
+        Array.init (last - lo) (fun k -> lo + k)
+        |> Array.sortBy (fun k -> peaks.Index.[k])
+        |> Array.map (fun k -> Peak(peaks.Mz.[k], peaks.Intensity.[k]))
     
     /// Returns the median of positive, finite values or None if no usable value exists.
     let private tryMedianFinitePositive (values: float[]) =
@@ -2002,15 +2086,15 @@ module PSMBasedQuantificationTIMs =
         |> Array.ofList
 
     ///
-    let initComparePredictedAndMeasuredIsotopicCluster inReader ms1s ms1AccuracyEstimate (x_Xic:float[]) (y_Xic:float[]) y_Xic_uncorrected ch peptideSequence tarRt tarMz =    
+    /// getMs1Peaks gives the peaks of a MS1 spectrum (by ID) with lowMz < m/z < highMz in file order.
+    let initComparePredictedAndMeasuredIsotopicCluster (getMs1Peaks: string -> float -> float -> Peak[]) ms1s ms1AccuracyEstimate (x_Xic:float[]) (y_Xic:float[]) y_Xic_uncorrected ch peptideSequence tarRt tarMz =    
         /// IsotopicCluster
         let targetIsotopicPattern_predicted = 
             generateIsotopicDistributionOfFormulaBySum ch peptideSequence
         let baseLineCorrectionF = getBaseLineCorrectionOffsetAt tarRt x_Xic y_Xic y_Xic_uncorrected
         let closestMS1 = getClosestMs1 ms1s tarRt
         let peaks' = 
-            getSpec inReader closestMS1
-            |> Array.filter (fun x -> x.Mz < tarMz + 1. && x.Mz > tarMz - 0.6)
+            getMs1Peaks closestMS1 (tarMz - 0.6) (tarMz + 1.)
         let recordedVsPredictedPattern = 
             targetIsotopicPattern_predicted
             |> Array.choose (fun (mz,relFreq) ->
@@ -2250,7 +2334,6 @@ module PSMBasedQuantificationTIMs =
            
         logger.Trace "init lookup functions"        
         ///
-        let comparePredictedAndMeasuredIsotopicCluster = initComparePredictedAndMeasuredIsotopicCluster inReader ms1SortedByScanTime ms1AccuracyEstimate     
         
         let mzWindow = 
             match processParams.XicExtraction.MzWindow_Da with 
@@ -2262,7 +2345,19 @@ module PSMBasedQuantificationTIMs =
 
         let readSpecPeaksWithMem = FSharpAux.Memoization.memoize inReader.ReadSpectrumPeaks
         ///
-        let getPeaks = Query.initRTProfile readSpecPeaksWithMem
+        let readSortedPeaks, readSortedPeaksCommand = Query.initReadSortedPeaks inReader
+        let readSortedPeaksWithMem = FSharpAux.Memoization.memoize readSortedPeaks
+        let comparePredictedAndMeasuredIsotopicCluster =
+            initComparePredictedAndMeasuredIsotopicCluster
+                (fun id lowMz highMz -> getPeaksInMzRange (readSortedPeaksWithMem id) lowMz highMz)
+                ms1SortedByScanTime
+                ms1AccuracyEstimate
+        let compareGaborPredictedAndMeasuredIsotopicCluster =
+            initComparePredictedAndMeasuredIsotopicCluster
+                (fun id lowMz highMz -> getSpec inReader id |> Array.filter (fun x -> x.Mz < highMz && x.Mz > lowMz))
+                ms1SortedByScanTime
+                ms1AccuracyEstimate
+        let getPeaks = Query.initRTProfile readSortedPeaksWithMem
         let getXIC = initGetProcessedXIC logger processParams.BaseLineCorrection getPeaks retTimeIdxed processParams.XicExtraction.ScanTimeWindow mzWindow 0.05        
         ///
         let identifyPeaks = initIdentifyPeaks processParams.XicExtraction.XicProcessing
@@ -2299,7 +2394,7 @@ module PSMBasedQuantificationTIMs =
                 if Array.isEmpty quant.ProjectedRetentionTimes || Array.isEmpty quant.ProjectedIntensities then
                     emptyClusterComparison
                 else
-                    comparePredictedAndMeasuredIsotopicCluster
+                    compareGaborPredictedAndMeasuredIsotopicCluster
                         quant.ProjectedRetentionTimes
                         quant.ProjectedIntensities
                         quant.ProjectedIntensities
@@ -3139,6 +3234,7 @@ module PSMBasedQuantificationTIMs =
                 | Error ex -> logger.Trace (sprintf "Error zipping directory: %A" ex)
         inTr.Commit()
         inTr.Dispose()
+        readSortedPeaksCommand.Dispose()
         inReader.Dispose()
         memoryDB.Dispose()
         logger.Trace "executing quantification:finished"

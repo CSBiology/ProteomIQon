@@ -37,6 +37,7 @@
     <Compile Include="Json.fs" />
     <Compile Include="Core.fs" />
     <Compile Include="SpectrumDescription.fs" />
+    <Compile Include="TimsPeaks.fs" />
     <None Include="Scripts\createTIMsMzMLtoMzLiteParams.fsx" />
     <None Include="Scripts\createAlignmentBasedQuantStatisticsParams.fsx" />
     <None Include="Scripts\createLabeledQuantificationParams.fsx" />
