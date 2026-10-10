@@ -1253,6 +1253,34 @@ module Dto =
                 BaseLineCorrection           = dtoQuantificationParams.BaseLineCorrection
             }
 
+    type AlignmentBasedQuantificationV2Params =
+        {
+            PerformLabeledQuantification : bool
+            XicExtraction                : XicExtraction
+            BaseLineCorrection           : BaseLineCorrection option
+            MinScanTimeWindow            : float
+            ScanTimeWindowSdFactor       : float
+            UseIonMobility               : bool
+            IonMobilityWindow            : Window
+            DecoyFraction                : float
+            Seed                         : int
+        }
+
+    module AlignmentBasedQuantificationV2Params =
+
+        let toDomain (dtoQuantificationParams: AlignmentBasedQuantificationV2Params ): Domain.AlignmentBasedQuantificationV2Params =
+            {
+                PerformLabeledQuantification = dtoQuantificationParams.PerformLabeledQuantification
+                XicExtraction                = dtoQuantificationParams.XicExtraction
+                BaseLineCorrection           = dtoQuantificationParams.BaseLineCorrection
+                MinScanTimeWindow            = dtoQuantificationParams.MinScanTimeWindow
+                ScanTimeWindowSdFactor       = dtoQuantificationParams.ScanTimeWindowSdFactor
+                UseIonMobility               = dtoQuantificationParams.UseIonMobility
+                IonMobilityWindow            = dtoQuantificationParams.IonMobilityWindow
+                DecoyFraction                = dtoQuantificationParams.DecoyFraction
+                Seed                         = dtoQuantificationParams.Seed
+            }
+
     ///
     type PeptideEvidenceClassConverter() = 
         inherit ConverterAttribute()
