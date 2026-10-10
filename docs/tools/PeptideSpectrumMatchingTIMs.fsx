@@ -30,7 +30,7 @@ PeptideSpectrumMatchingTIMs identifies peptides in timsTOF runs with precursor i
 
 An mzlite file of a timsTOF run keeps the peaks of every mobility scan of an MS2 spectrum. The fragments of a precursor carry the mobility of that precursor, so the tool first sums every spectrum over its mobility scans. Starting at the lowest m/z, all peaks within `--mobility-merge-ppm` of the first peak of a group become one peak with the summed intensity and the intensity weighted m/z. The width defaults to `FragmentTolerancePPM`. `--mobility-merge-ppm 0` sums only peaks at exactly the same m/z. It does not turn the summation off. Spectra without ion mobility per peak are searched as they are. Repeated PASEF measurements of one precursor stay separate spectra, as they are in the mzlite file.
 
-The fragment index holds the b and y ions of target peptides only. Reversed decoy peptides use the same index through a water shift. A decoy b ion is a target y ion minus water, and a decoy y ion is a target b ion plus water. Only peptides inside a precursor window of the searched runs, including the isotope errors and the tolerance, enter the index. Fragments above the heaviest of these windows plus 1 Da, or above the mass given with `-f`, stay out of it, and the ceiling never exceeds the heaviest peptide of the database plus 1 Da. The index uses 4 bytes per fragment entry.
+The fragment index holds the b and y ions of the target peptides, and a second index of the same size holds those of their decoys. A decoy is the target sequence with the C-terminal residue kept in place and the rest reversed. A target that this leaves unchanged, such as AAAAK, is reversed completely. Only peptides inside a precursor window of the searched runs, including the isotope errors and the tolerance, enter the index. Fragments above the heaviest of these windows plus 1 Da, or above the mass given with `-f`, stay out of it, and the ceiling never exceeds the heaviest peptide of the database plus 1 Da. Both indexes use 4 bytes per fragment entry.
 
 With `-s` the tool builds and searches the index in that many slices of the peptide table, one after the other, so only one slice is in memory at a time. Every further slice reads the spectra again, unless `-k` keeps the preprocessed spectra in memory, at about 2.4 kB per spectrum and charge. The result does not depend on the number of slices.
 
@@ -62,7 +62,7 @@ The reported targets and decoys then receive the SEQUEST-like score used by Pept
 
 The tool accepts `.mzlite` files and directories. An mzML path stops the tool with a message.
 
-The tool writes one `<run>.psm` per input into the output directory. The file is a tab separated table with a header. The tool overwrites it when it already exists. Label is 1 for a target and -1 for a reversed decoy. `MissCleavages` is -1, as in PeptideSpectrumMatching. PSMStatistics recomputes it.
+The tool writes one `<run>.psm` per input into the output directory. The file is a tab separated table with a header. The tool overwrites it when it already exists. Label is 1 for a target and -1 for a decoy. `MissCleavages` is -1, as in PeptideSpectrumMatching. PSMStatistics recomputes it.
 
 The output record is `Dto.PeptideSpectrumMatchingResult`, the same record written by [PeptideSpectrumMatching]({{root}}tools/PeptideSpectrumMatching.html). It has 28 columns. The record has the 23 classic PeptideSpectrumMatching columns, followed by these five columns.
 
