@@ -493,7 +493,7 @@ module PeptideSpectrumMatching =
         logger.Trace (sprintf "Charge parameters: %A" chargeParams)
         logger.Trace (sprintf "DB parameters: %A" sdbParams)
         let calcIonSeries aal =
-            Fragmentation.Series.fragmentMasses Fragmentation.Series.bOfBioList Fragmentation.Series.yOfBioList sdbParams.MassFunction aal
+            Fragmentation.Series.fragmentMassesPseudoReversed Fragmentation.Series.bOfBioList Fragmentation.Series.yOfBioList sdbParams.MassFunction aal
         let parse = SearchDB.initOfModAminoAcidString sdbParams.IsotopicMod (sdbParams.FixedMods@sdbParams.VariableMods)
         let candidates = CandidateCache(table, parse, calcIonSeries)
         let rnd = new System.Random()
