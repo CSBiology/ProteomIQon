@@ -286,21 +286,24 @@ module PSMStatistics =
                         .Append(ctx.BinaryClassification.Trainers.FastTree(fastTreeOptions))
              
                 let model = pipeline.Fit(split.TrainSet)    
-                let metrics = ctx.BinaryClassification.Evaluate(model.Transform(split.TestSet),labelColumnName="Label")
-                logger.Trace (sprintf "%sMetrics on the test split: accuracy %.4f, AUC %.4f, F1 %.4f" prefix metrics.Accuracy metrics.AreaUnderRocCurve metrics.F1Score)
-                if diagCharts then 
-                    Chart.Column(
-                        [
-                        "Accuracy",metrics.Accuracy
-                        "PositivePrecision",metrics.PositivePrecision
-                        "PositiveRecall",metrics.PositiveRecall
-                        "NegativePrecision",metrics.NegativePrecision
-                        "NegativeRecall",metrics.NegativeRecall
-                        "F1Score",metrics.F1Score
-                        ]
-                        )
-                    |> Chart.withTitle "Metrics"
-                    |> Chart.saveHtml (Path.Combine [|plotDirectory;prefix + "Metrics"|])
+                try
+                    let metrics = ctx.BinaryClassification.Evaluate(model.Transform(split.TestSet),labelColumnName="Label")
+                    logger.Trace (sprintf "%sMetrics on the test split: accuracy %.4f, AUC %.4f, F1 %.4f" prefix metrics.Accuracy metrics.AreaUnderRocCurve metrics.F1Score)
+                    if diagCharts then 
+                        Chart.Column(
+                            [
+                            "Accuracy",metrics.Accuracy
+                            "PositivePrecision",metrics.PositivePrecision
+                            "PositiveRecall",metrics.PositiveRecall
+                            "NegativePrecision",metrics.NegativePrecision
+                            "NegativeRecall",metrics.NegativeRecall
+                            "F1Score",metrics.F1Score
+                            ]
+                            )
+                        |> Chart.withTitle "Metrics"
+                        |> Chart.saveHtml (Path.Combine [|plotDirectory;prefix + "Metrics"|])
+                with
+                | ex -> logger.Warn (sprintf "%sMetrics on the test split not available: %s" prefix ex.Message)
                 let predF = ctx.Model.CreatePredictionEngine<PSMToLearn,PSMPrediction>(model)
                 let predict psm = 
                     psm 
@@ -493,7 +496,7 @@ module PSMStatistics =
                             else
                                 loop newModel (i+1)
                         with
-                        | _ -> logger.Trace (prefix + "Fall back to previous model"); prevModel
+                        | ex -> logger.Trace (sprintf "%sFall back to previous model: %s" prefix ex.Message); prevModel
                 let refinedModel = loop initModel 0
                 logger.Trace (sprintf "%sFinal model: %i %s in-sample" prefix refinedModel.NPositivesAtFDR (if estParams.CrossValidation then "targets with q <= 0.01" else "scans pass the q-value and PEP thresholds"))
                 refinedModel
