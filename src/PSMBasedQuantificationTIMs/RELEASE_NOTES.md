@@ -7,6 +7,7 @@
 * Take the ion mobility and scan time of the wavelet path from the top PSMs with an ion mobility
 * Take QValue, PEPValue and ProteinNames from the PSM with the lowest QValue that is not NaN
 * Update BioFSharp.Mz to 0.2.3
+* Compute the ALS baseline faster with the same values
 
 #### 0.0.13 - Wednesday, September 2, 2026
 * Add Gabor3D algorithm for peak detection
