@@ -89,7 +89,7 @@ module PeptideSpectrumMatchingTIMs =
         let compute = Func<IBioItem, float>(sdbParams.MassFunction)
         let massOf item = masses.GetOrAdd(item, compute)
         {
-            CalcIonSeries = Fragmentation.Series.fragmentMasses processParams.nTerminalSeries processParams.cTerminalSeries massOf
+            CalcIonSeries = Fragmentation.Series.fragmentMassesPseudoReversed processParams.nTerminalSeries processParams.cTerminalSeries massOf
             ParseSequence = parse
             ParseRank = fun rank ->
                 let start = table.Start rank
@@ -289,7 +289,7 @@ module PeptideSpectrumMatchingTIMs =
         Math.Max(0., Math.Round(Array.min mz, 0) |> floorToClosest10), Math.Round(Array.max mz, 0) |> ceilToClosest10
 
     /// Scores the given peptides with the BioFSharp.Mz functions that PeptideSpectrumMatching
-    /// uses. Every peptide yields a target and a reversed decoy result, keyed by
+    /// uses. Every peptide yields a target and a pseudo-reversed decoy result, keyed by
     /// (ModSequenceID, GlobalMod, isTarget).
     let classicScores (classic: ClassicScoring) (table: PeptideTable) (spectrum: Ms2Spectrum) (charge: int) (ranks: int[]) =
         let t = Diagnostics.Stopwatch.GetTimestamp()
@@ -335,7 +335,7 @@ module PeptideSpectrumMatchingTIMs =
         | SliceFound of histogram: int[] * targets: Candidate[] * decoys: Candidate[]
 
     /// The index pass of one slice for one spectrum at one charge.
-    let indexPass (settings: SearchSettings) (table: PeptideTable) (index: FragmentIndex) (scratch: Scratch)
+    let indexPass (settings: SearchSettings) (table: PeptideTable) (index: FragmentIndex) (decoyIndex: FragmentIndex) (scratch: Scratch)
                   (maxFragments: int) (precursorMz: float) (processed: ProcessedSpectrum) (charge: int) (rankLo: int) (rankHi: int) =
         if processed.Mz.Length < settings.MinimumPeaks then SliceTooFewPeaks
         else
@@ -347,7 +347,7 @@ module PeptideSpectrumMatchingTIMs =
             else
                 let t = Diagnostics.Stopwatch.GetTimestamp()
                 scratch.Reset (slotCount windows) maxFragments
-                scatter settings index scratch windows charge processed
+                scatter settings index decoyIndex scratch windows charge processed
                 Profile.add 4 t
                 let t = Diagnostics.Stopwatch.GetTimestamp()
                 let refine c =
@@ -632,12 +632,12 @@ module PeptideSpectrumMatchingTIMs =
     /// The index pass of one slice over one run. The first slice reads the peaks of every
     /// spectrum. With kept spectra the later slices search those and read nothing.
     let searchSliceWith (read: IMzIODataReader -> Ms2Header[] -> int -> Result<Ms2Spectrum, exn>) (settings: SearchSettings) (table: PeptideTable) (fallbackCharges: int[]) (maxFragments: int)
-                            (index: FragmentIndex) (rankLo: int) (rankHi: int) (slice: int) (run: Run) =
+                            (index: FragmentIndex) (decoyIndex: FragmentIndex) (rankLo: int) (rankHi: int) (slice: int) (run: Run) =
         Profile.countInto run.PhaseTicks (fun () ->
             let log = run.Log
             let searchAttempt (spectrumId: string) (precursorMz: float) (charge: int) (attempt: Attempt) (processed: ProcessedSpectrum) =
                 try
-                    match indexPass settings table index run.Scratch maxFragments precursorMz processed charge rankLo rankHi with
+                    match indexPass settings table index decoyIndex run.Scratch maxFragments precursorMz processed charge rankLo rankHi with
                     | SliceTooFewPeaks -> attempt.TooFewPeaks <- true
                     | SliceNoCandidates -> ()
                     | SliceFound (scores, targets, decoys) ->
@@ -809,7 +809,9 @@ module PeptideSpectrumMatchingTIMs =
                 let rankLo, rankHi = boundaries.[slice], boundaries.[slice + 1]
                 log (sprintf "Slice %i of %i: ranks %i to %i." (slice + 1) slices rankLo rankHi)
                 let index = buildFragmentIndexFor eligible table processParams.FragmentIndexBinWidth ceiling workers rankLo rankHi log
-                runs |> Array.Parallel.iter (searchSliceWith read settings table fallbackCharges maxFragments index rankLo rankHi slice)
+                log "Building the fragment index of the decoys."
+                let decoyIndex = buildDecoyFragmentIndexFor eligible table processParams.FragmentIndexBinWidth ceiling workers rankLo rankHi log
+                runs |> Array.Parallel.iter (searchSliceWith read settings table fallbackCharges maxFragments index decoyIndex rankLo rankHi slice)
                 log (sprintf "Slice %i of %i searched." (slice + 1) slices)
                 GC.Collect()
             runs |> Array.iter (fun run -> run.Kept <- null)
