@@ -50,13 +50,13 @@ column, and the next tool reads them.
 | Aggregate to proteins | [LabelFreeProteinQuantification]({{root}}tools/LabelFreeProteinQuantification.html) or [LabeledProteinQuantification]({{root}}tools/LabeledProteinQuantification.html) | .quantAndProt | LabelFreeQuant.txt or LabeledQuant.txt |
 
 With several runs, the alignment tools transfer identifications between runs before the join. They sit between
-PSMBasedQuantification and JoinQuantPepIonsWithProteins:
+PSMBasedQuantification or PSMBasedQuantificationTIMs and JoinQuantPepIonsWithProteins:
 
 | Step | Tool | Reads | Writes |
 |------|------|-------|--------|
-| Map scan times between runs | [QuantBasedAlignment]({{root}}tools/QuantBasedAlignment.html) | .quant of all runs | .align, .alignmetric |
-| Quantify transferred peptide ions | [AlignmentBasedQuantification]({{root}}tools/AlignmentBasedQuantification.html) | .mzlite, .align, .alignmetric, .quant, .db | .quant |
-| Score the transfers | [AlignmentBasedQuantStatistics]({{root}}tools/AlignmentBasedQuantStatistics.html) | .quant, .align | .quant |
+| Map scan times between runs | [QuantBasedAlignment]({{root}}tools/QuantBasedAlignment_v2.html) | .quant of all runs | .align, .alignmetric |
+| Quantify transferred peptide ions | [AlignmentBasedQuantification]({{root}}tools/AlignmentBasedQuantification_v2.html) | .mzlite, .align, .quant, .db | .quant, .alignfeatures, .aligndecoy |
+| Score the transfers | [AlignmentBasedQuantStatistics]({{root}}tools/AlignmentBasedQuantStatistics_v2.html) | PSM based and aligned .quant, .align, .alignfeatures, .aligndecoy | .quant |
 | Reassign protein groups | [AddDeducedPeptides]({{root}}tools/AddDeducedPeptides.html) | .quant, .prot | .prot |
 
 Five more tools cover other inputs. For 15N labeled samples, [RatioLFQ]({{root}}tools/RatioLFQ.html) turns the
