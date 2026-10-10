@@ -441,116 +441,122 @@ let pipelineTests =
             Expect.equal header expectedHeader "the header is the one of PSMStatisticsResult"
             Expect.isTrue compare "QPSMs are different"
 
-        testCase "PSMBasedQuantificationTIMs" <| fun _ -> 
-            let relToDirectory = getRelativePath baseDir
-            let db = relToDirectory "../../../data/PSMBasedQuantificationTIMs/in/minimal.db"
-            let qpsm = relToDirectory "../../../data/PSMBasedQuantificationTIMs/in/minimal.qpsm"
-            let mzlite = relToDirectory "../../../data/PSMBasedQuantificationTIMs/in/minimal.mzlite"
-            let quantParamsTIMs = relToDirectory "../../../data/PSMBasedQuantificationTIMs/in/QuantificationTIMsParams.json"
-            let outDirectory = relToDirectory "../../../data/PSMBasedQuantificationTIMs/out"
-            let quantTIMsExe = toolDll "PSMBasedQuantificationTIMs"
-            // cleanup
-            try
-                File.Delete (relToDirectory "../../../data/PSMBasedQuantificationTIMs/out/minimal.quant")
-                File.Delete (relToDirectory "../../../data/PSMBasedQuantificationTIMs/out/minimal_log.txt")
-                File.Delete (relToDirectory "../../../data/PSMBasedQuantificationTIMs/out/PSMBasedQuantification_log.txt")
-                Directory.Delete (relToDirectory "../../../data/PSMBasedQuantificationTIMs/out/minimal_plots")
-            with
-            | _ -> ()
-            // run tool
-            runDotNet (sprintf "%s -i %s -ii %s -o %s -p %s -d %s -dc" quantTIMsExe mzlite qpsm outDirectory quantParamsTIMs db) baseDir
-            let referenceQuantTIMs =
-                let quantPath = relToDirectory "../../../data/PSMBasedQuantificationTIMs/out/minimalReference.quant"
-                FSharpAux.IO.SchemaReader.Csv.CsvReader<ProteomIQon.Dto.QuantificationResult>().ReadFile(quantPath,'\t',false,1)
-                |> Array.ofSeq
-            let testQuantTIMs =
-                let quantPath = relToDirectory "../../../data/PSMBasedQuantificationTIMs/out/minimal.quant"
-                FSharpAux.IO.SchemaReader.Csv.CsvReader<ProteomIQon.Dto.QuantificationResult>().ReadFile(quantPath,'\t',false,1)
-                |> Array.ofSeq
-            let nanCasesForUnlabledData lowerLimit upperLimit actual reference = 
-                if Double.IsNaN actual && Double.IsNaN reference  then 
-                    true
-                elif Double.IsNaN actual || Double.IsNaN reference then
-                    false
-                else 
-                    actual >= reference * lowerLimit &&
-                    actual <= reference * upperLimit
-            let compare,fields = 
-                let unequalFields =
-                    Array.map2 (fun (reference: ProteomIQon.Dto.QuantificationResult) (test: ProteomIQon.Dto.QuantificationResult) ->
-                        [|
-                            "StringSequence",
-                                test.StringSequence = reference.StringSequence
-                            "GlobalMod",
-                                test.GlobalMod = reference.GlobalMod
-                            "Charge",
-                                test.Charge = reference.Charge
-                            "PepSequenceID",
-                                test.PepSequenceID = reference.PepSequenceID
-                            "ModSequenceID",
-                                test.ModSequenceID = reference.ModSequenceID
-                            "PrecursorMZ",
-                                nanCasesForUnlabledData 0.99 1.01 test.PrecursorMZ reference.PrecursorMZ
-                            "MeasuredMass",
-                                nanCasesForUnlabledData 0.99 1.01 test.MeasuredMass reference.MeasuredMass
-                            "TheoMass"
-                                ,test.TheoMass = reference.TheoMass
-                            "AbsDeltaMass",
-                                nanCasesForUnlabledData 0.7 1.3 test.AbsDeltaMass reference.AbsDeltaMass
-                            "MeanPercolatorScore",
-                                nanCasesForUnlabledData 0.99 1.01 test.MeanPercolatorScore reference.MeanPercolatorScore
-                            "QValue",
-                                nanCasesForUnlabledData 0.99 1.01 test.QValue reference.QValue
-                            "PEPValue",
-                                nanCasesForUnlabledData 0.99 1.01 test.PEPValue reference.PEPValue
-                            "ProteinNames",
-                                test.ProteinNames = reference.ProteinNames
-                            "QuantMz_Light",
-                                nanCasesForUnlabledData 0.99 1.01 test.QuantMz_Light reference.QuantMz_Light
-                            "Quant_Light",
-                                nanCasesForUnlabledData 0.99 1.01 test.Quant_Light reference.Quant_Light
-                            "MeasuredApex_Light",
-                                nanCasesForUnlabledData 0.99 1.01 test.MeasuredApex_Light reference.MeasuredApex_Light
-                            //"Seo_Light",
-                            //    test.Seo_Light >= reference.Seo_Light * 0.99 &&
-                            //    test.Seo_Light <= reference.Seo_Light * 1.01
-                            "Difference_SearchRT_FittedRT_Light",
-                                nanCasesForUnlabledData 0.9 1.1 (abs test.Difference_SearchRT_FittedRT_Light) (abs reference.Difference_SearchRT_FittedRT_Light)
-                            "KLDiv_CorrectedObserved_Theoretical_Light",
-                                nanCasesForUnlabledData 0.9 1.1 test.KLDiv_CorrectedObserved_Theoretical_Light reference.KLDiv_CorrectedObserved_Theoretical_Light
-                            "KLDiv_Observed_Theoretical_Light",
-                                nanCasesForUnlabledData 0.99 1.01 test.KLDiv_Observed_Theoretical_Light reference.KLDiv_Observed_Theoretical_Light
-                            "QuantMz_Heavy",
-                                nanCasesForUnlabledData 0.99 1.01 test.QuantMz_Heavy reference.QuantMz_Heavy
-                            "Quant_Heavy",
-                                nanCasesForUnlabledData 0.99 1.01 test.Quant_Heavy reference.Quant_Heavy
-                            "MeasuredApex_Heavy",
-                                nanCasesForUnlabledData 0.99 1.01 test.MeasuredApex_Heavy reference.MeasuredApex_Heavy
-                            //"Seo_Heavy",
-                            //    test.Seo_Heavy >= reference.Seo_Heavy * 0.99 &&
-                            //    test.Seo_Heavy <= reference.Seo_Heavy * 1.01
-                            "Difference_SearchRT_FittedRT_Heavy",
-                                nanCasesForUnlabledData 0.9 1.1 (abs test.Difference_SearchRT_FittedRT_Heavy) (abs reference.Difference_SearchRT_FittedRT_Heavy)
-                            "KLDiv_CorrectedObserved_Theoretical_Heavy",
-                                nanCasesForUnlabledData 0.9 1.1 test.KLDiv_CorrectedObserved_Theoretical_Heavy reference.KLDiv_CorrectedObserved_Theoretical_Heavy
-                            "KLDiv_Observed_Theoretical_Heavy",
-                                nanCasesForUnlabledData 0.9 1.1 test.KLDiv_Observed_Theoretical_Heavy reference.KLDiv_Observed_Theoretical_Heavy
-                            "Correlation_Light_Heavy",
-                                nanCasesForUnlabledData 0.99 1.01 test.Correlation_Light_Heavy reference.Correlation_Light_Heavy
-                            "QuantificationSource",
-                                test.QuantificationSource = reference.QuantificationSource
-                            "IonMobility",
-                                nanCasesForUnlabledData 0.99 1.01 test.IonMobility reference.IonMobility
-                        |]
-                    ) referenceQuantTIMs testQuantTIMs
-                    |> Array.collect (
-                        Array.filter (fun (field,equal) -> equal = false)
-                    )
-                    |> Array.distinct
-                    |> Array.map fst
-                if unequalFields |> Array.isEmpty then true , ""
-                else false, unequalFields |> String.concat ";"
-            Expect.isTrue compare (sprintf "Quants are different in the following fields: %s" fields)
+        let quantTIMsCase name paramsFile outSubDir referenceFile =
+            testCase name <| fun _ ->
+                let relToDirectory = getRelativePath baseDir
+                let db = relToDirectory "../../../data/PSMBasedQuantificationTIMs/in/minimal.db"
+                let qpsm = relToDirectory "../../../data/PSMBasedQuantificationTIMs/in/minimal.qpsm"
+                let mzlite = relToDirectory "../../../data/PSMBasedQuantificationTIMs/in/minimal.mzlite"
+                let quantParamsTIMs = relToDirectory "../../../data/PSMBasedQuantificationTIMs/in/" + paramsFile
+                let outDirectory = relToDirectory ("../../../data/PSMBasedQuantificationTIMs/out" + outSubDir)
+                let quantTIMsExe = toolDll "PSMBasedQuantificationTIMs"
+                // cleanup
+                try
+                    File.Delete (Path.Combine(outDirectory, "minimal.quant"))
+                    File.Delete (Path.Combine(outDirectory, "minimal_log.txt"))
+                    File.Delete (Path.Combine(outDirectory, "PSMBasedQuantification_log.txt"))
+                    Directory.Delete (Path.Combine(outDirectory, "minimal_plots"))
+                with
+                | _ -> ()
+                // run tool
+                runDotNet (sprintf "%s -i %s -ii %s -o %s -p %s -d %s -dc" quantTIMsExe mzlite qpsm outDirectory quantParamsTIMs db) baseDir
+                let referenceQuantTIMs =
+                    let quantPath = relToDirectory "../../../data/PSMBasedQuantificationTIMs/out/" + referenceFile
+                    FSharpAux.IO.SchemaReader.Csv.CsvReader<ProteomIQon.Dto.QuantificationResult>().ReadFile(quantPath,'\t',false,1)
+                    |> Array.ofSeq
+                let testQuantTIMs =
+                    let quantPath = Path.Combine(outDirectory, "minimal.quant")
+                    FSharpAux.IO.SchemaReader.Csv.CsvReader<ProteomIQon.Dto.QuantificationResult>().ReadFile(quantPath,'\t',false,1)
+                    |> Array.ofSeq
+                let nanCasesForUnlabledData lowerLimit upperLimit actual reference = 
+                    if Double.IsNaN actual && Double.IsNaN reference  then 
+                        true
+                    elif Double.IsNaN actual || Double.IsNaN reference then
+                        false
+                    else 
+                        actual >= reference * lowerLimit &&
+                        actual <= reference * upperLimit
+                let compare,fields = 
+                    let unequalFields =
+                        Array.map2 (fun (reference: ProteomIQon.Dto.QuantificationResult) (test: ProteomIQon.Dto.QuantificationResult) ->
+                            [|
+                                "StringSequence",
+                                    test.StringSequence = reference.StringSequence
+                                "GlobalMod",
+                                    test.GlobalMod = reference.GlobalMod
+                                "Charge",
+                                    test.Charge = reference.Charge
+                                "PepSequenceID",
+                                    test.PepSequenceID = reference.PepSequenceID
+                                "ModSequenceID",
+                                    test.ModSequenceID = reference.ModSequenceID
+                                "PrecursorMZ",
+                                    nanCasesForUnlabledData 0.99 1.01 test.PrecursorMZ reference.PrecursorMZ
+                                "MeasuredMass",
+                                    nanCasesForUnlabledData 0.99 1.01 test.MeasuredMass reference.MeasuredMass
+                                "TheoMass"
+                                    ,test.TheoMass = reference.TheoMass
+                                "AbsDeltaMass",
+                                    nanCasesForUnlabledData 0.7 1.3 test.AbsDeltaMass reference.AbsDeltaMass
+                                "MeanPercolatorScore",
+                                    nanCasesForUnlabledData 0.99 1.01 test.MeanPercolatorScore reference.MeanPercolatorScore
+                                "QValue",
+                                    nanCasesForUnlabledData 0.99 1.01 test.QValue reference.QValue
+                                "PEPValue",
+                                    nanCasesForUnlabledData 0.99 1.01 test.PEPValue reference.PEPValue
+                                "ProteinNames",
+                                    test.ProteinNames = reference.ProteinNames
+                                "QuantMz_Light",
+                                    nanCasesForUnlabledData 0.99 1.01 test.QuantMz_Light reference.QuantMz_Light
+                                "Quant_Light",
+                                    nanCasesForUnlabledData 0.99 1.01 test.Quant_Light reference.Quant_Light
+                                "MeasuredApex_Light",
+                                    nanCasesForUnlabledData 0.99 1.01 test.MeasuredApex_Light reference.MeasuredApex_Light
+                                //"Seo_Light",
+                                //    test.Seo_Light >= reference.Seo_Light * 0.99 &&
+                                //    test.Seo_Light <= reference.Seo_Light * 1.01
+                                "Difference_SearchRT_FittedRT_Light",
+                                    nanCasesForUnlabledData 0.9 1.1 (abs test.Difference_SearchRT_FittedRT_Light) (abs reference.Difference_SearchRT_FittedRT_Light)
+                                "KLDiv_CorrectedObserved_Theoretical_Light",
+                                    nanCasesForUnlabledData 0.9 1.1 test.KLDiv_CorrectedObserved_Theoretical_Light reference.KLDiv_CorrectedObserved_Theoretical_Light
+                                "KLDiv_Observed_Theoretical_Light",
+                                    nanCasesForUnlabledData 0.99 1.01 test.KLDiv_Observed_Theoretical_Light reference.KLDiv_Observed_Theoretical_Light
+                                "QuantMz_Heavy",
+                                    nanCasesForUnlabledData 0.99 1.01 test.QuantMz_Heavy reference.QuantMz_Heavy
+                                "Quant_Heavy",
+                                    nanCasesForUnlabledData 0.99 1.01 test.Quant_Heavy reference.Quant_Heavy
+                                "MeasuredApex_Heavy",
+                                    nanCasesForUnlabledData 0.99 1.01 test.MeasuredApex_Heavy reference.MeasuredApex_Heavy
+                                //"Seo_Heavy",
+                                //    test.Seo_Heavy >= reference.Seo_Heavy * 0.99 &&
+                                //    test.Seo_Heavy <= reference.Seo_Heavy * 1.01
+                                "Difference_SearchRT_FittedRT_Heavy",
+                                    nanCasesForUnlabledData 0.9 1.1 (abs test.Difference_SearchRT_FittedRT_Heavy) (abs reference.Difference_SearchRT_FittedRT_Heavy)
+                                "KLDiv_CorrectedObserved_Theoretical_Heavy",
+                                    nanCasesForUnlabledData 0.9 1.1 test.KLDiv_CorrectedObserved_Theoretical_Heavy reference.KLDiv_CorrectedObserved_Theoretical_Heavy
+                                "KLDiv_Observed_Theoretical_Heavy",
+                                    nanCasesForUnlabledData 0.9 1.1 test.KLDiv_Observed_Theoretical_Heavy reference.KLDiv_Observed_Theoretical_Heavy
+                                "Correlation_Light_Heavy",
+                                    nanCasesForUnlabledData 0.99 1.01 test.Correlation_Light_Heavy reference.Correlation_Light_Heavy
+                                "QuantificationSource",
+                                    test.QuantificationSource = reference.QuantificationSource
+                                "IonMobility",
+                                    nanCasesForUnlabledData 0.99 1.01 test.IonMobility reference.IonMobility
+                            |]
+                        ) referenceQuantTIMs testQuantTIMs
+                        |> Array.collect (
+                            Array.filter (fun (field,equal) -> equal = false)
+                        )
+                        |> Array.distinct
+                        |> Array.map fst
+                    if unequalFields |> Array.isEmpty then true , ""
+                    else false, unequalFields |> String.concat ";"
+                Expect.isTrue compare (sprintf "Quants are different in the following fields: %s" fields)
+
+        // sequenced, as both read minimal.mzlite, which the tool locks
+        quantTIMsCase "PSMBasedQuantificationTIMs" "QuantificationTIMsParams.json" "" "minimalReference.quant" |> testSequenced
+        // wavelet path with baseline correction, in its own folder
+        quantTIMsCase "PSMBasedQuantificationTIMsWavelet" "QuantificationTIMsWaveletParams.json" "/wavelet" "minimalWaveletReference.quant" |> testSequenced
             
 
         testCase "QuantBasedAlignment" <| fun _ ->
