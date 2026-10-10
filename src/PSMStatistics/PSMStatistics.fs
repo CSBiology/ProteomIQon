@@ -271,11 +271,18 @@ module PSMStatistics =
                             "Hyperscore"
                             "LogExpectscore"
                     |]
-                let pipeline =    
+                // A leaf output of up to 100 (the default) lets a few leaves push near-empty spectra and decoys to the top.
+                let fastTreeOptions =
+                    Trainers.FastTree.FastTreeBinaryTrainer.Options(
+                        FeatureColumnName = "featuresNorm",
+                        LabelColumnName = "Label",
+                        MaximumTreeOutput = 10.
+                    )
+                let pipeline =
                     (ctx.Transforms.Categorical.OneHotEncoding("OneHotCharge","Charge") |> downcastPipeline)
                         .Append(ctx.Transforms.Concatenate("Features", featureColumns))
                         .Append(ctx.Transforms.NormalizeMeanVariance("featuresNorm","Features"))
-                        .Append(ctx.BinaryClassification.Trainers.FastTree(featureColumnName="featuresNorm",labelColumnName="Label"))
+                        .Append(ctx.BinaryClassification.Trainers.FastTree(fastTreeOptions))
              
                 let model = pipeline.Fit(split.TrainSet)    
                 let metrics = ctx.BinaryClassification.Evaluate(model.Transform(split.TestSet),labelColumnName="Label")
