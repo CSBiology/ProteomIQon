@@ -276,7 +276,8 @@ module PSMStatistics =
                     Trainers.FastTree.FastTreeBinaryTrainer.Options(
                         FeatureColumnName = "featuresNorm",
                         LabelColumnName = "Label",
-                        MaximumTreeOutput = 10.
+                        MaximumTreeOutput = 10.,
+                        NumberOfThreads = 1
                     )
                 let pipeline =
                     (ctx.Transforms.Categorical.OneHotEncoding("OneHotCharge","Charge") |> downcastPipeline)
