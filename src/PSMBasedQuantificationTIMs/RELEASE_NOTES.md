@@ -3,7 +3,7 @@
 * Read the .qpsm of PSMStatistics, which MsFraggerToPSM now writes too, and fail with the missing columns when a .qpsm has another layout. Breaking: .qpsm files of earlier MsFraggerToPSM releases have to be regenerated
 * Take the ion mobility of a PSM from its MS2 spectrum in the mzlite, as the .qpsm does not carry it; PSMs without a readable spectrum with ion mobility are skipped with a warning; the tool stops when none has one
 * Fill MeanPercolatorScore, QValue and PEPValue from ModelScore, QValue and PEPValue of the PSMs, and pick the top PSMs of TopKPSMs by ModelScore
-* Speed up the reading of the spectra with the same results
+* Speed up the reading of the spectra and the XIC extraction with the same results
 * Take the ion mobility and scan time of the wavelet path from the top PSMs with an ion mobility
 * Take QValue, PEPValue and ProteinNames from the PSM with the lowest QValue that is not NaN
 * Update BioFSharp.Mz to 0.2.3
