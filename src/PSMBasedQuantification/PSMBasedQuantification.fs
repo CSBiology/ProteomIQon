@@ -222,7 +222,7 @@ module PSMBasedQuantification =
         if yData.Length > 500 then
             yData
         else
-            let baseLine = FSharp.Stats.Signal.Baseline.baselineAls' baseLineParams.MaxIterations baseLineParams.Lambda baseLineParams.P yData |> Array.ofSeq
+            let baseLine = BaselineAls.baselineAls baseLineParams.MaxIterations baseLineParams.Lambda baseLineParams.P yData
             Array.map2 (fun y b ->
                            let c = y - b
                            if c < 0. then 0. else c
