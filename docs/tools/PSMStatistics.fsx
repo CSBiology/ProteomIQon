@@ -67,6 +67,7 @@ The fields of `Threshold.Estimate`:
 | `MaxIterations` | `15` | Upper limit for the retraining iterations. |
 | `MinimumIncreaseBetweenIterations` | `0.005` | Stop when the number of positives at the q-value threshold grows by less than this fraction from one iteration to the next. |
 | `PepValueFittingMethod` | `PepValueFittingMethod.IRLS` | How the PEP curve is fitted. `IRLS` (iteratively reweighted least squares) is the only case. |
+| `CrossValidation` | `false` | Split the scans into three folds and score each fold with the model trained on the other two, as Percolator does. The scores are normalised per fold, so that the score at q = 0.01 is 0 and the median decoy score is -1, and the q-values and PEPs are computed on the pooled scores. Parameter files without this field use `false`. |
 
 The default file is [pSMStatisticsParams.json](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/pSMStatisticsParams.json).
 
@@ -86,6 +87,7 @@ let psmStatisticsParams : Dto.PSMStatisticsParams =
                     MaxIterations                    = 15
                     MinimumIncreaseBetweenIterations = 0.005
                     PepValueFittingMethod            = PepValueFittingMethod.IRLS
+                    CrossValidation                  = false
                 }
         ParseProteinIDRegexPattern = "id"
         KeepTemporaryFiles         = true
