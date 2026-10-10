@@ -234,6 +234,23 @@ module Domain =
             BaseLineCorrection           : BaseLineCorrection option
         }
 
+    type AlignmentBasedQuantificationV2Params =
+        {
+            PerformLabeledQuantification : bool
+            XicExtraction                : XicExtraction
+            BaseLineCorrection           : BaseLineCorrection option
+            /// Lower bound of the half width of the scan time window (minutes).
+            MinScanTimeWindow            : float
+            /// The half width of the scan time window is this factor times PredictedScanTimeSd, capped at XicExtraction.ScanTimeWindow.
+            ScanTimeWindowSdFactor       : float
+            /// Use the ion mobility of the .align file when the run has ion mobility.
+            UseIonMobility               : bool
+            IonMobilityWindow            : Window
+            /// Fraction of the new ions that are also quantified as decoy transfers at a shifted scan time (0: none).
+            DecoyFraction                : float
+            Seed                         : int
+        }
+
     type FDRMethod =
         | Conservative
         | MAYU

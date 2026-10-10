@@ -2,10 +2,11 @@
 * Use CrossValidation and no PEP cutoff (PepValueThreshold 1.0) in the default PSMStatistics parameters
 * Add SpectrumDescription, a streaming parser of the spectrum description that reads only the fields the spectrum search needs, shared by PeptideSpectrumMatching and PeptideSpectrumMatchingTIMs
 * Add a result type for the .align output of QuantBasedAlignment: the AlignmentResult columns followed by the local scan time error scale, the source run, the source model error and the predicted ion mobility with its error scale
+* Add the parameter record and default parameters of AlignmentBasedQuantification with the candidate window, ion mobility, decoy and seed parameters
 * Remove PSMStatisticsResultFragpipe. MsFraggerToPSM writes and PSMBasedQuantificationTIMs reads PSMStatisticsResult
 * Write warnings to the log file of the tools
 * Add CrossValidation to the PSMStatistics EstimationParams
-* Add BaselineAls, the ALS baseline of FSharp.Stats baselineAls' computed faster with the same values, shared by PSMBasedQuantification and PSMBasedQuantificationTIMs
+* Add BaselineAls, the ALS baseline of FSharp.Stats baselineAls' computed faster with the same values, shared by PSMBasedQuantification, PSMBasedQuantificationTIMs and AlignmentBasedQuantification
 * Update BioFSharp.Mz to 0.2.3
 * Add TimsPeaks, the direct decoding of the peak data of TIMS spectra, for PSMBasedQuantificationTIMs
 
