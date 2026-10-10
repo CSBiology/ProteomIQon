@@ -1105,7 +1105,60 @@ module Dto =
             IsotopicPatternIntensity_Observed_SourceFile    : float []
             [<FieldAttribute(15)>]
             IonMobility                  : float
-        } 
+        }
+
+    /// Output of QuantBasedAlignment_v2. Columns 0-15 are the columns of AlignmentResult, so readers of AlignmentResult can read it.
+    type AlignmentResultV2 =
+        {
+            [<FieldAttribute(0)>]
+            StringSequence               : string
+            [<FieldAttribute(1)>]
+            GlobalMod                    : int
+            [<FieldAttribute(2)>]
+            Charge                       : int
+            [<FieldAttribute(3)>]
+            PepSequenceID                : int
+            [<FieldAttribute(4)>]
+            ModSequenceID                : int
+            [<FieldAttribute(5)>]
+            Mz                           : float
+            [<FieldAttribute(6)>]
+            ProteinNames                 : string
+            [<FieldAttribute(7)>]
+            PredictedScanTime            : float
+            [<FieldAttribute(8)>]
+            ScanTime_SourceFile          : float
+            [<FieldAttribute(9)>]
+            ApexIntensity_SourceFile     : float
+            [<FieldAttribute(10)>]
+            Quant_SourceFile             : float
+            [<FieldAttribute(11)>][<TraceConverter>]
+            RtTrace_SourceFile           : float []
+            [<FieldAttribute(12)>][<TraceConverter>]
+            IntensityTrace_SourceFile    : float []
+            [<FieldAttribute(13)>][<TraceConverter>]
+            IsotopicPatternMz_SourceFile                    : float []
+            [<FieldAttribute(14)>][<TraceConverter>]
+            IsotopicPatternIntensity_Observed_SourceFile    : float []
+            /// Ion mobility of the source ion.
+            [<FieldAttribute(15)>]
+            IonMobility                  : float
+            /// Local robust error scale of the scan time prediction (minutes).
+            [<FieldAttribute(16)>]
+            PredictedScanTimeSd          : float
+            /// Name of the source run (without extension) the ion was transferred from.
+            [<FieldAttribute(17)>]
+            SourceFileName               : string
+            /// Median absolute cross-validation error of the source to target scan time model (minutes).
+            [<FieldAttribute(18)>]
+            SourceModelError             : float
+            /// nan without ion mobility.
+            [<FieldAttribute(19)>]
+            PredictedIonMobility         : float
+            /// Local robust error scale of the ion mobility prediction, nan without ion mobility.
+            [<FieldAttribute(20)>]
+            PredictedIonMobilitySd       : float
+        }
 
     /////
     //type AlignmentModelMetrics<'Metrics> = 
