@@ -138,6 +138,8 @@ module Domain =
         MaxIterations                   : int
         MinimumIncreaseBetweenIterations: float
         PepValueFittingMethod           : PepValueFittingMethod
+        /// Score each scan with a model trained on the other two of three scan folds (Percolator-style cross-validation).
+        CrossValidation                 : bool
     }
 
     type ScoreCutoff = {

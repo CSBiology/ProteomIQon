@@ -1,5 +1,6 @@
 #### Unreleased
 * Add SpectrumDescription, a streaming parser of the spectrum description that reads only the fields the spectrum search needs, shared by PeptideSpectrumMatching and PeptideSpectrumMatchingTIMs
+* Add CrossValidation to the PSMStatistics EstimationParams
 
 #### 0.0.12 - Monday, September 28, 2026
 * Extend PeptideSpectrumMatchingResult with IonMobility, Hyperscore, Expectscore, MatchedIons and TotalIons. Breaking: .psm files written by earlier releases have 23 columns and have to be regenerated before PSMStatistics of this release reads them

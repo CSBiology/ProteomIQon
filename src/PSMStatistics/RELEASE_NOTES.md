@@ -1,3 +1,6 @@
+#### Unreleased
+* Add the parameter CrossValidation (default false): each scan is scored by the model trained on the other two of three scan folds, the scores are normalised per fold, and q-values and PEPs are computed on the pooled scores
+
 #### 0.0.11 - Monday, September 28, 2026
 * Use Hyperscore and Expectscore as features and seed the training with the expectation value when the input carries them
 * Breaking: read the 28 column .psm layout of this release, .psm files of earlier releases have to be regenerated with PeptideSpectrumMatching

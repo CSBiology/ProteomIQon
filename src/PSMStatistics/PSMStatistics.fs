@@ -236,7 +236,8 @@ module PSMStatistics =
             try
             logger.Trace "Prepare training pipeline"
             let ctx = new ML.MLContext(1024)
-            let trainModel positives' negatives' =
+            // prefix: "" or "Fold<k>_" with cross-validation, added to log lines and chart names
+            let trainModel prefix positives' negatives' =
                 let data = ctx.Data.LoadFromEnumerable(positives' + negatives')
                 let split = ctx.Data.TrainTestSplit(data, testFraction= 0.1)
                 let featureColumns =
@@ -268,6 +269,7 @@ module PSMStatistics =
              
                 let model = pipeline.Fit(split.TrainSet)    
                 let metrics = ctx.BinaryClassification.Evaluate(model.Transform(split.TestSet),labelColumnName="Label")
+                logger.Trace (sprintf "%sMetrics on the test split: accuracy %.4f, AUC %.4f, F1 %.4f" prefix metrics.Accuracy metrics.AreaUnderRocCurve metrics.F1Score)
                 if diagCharts then 
                     Chart.Column(
                         [
@@ -280,7 +282,7 @@ module PSMStatistics =
                         ]
                         )
                     |> Chart.withTitle "Metrics"
-                    |> Chart.saveHtml (Path.Combine [|plotDirectory;"Metrics"|])
+                    |> Chart.saveHtml (Path.Combine [|plotDirectory;prefix + "Metrics"|])
                 let predF = ctx.Model.CreatePredictionEngine<PSMToLearn,PSMPrediction>(model)
                 let predict psm = 
                     psm 
@@ -294,64 +296,7 @@ module PSMStatistics =
                 |> Array.filter (fun x -> nan.Equals(x.SequestNormDeltaNext) = false && nan.Equals(x.AndroNormDeltaNext) = false )
             logger.Trace "Converting psms to PSMToLearn format: finished"        
 
-            let bestPSMPerScan = 
-                psmsToLearn
-                |> Array.groupBy (fun x -> x.ScanNr)
-                |> Array.map (fun (psmId,psms) -> 
-                    psms |> Array.maxBy seedScore
-                    )
-            let q = BioFSharp.Mz.FDRControl.calculateQValueStorey bestPSMPerScan (fun s -> s.Label |> not) (fun s -> float (seedScore s)) (fun s -> float (seedScore s)) 
-
-            let scoreVsQ = 
-                bestPSMPerScan
-                |> Array.map (fun x -> seedScore x,q (float (seedScore x)))
-
-            let tar = 
-                bestPSMPerScan 
-                |> Array.filter (fun x -> x.Label) 
-                |> Array.map seedScore
-
-            let decoy = 
-                bestPSMPerScan 
-                |> Array.filter (fun x -> x.Label |> not) 
-                |> Array.map seedScore
-            if diagCharts then
-                [
-                    [
-                    Chart.Histogram(tar)
-                    |> Chart.withTraceInfo "positives"
-
-                    Chart.Histogram(decoy)
-                    |> Chart.withTraceInfo "negatives"
-                    ]
-                    |> Chart.combine
-                    |> Chart.withAxisAnchor(Y=1)
-                    Chart.Point(scoreVsQ)
-                    |> Chart.withAxisAnchor(Y=2)
-                ]
-                |> Chart.combine
-                |> Chart.withXAxisStyle("Score")
-                |> Chart.withYAxisStyle("Count",Side=StyleParam.Side.Left,Id=StyleParam.SubPlotId.YAxis 1,ShowGrid=false)
-                |> Chart.withYAxisStyle("FDR",Side=StyleParam.Side.Right,Id=StyleParam.SubPlotId.YAxis 2,Overlaying=StyleParam.LinearAxisId.Y 1,ShowGrid=false,MinMax=(0.,0.5))
-                |> Chart.withTitle (sprintf "#%i with q < 0.01" (scoreVsQ |> Array.filter (fun x -> snd x <= 0.01) |> Array.length))
-                |> Chart.saveHtml (Path.Combine [|plotDirectory;"InitialSeparation"|])
-            logger.Trace "Selecting positives for training"
-            let positives' = 
-                bestPSMPerScan 
-                |> Array.filter (fun x -> q (float (seedScore x)) < 0.001)
-                |> Array.filter (fun x -> x.Label = true)
-                |> Array.map (fun x -> x.ScanNr,x)
-                |> Map.ofArray
-            logger.Trace "Selecting negatives for training"
-            let negatives' =
-                psmsToLearn
-                |> Array.filter (fun x -> positives' |> Map.containsKey x.ScanNr |> not)
-                |> Array.filter (fun x -> x.Label = false)
-                |> Set.ofArray
-        
-            let predict = trainModel (positives'|> Map.toArray |> Array.map snd |> Set.ofArray) negatives' 
-        
-            let applyModel iteration (trainedModel: PSMToLearn -> PSMPrediction) psms =
+            let applyModel prefix iteration (trainedModel: PSMToLearn -> PSMPrediction) psms =
                 let bestPSMPerScan = 
                     psms
                     |> Array.groupBy (fun x -> x.ScanNr)
@@ -412,22 +357,80 @@ module PSMStatistics =
                     |> Chart.withYAxisStyle("Count",Side=StyleParam.Side.Left,Id=StyleParam.SubPlotId.YAxis 1,ShowGrid=false)
                     |> Chart.withYAxisStyle("FDR",Side=StyleParam.Side.Right,Id=StyleParam.SubPlotId.YAxis 2,Overlaying=StyleParam.LinearAxisId.Y 1,ShowGrid=false,MinMax=(0.,0.5))
                     |> Chart.withTitle (sprintf "#iteration: %i, %i with q < 0.01" iteration (scoreVsQ |> Array.filter (fun x -> snd x <= 0.01) |> Array.length))
-                    |> Chart.saveHtml (Path.Combine [|plotDirectory;"separationAtIteration_" + iteration.ToString()|])
+                    |> Chart.saveHtml (Path.Combine [|plotDirectory;prefix + "separationAtIteration_" + iteration.ToString()|])
                 {
                     NPositivesAtFDR = nPosTar
                     CalcQValue     = getQ
                     CalcPepValue   = getPep
                     Model          = trainedModel
                 }
+
+            /// Trains the model on psmsToTrain. The positives are seeded with seedScore and then taken from the scores of the previous model.
+            let train prefix (psmsToTrain: PSMToLearn []) =
+                logger.Trace (sprintf "%sTraining on %i PSMs of %i scans" prefix psmsToTrain.Length (psmsToTrain |> Array.distinctBy (fun x -> x.ScanNr) |> Array.length))
+                let bestPSMPerScan = 
+                    psmsToTrain
+                    |> Array.groupBy (fun x -> x.ScanNr)
+                    |> Array.map (fun (psmId,psms) -> 
+                        psms |> Array.maxBy seedScore
+                        )
+                let q = BioFSharp.Mz.FDRControl.calculateQValueStorey bestPSMPerScan (fun s -> s.Label |> not) (fun s -> float (seedScore s)) (fun s -> float (seedScore s)) 
+
+                let scoreVsQ = 
+                    bestPSMPerScan
+                    |> Array.map (fun x -> seedScore x,q (float (seedScore x)))
+
+                let tar = 
+                    bestPSMPerScan 
+                    |> Array.filter (fun x -> x.Label) 
+                    |> Array.map seedScore
+
+                let decoy = 
+                    bestPSMPerScan 
+                    |> Array.filter (fun x -> x.Label |> not) 
+                    |> Array.map seedScore
+                if diagCharts then
+                    [
+                        [
+                        Chart.Histogram(tar)
+                        |> Chart.withTraceInfo "positives"
+
+                        Chart.Histogram(decoy)
+                        |> Chart.withTraceInfo "negatives"
+                        ]
+                        |> Chart.combine
+                        |> Chart.withAxisAnchor(Y=1)
+                        Chart.Point(scoreVsQ)
+                        |> Chart.withAxisAnchor(Y=2)
+                    ]
+                    |> Chart.combine
+                    |> Chart.withXAxisStyle("Score")
+                    |> Chart.withYAxisStyle("Count",Side=StyleParam.Side.Left,Id=StyleParam.SubPlotId.YAxis 1,ShowGrid=false)
+                    |> Chart.withYAxisStyle("FDR",Side=StyleParam.Side.Right,Id=StyleParam.SubPlotId.YAxis 2,Overlaying=StyleParam.LinearAxisId.Y 1,ShowGrid=false,MinMax=(0.,0.5))
+                    |> Chart.withTitle (sprintf "#%i with q < 0.01" (scoreVsQ |> Array.filter (fun x -> snd x <= 0.01) |> Array.length))
+                    |> Chart.saveHtml (Path.Combine [|plotDirectory;prefix + "InitialSeparation"|])
+                logger.Trace (prefix + "Selecting positives for training")
+                let positives' = 
+                    bestPSMPerScan 
+                    |> Array.filter (fun x -> q (float (seedScore x)) < 0.001)
+                    |> Array.filter (fun x -> x.Label = true)
+                    |> Array.map (fun x -> x.ScanNr,x)
+                    |> Map.ofArray
+                logger.Trace (prefix + "Selecting negatives for training")
+                let negatives' =
+                    psmsToTrain
+                    |> Array.filter (fun x -> positives' |> Map.containsKey x.ScanNr |> not)
+                    |> Array.filter (fun x -> x.Label = false)
+                    |> Set.ofArray
         
-            let initModel = applyModel 0 predict psmsToLearn
-            let refinedModel = 
+                let predict = trainModel prefix (positives'|> Map.toArray |> Array.map snd |> Set.ofArray) negatives' 
+                let initModel = applyModel prefix 0 predict psmsToTrain
                 let rec loop (prevModel:AppliedModel) i =
                     if i >= estParams.MaxIterations then 
                         prevModel
                     else
                         let bestPSMPerScan = 
-                            psmsToLearn
+                            psmsToTrain
                             |> Array.groupBy (fun x -> x.ScanNr)
                             |> Array.map (fun (psmId,psms) -> 
                                 psms 
@@ -435,7 +438,7 @@ module PSMStatistics =
                                     (prevModel.Model x).Score
                                     )
                                 )   
-                        logger.Trace "Selecting positives for training"
+                        logger.Trace (prefix + "Selecting positives for training")
                         let positives' = 
                             bestPSMPerScan 
                             |> Array.filter (fun x -> 
@@ -446,16 +449,16 @@ module PSMStatistics =
                             |> Array.filter (fun x -> x.Label = true)
                             |> Array.map (fun x -> x.ScanNr,x)
                             |> Map.ofArray
-                        logger.Trace "Selecting negatives for training"
+                        logger.Trace (prefix + "Selecting negatives for training")
                         let negatives' =
-                            psmsToLearn
+                            psmsToTrain
                             |> Array.filter (fun x -> positives' |> Map.containsKey x.ScanNr |> not)
                             |> Array.filter (fun x -> x.Label = false)
                             |> Set.ofArray
-                        logger.Trace (sprintf "Training iteration #%i with %i positives and %i negatives" i positives'.Count negatives'.Count )
+                        logger.Trace (sprintf "%sTraining iteration #%i with %i positives and %i negatives" prefix i positives'.Count negatives'.Count )
                         try
-                            let predict = trainModel (positives'|> Map.toArray |> Array.map snd |> Set.ofArray)  negatives' 
-                            let newModel = applyModel i predict psmsToLearn                    
+                            let predict = trainModel prefix (positives'|> Map.toArray |> Array.map snd |> Set.ofArray)  negatives' 
+                            let newModel = applyModel prefix i predict psmsToTrain                    
                             let ratio = (prevModel.NPositivesAtFDR |> float) /  (newModel.NPositivesAtFDR |> float) 
                             if ratio > 1. then 
                                 prevModel 
@@ -464,8 +467,62 @@ module PSMStatistics =
                             else
                                 loop newModel (i+1)
                         with
-                        | _ -> logger.Trace "Fall back to previous model"; prevModel
-                loop initModel 0
+                        | _ -> logger.Trace (prefix + "Fall back to previous model"); prevModel
+                let refinedModel = loop initModel 0
+                logger.Trace (sprintf "%sFinal model: %i scans pass the q-value and PEP thresholds in-sample" prefix refinedModel.NPositivesAtFDR)
+                refinedModel
+
+            // finalScore: the model score, with cross-validation the normalised score of the model that did not see the scan
+            let finalScore, calcQValue, calcPepValue =
+                if not estParams.CrossValidation then
+                    let refinedModel = train "" psmsToLearn
+                    (fun x -> (refinedModel.Model x).Score |> float), refinedModel.CalcQValue, refinedModel.CalcPepValue
+                else
+                    // Percolator-style: each scan is scored by the model trained on the other two of three scan folds.
+                    let nFolds = 3
+                    let foldOfScan =
+                        let rnd = System.Random(1024)
+                        psmsToLearn
+                        |> Array.map (fun x -> x.ScanNr)
+                        |> Array.distinct
+                        |> Array.sort
+                        |> Array.sortBy (fun _ -> rnd.Next())
+                        |> Array.mapi (fun i scanNr -> scanNr, i % nFolds)
+                        |> dict
+                    let scores = System.Collections.Generic.Dictionary<PSMToLearn,float>(HashIdentity.Reference)
+                    // 1 / (score at q = 0.01 - median decoy score) of each fold: one model score unit in normalised units
+                    let unitPerFold =
+                        Array.init nFolds (fun k ->
+                            let prefix = sprintf "Fold%i_" (k + 1)
+                            let trainSet, heldOut = psmsToLearn |> Array.partition (fun x -> foldOfScan.[x.ScanNr] <> k)
+                            let model = train prefix trainSet
+                            let score x = (model.Model x).Score |> float
+                            // Normalise as Percolator does: the score at q = 0.01 maps to 0 and the median decoy score to -1, so the folds are comparable.
+                            let bestPSMPerScan =
+                                heldOut
+                                |> Array.groupBy (fun x -> x.ScanNr)
+                                |> Array.map (fun (scanNr,psms) -> psms |> Array.maxBy score)
+                            let getQ = BioFSharp.Mz.FDRControl.calculateQValueStorey bestPSMPerScan (fun x -> x.Label |> not) score score
+                            let passing = bestPSMPerScan |> Array.filter (fun x -> x.Label && getQ (score x) <= 0.01) |> Array.map score
+                            let scoreAtQ = if passing.Length > 0 then Array.min passing else bestPSMPerScan |> Array.map score |> Array.max
+                            let medianDecoy = bestPSMPerScan |> Array.filter (fun x -> x.Label |> not) |> Array.map score |> FSharp.Stats.Array.median
+                            logger.Trace (sprintf "%sHeld-out: %i PSMs of %i scans, %i targets with q <= 0.01, score at q = 0.01 %f, median decoy score %f" prefix heldOut.Length bestPSMPerScan.Length passing.Length scoreAtQ medianDecoy)
+                            for x in heldOut do
+                                scores.[x] <- (score x - scoreAtQ) / (scoreAtQ - medianDecoy)
+                            1. / (scoreAtQ - medianDecoy)
+                        )
+                    let score x = scores.[x]
+                    let bestPSMPerScan =
+                        psmsToLearn
+                        |> Array.groupBy (fun x -> x.ScanNr)
+                        |> Array.map (fun (scanNr,psms) -> psms |> Array.maxBy score)
+                    let getQ = BioFSharp.Mz.FDRControl.calculateQValueStorey bestPSMPerScan (fun x -> x.Label |> not) score score
+                    let getPep =
+                        match estParams.PepValueFittingMethod with
+                        // the histogram bin width of 1 model score unit, as without cross-validation
+                        | IRLS -> ProteomIQon.PepValueCalculation.initCalculatePEPValueIRLS logger (Array.average unitPerFold) (fun x -> x.Label |> not) score score bestPSMPerScan
+                    logger.Trace (sprintf "Cross-validated scores: %i targets with q <= 0.01" (bestPSMPerScan |> Array.filter (fun x -> x.Label && getQ (score x) <= 0.01) |> Array.length))
+                    score, getQ, getPep
 
             let bestPSMPerScan = 
                 psmsToLearn
@@ -473,15 +530,15 @@ module PSMStatistics =
                 |> Array.map (fun (psmId,psms) -> 
                     psms 
                     |> Array.maxBy (fun x -> 
-                        (refinedModel.Model x).Score
+                        finalScore x
                         )
                     )
 
             let qpsm = 
                 bestPSMPerScan 
                 |> Array.filter (fun x -> 
-                    let qValPass = (refinedModel.Model x).Score |> float |> refinedModel.CalcQValue  < estParams.QValueThreshold
-                    let pepValPass = (refinedModel.Model x).Score |> float |> refinedModel.CalcPepValue < estParams.PepValueThreshold
+                    let qValPass = finalScore x |> calcQValue  < estParams.QValueThreshold
+                    let pepValPass = finalScore x |> calcPepValue < estParams.PepValueThreshold
                     qValPass && pepValPass
                     )
                 |> Array.filter (fun x -> x.Label = true)
@@ -496,9 +553,9 @@ module PSMStatistics =
                                         match Map.tryFind candidatePSM.PSMId qpsm with
                                         | Some validPSM ->
                                             let psmID = restorePSMID validPSM.PSMId 
-                                            let score = (refinedModel.Model validPSM).Score |> float 
-                                            let qValue = refinedModel.CalcQValue score 
-                                            let pepValue = refinedModel.CalcPepValue score 
+                                            let score = finalScore validPSM 
+                                            let qValue = calcQValue score 
+                                            let pepValue = calcPepValue score 
                                             Some {
                                             PSMId                       = psmID
                                             GlobalMod                   = candidatePSM.GlobalMod
