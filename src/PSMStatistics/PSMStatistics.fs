@@ -130,12 +130,14 @@ module PSMStatistics =
 
     /// The decoy of a peptide sequence as the searches build it with
     /// Fragmentation.Series.pseudoReverse: the C-terminal residue stays in place and the rest is
-    /// reversed, or the whole sequence if that gives the sequence itself. A residue keeps the
+    /// reversed, or the whole sequence if that gives the sequence itself. The terminator "*" and the
+    /// gap "-" are dropped first, as the searches drop them. A residue keeps the
     /// modification tokens written before it, such as "[ox]M".
     let decoySequence (sequence: string) =
         Text.RegularExpressions.Regex.Matches(sequence, @"(\[[^\]]*\])*[^\[\]]")
         |> Seq.map (fun m -> m.Value)
         |> List.ofSeq
+        |> List.filter (fun token -> token <> "*" && token <> "-")
         |> Fragmentation.Series.pseudoReverse
         |> String.concat ""
 
