@@ -1,6 +1,7 @@
 #### Unreleased
 * Fixed bug when using single file option caused by switched parameterss
 * Update BioFSharp.Mz to 0.2.2
+* Update BioFSharp.Mz to 0.2.3
 
 #### 0.0.4 - Wednesday, September 2, 2026
 * Fall back to a median mz correction when the smoothing spline cannot be fitted on sparse data
