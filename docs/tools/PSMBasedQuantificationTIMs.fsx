@@ -33,7 +33,7 @@ By default it locates the peak on the grid with a Gabor filter (a Gaussian envel
 | Flag | Meaning | Comes from |
 |------|---------|------------|
 | `-i` | one or more `.mzlite` files with ion mobility, or a directory | [MzMLToMzLiteIonMobility]({{root}}tools/MzMLToMzLiteIonMobility.html) |
-| `-ii` | one or more `.qpsm` files in the FragPipe column layout, or a directory that is searched for `*.qpsm` | [MsFraggerToPSM]({{root}}tools/MsFraggerToPSM.html) |
+| `-ii` | one or more `.qpsm` files, or a directory that is searched for `*.qpsm` | [PSMStatistics]({{root}}tools/PSMStatistics.html) or [MsFraggerToPSM]({{root}}tools/MsFraggerToPSM.html) |
 | `-d` | the SQLite peptide database | [PeptideDB]({{root}}tools/PeptideDB.html) |
 | `-o` | the output directory, created when missing | |
 | `-p` | the parameter file in JSON | this page |
@@ -42,7 +42,7 @@ By default it locates the peak on the grid with a Gabor filter (a Gaussian envel
 | `-z` | switch: pack the chart directory into a zip file and delete it | |
 | `-c` | number of runs quantified at the same time, default 1 | |
 
-The tool refuses any instrument file whose name does not end in `.mzlite`. It always reads the qpsm files as the FragPipe layout written by MsFraggerToPSM (with `Hyperscore` and `IonMobility` columns), so the files from [PSMStatistics]({{root}}tools/PSMStatistics.html) do not fit here.
+The tool refuses any instrument file whose name does not end in `.mzlite`. It reads the qpsm files in the column layout of PSMStatistics, which MsFraggerToPSM writes too, and stops with the missing columns when a file has another layout. The qpsm carries no ion mobility, so the tool reads the ion mobility of every identification from its MS2 spectrum in the mzlite, the spectrum whose id is the `PSMId`. The tool warns about identifications whose spectrum is missing or has no ion mobility. These identifications do not locate the trace. An ion without any identification with ion mobility gets no row, and the tool stops when no identification of the file has an ion mobility.
 With one file per flag the pair is used as given. With lists, the n-th mzlite file is paired with the n-th qpsm file unless you pass `-mf`, which pairs files by their base name and skips mzlite files without a partner.
 
 For every run the tool writes `run.quant`, tab separated with a header and the columns described on the [PSMBasedQuantification]({{root}}tools/PSMBasedQuantification.html) page.
@@ -57,11 +57,11 @@ The parameter record is the one of PSMBasedQuantification. The defaults below ar
 | Parameter | Default | Meaning |
 |-----------|---------|---------|
 | `PerformLabeledQuantification` | `Labeling.Unlabeled` | Label free quantification of the identified ion. The three labeled cases work as in PSMBasedQuantification and quantify the partner ion too. |
-| `FragPipe` | `true` | Marks that the qpsm input has the FragPipe layout written by MsFraggerToPSM. Keep it at `true` for this tool. |
+| `FragPipe` | `true` | Not read by this tool. |
 | `XicExtraction.ScanTimeWindow` | `2.0` | Half width of the retention time range around the identification that is extracted, in the scan time unit of the run. |
 | `XicExtraction.MzWindow_Da` | `Window.Estimate` | Half width of the m/z window, in Da. `Estimate` uses four times the MS1 mass error measured on the identifications. `Window.Fixed 0.07` sets it to 0.07 Da. |
 | `XicExtraction.XicProcessing` | `XicProcessing.Gabor3D gaborParams` | Peak detection on the retention time and mobility grid. The Gabor parameters are listed below. `Wavelet` and `SecondDerivative` fall back to the one dimensional processing of PSMBasedQuantification. |
-| `XicExtraction.TopKPSMs` | `None` | `Some k` keeps only the k identifications with the highest `Hyperscore` per peptide ion when placing the peak. |
+| `XicExtraction.TopKPSMs` | `None` | `Some k` keeps only the k identifications with the highest `ModelScore` per peptide ion when placing the peak. |
 | `BaseLineCorrection` | `None` | No baseline subtraction. `Some { MaxIterations = 10; Lambda = 6; P = 0.05 }` enables the asymmetric least squares baseline. |
 
 The Gabor parameters. The tool rejects a kernel size at or below zero and any width, frequency or angle that is not finite (widths must also be positive).

@@ -65,8 +65,7 @@ light to heavy ratios in LabeledQuant.txt into one intensity per run and protein
 [MsFraggerToPSM]({{root}}tools/MsFraggerToPSM.html) imports an MSFragger search. [PeptideSpectrumMatchingTIMs]({{root}}tools/PeptideSpectrumMatchingTIMs.html) identifies the spectra of an ion
 mobility run without MSFragger and writes the `.psm` that [PSMStatistics]({{root}}tools/PSMStatistics.html) reads.
 [PSMBasedQuantificationTIMs]({{root}}tools/PSMBasedQuantificationTIMs.html) quantifies in retention time and ion
-mobility from the FragPipe layout of MsFraggerToPSM. The `.qpsm` of PSMStatistics carries no ion mobility yet, so that
-link from PeptideSpectrumMatchingTIMs to the quantification is still open.
+mobility from the `.qpsm` of PSMStatistics or MsFraggerToPSM.
 
 The core project
 ------------------

@@ -76,7 +76,7 @@ The output record is `Dto.PeptideSpectrumMatchingResult`, the same record writte
 
 `ScanNr` is the position of the MS2 spectrum in scan time order. `PSMId` is the spectrum id with spaces replaced by "-", followed by `_ScanNr_charge_rank`. The rank is the position among the reported targets or decoys of that spectrum, with the best hyperscore first. `AbsDeltaMass` is the mass error after the isotope error that fits the candidate best.
 
-PSMStatistics reads it directly and uses `Hyperscore` and `Expectscore` when they are present. Its `.qpsm` output does not carry the ion mobility yet, and [PSMBasedQuantificationTIMs]({{root}}tools/PSMBasedQuantificationTIMs.html) still expects the FragPipe column layout of [MsFraggerToPSM]({{root}}tools/MsFraggerToPSM.html), so the quantification of a run identified with this tool needs those two tools to be adapted first.
+PSMStatistics reads it directly and uses `Hyperscore` and `Expectscore` when they are present. [PSMBasedQuantificationTIMs]({{root}}tools/PSMBasedQuantificationTIMs.html) reads its `.qpsm` output and takes the ion mobility of every identification from its spectrum in the mzlite.
 
 The output directory receives `PeptideSpectrumMatchingTIMs_log.txt` and one `<run>_log.txt` per input.
 

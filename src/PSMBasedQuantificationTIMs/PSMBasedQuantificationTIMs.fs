@@ -89,7 +89,69 @@ module PSMBasedQuantificationTIMs =
                     
             |]
 
-    type PeptideIon = 
+    /// Reading of the .qpsm of PSMStatistics and of the ion mobility of the PSM spectra.
+    module QpsmInput =
+
+        /// Column names of the .qpsm in the order the positional reader expects them.
+        let expectedColumns =
+            Reflection.FSharpType.GetRecordFields(typeof<PSMStatisticsResult>)
+            |> Array.map (fun field -> field.Name)
+
+        /// Fails when the header of the file is not the column layout of PSMStatisticsResult,
+        /// for example a .qpsm in the former FragPipe layout of MsFraggerToPSM.
+        let checkHeader (path: string) =
+            let header =
+                use reader = new StreamReader(path)
+                match reader.ReadLine() with
+                | null -> [||]
+                | line -> line.TrimEnd('\r').Split('\t')
+            if header <> expectedColumns then
+                let missing = expectedColumns |> Array.filter (fun c -> not (Array.contains c header))
+                let unexpected = header |> Array.filter (fun c -> not (Array.contains c expectedColumns))
+                failwithf
+                    "%s does not have the column layout of the PSMStatistics .qpsm. Missing columns: [%s]. Unexpected columns: [%s]. Expected in this order: [%s]."
+                    path
+                    (String.Join(", ", missing))
+                    (String.Join(", ", unexpected))
+                    (String.Join(", ", expectedColumns))
+
+        /// Reads the .qpsm after checking its header. An empty file has no PSMs.
+        let read (path: string) =
+            if FileInfo(path).Length = 0L then
+                [||]
+            else
+                checkHeader path
+                Csv.CsvReader<PSMStatisticsResult>(SchemaMode=Csv.Fill).ReadFile(path,'\t',false,1)
+                |> Array.ofSeq
+
+        /// The retention time index and the scan times of the MS1 spectra, both sorted by scan time, and the
+        /// inverse reduced ion mobility (MS:1002815, NaN when absent) of the spectra in psmSpectrumIds, from one
+        /// pass over the spectrum descriptions with the streaming parser.
+        let readSpectrumIndex (reader: MzIO.MzSQL.MzSQL) (runID: string) (psmSpectrumIds: Collections.Generic.HashSet<string>) =
+            let ms1s = ResizeArray<float option*string>()
+            let mobilities = Collections.Generic.Dictionary<string,float>()
+            use cmd = new SQLiteCommand("SELECT Description FROM Spectrum WHERE RunID = @runID ORDER BY rowid", reader.Connection)
+            cmd.Parameters.AddWithValue("@runID", runID) |> ignore
+            use rows = cmd.ExecuteReader()
+            while rows.Read() do
+                let header = SpectrumDescription.parse (rows.GetString 0)
+                if header.MsLevel = Some 1 then
+                    ms1s.Add (header.ScanTime, header.ID)
+                elif psmSpectrumIds.Contains header.ID then
+                    mobilities.[header.ID] <- header.IonMobility |> Option.defaultValue nan
+            let rtIndex =
+                ms1s.ToArray()
+                |> Array.choose (fun (scanTime, id) -> scanTime |> Option.map (fun rt -> MzIO.Processing.MzIOLinq.RtIndexEntry(rt, id)))
+                |> Array.sortBy (fun entry -> entry.Rt)
+                |> MzIO.Commons.Arrays.MzIOArray.ToMzIOArray
+            // a MS1 without scan time is kept at -1, as MassSpectrum.getScanTime gives it
+            let ms1SortedByScanTime =
+                ms1s.ToArray()
+                |> Array.map (fun (scanTime, id) -> Option.defaultValue -1. scanTime, id)
+                |> Array.sortBy fst
+            rtIndex, ms1SortedByScanTime, mobilities
+
+    type PeptideIon =
         {
             Sequence             : string
             GlobalMod            : int
@@ -186,14 +248,14 @@ module PSMBasedQuantificationTIMs =
         yUncorr - y
        
     ///
-    let getClosestMs1 (ms1s: (float*MzIO.Model.MassSpectrum) []) scanTime = 
+    let getClosestMs1 (ms1s: (float*string) []) scanTime = 
          ms1s
          |> Array.minBy (fun ms -> abs (fst ms - scanTime))
          |> snd
 
     ///
-    let getSpec (reader:MzIO.IO.IMzIODataReader) (ms1: MzIO.Model.MassSpectrum)  =
-        Peaks.unzipIMzliteArray (reader.ReadSpectrumPeaks(ms1.ID).Peaks)
+    let getSpec (reader:MzIO.IO.IMzIODataReader) (ms1ID: string)  =
+        Peaks.unzipIMzliteArray (reader.ReadSpectrumPeaks(ms1ID).Peaks)
         |> fun (mzData,intensityData) -> PeakArray.zip mzData intensityData
     
     /// Returns the median of positive, finite values or None if no usable value exists.
@@ -516,17 +578,19 @@ module PSMBasedQuantificationTIMs =
                 else
                     None
 
-    let estimateGaborTargetFromFragPipePsms
+    /// ionMobilityOf gives the ion mobility of the MS2 spectrum of a PSM by its PSMId.
+    let estimateGaborTargetFromPsms
+        (ionMobilityOf: string -> float)
         scanTimeToMzCorrection
         theoMz
-        (psms: (PSMStatisticsResultFragpipe * float)[])
+        (psms: (PSMStatisticsResult * float)[])
         =
 
         let usablePsms =
             psms
             |> Array.filter (fun (psm, weight) ->
                 Double.IsFinite psm.ScanTime
-                && Double.IsFinite psm.IonMobility
+                && Double.IsFinite (ionMobilityOf psm.PSMId)
                 && Double.IsFinite weight
                 && weight >= 0.0
             )
@@ -547,7 +611,7 @@ module PSMBasedQuantificationTIMs =
                 bestPsms |> Array.map (fun (psm, _) -> psm.ScanTime)
 
             let mobilities =
-                bestPsms |> Array.map (fun (psm, _) -> psm.IonMobility)
+                bestPsms |> Array.map (fun (psm, _) -> ionMobilityOf psm.PSMId)
 
             match
                 tryWeightedMeanOrMean weights scanTimes,
@@ -1731,21 +1795,30 @@ module PSMBasedQuantificationTIMs =
         let sum,n = Seq.fold2 (fun (sum,n) w i -> w*i+sum,n + w ) (0.,0.) weights items
         sum / n
         
+    /// The PSM with the lowest QValue. A PSM without QValue (NaN) is taken only when no PSM has one.
+    let bestPsmByQValue (psms: PSMStatisticsResult []) =
+        match psms |> Array.filter (fun x -> not (Double.IsNaN x.QValue)) with
+        | [||] -> psms.[0]
+        | withQValue -> withQValue |> Array.minBy (fun x -> x.QValue)
+
     ///
-    let average getXic scanTimeToMzCorrection theoMz (psms:(PSMStatisticsResultFragpipe*float) []) =
+    /// ionMobilityOf gives the ion mobility of the MS2 spectrum of a PSM by its PSMId. The top 3 PSMs are taken
+    /// among the PSMs whose spectrum has an ion mobility, among all when none has one.
+    let average (ionMobilityOf: string -> float) getXic scanTimeToMzCorrection theoMz (psms:(PSMStatisticsResult*float) []) =
             //let meanPrecMz   = psms |> Seq.meanBy (fun (psm,m) -> psm.PrecursorMZ)
-            
+
             let meanScanTime = psms |> Seq.meanBy (fun (psm,m) -> psm.ScanTime)
-            let meanScore = psms |> Seq.averageBy (fun (psm,m) -> psm.Hyperscore)
-            let psms' = 
-                let tmp = Array.sortByDescending (fun (psm,m) -> m) psms
+            let meanScore = psms |> Seq.averageBy (fun (psm,m) -> psm.ModelScore)
+            let psms' =
+                let withIonMobility = psms |> Array.filter (fun (psm,m) -> Double.IsFinite (ionMobilityOf psm.PSMId))
+                let tmp = Array.sortByDescending (fun (psm,m) -> m) (if Array.isEmpty withIonMobility then psms else withIonMobility)
                 if tmp.Length > 3 then tmp.[..2] else tmp 
             let weightedAvgScanTime =
                 let scanTimes = psms' |> Array.map (fun (psm,m) -> psm.ScanTime)
                 let weights = psms' |> Array.map snd
                 weightedMean weights scanTimes
             let weightedAvgIM =
-                let ims = psms' |> Array.map (fun (psm,m) -> psm.IonMobility)
+                let ims = psms' |> Array.map (fun (psm,m) -> ionMobilityOf psm.PSMId)
                 let weights = psms' |> Array.map snd
                 weightedMean weights ims
             let correctedMz = scanTimeToMzCorrection weightedAvgScanTime + theoMz
@@ -1980,11 +2053,21 @@ module PSMBasedQuantificationTIMs =
         logger.Trace (sprintf "Output directory: %s" outputDir)
         logger.Trace (sprintf "Parameters: %A" processParams)
         logger.Trace (sprintf "Now performing Quantification using: %s and %s, Results will be written to: %s" instrumentOutput scoredPSMs outputDir)
+        logger.Trace "Read scored PSMs"
+        ///
+        let qpsms = QpsmInput.read scoredPSMs
+        logger.Trace "Read scored PSMs:finished"
         // initialize Reader and Transaction
         let outFilePath =
             let fileName = (Path.GetFileNameWithoutExtension instrumentOutput) + ".quant"
             Path.Combine [|outputDir;fileName|]
         logger.Trace (sprintf "outFilePath:%s" outFilePath)
+        if Array.isEmpty qpsms then
+            logger.Warn (sprintf "%s contains no PSMs, %s gets no quantifications." scoredPSMs outFilePath)
+            Seq.empty<QuantificationResult>
+            |> SeqIO'.csv "\t" true false
+            |> FSharpAux.IO.SeqIO.Seq.writeOrAppend (outFilePath)
+        else
         //
         let plotDirectory =
             let fileName = sprintf "%s_plots" (Path.GetFileNameWithoutExtension instrumentOutput)
@@ -2025,7 +2108,7 @@ module PSMBasedQuantificationTIMs =
         inReader.Connection.Open()
         let inRunID  = Core.MzIO.Reader.getDefaultRunID inReader       
         let inTr = inReader.BeginTransaction()
-        let countMatchedMasses (peptide: LookUpResult<AminoAcids.AminoAcid>)(psms: PSMStatisticsResultFragpipe []) =
+        let countMatchedMasses (peptide: LookUpResult<AminoAcids.AminoAcid>)(psms: PSMStatisticsResult []) =
             let frag = 
                 let ionSeries = (calcIonSeries peptide.BioSequence).TargetMasses
                 [1. .. 2.]
@@ -2045,28 +2128,25 @@ module PSMBasedQuantificationTIMs =
                     |> Seq.sumBy (fun x -> x.Intensity)
                 psm,sum
             )
-        logger.Trace "Create RetentionTime index"
-        let retTimeIdxed = Query.getMS1RTIdx inReader inRunID
-        logger.Trace "Create RetentionTime index:finished"
-        
-        logger.Trace "Read and sort ms1s"
-        /// Returns a Sequence containing all MassSpectra of a single MS-run
-        let massSpectra = inReader.ReadMassSpectra(inRunID)
-        /// Returns a Array that contains all MS1s sorted by their scanTime
-        let ms1SortedByScanTime =
-            massSpectra
-            |> Seq.filter (fun ms -> MassSpectrum.getMsLevel ms = 1)
-            |> Seq.map (fun ms -> MassSpectrum.getScanTime ms, ms)
-            |> Seq.sortBy fst
-            |> Array.ofSeq
-        logger.Trace "Read and sort ms1s:finished"
-        
-        logger.Trace "Read scored PSMs"
-        ///
-        let qpsms =
-            Csv.CsvReader<PSMStatisticsResultFragpipe>(SchemaMode=Csv.Fill).ReadFile(scoredPSMs,'\t',false,1)
-            |> Array.ofSeq
-        logger.Trace "Read scored PSMs:finished"
+
+        logger.Trace "Create RetentionTime index, read the ms1s and the ion mobility of the PSM spectra"
+        /// retTimeIdxed and ms1SortedByScanTime: the MS1s sorted by their scanTime. ionMobilityBySpectrum: the ion
+        /// mobility of every spectrum a PSM refers to, which the .qpsm does not carry.
+        let retTimeIdxed, ms1SortedByScanTime, ionMobilityBySpectrum =
+            let psmSpectrumIds = Collections.Generic.HashSet<string>(qpsms |> Array.map (fun x -> x.PSMId))
+            QpsmInput.readSpectrumIndex inReader inRunID psmSpectrumIds
+        let ionMobilityOf (psmId: string) =
+            match ionMobilityBySpectrum.TryGetValue psmId with
+            | true, mobility -> mobility
+            | _ -> nan
+        let psmsNotInMzlite = qpsms |> Array.filter (fun x -> not (ionMobilityBySpectrum.ContainsKey x.PSMId)) |> Array.length
+        let psmsWithIonMobility = qpsms |> Array.filter (fun x -> Double.IsFinite (ionMobilityOf x.PSMId)) |> Array.length
+        let psmsWithoutIonMobility = qpsms.Length - psmsNotInMzlite - psmsWithIonMobility
+        logger.Trace (sprintf "Create RetentionTime index, read the ms1s and the ion mobility of the PSM spectra:finished, %i MS1s, %i of %i PSMs have an ion mobility in their spectrum" ms1SortedByScanTime.Length psmsWithIonMobility qpsms.Length)
+        if qpsms.Length > 0 && psmsWithIonMobility = 0 then
+            failwithf "No PSM of %s refers to a spectrum of %s with an ion mobility (MS:1002815): %i PSMIds not found in the mzlite (wrong mzlite?), %i spectra without ion mobility. The PSMId has to be the ID of an MS2 spectrum of this mzlite." scoredPSMs instrumentOutput psmsNotInMzlite psmsWithoutIonMobility
+        if psmsWithIonMobility < qpsms.Length then
+            logger.Warn (sprintf "%i PSMIds not found in the mzlite (wrong mzlite?), %i spectra without ion mobility of %i PSMs in %s, they do not count for the ion mobility of their ion." psmsNotInMzlite psmsWithoutIonMobility qpsms.Length instrumentOutput)
         
         logger.Trace "Estimate precursor mz standard deviation and mz correction."
         ///
@@ -2286,14 +2366,14 @@ module PSMBasedQuantificationTIMs =
         let gaborLabeledQuantification
             (gaborParams: Domain.Gabor3DParams)
             (pepIon: PeptideIon)
-            (psms: PSMStatisticsResultFragpipe[])
+            (psms: PSMStatisticsResult[])
             =
 
             try
-                let bestQValue, prots =
+                let bestQValue, bestPepValue, prots =
                     psms
-                    |> Array.minBy (fun x -> x.Expectscore)
-                    |> fun x -> x.Expectscore, x.ProteinNames
+                    |> bestPsmByQValue
+                    |> fun x -> x.QValue, x.PEPValue, x.ProteinNames
 
                 let unlabledPeptide =
                     peptideLookUp pepIon.Sequence 0
@@ -2310,9 +2390,9 @@ module PSMBasedQuantificationTIMs =
                 let theoMz =
                     Mass.toMZ targetPeptide.Mass (float pepIon.Charge)
 
-                match estimateGaborTargetFromFragPipePsms scanTimeToMzCorrection theoMz psmsWithMatchedSums with
+                match estimateGaborTargetFromPsms ionMobilityOf scanTimeToMzCorrection theoMz psmsWithMatchedSums with
                 | None ->
-                    logger.Trace (sprintf "Gabor quant failed: No FragPipe target estimate, Sequence:%s, GlobalMod:%s, Charge:%s" (pepIon.Sequence |> String.filter (fun x -> x <> '*')) (pepIon.GlobalMod.ToString()) (pepIon.Charge.ToString()))
+                    logger.Trace (sprintf "Gabor quant failed: No PSM target estimate, Sequence:%s, GlobalMod:%s, Charge:%s" (pepIon.Sequence |> String.filter (fun x -> x <> '*')) (pepIon.GlobalMod.ToString()) (pepIon.Charge.ToString()))
                     None
                 | Some target ->
                     match getGabor2DQuantification gaborParams target.ExpectedRt target.ExpectedMz target.ExpectedMobility with
@@ -2322,7 +2402,7 @@ module PSMBasedQuantificationTIMs =
                     | Some targetQuant ->
                         let meanScore =
                             psmsWithMatchedSums
-                            |> Array.averageBy (fun (psm, _) -> psm.Hyperscore)
+                            |> Array.averageBy (fun (psm, _) -> psm.ModelScore)
 
                         if pepIon.GlobalMod = 0 then
                             let quantMzLight =
@@ -2359,7 +2439,7 @@ module PSMBasedQuantificationTIMs =
                                 AbsDeltaMass                                = abs(avgMass - unlabledPeptide.Mass)
                                 MeanPercolatorScore                         = meanScore
                                 QValue                                      = bestQValue
-                                PEPValue                                    = nan
+                                PEPValue                                    = bestPepValue
                                 ProteinNames                                = prots
                                 QuantMz_Light                               = quantMzLight
                                 Quant_Light                                 = qLight
@@ -2431,7 +2511,7 @@ module PSMBasedQuantificationTIMs =
                                 AbsDeltaMass                                = abs(avgMass - labeledPeptide.Mass)
                                 MeanPercolatorScore                         = meanScore
                                 QValue                                      = bestQValue
-                                PEPValue                                    = nan
+                                PEPValue                                    = bestPepValue
                                 ProteinNames                                = prots
                                 QuantMz_Light                               = mzLight
                                 Quant_Light                                 = qLight
@@ -2476,17 +2556,17 @@ module PSMBasedQuantificationTIMs =
         let gaborLabelFreeQuantification
             (gaborParams: Domain.Gabor3DParams)
             (pepIon: PeptideIon)
-            (psms: PSMStatisticsResultFragpipe[])
+            (psms: PSMStatisticsResult[])
             =
 
             try
                 if pepIon.GlobalMod <> 0 then
                     None
                 else
-                    let bestQValue, prots =
+                    let bestQValue, bestPepValue, prots =
                         psms
-                        |> Array.minBy (fun x -> x.Expectscore)
-                        |> fun x -> x.Expectscore, x.ProteinNames
+                        |> bestPsmByQValue
+                        |> fun x -> x.QValue, x.PEPValue, x.ProteinNames
 
                     let unlabledPeptide =
                         peptideLookUp pepIon.Sequence 0
@@ -2497,9 +2577,9 @@ module PSMBasedQuantificationTIMs =
                     let theoMz =
                         Mass.toMZ unlabledPeptide.Mass (float pepIon.Charge)
 
-                    match estimateGaborTargetFromFragPipePsms scanTimeToMzCorrection theoMz psmsWithMatchedSums with
+                    match estimateGaborTargetFromPsms ionMobilityOf scanTimeToMzCorrection theoMz psmsWithMatchedSums with
                     | None ->
-                        logger.Trace (sprintf "Gabor quant failed: No FragPipe target estimate, Sequence:%s, GlobalMod:%s, Charge:%s" (pepIon.Sequence |> String.filter (fun x -> x <> '*')) (pepIon.GlobalMod.ToString()) (pepIon.Charge.ToString()))
+                        logger.Trace (sprintf "Gabor quant failed: No PSM target estimate, Sequence:%s, GlobalMod:%s, Charge:%s" (pepIon.Sequence |> String.filter (fun x -> x <> '*')) (pepIon.GlobalMod.ToString()) (pepIon.Charge.ToString()))
                         None
                     | Some target ->
                         match getGabor2DQuantification gaborParams target.ExpectedRt target.ExpectedMz target.ExpectedMobility with
@@ -2509,7 +2589,7 @@ module PSMBasedQuantificationTIMs =
                         | Some targetQuant ->
                             let meanScore =
                                 psmsWithMatchedSums
-                                |> Array.averageBy (fun (psm, _) -> psm.Hyperscore)
+                                |> Array.averageBy (fun (psm, _) -> psm.ModelScore)
 
                             let quantMzLight =
                                 quantMzAtScanTime unlabledPeptide pepIon.Charge targetQuant.WeightedRetentionTime
@@ -2532,7 +2612,7 @@ module PSMBasedQuantificationTIMs =
                                 AbsDeltaMass                                = abs(avgMass - unlabledPeptide.Mass)
                                 MeanPercolatorScore                         = meanScore
                                 QValue                                      = bestQValue
-                                PEPValue                                    = nan
+                                PEPValue                                    = bestPepValue
                                 ProteinNames                                = prots
                                 QuantMz_Light                               = quantMzLight
                                 Quant_Light                                 = qLight
@@ -2574,16 +2654,16 @@ module PSMBasedQuantificationTIMs =
                 logger.Trace (sprintf "Gabor quantfailed: %A" ex)
                 None
         ///
-        let labledQuantification (pepIon:PeptideIon) (psms:PSMStatisticsResultFragpipe []) = 
+        let labledQuantification (pepIon:PeptideIon) (psms:PSMStatisticsResult []) = 
             try
-            let bestQValue,prots = psms |> Array.minBy (fun x -> x.Expectscore) |> fun x -> x.Expectscore,x.ProteinNames
+            let bestQValue,bestPepValue,prots = bestPsmByQValue psms |> fun x -> x.QValue, x.PEPValue,x.ProteinNames
             let unlabledPeptide = peptideLookUp pepIon.Sequence 0
             let labeledPeptide  = peptideLookUp pepIon.Sequence 1
             let targetPeptide = if pepIon.GlobalMod = 0 then unlabledPeptide else labeledPeptide            
             let psmsWithMatchedSums = countMatchedMasses targetPeptide psms 
             let ms2s = psmsWithMatchedSums |> Array.map (fun (psm,m) -> psm.ScanTime,m)
             let theoMz = Mass.toMZ targetPeptide.Mass (float pepIon.Charge)
-            let averagePSM = average getXIC scanTimeToMzCorrection theoMz psmsWithMatchedSums
+            let averagePSM = average ionMobilityOf getXIC scanTimeToMzCorrection theoMz psmsWithMatchedSums
             let avgMass = Mass.ofMZ (averagePSM.MeanPrecMz) (pepIon.Charge |> float)
             let peaks = identifyPeaks averagePSM.X_Xic averagePSM.Y_Xic
             if Array.isEmpty peaks then 
@@ -2658,7 +2738,7 @@ module PSMBasedQuantificationTIMs =
                     AbsDeltaMass                                = abs(avgMass-unlabledPeptide.Mass)
                     MeanPercolatorScore                         = averagePSM.MeanScore
                     QValue                                      = bestQValue
-                    PEPValue                                    = nan
+                    PEPValue                                    = bestPepValue
                     ProteinNames                                = prots
                     QuantMz_Light                               = averagePSM.MeanPrecMz
                     Quant_Light                                 = quantP.Area
@@ -2711,7 +2791,7 @@ module PSMBasedQuantificationTIMs =
                     AbsDeltaMass                                = abs(avgMass-unlabledPeptide.Mass)
                     MeanPercolatorScore                         = averagePSM.MeanScore
                     QValue                                      = bestQValue
-                    PEPValue                                    = nan
+                    PEPValue                                    = bestPepValue
                     ProteinNames                                = prots
                     QuantMz_Light                               = averagePSM.MeanPrecMz
                     Quant_Light                                 = quantP.Area
@@ -2805,7 +2885,7 @@ module PSMBasedQuantificationTIMs =
                     AbsDeltaMass                                = abs(avgMass-labeledPeptide.Mass)
                     MeanPercolatorScore                         = averagePSM.MeanScore
                     QValue                                      = bestQValue
-                    PEPValue                                    = nan
+                    PEPValue                                    = bestPepValue
                     ProteinNames                                = prots
                     QuantMz_Light                               = mzLight
                     Quant_Light                                 = successfulQuant.Area
@@ -2858,7 +2938,7 @@ module PSMBasedQuantificationTIMs =
                     AbsDeltaMass                                = abs(avgMass-labeledPeptide.Mass)
                     MeanPercolatorScore                         = averagePSM.MeanScore
                     QValue                                      = bestQValue
-                    PEPValue                                    = nan
+                    PEPValue                                    = bestPepValue
                     ProteinNames                                = prots
                     QuantMz_Light                               = mzLight
                     Quant_Light                                 = nan
@@ -2900,16 +2980,16 @@ module PSMBasedQuantificationTIMs =
                 logger.Trace (sprintf "Quantfailed: %A" ex)
                 Option.None
 
-        let lableFreeQuantification (pepIon:PeptideIon)  (psms:PSMStatisticsResultFragpipe []) = 
+        let lableFreeQuantification (pepIon:PeptideIon)  (psms:PSMStatisticsResult []) = 
             try
             if pepIon.GlobalMod <> 0 then None 
             else
-            let bestQValue,prots = psms |> Array.minBy (fun x -> x.Expectscore) |> fun x -> x.Expectscore,x.ProteinNames
+            let bestQValue,bestPepValue,prots = bestPsmByQValue psms |> fun x -> x.QValue, x.PEPValue,x.ProteinNames
             let unlabledPeptide = peptideLookUp pepIon.Sequence 0
             let psmsWithMatchedSums = countMatchedMasses unlabledPeptide psms 
             let ms2s = psmsWithMatchedSums |> Array.map (fun (psm,m) -> psm.ScanTime,m)
             let theoMz = Mass.toMZ unlabledPeptide.Mass (float pepIon.Charge)
-            let averagePSM = average getXIC scanTimeToMzCorrection theoMz psmsWithMatchedSums
+            let averagePSM = average ionMobilityOf getXIC scanTimeToMzCorrection theoMz psmsWithMatchedSums
             let avgMass = Mass.ofMZ (averagePSM.MeanPrecMz) (pepIon.Charge |> float)      
             let peaks = identifyPeaks averagePSM.X_Xic averagePSM.Y_Xic               
             if Array.isEmpty peaks then 
@@ -2941,7 +3021,7 @@ module PSMBasedQuantificationTIMs =
             AbsDeltaMass                                = abs(avgMass-unlabledPeptide.Mass)
             MeanPercolatorScore                         = averagePSM.MeanScore
             QValue                                      = bestQValue
-            PEPValue                                    = nan
+            PEPValue                                    = bestPepValue
             ProteinNames                                = prots
             QuantMz_Light                               = averagePSM.MeanPrecMz
             Quant_Light                                 = quantP.Area
@@ -3003,7 +3083,8 @@ module PSMBasedQuantificationTIMs =
                     | Some x when psms.Length > x -> 
                         pepIon,
                         psms
-                        |> Array.sortByDescending (fun x -> x.Hyperscore)
+                        // NaN sorts last
+                        |> Array.sortByDescending (fun x -> x.ModelScore)
                         |> Array.take x
                     | _ -> 
                         pepIon,
