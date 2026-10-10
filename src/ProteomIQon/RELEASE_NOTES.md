@@ -4,7 +4,7 @@
 * Remove PSMStatisticsResultFragpipe. MsFraggerToPSM writes and PSMBasedQuantificationTIMs reads PSMStatisticsResult
 * Write warnings to the log file of the tools
 * Add CrossValidation to the PSMStatistics EstimationParams
-* Add BaselineAls, the ALS baseline of FSharp.Stats baselineAls' computed faster with the same values, for PSMBasedQuantificationTIMs
+* Add BaselineAls, the ALS baseline of FSharp.Stats baselineAls' computed faster with the same values, shared by PSMBasedQuantification and PSMBasedQuantificationTIMs
 * Update BioFSharp.Mz to 0.2.3
 * Add TimsPeaks, the direct decoding of the peak data of TIMS spectra, for PSMBasedQuantificationTIMs
 
