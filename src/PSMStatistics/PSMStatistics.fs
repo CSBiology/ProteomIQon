@@ -128,6 +128,17 @@ module PSMStatistics =
         let CTerminal = if missClvEnd = protSequence.Length-1 then "-" else  protSequence.[missClvEnd+1].ToString()
         Nterminal,CTerminal
 
+    /// The decoy of a peptide sequence as the searches build it with
+    /// Fragmentation.Series.pseudoReverse: the C-terminal residue stays in place and the rest is
+    /// reversed, or the whole sequence if that gives the sequence itself. A residue keeps the
+    /// modification tokens written before it, such as "[ox]M".
+    let decoySequence (sequence: string) =
+        Text.RegularExpressions.Regex.Matches(sequence, @"(\[[^\]]*\])*[^\[\]]")
+        |> Seq.map (fun m -> m.Value)
+        |> List.ofSeq
+        |> Fragmentation.Series.pseudoReverse
+        |> String.concat ""
+
     let restorePSMID psmID =
         FSharpAux.String.split '_' psmID  
         |> Array.item 0
@@ -145,10 +156,7 @@ module PSMStatistics =
                 |> List.minBy (fun ((protID,name,seq),clvgS,clvgE,missClv) -> missClv)
                 |> fun ((protID,name,seq),clvgS,clvgE,missClv) ->
                     let nTerm,cTerm = getFlankingAminoAcids clvgS clvgE seq
-                    if psm.Label = 1 then
-                        missClv,nTerm + ".", "." + cTerm
-                    else
-                        missClv, cTerm + ".", "." + nTerm
+                    missClv,nTerm + ".", "." + cTerm
         let proteinNames =
             let parseLabel label = if label = 1 then "" else "decoy_"
             match lookUp with
@@ -159,7 +167,7 @@ module PSMStatistics =
                 |> String.concat ";"
         
         let flankedPepSequence =
-            let sequence = if psm.Label = 1 then psm.StringSequence else FSharpAux.String.rev psm.StringSequence
+            let sequence = if psm.Label = 1 then psm.StringSequence else decoySequence psm.StringSequence
             nTerminal + sequence + cTerminal
         {
             PSMId                        = psm.PSMId
