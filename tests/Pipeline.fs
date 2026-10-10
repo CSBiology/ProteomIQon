@@ -618,6 +618,20 @@ let pipelineTests =
             Expect.isTrue compare (sprintf "Quants are different in the following fields")
 
 
+        testCase "QuantBasedAlignment_v2" <| fun _ ->
+            let relToDirectory = getRelativePath baseDir
+            let quantFiles = relToDirectory "../../../data/QuantBasedAlignment/in"
+            // its own folder, because the QuantBasedAlignment test writes files of the same names
+            let outDirectory = relToDirectory "../../../data/QuantBasedAlignment_v2/out/test/"
+            let alignExe = toolDll "QuantBasedAlignment_v2"
+            runDotNet (sprintf "%s -i %s -ii %s -o %s" alignExe quantFiles quantFiles outDirectory) baseDir
+            let compare =
+                tsvFilesEqual 1e-6
+                    (relToDirectory "../../../data/QuantBasedAlignment_v2/out/trunc1_Reference.align")
+                    (relToDirectory "../../../data/QuantBasedAlignment_v2/out/test/trunc1.align")
+            Directory.Delete(outDirectory, true)
+            Expect.isTrue compare "Alignments are different"
+
         testCase "ProteinInference" <| fun _ ->
             let relToDirectory = getRelativePath baseDir
             let db = relToDirectory "../../../data/ProteinInference/in/Minimal.db"

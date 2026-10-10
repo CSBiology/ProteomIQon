@@ -1,6 +1,7 @@
 #### Unreleased
 * Use CrossValidation and no PEP cutoff (PepValueThreshold 1.0) in the default PSMStatistics parameters
 * Add SpectrumDescription, a streaming parser of the spectrum description that reads only the fields the spectrum search needs, shared by PeptideSpectrumMatching and PeptideSpectrumMatchingTIMs
+* Add a result type for the .align output of QuantBasedAlignment: the AlignmentResult columns followed by the local scan time error scale, the source run, the source model error and the predicted ion mobility with its error scale
 * Remove PSMStatisticsResultFragpipe. MsFraggerToPSM writes and PSMBasedQuantificationTIMs reads PSMStatisticsResult
 * Write warnings to the log file of the tools
 * Add CrossValidation to the PSMStatistics EstimationParams

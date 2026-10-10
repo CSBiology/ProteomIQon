@@ -26,7 +26,7 @@ index: 9
 # PSMBasedQuantificationTIMs
 
 PSMBasedQuantificationTIMs is the [PSMBasedQuantification]({{root}}tools/PSMBasedQuantification.html) variant for timsTOF runs. On these instruments a peptide ion is a peak in two dimensions, retention time and ion mobility, so the tool extracts an intensity grid over that plane around every identification instead of a one dimensional [ion chromatogram](https://www.biofsharp.com/BioFSharp.Mz/03_01_quantification.html#Building-an-XIC-trace).
-By default it locates the peak on the grid with a Gabor filter (a Gaussian envelope multiplied with a cosine wave, tuned in size, width, frequency and angle), then [fits and integrates](https://www.biofsharp.com/BioFSharp.Mz/03_01_quantification.html#Fitting-and-integrating-the-main-peak) it. The output has the same layout as the output of PSMBasedQuantification, so the downstream tools do not care which of the two produced it.
+By default it locates the peak on the grid with a Gabor filter (a Gaussian envelope multiplied with a cosine wave, tuned in size, width, frequency and angle), then [fits and integrates](https://www.biofsharp.com/BioFSharp.Mz/03_01_quantification.html#Fitting-and-integrating-the-main-peak) it. The output has the layout of PSMBasedQuantification. The alignment tools need `.quant` files from `Wavelet` or `SecondDerivative` processing.
 
 ## Inputs and outputs
 
