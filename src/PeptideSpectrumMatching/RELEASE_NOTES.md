@@ -11,6 +11,8 @@
 * Log failed spectra as warnings and their number per file
 * Log the time spent per phase of every file
 * Overwrite an existing result file instead of appending to it
+* Build the decoys by pseudo-reversal instead of reversal: the C-terminal residue stays in place and the rest is reversed, and a peptide that this leaves unchanged is reversed completely. The decoys keep the cleavage site of the targets. Target scores do not change, but the NormDelta columns of targets do, as they are computed over targets and decoys
+* Update BioFSharp.Mz to 0.2.3
 
 #### 0.0.10 - Monday, September 28, 2026
 * Write the ion mobility and hyperscore columns of the shared result record as NaN and 0

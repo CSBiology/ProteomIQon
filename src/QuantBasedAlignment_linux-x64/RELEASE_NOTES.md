@@ -1,5 +1,6 @@
 #### Unreleased
 * Update BioFSharp.Mz to 0.2.2
+* Update BioFSharp.Mz to 0.2.3
 
 #### 0.0.4 - Wednesday, September 2, 2026
 * Update to .NET 10
