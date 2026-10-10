@@ -30,6 +30,7 @@ module Logging =
 
         //declares which error results in a log in which target
         config.AddRuleForOneLevel(LogLevel.Trace, fileTarget)
+        config.AddRuleForOneLevel(LogLevel.Warn, fileTarget)
         config.AddRuleForOneLevel(LogLevel.Info, consoleTarget)
 
    
