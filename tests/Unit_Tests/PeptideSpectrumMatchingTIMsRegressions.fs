@@ -268,6 +268,32 @@ let all = testList "PeptideSpectrumMatchingTIMs regressions" [
             Expect.equal count (2*(decoy.Length-1)) "one b and one y ion per cleavage"
             Array.iteri (fun i e -> Expect.floatClose Accuracy.veryHigh buffer.[i] e (sprintf "b%i of rank %i" (i+1) rank)) b
             Array.iteri (fun i e -> Expect.floatClose Accuracy.veryHigh buffer.[count/2+i] e (sprintf "y%i of rank %i" (i+1) rank)) y
+    testCase "the decoy of a modified peptide in the index equals the library decoy, including the fallback" <| fun _ ->
+        let path name=IO.Path.Combine(AppContext.BaseDirectory,name)
+        let p=Json.ReadAndDeserialize<Dto.PeptideSpectrumMatchingTIMsParams> (path "defaultParams.json") |> Dto.PeptideSpectrumMatchingTIMsParams.toDomain
+        use cn=SearchDB.getDBConnection (path "MinimalTIMs.db")
+        let sdb0=SearchDB.getSDBParamsByCn cn
+        let sdb={sdb0 with VariableMods=[SearchDB.Table.oxidation'Met']}
+        // residue codes 0 = M, 1 = A, 2 = [ox]M, 3 = K
+        let tokens=[|"M";"A";"[ox]M";"K"|]
+        // M A [ox]M K differs from its pseudo-reversal because the modification counts, while
+        // [ox]M A [ox]M K and M A M K equal it, so their decoy falls back to the complete reversal.
+        let peptides=[| [|0;1;2;3|]; [|2;1;2;3|]; [|0;1;0;3|] |]
+        let starts=Array.scan (fun s (q: int[]) -> s+q.Length) 0 peptides
+        let t={ Count=3; Mass=Array.zeroCreate 3; Order=Array.init 3 id; ModSequenceIdRow=Array.init 3 id; PepSequenceIdRow=Array.init 3 id
+                GlobalModRow=Array.zeroCreate 3; SeqStartRow=starts; Residues=peptides |> Array.concat |> Array.map byte
+                Codes=tokens |> Array.map (createResidueCode sdb 1); MaxLength=4; RawSequenceRow=dict [] }
+        let classic=toClassicScoring p sdb t
+        let buffer=Array.zeroCreate 8
+        for rank in 0 .. t.Count-1 do
+            let masses (series: PeakFamily<TaggedMass.TaggedMass> list)=series |> List.map (fun f -> f.MainPeak.Mass) |> List.sort
+            let library=(classic.CalcIonSeries (classic.ParseRank rank)).DecoyMasses |> masses
+            // the library also lists the complete b and y ions, the two heaviest, which the index leaves out
+            let library=List.truncate (List.length library-2) library
+            let count=decoyFragmentMasses t rank buffer
+            let actual=Array.sub buffer 0 count |> Array.sort |> List.ofArray
+            Expect.equal actual.Length library.Length (sprintf "rank %i: one fragment per cleavage" rank)
+            List.iter2 (fun (a: float) e -> Expect.floatClose Accuracy.veryHigh a e (sprintf "rank %i: %f vs %f" rank a e)) actual library
     testCase "parameter validation rejects invalid tolerances and ceilings" <| fun _ ->
         let p=Json.ReadAndDeserialize<Dto.PeptideSpectrumMatchingTIMsParams> (IO.Path.Combine(AppContext.BaseDirectory,"defaultParams.json")) |> Dto.PeptideSpectrumMatchingTIMsParams.toDomain
         validateParameters {p with PrecursorTolerancePPM=0.} 0. 1
