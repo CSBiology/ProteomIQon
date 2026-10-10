@@ -347,10 +347,14 @@ module PSMStatistics =
                     bestPSMPerScan 
                     |> Array.filter (fun x -> x.Label |> not) 
                     |> Array.map (fun x -> (trainedModel x).Score )
+                // With cross-validation, models are compared by their targets with q <= 0.01, independent of the output thresholds.
                 let nPosTar = 
-                    let posQ = scoreVsQ |> Array.filter (fun x -> snd x <= estParams.QValueThreshold) |> Array.length
-                    let posPep = scoreVSPep |> Array.filter (fun x -> snd x <= estParams.PepValueThreshold) |> Array.length
-                    System.Math.Min(posQ,posPep)
+                    if estParams.CrossValidation then
+                        bestPSMPerScan |> Array.filter (fun x -> x.Label && getQ (float (trainedModel x).Score) <= 0.01) |> Array.length
+                    else
+                        let posQ = scoreVsQ |> Array.filter (fun x -> snd x <= estParams.QValueThreshold) |> Array.length
+                        let posPep = scoreVSPep |> Array.filter (fun x -> snd x <= estParams.PepValueThreshold) |> Array.length
+                        System.Math.Min(posQ,posPep)
                 if diagCharts then 
                     [
                         [
@@ -456,12 +460,16 @@ module PSMStatistics =
                                     )
                                 )   
                         logger.Trace (prefix + "Selecting positives for training")
+                        // With cross-validation, the positives are the targets with q < 0.01, independent of the output thresholds.
                         let positives' = 
                             bestPSMPerScan 
                             |> Array.filter (fun x -> 
-                                let passQVal = (prevModel.Model x).Score |> float |> prevModel.CalcQValue  < (estParams.QValueThreshold / 10.)
-                                let passPEPVal = (prevModel.Model x).Score |> float |> prevModel.CalcPepValue  < (estParams.PepValueThreshold)
-                                passQVal && passPEPVal
+                                if estParams.CrossValidation then
+                                    (prevModel.Model x).Score |> float |> prevModel.CalcQValue < 0.01
+                                else
+                                    let passQVal = (prevModel.Model x).Score |> float |> prevModel.CalcQValue  < (estParams.QValueThreshold / 10.)
+                                    let passPEPVal = (prevModel.Model x).Score |> float |> prevModel.CalcPepValue  < (estParams.PepValueThreshold)
+                                    passQVal && passPEPVal
                                 )
                             |> Array.filter (fun x -> x.Label = true)
                             |> Array.map (fun x -> x.ScanNr,x)
@@ -486,7 +494,7 @@ module PSMStatistics =
                         with
                         | _ -> logger.Trace (prefix + "Fall back to previous model"); prevModel
                 let refinedModel = loop initModel 0
-                logger.Trace (sprintf "%sFinal model: %i scans pass the q-value and PEP thresholds in-sample" prefix refinedModel.NPositivesAtFDR)
+                logger.Trace (sprintf "%sFinal model: %i %s in-sample" prefix refinedModel.NPositivesAtFDR (if estParams.CrossValidation then "targets with q <= 0.01" else "scans pass the q-value and PEP thresholds"))
                 refinedModel
 
             // finalScore: the model score, with cross-validation the normalised score of the model that did not see the scan
