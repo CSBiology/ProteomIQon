@@ -439,8 +439,46 @@ module Domain =
             NegativeQuantMzCutoff: float
             PositiveQuantCutoff: float
             NegativeQuantCutoff: float
-        } 
-               
+        }
+
+    /// Gradient boosted trees of ML.NET that AlignmentBasedQuantStatistics_v2 trains.
+    [<RequireQualifiedAccess>]
+    type AlignmentScoreTrainer =
+        | FastTree
+        | LightGbm
+
+    /// How AlignmentBasedQuantStatistics_v2 adds the false discovery rate of new ions whose analyte is absent from the run.
+    [<RequireQualifiedAccess>]
+    type AbsentAnalyteFdr =
+        /// Not added.
+        | Off
+        /// Decoy based, with the absent fraction estimated per run.
+        | Estimated
+        /// Decoy based, with an absent fraction of 1.
+        | Conservative
+
+    type AlignmentBasedQuantStatisticsV2Params =
+        {
+            /// An overlap ion is positive if its peak is at most this many sd (of the own PSM peak) away from the own PSM peak ...
+            PositiveRtSdFactor          : float
+            /// ... and ambiguous (left out of training) if it is further away, but at most this many sd. Else negative.
+            NegativeRtSdFactor          : float
+            /// Positive and ambiguous ions also have |log2(alignment quant / PSM quant)| at most this value.
+            MaxAbsLog2QuantRatio        : float
+            /// Adds the target to source quant and apex ratios and the target quant and apex as features.
+            UseIntensityRatioFeatures   : bool
+            /// Adds |IonMobility - PredictedIonMobility| / PredictedIonMobilitySd as a feature when the runs have ion mobility.
+            UseIonMobility              : bool
+            NumberOfFolds               : int
+            Trainer                     : AlignmentScoreTrainer
+            NumberOfLeaves              : int
+            NumberOfTrees               : int
+            MinimumExampleCountPerLeaf  : int
+            LearningRate                : float
+            AbsentAnalyteFdr            : AbsentAnalyteFdr
+            Seed                        : int
+        }
+
     type ConsensusAlignmentAlgorithm = 
         | FastTree
         | Spline 

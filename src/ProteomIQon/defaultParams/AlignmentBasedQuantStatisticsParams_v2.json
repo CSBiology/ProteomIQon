@@ -1,0 +1,1 @@
+{"PositiveRtSdFactor":1.0,"NegativeRtSdFactor":3.0,"MaxAbsLog2QuantRatio":1.0,"UseIntensityRatioFeatures":false,"UseIonMobility":true,"NumberOfFolds":5,"Trainer":"FastTree","NumberOfLeaves":null,"NumberOfTrees":null,"MinimumExampleCountPerLeaf":null,"LearningRate":null,"AbsentAnalyteFdr":"Estimated","Seed":1}

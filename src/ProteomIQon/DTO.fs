@@ -1537,7 +1537,65 @@ module Dto =
                 PositiveQuantCutoff = dtoAlignmentBasedQuantStatisticsParams.PositiveQuantCutoff
                 NegativeQuantCutoff = dtoAlignmentBasedQuantStatisticsParams.NegativeQuantCutoff
             }
-            
+
+    /// Tree parameters that are null take the default of the trainer.
+    type AlignmentBasedQuantStatisticsV2Params =
+        {
+            PositiveRtSdFactor          : float
+            NegativeRtSdFactor          : float
+            MaxAbsLog2QuantRatio        : float
+            UseIntensityRatioFeatures   : bool
+            UseIonMobility              : bool
+            NumberOfFolds               : int
+            /// FastTree or LightGbm.
+            Trainer                     : string
+            NumberOfLeaves              : System.Nullable<int>
+            NumberOfTrees               : System.Nullable<int>
+            MinimumExampleCountPerLeaf  : System.Nullable<int>
+            LearningRate                : System.Nullable<float>
+            /// Off, Estimated or Conservative.
+            AbsentAnalyteFdr            : string
+            Seed                        : int
+        }
+
+    module AlignmentBasedQuantStatisticsV2Params =
+
+        /// Tree parameters (leaves, trees, minimum examples per leaf, learning rate) of a trainer.
+        let treeDefaults (trainer: Domain.AlignmentScoreTrainer) =
+            match trainer with
+            | Domain.AlignmentScoreTrainer.LightGbm -> 31, 100, 20, 0.1
+            | Domain.AlignmentScoreTrainer.FastTree -> 20, 100, 10, 0.2
+
+        let toDomain (dtoParams: AlignmentBasedQuantStatisticsV2Params) : Domain.AlignmentBasedQuantStatisticsV2Params =
+            let trainer =
+                match dtoParams.Trainer with
+                | "FastTree" -> Domain.AlignmentScoreTrainer.FastTree
+                | "LightGbm" -> Domain.AlignmentScoreTrainer.LightGbm
+                | other -> failwithf "Trainer %s is unknown, use FastTree or LightGbm." other
+            let absentAnalyteFdr =
+                match dtoParams.AbsentAnalyteFdr with
+                | "Off" -> Domain.AbsentAnalyteFdr.Off
+                | "Estimated" -> Domain.AbsentAnalyteFdr.Estimated
+                | "Conservative" -> Domain.AbsentAnalyteFdr.Conservative
+                | other -> failwithf "AbsentAnalyteFdr %s is unknown, use Off, Estimated or Conservative." other
+            let leaves, trees, minLeaf, learningRate = treeDefaults trainer
+            let orDefault (value: System.Nullable<'T>) (defaultValue: 'T) = if value.HasValue then value.Value else defaultValue
+            {
+                PositiveRtSdFactor          = dtoParams.PositiveRtSdFactor
+                NegativeRtSdFactor          = dtoParams.NegativeRtSdFactor
+                MaxAbsLog2QuantRatio        = dtoParams.MaxAbsLog2QuantRatio
+                UseIntensityRatioFeatures   = dtoParams.UseIntensityRatioFeatures
+                UseIonMobility              = dtoParams.UseIonMobility
+                NumberOfFolds               = dtoParams.NumberOfFolds
+                Trainer                     = trainer
+                NumberOfLeaves              = orDefault dtoParams.NumberOfLeaves leaves
+                NumberOfTrees               = orDefault dtoParams.NumberOfTrees trees
+                MinimumExampleCountPerLeaf  = orDefault dtoParams.MinimumExampleCountPerLeaf minLeaf
+                LearningRate                = orDefault dtoParams.LearningRate learningRate
+                AbsentAnalyteFdr            = absentAnalyteFdr
+                Seed                        = dtoParams.Seed
+            }
+
     type SpectralLibraryParams =
         {
             MatchingTolerancePPM: float
