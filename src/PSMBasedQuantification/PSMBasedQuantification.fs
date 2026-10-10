@@ -39,6 +39,29 @@ module PSMBasedQuantification =
                 profile.[rtIdx] <- p
             profile
 
+        /// The retention time index and the scan times of the MS1 spectra, both sorted by scan time, from one pass
+        /// over the spectrum descriptions with the streaming parser.
+        let readMs1Index (reader: MzIO.MzSQL.MzSQL) (runID: string) =
+            let ms1s = ResizeArray<float option*string>()
+            use cmd = new SQLiteCommand("SELECT Description FROM Spectrum WHERE RunID = @runID ORDER BY rowid", reader.Connection)
+            cmd.Parameters.AddWithValue("@runID", runID) |> ignore
+            use rows = cmd.ExecuteReader()
+            while rows.Read() do
+                let header = SpectrumDescription.parse (rows.GetString 0)
+                if header.MsLevel = Some 1 then
+                    ms1s.Add (header.ScanTime, header.ID)
+            let rtIndex =
+                ms1s.ToArray()
+                |> Array.choose (fun (scanTime, id) -> scanTime |> Option.map (fun rt -> RtIndexEntry(rt, id)))
+                |> Array.sortBy (fun entry -> entry.Rt)
+                |> MzIOArray.ToMzIOArray
+            // a MS1 without scan time is kept at -1, as MassSpectrum.getScanTime gives it
+            let ms1SortedByScanTime =
+                ms1s.ToArray()
+                |> Array.map (fun (scanTime, id) -> Option.defaultValue -1. scanTime, id)
+                |> Array.sortBy fst
+            rtIndex, ms1SortedByScanTime
+
 
     type PeptideIon = 
         {
@@ -135,14 +158,14 @@ module PSMBasedQuantification =
         yUncorr - y
        
     ///
-    let getClosestMs1 (ms1s: (float*MzIO.Model.MassSpectrum) []) scanTime = 
+    let getClosestMs1 (ms1s: (float*string) []) scanTime = 
          ms1s
          |> Array.minBy (fun ms -> abs (fst ms - scanTime))
          |> snd
 
     ///
-    let getSpec (reader:MzIO.IO.IMzIODataReader) (ms1: MzIO.Model.MassSpectrum)  =
-        Peaks.unzipIMzliteArray (reader.ReadSpectrumPeaks(ms1.ID).Peaks)
+    let getSpec (reader:MzIO.IO.IMzIODataReader) (ms1ID: string)  =
+        Peaks.unzipIMzliteArray (reader.ReadSpectrumPeaks(ms1ID).Peaks)
         |> fun (mzData,intensityData) -> PeakArray.zip mzData intensityData
     
     ///
@@ -553,21 +576,10 @@ module PSMBasedQuantification =
                     |> Seq.sumBy (fun x -> x.Intensity)
                 psm,sum
             )
-        logger.Trace "Create RetentionTime index"
-        let retTimeIdxed = Query.getMS1RTIdx inReader inRunID
-        logger.Trace "Create RetentionTime index:finished"
-        
-        logger.Trace "Read and sort ms1s"
-        /// Returns a Sequence containing all MassSpectra of a single MS-run
-        let massSpectra = inReader.ReadMassSpectra(inRunID)
-        /// Returns a Array that contains all MS1s sorted by their scanTime
-        let ms1SortedByScanTime =
-            massSpectra
-            |> Seq.filter (fun ms -> MassSpectrum.getMsLevel ms = 1)
-            |> Seq.map (fun ms -> MassSpectrum.getScanTime ms, ms)
-            |> Seq.sortBy fst
-            |> Array.ofSeq
-        logger.Trace "Read and sort ms1s:finished"
+        logger.Trace "Create RetentionTime index and read the ms1s"
+        /// retTimeIdxed and ms1SortedByScanTime: the MS1s sorted by their scanTime
+        let retTimeIdxed, ms1SortedByScanTime = Query.readMs1Index inReader inRunID
+        logger.Trace (sprintf "Create RetentionTime index and read the ms1s:finished, %i MS1s" ms1SortedByScanTime.Length)
         
         logger.Trace "Read scored PSMs"
         ///

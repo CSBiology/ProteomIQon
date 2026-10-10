@@ -1,5 +1,6 @@
 #### Unreleased
 * Update BioFSharp.Mz to 0.2.2
+* Read the spectra faster with the same results
 * Update BioFSharp.Mz to 0.2.3
 
 #### 0.0.12 - Wednesday, September 2, 2026
