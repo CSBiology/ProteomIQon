@@ -9,10 +9,8 @@ open BioFSharp.Mz
 
 /// Peptide table and fragment ion index in the style of MSFragger. The peptides are kept in
 /// ascending mass order, so the entries of every fragment bin are in mass order as well and
-/// the precursor window of a spectrum becomes a binary search on peptide ranks. Only target
-/// fragments are stored. The fragments of a reversed decoy follow from the target fragments
-/// by a water shift (decoy b ions are target y ions minus water, decoy y ions are target b
-/// ions plus water), so the search serves decoys from the same index.
+/// the precursor window of a spectrum becomes a binary search on peptide ranks. The fragments
+/// of the targets and of their pseudo-reversed decoys are kept in two indexes with the same bins.
 module PeptideIndex =
 
     /// Mask that strips the ion type flag from an index entry.
@@ -75,7 +73,7 @@ module PeptideIndex =
                 |> Array.map (fun code -> this.Codes.[int code].Token)
                 |> String.concat ""
 
-    /// Fragment index over the target b and y ions of all peptides of a PeptideTable.
+    /// Fragment index over the b and y ions of the targets or of the decoys of a PeptideTable.
     type FragmentIndex =
         {
             BinWidth   : float
@@ -248,6 +246,38 @@ module PeptideIndex =
             buffer.[length - 1 + i] <- acc
         2 * (length - 1)
 
+    /// Writes the neutral b and y ion masses of the decoy of a peptide in the layout of
+    /// fragmentMasses and returns their number. The decoy is the sequence that
+    /// Fragmentation.Series.pseudoReverse gives: the C-terminal residue stays in place and the
+    /// rest is reversed, and a peptide that equals this pseudo-reversal, such as AAAAK, is
+    /// reversed completely. A residue code carries its modifications, so they move with it.
+    let decoyFragmentMasses (table: PeptideTable) (rank: int) (buffer: float[]) =
+        let start = table.Start rank
+        let length = table.Length rank
+        let globalMod = int (table.GlobalMod rank)
+        // The peptide equals its pseudo-reversal if the residues before the C-terminal one read
+        // the same in both directions.
+        let mutable pseudoPalindrome = true
+        let mutable i = 0
+        while pseudoPalindrome && i < (length - 1) / 2 do
+            if table.Residues.[start + i] <> table.Residues.[start + length - 2 - i] then pseudoPalindrome <- false
+            i <- i + 1
+        // The target position of the residue at decoy position i.
+        let source i =
+            if pseudoPalindrome then length - 1 - i
+            elif i = length - 1 then i
+            else length - 2 - i
+        let residueMass i = table.Codes.[int table.Residues.[start + source i]].Masses.[globalMod]
+        let mutable acc = 0.
+        for i = 0 to length - 2 do
+            acc <- acc + residueMass i
+            buffer.[i] <- acc
+        acc <- waterMass
+        for i = 0 to length - 2 do
+            acc <- acc + residueMass (length - 1 - i)
+            buffer.[length - 1 + i] <- acc
+        2 * (length - 1)
+
     /// The number of bins of an index up to the fragment mass ceiling. The last bin holds the
     /// ceiling itself, one more absorbs the rounding of a mass on the edge.
     let binCountOf (binWidth: float) (maxFragmentMass: float) = int (maxFragmentMass / binWidth) + 2
@@ -291,11 +321,11 @@ module PeptideIndex =
         sliceBoundariesFor null table slices binWidth maxFragmentMass
 
     /// Builds the fragment index of the peptides with ranks rankLo to rankHi - 1 with the given
-    /// number of workers. Target b and y ions are
-    /// binned by neutral mass. Entries inside a bin end up in peptide rank order because every
-    /// worker owns a contiguous rank range and processes it in order, and the workers write to
-    /// disjoint offsets inside every bin.
-    let buildFragmentIndexFor (eligible: bool[]) (table: PeptideTable) (binWidth: float) (maxFragmentMass: float) (workers: int) (rankLo: int) (rankHi: int) (log: string -> unit) =
+    /// number of workers. The b and y ions that the given function writes, fragmentMasses for
+    /// the targets or decoyFragmentMasses for the decoys, are binned by neutral mass. Entries
+    /// inside a bin end up in peptide rank order because every worker owns a contiguous rank
+    /// range and processes it in order, and the workers write to disjoint offsets inside every bin.
+    let buildFragmentIndexWith (fragmentMasses: PeptideTable -> int -> float[] -> int) (eligible: bool[]) (table: PeptideTable) (binWidth: float) (maxFragmentMass: float) (workers: int) (rankLo: int) (rankHi: int) (log: string -> unit) =
         let binCount = binCountOf binWidth maxFragmentMass
         let workers = max 1 (min workers 64)
         let bufferSize = 2 * max 1 table.MaxLength
@@ -361,8 +391,19 @@ module PeptideIndex =
             EntryCount = total
         }
 
+    /// The fragment index of the targets.
+    let buildFragmentIndexFor eligible table binWidth maxFragmentMass workers rankLo rankHi log =
+        buildFragmentIndexWith fragmentMasses eligible table binWidth maxFragmentMass workers rankLo rankHi log
+
+    /// The fragment index of the decoys, with the same bins and rank order as the one of the targets.
+    let buildDecoyFragmentIndexFor eligible table binWidth maxFragmentMass workers rankLo rankHi log =
+        buildFragmentIndexWith decoyFragmentMasses eligible table binWidth maxFragmentMass workers rankLo rankHi log
+
     let buildFragmentIndex table binWidth maxFragmentMass workers rankLo rankHi log =
         buildFragmentIndexFor null table binWidth maxFragmentMass workers rankLo rankHi log
+
+    let buildDecoyFragmentIndex table binWidth maxFragmentMass workers rankLo rankHi log =
+        buildDecoyFragmentIndexFor null table binWidth maxFragmentMass workers rankLo rankHi log
 
     /// First position in [lo, hi) of the chunk whose rank is at least the given rank.
     let lowerBound (chunk: int[]) (lo: int) (hi: int) (rank: int) =
