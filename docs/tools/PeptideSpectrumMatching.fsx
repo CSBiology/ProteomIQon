@@ -29,7 +29,7 @@ index: 4
 PeptideSpectrumMatching identifies the peptides behind the MS/MS spectra of a run. For each MS2 scan it first determines the charge of the precursor ion from the isotope pattern in the preceding MS1 scan ([charge state determination](https://www.biofsharp.com/BioFSharp.Mz/01_03_charge_state_determination.html)).
 With the charge, the precursor m/z becomes a peptide mass, and the tool fetches every peptide from the [PeptideDB]({{root}}tools/PeptideDB.html) database whose mass lies within LookUpPPM of it.
 For each candidate it computes the theoretical fragment ions ([fragmentation](https://www.biofsharp.com/BioFSharp.Mz/02_01_fragmentation.html)) and compares them with the measured spectrum. Each candidate gets a [SEQUEST-like](https://www.biofsharp.com/BioFSharp.Mz/02_03_sequest_like_scoring.html) score and an [Andromeda-like](https://www.biofsharp.com/BioFSharp.Mz/02_04_andromeda_like_scoring.html) score. An X!Tandem-like score is computed alongside the Andromeda one.
-The candidates include reversed decoy peptides, which [PSMStatistics]({{root}}tools/PSMStatistics.html) later uses to estimate the false discovery rate ([what the decoys are for](https://www.biofsharp.com/BioFSharp.Mz/02_03_sequest_like_scoring.html#What-the-decoys-are-for)).
+The candidates include a decoy of every peptide: its sequence with the C-terminal residue kept in place and the rest reversed. A peptide that this leaves unchanged, such as AAAAK, is reversed completely. [PSMStatistics]({{root}}tools/PSMStatistics.html) later uses the decoys to estimate the false discovery rate ([what the decoys are for](https://www.biofsharp.com/BioFSharp.Mz/02_03_sequest_like_scoring.html#What-the-decoys-are-for)).
 
 <img src="{{root}}img/PSM.png" width="1000" height="750" />
 
