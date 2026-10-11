@@ -139,21 +139,21 @@ module PeptideIndex =
                 code
         log "Reading the ModSequence table."
         // The sequence strings hold the modification tokens as well, so their total length is an
-        // upper bound for the residues and the residue array can be allocated once.
+        // upper bound for the residues and the residue array can be allocated once. The array is
+        // capped at the longest byte array .NET allows, and only the residues written count.
         let count, residueBound =
             use cmd = new SQLiteCommand("SELECT COUNT(*), SUM(LENGTH(Sequence)) FROM ModSequence", cn)
             use reader = cmd.ExecuteReader()
             if not (reader.Read()) then failwith "The peptide data base holds no modified sequences."
             reader.GetInt64 0, reader.GetInt64 1
         if count = 0L then failwith "The peptide data base holds no modified sequences."
-        if residueBound > int64 Int32.MaxValue then failwith "The concatenated peptide sequences exceed the supported size."
         let count = int count
         let modSequenceIdRow = Array.zeroCreate<int> count
         let pepSequenceIdRow = Array.zeroCreate<int> count
         let massRow = Array.zeroCreate<float> count
         let globalModRow = Array.zeroCreate<byte> count
         let seqStartRow = Array.zeroCreate<int> (count + 1)
-        let residues = Array.zeroCreate<byte> (int residueBound)
+        let residues = Array.zeroCreate<byte> (int (min residueBound (int64 Array.MaxLength)))
         let rawSequenceRow = Dictionary<int, string>()
         let mutable used = 0
         let mutable maxLength = 0
@@ -168,6 +168,8 @@ module PeptideIndex =
                 for token in tokenize sequence do
                     match codeOf token with
                     | Some code ->
+                        if used = residues.Length then
+                            failwithf "The peptide data base holds more than %i residues, the most a search can index; use fewer variable modifications or split the data base." residues.Length
                         residues.[used] <- byte code
                         used <- used + 1
                     | None -> dropped <- true
