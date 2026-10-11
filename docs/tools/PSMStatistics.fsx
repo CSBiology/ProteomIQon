@@ -63,11 +63,11 @@ The fields of `Threshold.Estimate`:
 | Parameter | Default | Meaning |
 |-----------|---------|---------|
 | `QValueThreshold` | `0.01` | Keep PSMs with a q-value below this value. |
-| `PepValueThreshold` | `0.05` | Keep PSMs with a PEP value below this value. |
+| `PepValueThreshold` | `1.0` | Keep PSMs with a PEP value below this value. The default applies no PEP cutoff. |
 | `MaxIterations` | `15` | Upper limit for the retraining iterations. |
 | `MinimumIncreaseBetweenIterations` | `0.005` | Stop when the number of scans that pass the q-value and PEP thresholds (the smaller of the two counts; with `CrossValidation` the targets with q <= 0.01) grows by less than this fraction from one iteration to the next. |
 | `PepValueFittingMethod` | `PepValueFittingMethod.IRLS` | How the PEP curve is fitted. `IRLS` (iteratively reweighted least squares) is the only case. |
-| `CrossValidation` | `false` | Split the scans into three folds and score each fold with the model trained on the other two, as Percolator does. The folds retrain on the targets with q < 0.01, independent of `QValueThreshold` and `PepValueThreshold`, which then only filter the output. The scores are normalised per fold, so that the score at q = 0.01 is 0 and the median decoy score is -1, and the q-values and PEPs are computed on the pooled scores. Parameter files without this field use `false`. |
+| `CrossValidation` | `true` | Split the scans into three folds and score each fold with the model trained on the other two, as Percolator does. The folds retrain on the targets with q < 0.01, independent of `QValueThreshold` and `PepValueThreshold`, which then only filter the output. The scores are normalised per fold, so that the score at q = 0.01 is 0 and the median decoy score is -1, and the q-values and PEPs are computed on the pooled scores. Parameter files without this field use `false`. |
 
 The default file is [pSMStatisticsParams.json](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/pSMStatisticsParams.json).
 
@@ -83,11 +83,11 @@ let psmStatisticsParams : Dto.PSMStatisticsParams =
             Threshold.Estimate
                 {
                     QValueThreshold                  = 0.01
-                    PepValueThreshold                = 0.05
+                    PepValueThreshold                = 1.0
                     MaxIterations                    = 15
                     MinimumIncreaseBetweenIterations = 0.005
                     PepValueFittingMethod            = PepValueFittingMethod.IRLS
-                    CrossValidation                  = false
+                    CrossValidation                  = true
                 }
         ParseProteinIDRegexPattern = "id"
         KeepTemporaryFiles         = true
