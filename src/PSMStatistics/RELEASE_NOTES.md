@@ -5,6 +5,7 @@
 * Cap the leaf output of the FastTree trees at 10 instead of 100, so that a few leaves no longer push near-empty spectra and decoys to the top of the ranking
 * With CrossValidation, retrain each fold on the targets with q < 0.01 and accept a retrained model by its targets with q <= 0.01, independent of QValueThreshold and PepValueThreshold, which then only filter the output
 * Train FastTree on one thread; the results do not change
+* Write only the header instead of failing when no PSM passes the thresholds
 
 #### 0.0.11 - Monday, September 28, 2026
 * Use Hyperscore and Expectscore as features and seed the training with the expectation value when the input carries them

@@ -196,6 +196,19 @@ module PSMStatistics =
             Protein                      = proteinNames
         }
              
+    /// Writes the results as a tab separated table, or only the header if there are none.
+    let writeResults (outFilePath: string) (result: Dto.PSMStatisticsResult []) =
+        if result.Length = 0 then
+            // Seq.CSV takes the header from the first row and fails on an empty sequence.
+            Reflection.FSharpType.GetRecordFields(typeof<Dto.PSMStatisticsResult>)
+            |> Seq.map (fun field -> field.Name)
+            |> String.concat "\t"
+            |> FSharpAux.IO.FileIO.writeStringToFile false outFilePath
+        else
+            result
+            |> FSharpAux.IO.SeqIO.Seq.CSV "\t" true true
+            |> FSharpAux.IO.FileIO.writeToFile false outFilePath
+
     ///
     let psmStats diagCharts (processParams:PSMStatisticsParams) (outputDir:string) (cn:SQLiteConnection) (psms:string) =
 
@@ -620,19 +633,13 @@ module PSMStatistics =
                                         None
                                 )
             logger.Trace (sprintf "Number of results: %i" result.Length)
-            result
-            |> FSharpAux.IO.SeqIO.Seq.CSV "\t" true true
-            |> FSharpAux.IO.FileIO.writeToFile false outFilePath
+            writeResults outFilePath result
             logger.Trace "Done."
             with 
             | ex ->
                 logger.Trace (sprintf "%A" ex)
                 logger.Trace "Machine learning based psm filtering did not succeed, please try a different PEP-value fitting method. This method was developed for large data sets so it might fail for data sets too small of a size."
-                let fields = Reflection.FSharpType.GetRecordFields(typeof<Dto.PSMStatisticsResult>)
-                fields
-                |> Seq.map(fun field -> field.Name)
-                |> String.concat "\t"
-                |> FSharpAux.IO.FileIO.writeStringToFile false outFilePath
+                writeResults outFilePath [||]
                 logger.Trace "Done."
         | Threshold.Fixed cutoff -> 
             let pepSequenceIDToMissCleavagesAndProt =
@@ -690,7 +697,5 @@ module PSMStatistics =
                                         None
                                 )
             logger.Trace (sprintf "Number of results: %i" result.Length)
-            result
-            |> FSharpAux.IO.SeqIO.Seq.CSV "\t" true true
-            |> FSharpAux.IO.FileIO.writeToFile false outFilePath
+            writeResults outFilePath result
 
