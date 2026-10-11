@@ -1,4 +1,5 @@
 #### Unreleased
+* Use CrossValidation and no PEP cutoff (PepValueThreshold 1.0) in the default PSMStatistics parameters
 * Add SpectrumDescription, a streaming parser of the spectrum description that reads only the fields the spectrum search needs, shared by PeptideSpectrumMatching and PeptideSpectrumMatchingTIMs
 * Add CrossValidation to the PSMStatistics EstimationParams
 * Update BioFSharp.Mz to 0.2.3

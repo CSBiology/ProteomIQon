@@ -1,4 +1,5 @@
 #### Unreleased
+* Use CrossValidation and no PEP cutoff (PepValueThreshold 1.0) in the default parameters; with pseudo-reversed decoys and cross-validation, q < 0.01 alone keeps about 1 % real FDP
 * Add the parameter CrossValidation (default false): each scan is scored by the model trained on the other two of three scan folds, the scores are normalised per fold, and q-values and PEPs are computed on the pooled scores
 * Give a decoy the pseudo-reversed sequence that PeptideSpectrumMatching and PeptideSpectrumMatchingTIMs score, without terminator tokens and with the flanking residues of its target, in the Peptide column of the training data instead of the reversed sequence. The column is not a model feature, so the results do not change
 * Update BioFSharp.Mz to 0.2.3
