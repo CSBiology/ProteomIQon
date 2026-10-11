@@ -298,6 +298,21 @@ let pipelineTests =
             Expect.stringContains log "Hyperscore and expectation value present: true" "the hyperscore and the expectation value are used"
             Expect.isTrue (List.isEmpty problems) (String.concat "; " problems)
 
+        testCase "PSMStatisticsCrossValidation" <| fun _ ->
+            let relToDirectory = getRelativePath baseDir
+            let db = relToDirectory "../../../data/PSMStatistics/in/MinimalTIMs.db"
+            let psm = relToDirectory "../../../data/PSMStatistics/in/minimalTIMs.psm"
+            let psmStatsParams = relToDirectory "../../../data/PSMStatistics/in/pSMStatisticsParamsCrossValidation.json"
+            let outDirectory = relToDirectory "../../../data/PSMStatistics/out/timsCvOut"
+            let psmStatsExe = toolDll "PSMStatistics"
+            if Directory.Exists outDirectory then Directory.Delete(outDirectory, true)
+            runDotNet (sprintf "%s -i %s -o %s -p %s -d %s" psmStatsExe psm outDirectory psmStatsParams db) baseDir
+            let log = File.ReadAllText (Path.Combine(outDirectory, "minimalTIMs_log.txt"))
+            let qpsmLines = File.ReadAllLines (Path.Combine(outDirectory, "minimalTIMs.qpsm")) |> Array.filter (fun line -> line <> "")
+            Directory.Delete(outDirectory, true)
+            Expect.stringContains log "Cross-validated scores" "the scans are scored by cross-validation"
+            Expect.isGreaterThan qpsmLines.Length 1 "the qpsm holds PSMs"
+
         testCase "PSMBasedQuantification" <| fun _ ->
             let relToDirectory = getRelativePath baseDir
             let db = relToDirectory "../../../data/PSMBasedQuantification/in/Minimal.db"
