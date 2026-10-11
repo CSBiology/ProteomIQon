@@ -327,7 +327,6 @@ module PSMStatistics =
             let psmsToLearn =
                 psms
                 |> Array.map toPSMToLearn
-                |> Array.filter (fun x -> nan.Equals(x.SequestNormDeltaNext) = false && nan.Equals(x.AndroNormDeltaNext) = false )
             logger.Trace "Converting psms to PSMToLearn format: finished"        
 
             let applyModel prefix iteration (trainedModel: PSMToLearn -> PSMPrediction) psms =
