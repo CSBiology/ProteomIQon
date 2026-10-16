@@ -1152,9 +1152,28 @@ module AlignmentBasedQuantification_v2 =
                 dropIon row (sprintf "error in %s" step)
                 None
 
-        let lookUp sequence gMod = try Some (peptideLookUp sequence gMod) with _ -> None
-        let isotopePeaksOf (align: AlignmentResultV2) (gMod: int) (peptide: SearchDB.LookUpResult<AminoAcids.AminoAcid>) =
-            isotopePeaks align.Charge peptide
+        // the light and heavy row of a peptide and its charges share the data base lookup and the isotope pattern
+        let lookUps = Dictionary<(string*int), SearchDB.LookUpResult<AminoAcids.AminoAcid> option>(HashIdentity.Structural)
+        let lookUpCalls = ref 0
+        let isotopeCalls = ref 0
+        let lookUp sequence gMod =
+            lookUpCalls.Value <- lookUpCalls.Value + 1
+            match lookUps.TryGetValue ((sequence, gMod)) with
+            | true, found -> found
+            | _ ->
+                let found = try Some (peptideLookUp sequence gMod) with _ -> None
+                lookUps.[(sequence, gMod)] <- found
+                found
+        let isotopes = Dictionary<(string*int*int), IsotopePeak []>(HashIdentity.Structural)
+        let isotopePeaksOf (align: AlignmentResultV2) gMod (peptide: SearchDB.LookUpResult<AminoAcids.AminoAcid>) =
+            let key = (align.StringSequence, gMod, align.Charge)
+            isotopeCalls.Value <- isotopeCalls.Value + 1
+            match isotopes.TryGetValue key with
+            | true, peaks -> peaks
+            | _ ->
+                let peaks = isotopePeaks align.Charge peptide
+                isotopes.[key] <- peaks
+                peaks
 
         // windows per ion
         let prepare (row: int) (align: AlignmentResultV2) =
@@ -1278,6 +1297,7 @@ module AlignmentBasedQuantification_v2 =
             logger.Info (sprintf "%s: decoy transfers of %i of %i new ions requested (gradient %.2f - %.2f min), %i created" runName requested pool.Length low high rows.Length)
             rows |> Array.choose (fun row -> prepare row (alignOf row))
 
+        logger.Info (sprintf "%s: data base look ups %i (%i hits), isotope patterns %i (%i hits)" runName lookUpCalls.Value (lookUpCalls.Value - lookUps.Count) isotopeCalls.Value (isotopeCalls.Value - isotopes.Count))
 
         // XIC extraction and candidates, as soon as an XIC window is passed
         let toExtract = Array.append prepared decoys
