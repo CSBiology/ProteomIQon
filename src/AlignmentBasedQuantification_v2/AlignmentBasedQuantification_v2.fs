@@ -1040,7 +1040,9 @@ module AlignmentBasedQuantification_v2 =
         inReader.Connection.Open()
         let inRunID  = Core.MzIO.Reader.getDefaultRunID inReader
         let ms1 = readMs1Index logger inReader inRunID
-        let readSpectrum = inReader.ReadSpectrumPeaks >> XicSweep.sortPeaks
+        // TIMS spectra are decoded from the peak data directly, other layouts are read by MzIO
+        let readSpectrum, readSpectrumCommand = TimsPeaks.initReadPeakArrays inReader XicSweep.sortPeaks XicSweep.sortPeakArrays
+        use _readSpectrumCommand = readSpectrumCommand
         let spectraHaveIonMobility =
             ms1
             |> Seq.skip (ms1.Length / 2)
