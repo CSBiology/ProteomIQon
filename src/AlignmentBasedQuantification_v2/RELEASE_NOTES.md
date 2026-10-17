@@ -21,3 +21,4 @@
 * Stop with an error message on input paths that do not exist and on directories with different numbers of .mzlite, .align and .quant files; match the files of a directory by position in name order, or by file name with -mf, where a run without .align or .quant file is skipped with a warning; -i, -ii and -iv have to be all files or all directories
 * Breaking: .align files of earlier QuantBasedAlignment releases cannot be read, the runs have to be aligned again
 * Leave the labeled partner empty in the alignment row of an ion that has a fitted PSM based row of its own
+* Update MzIO to 0.1.8, MzIO.Processing to 0.1.8, MzIO.SQL to 0.1.10 and MzIO.MzML to 0.1.11
