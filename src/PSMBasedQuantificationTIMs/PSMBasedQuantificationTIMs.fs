@@ -39,6 +39,34 @@ module PSMBasedQuantificationTIMs =
         let initReadSortedPeaks (reader: MzIO.MzSQL.MzSQL) =
             TimsPeaks.initReadPeakArrays reader sortPeaksByMz TimsPeaks.sortPeakArraysByMz
 
+        /// Cache of the sorted peaks of MS1 spectra that keeps at most maxEntries spectra. When it is full, the tenth of
+        /// the spectra that was used least recently is dropped.
+        type PeakCache(read: string -> TimsPeaks.MzSortedPeaks, maxEntries: int) =
+            let cache = Dictionary<string, struct (TimsPeaks.MzSortedPeaks * int64 ref)>()
+            let mutable clock = 0L
+            let mutable reads = 0
+            /// The number of spectra that were read, including the ones that were read again after they were dropped.
+            member _.Reads = reads
+            member _.Capacity = maxEntries
+            member _.Get(spectrumID: string) =
+                clock <- clock + 1L
+                match cache.TryGetValue spectrumID with
+                | true, struct (peaks, lastUse) ->
+                    lastUse.Value <- clock
+                    peaks
+                | _ ->
+                    let peaks = read spectrumID
+                    reads <- reads + 1
+                    if cache.Count >= maxEntries then
+                        cache
+                        |> Seq.map (fun kv -> let struct (_, lastUse) = kv.Value in kv.Key, lastUse.Value)
+                        |> Seq.sortBy snd
+                        |> Seq.truncate (max 1 (maxEntries / 10))
+                        |> Seq.toArray
+                        |> Array.iter (fun (key, _) -> cache.Remove key |> ignore)
+                    cache.[spectrumID] <- struct (peaks, ref clock)
+                    peaks
+
         /// Extract a rt profile for specified target mass and rt range.
         /// Mz range peak aggregation is closest lock mz.
         /// Profile array with index corresponding to continous mass spectra over rt range and mz range given.
@@ -2067,6 +2095,14 @@ module PSMBasedQuantificationTIMs =
             KLDiv_Corrected     = klCorr
         }
        
+    /// Maps f over xs in the order of key (ascending) and returns the results in the order of xs. f gets the position of the
+    /// element in the order of key.
+    let mapiOrderedBy (key: 'a -> float) (f: int -> 'a -> 'b) (xs: 'a []) =
+        let order = Array.init xs.Length id |> Array.sortBy (fun i -> key xs.[i], i)
+        let results = Array.zeroCreate xs.Length
+        order |> Array.iteri (fun position i -> results.[i] <- f position xs.[i])
+        results
+
     ///
     let quantifyPeptides diagCharts zipCharts (processParams:Domain.QuantificationParams) (outputDir:string) (cn:SQLiteConnection) (instrumentOutput:string) (scoredPSMs:string)  =
         let logger = Logging.createLogger (Path.GetFileNameWithoutExtension scoredPSMs)
@@ -2099,13 +2135,14 @@ module PSMBasedQuantificationTIMs =
                 System.IO.Directory.CreateDirectory path |> ignore
                 path
         logger.Trace (sprintf "plotDirectory:%s" plotDirectory)
-        logger.Trace "Copy peptide DB into Memory"
-        let memoryDB = SearchDB.copyDBIntoMemory cn
-        logger.Trace "Copy peptide DB into Memory: finished"
+        // the peptides are looked up in the data base file, a copy of the data base in memory would take its whole size (GBs) for two lookups per ion;
+        // every file has its own connection and the lookups run without a transaction, so that files in parallel do not lock each other
+        use peptideDB = new SQLiteConnection(cn.ConnectionString)
+        peptideDB.Open()
         logger.Trace "Get peptide lookUp function"
-        let dBParams     = getSDBParamsByCn memoryDB
-        //let massLookUp = prepareSelectMassByModSequenceAndGlobalMod memoryDB
-        let peptideLookUp = getThreadSafePeptideLookUpFromFileBySequenceAndGMod memoryDB dBParams
+        let dBParams     = getSDBParamsByCn peptideDB
+        //let massLookUp = prepareSelectMassByModSequenceAndGlobalMod peptideDB
+        let peptideLookUp = getThreadSafePeptideLookUpFromFileBySequenceAndGMod peptideDB dBParams
         let calcIonSeries aal = Fragmentation.Series.fragmentMasses Fragmentation.Series.bOfBioList Fragmentation.Series.yOfBioList dBParams.MassFunction aal
         logger.Trace "Get peptide lookUp function: finished"
         // initialize Reader and Transaction
@@ -2283,7 +2320,21 @@ module PSMBasedQuantificationTIMs =
         let readSpecPeaksWithMem = FSharpAux.Memoization.memoize inReader.ReadSpectrumPeaks
         ///
         let readSortedPeaks, readSortedPeaksCommand = Query.initReadSortedPeaks inReader
-        let readSortedPeaksWithMem = FSharpAux.Memoization.memoize readSortedPeaks
+        // The ions are quantified in the order of their scan time and their XICs read the MS1 spectra of a window of
+        // 2 x ScanTimeWindow, so the spectra of twice the widest window are kept instead of all MS1 spectra of the file.
+        let peakCache =
+            let windowWidth = 2. * processParams.XicExtraction.ScanTimeWindow
+            let ms1ScanTimes = ms1SortedByScanTime |> Array.map fst
+            let mutable windowEnd = 0
+            let mutable widestWindow = 1
+            for windowStart in 0 .. ms1ScanTimes.Length - 1 do
+                while windowEnd < ms1ScanTimes.Length && ms1ScanTimes.[windowEnd] < ms1ScanTimes.[windowStart] + windowWidth do
+                    windowEnd <- windowEnd + 1
+                widestWindow <- max widestWindow (windowEnd - windowStart)
+            let cacheSize = max 16 (2 * widestWindow)
+            logger.Trace (sprintf "MS1 peaks cache: %i spectra (%i MS1s in the widest XIC window)" cacheSize widestWindow)
+            Query.PeakCache(readSortedPeaks, cacheSize)
+        let readSortedPeaksWithMem = peakCache.Get
         let closestMs1 = SpectrumIndex.initClosestMs1 ms1SortedByScanTime
         let comparePredictedAndMeasuredIsotopicCluster =
             initComparePredictedAndMeasuredIsotopicCluster
@@ -3123,7 +3174,7 @@ module PSMBasedQuantificationTIMs =
                         pepIon,
                         psms                  
                 )
-            |> Array.mapi (fun i (pepIon,psms) -> 
+            |> mapiOrderedBy (fun (_, psms: PSMStatisticsResult []) -> if psms.Length = 0 then infinity else psms |> Array.averageBy (fun x -> x.ScanTime)) (fun i (pepIon,psms) -> 
                 if i % 100 = 0 then logger.Trace (sprintf "%i peptides quantified" i)
                 // check if unlabeled or labeled quantification should be performed and if gabor processing is requested
                 match processParams.XicExtraction.XicProcessing, processParams.PerformLabeledQuantification with 
@@ -3174,6 +3225,6 @@ module PSMBasedQuantificationTIMs =
         inTr.Dispose()
         readSortedPeaksCommand.Dispose()
         inReader.Dispose()
-        memoryDB.Dispose()
+        if peakCache.Reads > 0 then logger.Trace (sprintf "%i MS1 spectra were read for %i MS1s of the file (cache of %i spectra)" peakCache.Reads ms1SortedByScanTime.Length peakCache.Capacity)
         logger.Trace "executing quantification:finished"
         
