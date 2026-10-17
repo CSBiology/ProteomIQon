@@ -1,4 +1,5 @@
 #### Unreleased
+* Convert faster with the same mzlite files and use MzIO 0.1.8, MzIO.Processing 0.1.8, MzIO.SQL 0.1.10 and MzIO.MzML 0.1.11 (faster JSON)
 * Update BioFSharp.Mz to 0.2.2
 * Update BioFSharp.Mz to 0.2.3
 

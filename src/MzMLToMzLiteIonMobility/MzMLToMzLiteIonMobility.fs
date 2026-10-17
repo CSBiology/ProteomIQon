@@ -200,10 +200,14 @@ module MzMLIonMobilityToMzLite =
         //File.WriteAllText(instrumentOutput, tmp.Replace("&quot;", ""))
 
         let inReaderMS = new MzMLReaderMIRIM(instrumentOutput)
-        let inReaderPeaks = new MzMLReaderMIRIM(instrumentOutput)
+        let inReaderMS = new MzMLReaderMIRIM(instrumentOutput)
         let inRunID  = getDefaultRunID inReaderMS
         let inTrMS = inReaderMS.BeginTransaction()
-        let inTrPeaks = inReaderPeaks.BeginTransaction()
+        // the peaks of the spectra of the usual layout are read directly from the file, the others with the MIRIM reader
+        let rawPeakReader = new MzMLRawPeakReaderMIRIM(instrumentOutput)
+        let fallbackPeakReader = lazy (new MzMLReaderMIRIM(instrumentOutput))
+        let useRawPeakReader = processParams.Compress = BinaryDataCompressionType.ZLib
+        let peakDataEncoder = TimsPeaks.PeakDataEncoder()
 
         let ms1PeakPicking = initPeakPicking logger processParams.MS1PeakPicking
         let ms2PeakPicking = initPeakPicking logger processParams.MS2PeakPicking
@@ -234,13 +238,36 @@ module MzMLIonMobilityToMzLite =
         let _ = outReader.Open()
         let outTr = outReader.BeginTransaction()
         let outRunID  = getDefaultRunID outReader
+        // the description of the peak arrays is the same for all spectra
+        let peakArrayJson =
+            lazy (
+                createPeak1DArray processParams.Compress BinaryDataType.Float64 BinaryDataType.Float64 BinaryDataType.Float64 [||] [||] [||]
+                |> MzIO.Json.MzIOJson.ToJson
+            )
+        let insertCommand =
+            new System.Data.SQLite.SQLiteCommand(
+                "INSERT INTO Spectrum (RunID, SpectrumID, Description, PeakArray, PeakData) VALUES(@runID, @spectrumID, @description, @peakArray, @peakData)",
+                outReader.Connection)
+        for (name, dbType) in [ "@runID", System.Data.DbType.String; "@spectrumID", System.Data.DbType.String; "@description", System.Data.DbType.String; "@peakArray", System.Data.DbType.String; "@peakData", System.Data.DbType.Binary ] do
+            insertCommand.Parameters.Add(name, dbType) |> ignore
         spectra
         |> Seq.iteri (fun i spectrum ->
             if i % 1000 = 0 then logger.Trace $"{i}"
-            let data = inReaderPeaks.getSpecificPeak1DArraySequentialWithMIRIM(spectrum.ID)
-            let dataIM = toIMPeaks data
-            insertSpectrum processParams.Compress outReader outRunID ms1PeakPicking ms2PeakPicking (changeScanTimeToMinutes (fixSpectrum spectrum)) dataIM
-            
+            let spectrum' = changeScanTimeToMinutes (fixSpectrum spectrum)
+            if useRawPeakReader && rawPeakReader.TryReadPeaks spectrum.ID then
+                match MassSpectrum.getMsLevel spectrum' with
+                | 1 | 2 -> ()
+                | _ -> failwith "Only mass spectra of level 1 and 2 are supported."
+                insertCommand.Parameters.["@runID"].Value <- outRunID
+                insertCommand.Parameters.["@spectrumID"].Value <- spectrum'.ID
+                insertCommand.Parameters.["@description"].Value <- MzIO.Json.MzIOJson.MassSpectrumToJson spectrum'
+                insertCommand.Parameters.["@peakArray"].Value <- peakArrayJson.Value
+                insertCommand.Parameters.["@peakData"].Value <- peakDataEncoder.Encode(rawPeakReader.Intensity, rawPeakReader.Mz, rawPeakReader.IonMobility, rawPeakReader.Count)
+                insertCommand.ExecuteNonQuery() |> ignore
+            else
+                let data = fallbackPeakReader.Value.getSpecificPeak1DArraySequentialWithMIRIM(spectrum.ID)
+                let dataIM = toIMPeaks data
+                insertSpectrum processParams.Compress outReader outRunID ms1PeakPicking ms2PeakPicking spectrum' dataIM
         )
         try
             outReader.InsertModel model
@@ -250,10 +277,9 @@ module MzMLIonMobilityToMzLite =
         outTr.Commit()
         outTr.Dispose()
         outReader.Dispose()
-        inTrPeaks.Commit()
-        inTrPeaks.Dispose()
         inTrMS.Commit()
         inTrMS.Dispose()
         inReaderMS.Dispose()
-        inReaderPeaks.Dispose()
+        rawPeakReader.Dispose()
+        if fallbackPeakReader.IsValueCreated then fallbackPeakReader.Value.Dispose()
         logger.Trace "Done."
