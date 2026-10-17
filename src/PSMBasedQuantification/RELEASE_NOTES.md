@@ -3,6 +3,7 @@
 * Read the spectra faster with the same results
 * Compute the ALS baseline faster with the same values
 * Update BioFSharp.Mz to 0.2.3
+* Speed up the wavelet peak detection with the same results
 
 #### 0.0.12 - Wednesday, September 2, 2026
 * Fall back to a median mz correction when the smoothing spline cannot be fitted on sparse data
