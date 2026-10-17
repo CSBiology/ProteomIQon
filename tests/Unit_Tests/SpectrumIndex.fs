@@ -123,4 +123,30 @@ let all =
             Expect.equal sorted.Intensity [| 30.; 50.; 60.; 10.; 40. |] "intensities follow"
             Expect.equal sorted.IonMobility [| 0.3; 0.5; 0.6; 0.1; 0.4 |] "ion mobilities follow"
             Expect.isEmpty (TimsPeaks.sortPeakArraysByMz [| 2.; 1. |] [| 1.; 2. |] [||]).IonMobility "no ion mobility stays empty"
+        testCase "mapiOrderedBy runs in the order of the key and returns the results in the order of the input" <| fun _ ->
+            let calls = ResizeArray<int * float>()
+            let keys = [| 3.; nan; 1.; 3.; 2. |]
+            let results = PSMBasedQuantificationTIMs.mapiOrderedBy id (fun position key -> calls.Add((position, key)); sprintf "%i:%g" position key) keys
+            Expect.equal (calls |> Seq.map fst |> Seq.toList) [ 0; 1; 2; 3; 4 ] "the positions in the order of the key"
+            Expect.equal (calls |> Seq.map snd |> Seq.toList |> List.map (fun k -> if Double.IsNaN k then -1. else k)) [ -1.; 1.; 2.; 3.; 3. ] "NaN first, equal keys in the order of the input"
+            Expect.equal results [| "3:3"; "0:NaN"; "1:1"; "4:3"; "2:2" |] "the results stay in the order of the input"
+            Expect.isEmpty (PSMBasedQuantificationTIMs.mapiOrderedBy id (fun _ _ -> 0) [||]) "nothing to map"
+        testCase "the peak cache keeps at most its capacity, drops the least recently used and counts the reads" <| fun _ ->
+            let reads = ResizeArray<string>()
+            let read (id: string) =
+                reads.Add id
+                TimsPeaks.sortPeakArraysByMz [| float id.Length |] [| 1. |] [||]
+            let cache = PSMBasedQuantificationTIMs.Query.PeakCache(read, 10)
+            for i in 1 .. 10 do cache.Get (string (i * 11)) |> ignore
+            Expect.equal cache.Reads 10 "ten different spectra"
+            cache.Get "11" |> ignore
+            Expect.equal cache.Reads 10 "a hit is not a read"
+            // the tenth that was used least recently is dropped when the cache is full: "22"
+            cache.Get "x" |> ignore
+            Expect.equal cache.Reads 11 "a new spectrum"
+            cache.Get "11" |> ignore
+            Expect.equal cache.Reads 11 "recently used spectra stay"
+            cache.Get "22" |> ignore
+            Expect.equal cache.Reads 12 "the least recently used one was dropped and is read again"
+            Expect.equal (reads |> Seq.filter ((=) "22") |> Seq.length) 2 "read twice"
     ]
