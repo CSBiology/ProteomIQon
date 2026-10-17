@@ -20,3 +20,4 @@
 * Use the Wavelet settings of the parameter file in the wavelet peak detection; they were ignored before
 * Stop with an error message on input paths that do not exist and on directories with different numbers of .mzlite, .align and .quant files; match the files of a directory by position in name order, or by file name with -mf, where a run without .align or .quant file is skipped with a warning; -i, -ii and -iv have to be all files or all directories
 * Breaking: .align files of earlier QuantBasedAlignment releases cannot be read, the runs have to be aligned again
+* Leave the labeled partner empty in the alignment row of an ion that has a fitted PSM based row of its own
