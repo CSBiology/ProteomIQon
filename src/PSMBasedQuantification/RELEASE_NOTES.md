@@ -1,4 +1,5 @@
 #### Unreleased
+* Skip with a warning the spectrum descriptions that cannot be read and the MS1 spectra without a finite scan time or an ID
 * Update BioFSharp.Mz to 0.2.2
 * Read the spectra faster with the same results
 * Compute the ALS baseline faster with the same values

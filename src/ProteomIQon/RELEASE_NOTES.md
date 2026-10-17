@@ -1,4 +1,5 @@
 #### Unreleased
+* Add SpectrumIndex (the MS1 index and the MS2 headers from one pass over the spectrum descriptions, skipping with a warning the descriptions that cannot be read) and SortedSearch (binary searches and the closest scan time), and the m/z sort of the peaks of a spectrum in TimsPeaks, shared by the quantification and search tools
 * Add PeakDataEncoder to TimsPeaks, the direct encoding of the peak data of TIMS spectra, the counterpart of its decoding
 * Use CrossValidation and no PEP cutoff (PepValueThreshold 1.0) in the default PSMStatistics parameters
 * Add SpectrumDescription, a streaming parser of the spectrum description that reads only the fields the spectrum search needs, shared by PeptideSpectrumMatching and PeptideSpectrumMatchingTIMs

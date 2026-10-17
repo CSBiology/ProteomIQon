@@ -140,36 +140,16 @@ module MsFraggerToPSM =
     /// The MS2 spectra of the run from one pass over the spectrum descriptions. Like PeptideSpectrumMatchingTIMs,
     /// spectra without ID, scan time or precursor m/z are left out and do not count for ScanNr.
     let readMs2Spectra (reader: MzIO.MzSQL.MzSQL) (runID: string) (logger: NLog.Logger) =
-        let spectra = ResizeArray<int*SpectrumDescription.SpectrumHeader>()
-        do
-            use cmd = new SQLiteCommand("SELECT Description FROM Spectrum WHERE RunID = @runID ORDER BY rowid", reader.Connection)
-            cmd.Parameters.AddWithValue("@runID", runID) |> ignore
-            use rows = cmd.ExecuteReader()
-            let mutable position = 0
-            while rows.Read() do
-                let h = SpectrumDescription.tryParse (rows.GetString 0)
-                if not (isNull h.Error) then
-                    logger.Warn (sprintf "spectrum at position %i cannot be read: %s" position h.Error)
-                elif h.MsLevel = Some 2 &&
-                     (System.String.IsNullOrWhiteSpace h.ID ||
-                      not (h.ScanTime |> Option.exists (fun x -> System.Double.IsFinite x && x >= 0.)) ||
-                      not (h.PrecursorMz |> Option.exists (fun x -> System.Double.IsFinite x && x > BioFSharp.Mass.Table.PMassInU)) ||
-                      (h.ChargeState |> Option.exists (fun x -> x < 0))) then
-                    logger.Warn (sprintf "spectrum at position %i has missing or invalid metadata; skipped." position)
-                elif h.MsLevel = Some 2 then
-                    spectra.Add (position, h)
-                position <- position + 1
-        spectra.ToArray()
-        |> Array.sortBy (fun (position, h) -> h.ScanTime.Value, position)
-        |> Array.mapi (fun i (_, h) ->
+        SpectrumIndex.readMs2Headers reader runID (fun message -> logger.Warn message)
+        |> Array.mapi (fun i h ->
             {
-                ID          = h.ID
+                ID          = h.Id
                 ScanNr      = i
-                ScanTime    = h.ScanTime.Value
-                PrecursorMZ = h.PrecursorMz.Value
+                ScanTime    = h.ScanTime
+                PrecursorMZ = h.PrecursorMz
                 // charge 0 means unknown
-                Charge      = h.ChargeState |> Option.filter (fun x -> x > 0)
-                IonMobility = h.IonMobility |> Option.defaultValue nan
+                Charge      = if h.Charge > 0 then Some h.Charge else None
+                IonMobility = h.IonMobility
             }
         )
 

@@ -1,4 +1,5 @@
 #### Unreleased
+* Skip with a warning the spectrum descriptions that cannot be read and the MS1 spectra without a finite scan time or an ID
 * Update BioFSharp.Mz to 0.2.2
 * Read the .qpsm of PSMStatistics, which MsFraggerToPSM now writes too, and fail with the missing columns when a .qpsm has another layout. Breaking: .qpsm files of earlier MsFraggerToPSM releases have to be regenerated
 * Take the ion mobility of a PSM from its MS2 spectrum in the mzlite, as the .qpsm does not carry it; PSMs without a readable spectrum with ion mobility are skipped with a warning; the tool stops when none has one
