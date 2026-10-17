@@ -846,6 +846,8 @@ module AlignmentBasedQuantification_v2 =
             /// Corrected monoisotopic m/z of the target.
             LockMz            : float
             PartnerLockMz     : float
+            /// The labeled partner of an overlap ion with a fitted PSM based peak is not extracted nor quantified.
+            PartnerSkipped    : bool
             ScanTimeWindow    : float
             IonMobilityWindow : float
             Request           : XicRequest
@@ -1029,6 +1031,11 @@ module AlignmentBasedQuantification_v2 =
             if isFinite scanTime && isFinite sd && sd > 0. then
                 ownQuant.[(qp.StringSequence, qp.GlobalMod, qp.Charge)] <- qp
         logger.Info (sprintf "%s: %i .align rows, %i PSM based rows (%i ions with a fitted peak)" runName alignments.Length psmQuant.Length ownQuant.Count)
+        // ions whose PSM based row has a fitted scan time: Stats_v2 keeps this row, the alignment row is a training example and the truth
+        let psmPeakIons = HashSet<(string*int*int)>(HashIdentity.Structural)
+        for qp in psmQuant do
+            let key = (qp.StringSequence, qp.GlobalMod, qp.Charge)
+            if isFinite (getTargetScanTime qp) then psmPeakIons.Add key |> ignore else psmPeakIons.Remove key |> ignore
 
         // the peptide data base is read from disk: only the ions of the .align file are looked up, and a copy in memory
         // (as v1) costs the size of the data base per run (5.5 GB for the TIMs data base)
@@ -1190,8 +1197,11 @@ module AlignmentBasedQuantification_v2 =
                     dropIon row "peptide not in the database"
                     None
                 | Some target ->
+                // the alignment row of an overlap ion with a fitted PSM based peak is a training example and the truth of
+                // AlignmentBasedQuantStatistics_v2 only, which reads the quantification of the ion itself
+                let partnerSkipped = processParams.PerformLabeledQuantification && psmPeakIons.Contains ((align.StringSequence, align.GlobalMod, align.Charge))
                 let partner =
-                    if processParams.PerformLabeledQuantification then
+                    if processParams.PerformLabeledQuantification && not partnerSkipped then
                         let p = lookUp align.StringSequence (if align.GlobalMod = 0 then 1 else 0)
                         if p.IsNone then logger.Debug (sprintf "Labeled partner not in the database: %s" (ionName align))
                         p
@@ -1230,6 +1240,7 @@ module AlignmentBasedQuantification_v2 =
                     PartnerIsotopes   = partnerIsotopes
                     LockMz            = lockMz
                     PartnerLockMz     = partnerLockMz
+                    PartnerSkipped    = partnerSkipped
                     ScanTimeWindow    = scanTimeWindow
                     IonMobilityWindow = imWindow
                     Request           =
@@ -1243,6 +1254,8 @@ module AlignmentBasedQuantification_v2 =
                         }
                 }
         let prepared = alignments |> Array.mapi prepare |> Array.choose id
+        if processParams.PerformLabeledQuantification then
+            logger.Info (sprintf "%s: labeled partner not quantified for %i of %i ions (overlap ions with a fitted PSM based peak)" runName (prepared |> Array.filter (fun ion -> ion.PartnerSkipped) |> Array.length) prepared.Length)
         let withIonMobility = prepared |> Array.filter (fun ion -> isFinite ion.Request.ImLow) |> Array.length
         logger.Info (
             sprintf "%s: %i ions to extract (XIC +-%.2f min); candidate window median +-%.3f min (%.3f - %.3f); %i with an ion mobility window (median +-%.4f)"
@@ -1518,7 +1531,7 @@ module AlignmentBasedQuantification_v2 =
                             | _ -> failed "peak fit failed"
                         | Some _, None -> emptySide ion.PartnerLockMz None, nan
                         | None, _ ->
-                            if processParams.PerformLabeledQuantification && ion.Row < n then
+                            if processParams.PerformLabeledQuantification && not ion.PartnerSkipped && ion.Row < n then
                                 partnerFailures <- partnerFailures + 1
                             emptySide nan None, nan
                     features.[ion.Row] <- Some (featureRow "quantified")
