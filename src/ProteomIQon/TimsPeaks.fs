@@ -49,7 +49,11 @@ module TimsPeaks =
                 let intensities = next ()
                 let mzs = next ()
                 let ionMobilities = next ()
-                ofArrays mzs intensities ionMobilities
+                // a blob of another layout (not ending after the three arrays, arrays of different lengths) is read by MzIO
+                if position = data.Length && mzs.Length = intensities.Length && mzs.Length = ionMobilities.Length then
+                    ofArrays mzs intensities ionMobilities
+                else
+                    fallback (reader.ReadSpectrumPeaks spectrumID)
             | _ ->
                 fallback (reader.ReadSpectrumPeaks spectrumID)
         read, cmd
