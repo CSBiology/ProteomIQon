@@ -356,6 +356,111 @@ module FSharpStats' =
         let private aic n nParams likelihood = 
             (float n * Math.Log(likelihood / float n)) + 2. * (float nParams) 
     
+        /// Same values as ContinuousWavelet.transform with (-) as getDiff: the constants of the Ricker function are hoisted and the
+        /// kernel value of a pair of points is evaluated once, the right side of the left point and the left side of the right point
+        /// share it (the same difference of the same two x values, the kernel is even). The sums run in the same order. A kernel value
+        /// is a factor of the intensities of its two points only, with both intensities zero (or not an output point) it is not evaluated.
+        let private transformFast (kernelValues: float [] ref) (paddedData: (float*float)[]) (borderpadding: int) (wavelet: Wavelet.Ricker) =
+            let n = paddedData.Length
+            let xs = paddedData |> Array.map fst
+            let ys = paddedData |> Array.map snd
+            let padd = wavelet.PaddingArea
+            let scale = wavelet.Scale
+            let ss = pown scale 2
+            let twoSs = 2. * ss
+            let fakA = 2. / (sqrt(3. * scale) * 1.331335364)
+            let ricker (x: float) =
+                let xx = x * x
+                fakA * (1. - (xx/ss)) * exp (-xx / twoSs)
+            let stepSize = xs.[1] - xs.[0]
+            let last = n - borderpadding - 1
+            // kernel values of all computed rows in one buffer, which the scales of a trace share
+            let used = ref 0
+            let rowOff : int [] = Array.zeroCreate n
+            let rowStart : int [] = Array.zeroCreate n
+            let rowLen : int [] = Array.zeroCreate n
+            let computeRow i start =
+                rowOff.[i] <- used.Value
+                rowStart.[i] <- start
+                let xi = xs.[i]
+                let iOut = i >= borderpadding && i <= last
+                let mutable j = start
+                let mutable go = true
+                while go do
+                    let diff = xs.[j] - xi
+                    if diff > padd then go <- false
+                    else
+                        if used.Value = kernelValues.Value.Length then
+                            let bigger = Array.zeroCreate (2 * kernelValues.Value.Length)
+                            Array.blit kernelValues.Value 0 bigger 0 used.Value
+                            kernelValues.Value <- bigger
+                        let jOut = j >= borderpadding && j <= last
+                        kernelValues.Value.[used.Value] <- if (iOut && ys.[j] <> 0.) || (jOut && ys.[i] <> 0.) then ricker diff else 0.
+                        used.Value <- used.Value + 1
+                        j <- j + 1
+                rowLen.[i] <- j - start
+            // the points left of the first output point that have it within the kernel
+            let mutable i0 = borderpadding - 1
+            while i0 >= 0 && xs.[borderpadding] - xs.[i0] <= padd do
+                computeRow i0 borderpadding
+                i0 <- i0 - 1
+            let center = ricker 0.
+            for j in borderpadding .. last do
+                computeRow j (j + 1)
+            let buf = kernelValues.Value
+            Array.init (last - borderpadding + 1) (fun o ->
+                let j = borderpadding + o
+                let mutable right = 0.
+                let off = rowOff.[j]
+                for k in 0 .. rowLen.[j] - 1 do
+                    right <- right + buf.[off + k] * ys.[j + 1 + k]
+                let mutable left = 0.
+                let mutable i = j - 1
+                let mutable go = true
+                while go do
+                    let diff = xs.[j] - xs.[i]
+                    if diff > padd then go <- false
+                    else
+                        left <- left + buf.[rowOff.[i] + j - rowStart.[i]] * ys.[i]
+                        i <- i - 1
+                let correlationValue = right + left + center * ys.[j]
+                xs.[j], correlationValue / (Math.Sqrt (Math.Abs scale)) * stepSize
+                )
+
+        /// Bit mask (bit j = j-th peak) of the subset of the peaks with the smallest AIC, the subset List.minBy chooses of
+        /// FSharpAux.List.powerSetOf: the first of equal values, and the first subset if it has no AIC (nan). The sums of the fits
+        /// are added in the order of the peaks, as Vector.sum does, along a depth first walk over the subsets that reuses the sum
+        /// of the prefix.
+        let private bestSubsetFast (y: float []) (yHats: float [] []) =
+            let k = yHats.Length
+            let cols = y.Length
+            let buffers = Array.init (k + 1) (fun _ -> Array.zeroCreate<float> cols)
+            let best = ref 0
+            let bestAic = ref nan
+            let firstIsNan = ref false
+            let rec visit (start: int) (sum: float []) (mask: int) (count: int) =
+                for j in start .. k - 1 do
+                    let row = yHats.[j]
+                    let mask' = mask ||| (1 <<< j)
+                    let sum' =
+                        if count = 0 then row
+                        else
+                            let target = buffers.[count]
+                            for c in 0 .. cols - 1 do
+                                target.[c] <- sum.[c] + row.[c]
+                            target
+                    let mutable rss = 0.
+                    for c in 0 .. cols - 1 do
+                        rss <- rss + (y.[c] - sum'.[c]) ** 2.
+                    let a = aic cols ((count + 1) * 3) rss
+                    if mask' = 1 && Double.IsNaN a then firstIsNan.Value <- true
+                    if (a < bestAic.Value) || (a = bestAic.Value && mask' < best.Value) || (best.Value = 0 && not (Double.IsNaN a)) then
+                        best.Value <- mask'
+                        bestAic.Value <- a
+                    visit (j + 1) sum' mask' (count + 1)
+            visit 0 null 0 0
+            if firstIsNan.Value then 1 else best.Value
+
         ///
         let private optimizeWaveletFits (origData:(float*float) []) (groupedPeaks:(WaveletPeak*Gaussian)list) = 
             match groupedPeaks with 
@@ -371,19 +476,10 @@ module FSharpStats' =
                 let xy = origData |> Array.filter (fun (x,y) -> x >= min && x <= max) 
                 let x,y = xy |> Array.unzip        
                 let bestGroup = 
-                    groupedPeaks
-                    |> List.map (fun (wp,g) -> 
-                        let yHat = x |> Array.map g.Function
-                        g,yHat
-                    )
-                    |> FSharpAux.List.powerSetOf
-                    |> List.minBy (fun groupedPeaks ->    
-                        let m = Matrix.ofJaggedArray (groupedPeaks |> List.map snd |> Array.ofList)
-                        let yHat'= m |> Matrix.mapiCols (fun i v -> v |> Vector.sum)
-                        let rss = Seq.map2 (fun x y -> (x-y)**2. ) y yHat' |> Seq.sum
-                        aic m.NumCols (m.NumRows*3) rss
-                    )
-                    |> List.map fst
+                    let withHats = groupedPeaks |> List.map (fun (wp,g) -> g, x |> Array.map g.Function)
+                    // the groups hold at most 15 peaks (List.chunkBySize 15 in identifyPeaksBy), within the 30 peaks that fit the bit mask of bestSubsetFast
+                    let subset = bestSubsetFast y (withHats |> List.map snd |> Array.ofList)
+                    withHats |> List.mapi (fun j (g,_) -> j,g) |> List.filter (fun (j,_) -> (subset >>> j) &&& 1 = 1) |> List.map snd
                 let sumTrace = 
                     let m = Matrix.ofJaggedArray (bestGroup |> List.map (fun g ->  origData |> Array.map (fst >> g.Function)) |> Array.ofList )
                     let yHat' = m |> Matrix.mapiCols (fun i v -> v |> Vector.sum)
@@ -416,10 +512,11 @@ module FSharpStats' =
                 | Option.Some v -> Math.Max(v,minDistancePadding*3.)
                 | Option.None -> minDistancePadding*3.
             let scales = getScales minScale maxScale minDistancePadding
+            let kernelValues = ref (Array.zeroCreate<float> (1 <<< 12))
             let transformations = 
                 scales
                 |> Array.map Wavelet.createRicker
-                |> Array.map (fun x -> ContinuousWavelet.transform paddedData (-) borderpadding x |> Array.unzip)
+                |> Array.map (fun x -> transformFast kernelValues paddedData borderpadding x |> Array.unzip)
             let xVals = fst transformations.[0]
             let corrMatrix = 
                 transformations

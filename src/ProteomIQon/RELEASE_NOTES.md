@@ -10,6 +10,7 @@
 * Add BaselineAls, the ALS baseline of FSharp.Stats baselineAls' computed faster with the same values, shared by PSMBasedQuantification, PSMBasedQuantificationTIMs and AlignmentBasedQuantification
 * Update BioFSharp.Mz to 0.2.3
 * Add TimsPeaks, the direct decoding of the peak data of TIMS spectra, shared by PSMBasedQuantificationTIMs and AlignmentBasedQuantification
+* Speed up the wavelet peak detection of FSharpStats'.Wavelet with the same results
 
 #### 0.0.12 - Monday, September 28, 2026
 * Extend PeptideSpectrumMatchingResult with IonMobility, Hyperscore, Expectscore, MatchedIons and TotalIons. Breaking: .psm files written by earlier releases have 23 columns and have to be regenerated before PSMStatistics of this release reads them

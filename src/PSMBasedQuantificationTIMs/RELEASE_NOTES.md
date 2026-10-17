@@ -8,6 +8,7 @@
 * Take QValue, PEPValue and ProteinNames from the PSM with the lowest QValue that is not NaN
 * Update BioFSharp.Mz to 0.2.3
 * Compute the ALS baseline faster with the same values
+* Speed up the wavelet peak detection with the same results
 
 #### 0.0.13 - Wednesday, September 2, 2026
 * Add Gabor3D algorithm for peak detection
