@@ -3,6 +3,7 @@ module ProteomIQon.UnitTestsPeptideSpectrumMatchingTIMsRegressions
 open System
 open Expecto
 open ProteomIQon
+open ProteomIQon.SpectrumIndex
 open PeptideIndex
 open SpectrumSearch
 open PeptideSpectrumMatchingTIMs

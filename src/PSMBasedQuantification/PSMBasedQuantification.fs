@@ -40,26 +40,13 @@ module PSMBasedQuantification =
             profile
 
         /// The retention time index and the scan times of the MS1 spectra, both sorted by scan time, from one pass
-        /// over the spectrum descriptions with the streaming parser.
-        let readMs1Index (reader: MzIO.MzSQL.MzSQL) (runID: string) =
-            let ms1s = ResizeArray<float option*string>()
-            use cmd = new SQLiteCommand("SELECT Description FROM Spectrum WHERE RunID = @runID ORDER BY rowid", reader.Connection)
-            cmd.Parameters.AddWithValue("@runID", runID) |> ignore
-            use rows = cmd.ExecuteReader()
-            while rows.Read() do
-                let header = SpectrumDescription.parse (rows.GetString 0)
-                if header.MsLevel = Some 1 then
-                    ms1s.Add (header.ScanTime, header.ID)
+        /// over the spectrum descriptions with the streaming parser (SpectrumIndex.readMs1Index).
+        let readMs1Index (reader: MzIO.MzSQL.MzSQL) (runID: string) (warn: string -> unit) =
+            let ms1SortedByScanTime = SpectrumIndex.readMs1Index reader runID warn ignore
             let rtIndex =
-                ms1s.ToArray()
-                |> Array.choose (fun (scanTime, id) -> scanTime |> Option.map (fun rt -> RtIndexEntry(rt, id)))
-                |> Array.sortBy (fun entry -> entry.Rt)
+                ms1SortedByScanTime
+                |> Array.map (fun (scanTime, id) -> RtIndexEntry(scanTime, id))
                 |> MzIOArray.ToMzIOArray
-            // a MS1 without scan time is kept at -1, as MassSpectrum.getScanTime gives it
-            let ms1SortedByScanTime =
-                ms1s.ToArray()
-                |> Array.map (fun (scanTime, id) -> Option.defaultValue -1. scanTime, id)
-                |> Array.sortBy fst
             rtIndex, ms1SortedByScanTime
 
 
@@ -157,12 +144,6 @@ module PSMBasedQuantification =
             |> Array.minBy (fun (rt,y,yUncorr) -> abs (rt - tarRT))
         yUncorr - y
        
-    ///
-    let getClosestMs1 (ms1s: (float*string) []) scanTime = 
-         ms1s
-         |> Array.minBy (fun ms -> abs (fst ms - scanTime))
-         |> snd
-
     ///
     let getSpec (reader:MzIO.IO.IMzIODataReader) (ms1ID: string)  =
         Peaks.unzipIMzliteArray (reader.ReadSpectrumPeaks(ms1ID).Peaks)
@@ -475,12 +456,12 @@ module PSMBasedQuantification =
         |> Array.ofList
 
     ///
-    let initComparePredictedAndMeasuredIsotopicCluster inReader ms1s ms1AccuracyEstimate (x_Xic:float[]) (y_Xic:float[]) y_Xic_uncorrected ch peptideSequence tarRt tarMz =    
+    let initComparePredictedAndMeasuredIsotopicCluster inReader (getClosestMs1: float -> string) ms1AccuracyEstimate (x_Xic:float[]) (y_Xic:float[]) y_Xic_uncorrected ch peptideSequence tarRt tarMz =    
         /// IsotopicCluster
         let targetIsotopicPattern_predicted = 
             generateIsotopicDistributionOfFormulaBySum ch peptideSequence
         let baseLineCorrectionF = getBaseLineCorrectionOffsetAt tarRt x_Xic y_Xic y_Xic_uncorrected
-        let closestMS1 = getClosestMs1 ms1s tarRt
+        let closestMS1 = getClosestMs1 tarRt
         let peaks' = 
             getSpec inReader closestMS1
             |> Array.filter (fun x -> x.Mz < tarMz + 1. && x.Mz > tarMz - 0.6)
@@ -578,7 +559,7 @@ module PSMBasedQuantification =
             )
         logger.Trace "Create RetentionTime index and read the ms1s"
         /// retTimeIdxed and ms1SortedByScanTime: the MS1s sorted by their scanTime
-        let retTimeIdxed, ms1SortedByScanTime = Query.readMs1Index inReader inRunID
+        let retTimeIdxed, ms1SortedByScanTime = Query.readMs1Index inReader inRunID (fun message -> logger.Warn message)
         logger.Trace (sprintf "Create RetentionTime index and read the ms1s:finished, %i MS1s" ms1SortedByScanTime.Length)
         
         logger.Trace "Read scored PSMs"
@@ -690,7 +671,7 @@ module PSMBasedQuantification =
            
         logger.Trace "init lookup functions"        
         ///
-        let comparePredictedAndMeasuredIsotopicCluster = initComparePredictedAndMeasuredIsotopicCluster inReader ms1SortedByScanTime ms1AccuracyEstimate     
+        let comparePredictedAndMeasuredIsotopicCluster = initComparePredictedAndMeasuredIsotopicCluster inReader (SpectrumIndex.initClosestMs1 ms1SortedByScanTime) ms1AccuracyEstimate     
         
         let mzWindow = 
             match processParams.XicExtraction.MzWindow_Da with 

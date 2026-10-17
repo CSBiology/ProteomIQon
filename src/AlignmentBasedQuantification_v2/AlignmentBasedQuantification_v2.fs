@@ -29,24 +29,6 @@ module Numerics =
             let n = sorted.Length
             if n % 2 = 1 then sorted.[n / 2] else 0.5 * (sorted.[n / 2 - 1] + sorted.[n / 2])
 
-    /// Index of the first value >= v in the sorted array.
-    let lowerBound (sorted: float []) (v: float) =
-        let mutable lo = 0
-        let mutable hi = sorted.Length
-        while lo < hi do
-            let mid = (lo + hi) / 2
-            if sorted.[mid] < v then lo <- mid + 1 else hi <- mid
-        lo
-
-    /// Index of the first value > v in the sorted array.
-    let upperBound (sorted: float []) (v: float) =
-        let mutable lo = 0
-        let mutable hi = sorted.Length
-        while lo < hi do
-            let mid = (lo + hi) / 2
-            if sorted.[mid] <= v then lo <- mid + 1 else hi <- mid
-        lo
-
     /// Pearson correlation, nan for fewer than 4 points or a constant input.
     let pearson (a: float []) (b: float []) =
         let n = a.Length
@@ -72,7 +54,7 @@ module Numerics =
         if n = 0 || x < xs.[0] || x > xs.[n - 1] then
             0.
         else
-            let hi = upperBound xs x
+            let hi = SortedSearch.upperBound xs x
             if hi >= n then ys.[n - 1]
             else
                 let lo = hi - 1
@@ -116,7 +98,7 @@ module Numerics =
             elif v <= kx.[0] then ky.[0]
             elif v >= kx.[m - 1] then ky.[m - 1]
             else
-                let hi = upperBound kx v
+                let hi = SortedSearch.upperBound kx v
                 let lo = hi - 1
                 let t = (v - kx.[lo]) / (kx.[hi] - kx.[lo])
                 ky.[lo] + t * (ky.[hi] - ky.[lo])
@@ -127,32 +109,11 @@ module XicSweep =
 
     open Numerics
 
-    /// The peaks of a spectrum sorted by m/z. TIMs spectra store their peaks per mobility scan, not sorted by m/z.
-    type SortedPeaks =
-        {
-            Mz          : float []
-            Intensity   : float []
-            /// Empty if the spectrum has no ion mobility.
-            IonMobility : float []
-        }
-
-    /// Sorts the peaks of a spectrum, given as arrays in file order, by m/z. The ion mobilities are empty for a spectrum without ion mobility.
-    let sortPeakArrays (mzs: float []) (intensities: float []) (ionMobilities: float []) =
-        let n = mzs.Length
-        let mz = Array.copy mzs
-        let order = Array.init n id
-        Array.Sort(mz, order)
-        {
-            Mz          = mz
-            Intensity   = order |> Array.map (fun i -> intensities.[i])
-            IonMobility = if ionMobilities.Length > 0 then order |> Array.map (fun i -> ionMobilities.[i]) else [||]
-        }
-
     /// Sorts the peaks of a spectrum read by MzIO.
     let sortPeaks (peaks: Peak1DArray) =
         let ps = peaks.Peaks |> Seq.toArray
         let hasIonMobility = ps.Length > 0 && ps.[0].IonMobility.IsSome
-        sortPeakArrays
+        TimsPeaks.sortPeakArraysByMz
             (ps |> Array.map (fun p -> p.Mz))
             (ps |> Array.map (fun p -> p.Intensity))
             (if hasIonMobility then ps |> Array.map (fun p -> match p.IonMobility with Some im -> im | None -> nan) else [||])
@@ -161,11 +122,11 @@ module XicSweep =
     /// With ion mobility the peaks inside the ion mobility window (no window if imLow is nan) are first summed per m/z,
     /// because one m/z is spread over the mobility scans; this is the XIC of PSMBasedQuantificationTIMs (Wavelet).
     /// Returns intensity, observed m/z and the intensity weighted ion mobility of the chosen m/z (nan without ion mobility).
-    let extractPoint (spectrum: SortedPeaks) (lockMz: float) (halfWindow: float) (imLow: float) (imHigh: float) =
+    let extractPoint (spectrum: TimsPeaks.MzSortedPeaks) (lockMz: float) (halfWindow: float) (imLow: float) (imHigh: float) =
         let mz = spectrum.Mz
         let intensity = spectrum.Intensity
         let high = lockMz + halfWindow
-        let mutable i = lowerBound mz (lockMz - halfWindow)
+        let mutable i = SortedSearch.lowerBound mz (lockMz - halfWindow)
         let mutable bestDistance = infinity
         let mutable bestIntensity = 0.
         let mutable bestMz = nan
@@ -238,7 +199,7 @@ module XicSweep =
     /// Walks once through the MS1 spectra (sorted by scan time), reads only spectra inside at least one window
     /// and hands every XIC to onComplete as soon as its window is passed. Only the current spectrum and the XICs
     /// of open windows are held in memory. Returns the number of spectra read.
-    let sweep (readSpectrum: string -> SortedPeaks) (ms1: (float*string) []) (requests: XicRequest []) (onComplete: int -> RawXic -> unit) =
+    let sweep (readSpectrum: string -> TimsPeaks.MzSortedPeaks) (ms1: (float*string) []) (requests: XicRequest []) (onComplete: int -> RawXic -> unit) =
         let n = requests.Length
         let order =
             Array.init n id
@@ -463,8 +424,8 @@ module PeakSelection =
         let located =
             peaks
             |> Array.choose (fun peak ->
-                let first = lowerBound rt peak.LeftEnd.XVal |> min (n - 1)
-                let last = (upperBound rt peak.RightEnd.XVal - 1) |> max first
+                let first = SortedSearch.lowerBound rt peak.LeftEnd.XVal |> min (n - 1)
+                let last = (SortedSearch.upperBound rt peak.RightEnd.XVal - 1) |> max first
                 let apex = [|first .. last|] |> Array.maxBy (fun i -> y.[i])
                 if y.[apex] > 0. && isFinite peak.Apex.XVal && abs (peak.Apex.XVal - ctx.PredictedScanTime) <= ctx.SelectionWindow then Some (peak, first, last, apex) else None
                 )
@@ -981,27 +942,6 @@ module AlignmentBasedQuantification_v2 =
             if counts.Count = 0 then "none"
             else counts |> Seq.map (fun kv -> sprintf "%s: %i" kv.Key kv.Value) |> String.concat ", "
 
-    /// Scan time and ID of the MS1 spectra, sorted by scan time (stable). Reads the spectrum descriptions with the streaming
-    /// parser of PeptideSpectrumMatching instead of the object model of Query.getMS1RTIdx, which takes minutes and
-    /// gigabytes on TIMs files with hundreds of thousands of MS2 spectra.
-    let readMs1Index (logger: NLog.Logger) (reader: MzIO.MzSQL.MzSQL) (runID: string) =
-        let entries = ResizeArray<float*string>()
-        let mutable unreadable = 0
-        use cmd = new System.Data.SQLite.SQLiteCommand("SELECT Description FROM Spectrum WHERE RunID = @runID ORDER BY rowid", reader.Connection)
-        cmd.Parameters.AddWithValue("@runID", runID) |> ignore
-        use rows = cmd.ExecuteReader()
-        while rows.Read() do
-            let header = SpectrumDescription.tryParse (rows.GetString 0)
-            if not (isNull header.Error) then
-                unreadable <- unreadable + 1
-            elif header.MsLevel = Some 1 then
-                match header.ScanTime with
-                | Some scanTime when isFinite scanTime && not (String.IsNullOrWhiteSpace header.ID) -> entries.Add (scanTime, header.ID)
-                | _ -> unreadable <- unreadable + 1
-        if unreadable > 0 then
-            logger.Warn (sprintf "%i spectrum descriptions cannot be read or lack the ID or scan time; these spectra are not used." unreadable)
-        entries.ToArray() |> Array.sortBy fst
-
     let private ionName (align: AlignmentResultV2) = sprintf "%s, GlobalMod %i, charge %i" align.StringSequence align.GlobalMod align.Charge
 
     /// Quantifies the ions of one .align file in one run and writes <run>.quant and <run>.alignfeatures.
@@ -1046,9 +986,9 @@ module AlignmentBasedQuantification_v2 =
         use inReader = Core.MzIO.Reader.getReader instrumentOutput :?> MzIO.MzSQL.MzSQL
         inReader.Connection.Open()
         let inRunID  = Core.MzIO.Reader.getDefaultRunID inReader
-        let ms1 = readMs1Index logger inReader inRunID
+        let ms1 = SpectrumIndex.readMs1Index inReader inRunID (fun message -> logger.Warn message) ignore
         // TIMS spectra are decoded from the peak data directly, other layouts are read by MzIO
-        let readSpectrum, readSpectrumCommand = TimsPeaks.initReadPeakArrays inReader XicSweep.sortPeaks XicSweep.sortPeakArrays
+        let readSpectrum, readSpectrumCommand = TimsPeaks.initReadPeakArrays inReader XicSweep.sortPeaks TimsPeaks.sortPeakArraysByMz
         use _readSpectrumCommand = readSpectrumCommand
         let spectraHaveIonMobility =
             ms1
@@ -1076,12 +1016,7 @@ module AlignmentBasedQuantification_v2 =
         let calibration =
             let ms1ScanTimes = ms1 |> Array.map fst
             // the MS1 spectrum closest to the scan time
-            let closestScanTime (scanTime: float) =
-                let i = lowerBound ms1ScanTimes scanTime
-                if i = 0 then ms1ScanTimes.[0]
-                elif i >= ms1ScanTimes.Length then ms1ScanTimes.[ms1ScanTimes.Length - 1]
-                elif ms1ScanTimes.[i] - scanTime < scanTime - ms1ScanTimes.[i - 1] then ms1ScanTimes.[i]
-                else ms1ScanTimes.[i - 1]
+            let closestScanTime (scanTime: float) = ms1ScanTimes.[SortedSearch.closestIndex ms1ScanTimes scanTime]
             let requests =
                 calibrationIons
                 |> Array.map (fun qp ->

@@ -187,12 +187,6 @@ module AlignmentBasedQuantification =
         yUncorr - y
        
     ///
-    let getClosestMs1 (ms1s: (float*MzIO.Model.MassSpectrum) []) scanTime = 
-        ms1s
-        |> Array.minBy (fun ms -> abs (fst ms - scanTime))
-        |> snd
-
-    ///
     let getSpec (reader:MzIO.IO.IMzIODataReader) (ms1: MzIO.Model.MassSpectrum)  =
         Peaks.unzipIMzliteArray (reader.ReadSpectrumPeaks(ms1.ID).Peaks)
         |> fun (mzData,intensityData) -> PeakArray.zip mzData intensityData
@@ -589,12 +583,12 @@ module AlignmentBasedQuantification =
         |> Array.ofList
 
     ///
-    let initComparePredictedAndMeasuredIsotopicCluster inReader ms1s ms1AccuracyEstimate (x_Xic:float[]) (y_Xic:float[]) y_Xic_uncorrected ch peptideSequence tarRt tarMz =    
+    let initComparePredictedAndMeasuredIsotopicCluster inReader (getClosestMs1: float -> MzIO.Model.MassSpectrum) ms1AccuracyEstimate (x_Xic:float[]) (y_Xic:float[]) y_Xic_uncorrected ch peptideSequence tarRt tarMz =    
         /// IsotopicCluster
         let targetIsotopicPattern_predicted = 
             generateIsotopicDistributionOfFormulaBySum ch peptideSequence
         let baseLineCorrectionF = getBaseLineCorrectionOffsetAt tarRt x_Xic y_Xic y_Xic_uncorrected
-        let closestMS1 = getClosestMs1 ms1s tarRt
+        let closestMS1 = getClosestMs1 tarRt
         let peaks' = 
             getSpec inReader closestMS1
             |> Array.filter (fun x -> x.Mz < tarMz + 1. && x.Mz > tarMz - 0.6)
@@ -815,7 +809,7 @@ module AlignmentBasedQuantification =
         
         logger.Trace "init lookup functions"   
         ///
-        let comparePredictedAndMeasuredIsotopicCluster = initComparePredictedAndMeasuredIsotopicCluster inReader ms1SortedByScanTime ms1AccuracyEstimate     
+        let comparePredictedAndMeasuredIsotopicCluster = initComparePredictedAndMeasuredIsotopicCluster inReader (SpectrumIndex.initClosestMs1 ms1SortedByScanTime) ms1AccuracyEstimate     
         
         let readSpecPeaksWithMem = FSharpAux.Memoization.memoize inReader.ReadSpectrumPeaks
         let getPeaks = Query.initRTProfile readSpecPeaksWithMem

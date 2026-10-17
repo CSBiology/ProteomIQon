@@ -146,3 +146,127 @@ module SpectrumDescription =
         try parse json
         with ex -> { ID = null; MsLevel = None; ScanTime = None; PrecursorMz = None; ChargeState = None; IonMobility = None; Error = ex.Message }
 
+
+/// Binary searches on sorted float arrays.
+module SortedSearch =
+
+    /// Index of the first value >= v in the sorted array.
+    let lowerBound (sorted: float []) (v: float) =
+        let mutable lo = 0
+        let mutable hi = sorted.Length
+        while lo < hi do
+            let mid = (lo + hi) / 2
+            if sorted.[mid] < v then lo <- mid + 1 else hi <- mid
+        lo
+
+    /// Index of the first value > v in the sorted array.
+    let upperBound (sorted: float []) (v: float) =
+        let mutable lo = 0
+        let mutable hi = sorted.Length
+        while lo < hi do
+            let mid = (lo + hi) / 2
+            if sorted.[mid] <= v then lo <- mid + 1 else hi <- mid
+        lo
+
+    /// Index of the value of the sorted, non-empty array closest to t: the first of equal values, and the
+    /// earlier value when two are equally close (as Array.minBy over the array).
+    let closestIndex (sorted: float []) (t: float) =
+        let i = lowerBound sorted t
+        let closest =
+            if i = 0 then 0
+            elif i >= sorted.Length then sorted.Length - 1
+            elif sorted.[i] - t < t - sorted.[i - 1] then i
+            else i - 1
+        let mutable first = closest
+        while first > 0 && sorted.[first - 1] = sorted.[closest] do
+            first <- first - 1
+        first
+
+/// One pass readers of the spectrum descriptions of a mzlite run.
+module SpectrumIndex =
+
+    open System
+    open System.Data.SQLite
+    open SpectrumDescription
+
+    /// Neither NaN nor infinite (netstandard2.0 has no Double.IsFinite).
+    let private isFinite (x: float) = not (Double.IsNaN x || Double.IsInfinity x)
+
+    /// The headers of the run in file order. A description that cannot be read is given with its Error.
+    let private readHeaders (reader: MzIO.MzSQL.MzSQL) (runID: string) =
+        seq {
+            use cmd = new SQLiteCommand("SELECT Description FROM Spectrum WHERE RunID = @runID ORDER BY rowid", reader.Connection)
+            cmd.Parameters.AddWithValue("@runID", runID) |> ignore
+            use rows = cmd.ExecuteReader()
+            while rows.Read() do yield tryParse (rows.GetString 0)
+        }
+
+    /// Scan time and ID of the MS1 spectra of the run, sorted by scan time (file order on equal scan times), from one
+    /// pass over the spectrum descriptions with the streaming parser instead of the object model. A description that
+    /// cannot be read and a MS1 without a finite scan time or an ID are not used; one warning gives their number.
+    /// onOther is called with every readable header that is not of a MS1.
+    let readMs1Index (reader: MzIO.MzSQL.MzSQL) (runID: string) (warn: string -> unit) (onOther: SpectrumHeader -> unit) =
+        let entries = ResizeArray<float*string>()
+        let mutable unreadable = 0
+        for header in readHeaders reader runID do
+            if not (isNull header.Error) then
+                unreadable <- unreadable + 1
+            elif header.MsLevel = Some 1 then
+                match header.ScanTime with
+                | Some scanTime when isFinite scanTime && not (String.IsNullOrWhiteSpace header.ID) -> entries.Add (scanTime, header.ID)
+                | _ -> unreadable <- unreadable + 1
+            else
+                onOther header
+        if unreadable > 0 then
+            warn (sprintf "%i spectrum descriptions cannot be read or lack the ID or scan time; these spectra are not used." unreadable)
+        entries.ToArray() |> Array.sortBy fst
+
+    /// The values the search needs from a MS2 spectrum description. Position is the place of the spectrum in the
+    /// file, which orders spectra that share a scan time.
+    type Ms2Header =
+        {
+            Id          : string
+            Position    : int
+            ScanTime    : float
+            PrecursorMz : float
+            /// 0 when unknown.
+            Charge      : int
+            /// nan when absent.
+            IonMobility : float
+        }
+
+    /// The MS2 headers of the run in scan time order, equal scan times in file order, from one pass over the spectrum
+    /// descriptions. A description that cannot be read and a MS2 without ID, scan time >= 0, precursor m/z above the
+    /// proton mass or with a negative charge are logged with log and skipped.
+    let readMs2Headers (reader: MzIO.MzSQL.MzSQL) (runID: string) (log: string -> unit) =
+        let headers = ResizeArray<Ms2Header>()
+        let mutable position = 0
+        for h in readHeaders reader runID do
+            if not (isNull h.Error) then
+                log (sprintf "spectrum at position %i cannot be read: %s" position h.Error)
+            elif h.MsLevel = Some 2 &&
+                 (String.IsNullOrWhiteSpace h.ID ||
+                  not (h.ScanTime |> Option.exists (fun x -> isFinite x && x >= 0.)) ||
+                  not (h.PrecursorMz |> Option.exists (fun x -> isFinite x && x > BioFSharp.Mass.Table.PMassInU)) ||
+                  (h.ChargeState |> Option.exists (fun x -> x < 0))) then
+                log (sprintf "spectrum at position %i has missing or invalid search metadata; skipped." position)
+            elif h.MsLevel = Some 2 then
+                headers.Add
+                    {
+                        Id = h.ID
+                        Position = position
+                        ScanTime = defaultArg h.ScanTime -1.
+                        PrecursorMz = defaultArg h.PrecursorMz -1.
+                        Charge = defaultArg h.ChargeState 0
+                        IonMobility = defaultArg h.IonMobility nan
+                    }
+            position <- position + 1
+        let ordered = headers.ToArray()
+        Array.sortInPlaceWith (fun a b -> compare (a.ScanTime, a.Position) (b.ScanTime, b.Position)) ordered
+        ordered
+
+    /// The item of (scan time, item) pairs sorted by scan time whose scan time is closest to a given one; the first
+    /// of equal scan times, the earlier item on equal distance.
+    let initClosestMs1 (ms1s: (float*'a) []) =
+        let scanTimes = ms1s |> Array.map fst
+        fun (scanTime: float) -> snd ms1s.[SortedSearch.closestIndex scanTimes scanTime]
