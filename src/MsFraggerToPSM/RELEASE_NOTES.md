@@ -5,6 +5,7 @@
 * Exclude a PSM with a NaN PEP from the q-values of the others and give it the q-value NaN. An empty Probability cell is not supported
 * Number ScanNr with equal scan times in file order and without unreadable spectra, as PeptideSpectrumMatchingTIMs does
 * Update BioFSharp.Mz to 0.2.3
+* Update NLog to 4.7.11
 
 #### 0.0.4 - Wednesday, September 2, 2026
 * Update to .NET 10
