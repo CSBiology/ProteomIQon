@@ -1248,7 +1248,10 @@ module AlignmentBasedQuantification_v2 =
 
         logger.Info (sprintf "%s: data base look ups %i (%i hits), isotope patterns %i (%i hits)" runName lookUpCalls.Value (lookUpCalls.Value - lookUps.Count) isotopeCalls.Value (isotopeCalls.Value - isotopes.Count))
 
-        // XIC extraction and candidates, as soon as an XIC window is passed
+        // XIC extraction and candidates, as soon as an XIC window is passed. Two sweeps: first the ions the run quantified itself
+        // (they train the selection model and are scored by the model of the other folds, which needs the peptides of all
+        // ions), then the other ions, which are scored by the model of all training ions and fitted as soon as their XIC is analysed,
+        // so only their rows, not their traces, are held until the end.
         let toExtract = Array.append prepared decoys
         let analysed : AnalysedIon option [] = Array.create toExtract.Length None
         let analyse (i: int) (raw: RawXic) =
@@ -1289,39 +1292,47 @@ module AlignmentBasedQuantification_v2 =
                                 None
                             else
                                 Some { Ion = ion; Context = { context with SourceRt = [||]; SourceIntensity = [||] }; Target = targetTraces; Partner = partnerTraces; Candidates = candidates }
-        let spectraRead = sweep readSpectrum ms1 (toExtract |> Array.map (fun ion -> ion.Request)) analyse
-        let analysedDecoys = analysed |> Array.choose id |> Array.filter (fun a -> a.Ion.Row >= n)
-        let analysed = analysed |> Array.choose id |> Array.filter (fun a -> a.Ion.Row < n)
-        logger.Info (sprintf "%s: XICs extracted from %i MS1 spectra, %i ions with candidates, %.1f candidates per ion, %i decoys with candidates (%.1f s)" runName spectraRead analysed.Length (if analysed.Length = 0 then nan else analysed |> Array.averageBy (fun a -> float a.Candidates.Length)) analysedDecoys.Length (elapsed ()))
-
-        // selection model, trained on the ions this run quantified itself
-        let featureSet =
-            [| RtZ; RtZ2; ShapeCorr; LogRelHeight; AbsLog2FwhmRatio; Log2NCandidates; IsoCorr; IsoRatioLog2; AbsPpmMono |]
-            |> fun f -> if useIonMobility && analysed |> Array.exists (fun a -> isFinite a.Context.PredictedIonMobility) then Array.append f [|ImZ|] else f
-        let ownOf (a: AnalysedIon) =
-            match ownQuant.TryGetValue ((a.Ion.Align.StringSequence, a.Ion.Align.GlobalMod, a.Ion.Align.Charge)) with
+        let ownOfIon (ion: PreparedIon) =
+            match ownQuant.TryGetValue ((ion.Align.StringSequence, ion.Align.GlobalMod, ion.Align.Charge)) with
             | true, qp -> Some qp
             | _ -> None
+        let ownOf (a: AnalysedIon) = ownOfIon a.Ion
         let isCorrect (qp: QuantificationResult) (c: Candidate) = abs (c.Center - getTargetScanTime qp) <= getTargetStabw qp
-        let training =
-            analysed
+        let idxA = [| for i in 0 .. toExtract.Length - 1 do if (ownOfIon toExtract.[i]).IsSome then yield i |]
+        let idxB = [| for i in 0 .. toExtract.Length - 1 do if (ownOfIon toExtract.[i]).IsNone then yield i |]
+        let sweepOver (indices: int []) (callback: int -> RawXic -> unit) =
+            sweep readSpectrum ms1 (indices |> Array.map (fun i -> toExtract.[i].Request)) (fun j raw -> callback indices.[j] raw)
+        let spectraReadA = sweepOver idxA analyse
+        let mutable analysedA = idxA |> Array.choose (fun i -> analysed.[i])
+        let baseFeatures = [| RtZ; RtZ2; ShapeCorr; LogRelHeight; AbsLog2FwhmRatio; Log2NCandidates; IsoCorr; IsoRatioLog2; AbsPpmMono |]
+        let withIonMobilityFeature (exists: bool) = if useIonMobility && exists then Array.append baseFeatures [|ImZ|] else baseFeatures
+        // the ion mobility feature is used if any ion with candidates has a predicted ion mobility; the ions of the second sweep
+        // can only add one if they have the data for it
+        let existsImA = analysedA |> Array.exists (fun a -> isFinite a.Context.PredictedIonMobility)
+        let potentialImB =
+            idxB |> Array.exists (fun i ->
+                let ion = toExtract.[i]
+                ion.Row < n && isFinite ion.Request.ImLow && isFinite ion.Align.PredictedIonMobility && isFinite ion.Align.PredictedIonMobilitySd)
+        let eager = existsImA || not potentialImB
+        let mutable training =
+            analysedA
             |> Array.choose (fun a ->
                 match ownOf a with
                 | Some qp when abs (getTargetScanTimeDifference qp) / getTargetStabw qp < 2. -> Some (a, qp)
                 | _ -> None
                 )
-        let fitOn (ions: (AnalysedIon*QuantificationResult) []) =
+        let fitOn (featureSet: int []) (ions: (AnalysedIon*QuantificationResult) []) =
             let x = ions |> Array.collect (fun (a, _) -> a.Candidates |> Array.map (fun c -> c.Features))
             let y = ions |> Array.collect (fun (a, qp) -> a.Candidates |> Array.map (fun c -> if isCorrect qp c then 1. else 0.))
             let positives = y |> Array.sum
             if positives = 0. || positives = float y.Length then None
             else Some (fitLogistic logisticLambda featureSet x y, y.Length, positives)
-        let model =
+        let trainModel (featureSet: int []) =
             if training.Length < minTrainingIons then
                 logger.Warn (sprintf "%s: %i clean overlap ions with candidates, at least %i are needed to train the selection model; the fixed score is used." runName training.Length minTrainingIons)
                 None
             else
-                match fitOn training with
+                match fitOn featureSet training with
                 | None ->
                     logger.Warn (sprintf "%s: the training candidates are all of one class; the fixed score is used." runName)
                     None
@@ -1334,41 +1345,24 @@ module AlignmentBasedQuantification_v2 =
                             (featureSet |> Array.mapi (fun j f -> sprintf "%s %.3f" featureNames.[f] m.Weights.[j + 1]) |> String.concat ", ")
                         )
                     Some m
-        // cross-fitting: an ion the run quantified itself is scored by the model trained on the other folds (folds of peptides,
-        // PepSequenceID), so its selection and probability are out-of-fold like those of the new ions, which get the model of all
-        // training ions
-        let foldOf = assignFolds processParams.Seed selectionFolds (analysed |> Seq.map (fun a -> a.Ion.Align.PepSequenceID))
-        let foldModels =
-            match model with
-            | None -> [||]
-            | Some _ ->
-                Array.init selectionFolds (fun f ->
-                    match fitOn (training |> Array.filter (fun (a, _) -> foldOf.[a.Ion.Align.PepSequenceID] <> f)) with
-                    | Some (m, _, _) -> Some m
-                    | None ->
-                        logger.Warn (sprintf "%s: the training candidates outside fold %i are all of one class; the ions of fold %i the run quantified itself are chosen with the fixed score." runName f f)
-                        None
-                    )
+        // set after the first sweep (then all ions can be scored by it) or, if the second sweep can change the features, after it
+        let mutable featureSet = withIonMobilityFeature existsImA
+        let mutable model : LogisticModel option = None
+        let mutable foldOf : Dictionary<int,int> = Dictionary<int,int>()
+        let mutable foldModels : LogisticModel option [] = [||]
         // the model that scores the candidates of the ion, None for the fixed score
         let modelOf (a: AnalysedIon) =
             match model with
             | None -> None
             | Some full -> if (ownOf a).IsSome then foldModels.[foldOf.[a.Ion.Align.PepSequenceID]] else Some full
         let selectionModelOf (m: LogisticModel option) = if m.IsSome then "Logistic" else "FixedScore"
-        let selectionModel = selectionModelOf model
         let score (a: AnalysedIon) (c: Candidate) =
             match modelOf a with
             | Some m -> probability m c.Features
             | None -> fixedScore c.Features
         let rank (a: AnalysedIon) = a.Candidates |> Array.map (fun c -> c, score a c) |> Array.sortByDescending snd
-        let overlap = analysed |> Array.choose (fun a -> ownOf a |> Option.map (fun qp -> a, qp))
-        let chosenCorrect (sel: (AnalysedIon*QuantificationResult) []) =
-            if sel.Length = 0 then nan
-            else 100. * (sel |> Array.filter (fun (a, qp) -> isCorrect qp (a.Candidates |> Array.maxBy (score a))) |> Array.length |> float) / float sel.Length
-        logger.Info (sprintf "%s: chosen candidate within 1 sd of the own PSM peak: %.1f %% of %i clean overlap ions, %.1f %% of %i overlap ions (%s, out-of-fold)" runName (chosenCorrect training) training.Length (chosenCorrect overlap) overlap.Length selectionModel)
-
-        // quantification of the chosen candidate
         let mutable partnerFailures = 0
+        // quantification of the chosen candidate
         let fit (a: AnalysedIon) =
             guarded a.Ion.Row "peak fit" <| fun () ->
                 let ion = a.Ion
@@ -1476,7 +1470,72 @@ module AlignmentBasedQuantification_v2 =
                     features.[ion.Row] <- Some (featureRow "peak fit failed")
                     dropIon ion.Row "peak fit failed"
                     None
-        let quantResults = analysed |> Array.choose fit
+        // fit of the ion at toExtract index i, then its traces are released
+        let results : QuantificationResult option [] = Array.create toExtract.Length None
+        let chosenCenter = Dictionary<int,float>()
+        let fitAt (i: int) (a: AnalysedIon) =
+            if a.Ion.Row < n && decoyAlign.[a.Ion.Row].IsSome then chosenCenter.[a.Ion.Row] <- (fst (rank a).[0]).Center
+            results.[i] <- fit a
+            analysed.[i] <- None
+        let peptidesB = HashSet<int>()
+        let mutable candidatesB = 0
+        let mutable ionsB = 0
+        let mutable decoysB = 0
+        if eager then
+            model <- trainModel featureSet
+        let analyseAndFit (i: int) (raw: RawXic) =
+            analyse i raw
+            match analysed.[i] with
+            | Some a ->
+                if a.Ion.Row < n then
+                    peptidesB.Add a.Ion.Align.PepSequenceID |> ignore
+                    ionsB <- ionsB + 1
+                    candidatesB <- candidatesB + a.Candidates.Length
+                else
+                    decoysB <- decoysB + 1
+                if eager then fitAt i a
+            | None -> ()
+        let spectraRead = spectraReadA + sweepOver idxB analyseAndFit
+        let nIons = analysedA.Length + ionsB
+        logger.Info (sprintf "%s: XICs extracted from %i MS1 spectra (two sweeps), %i ions with candidates, %.1f candidates per ion, %i decoys with candidates (%.1f s)" runName spectraRead nIons (if nIons = 0 then nan else float ((analysedA |> Array.sumBy (fun a -> a.Candidates.Length)) + candidatesB) / float nIons) decoysB (elapsed ()))
+        if not eager then
+            featureSet <-
+                withIonMobilityFeature (
+                    existsImA
+                    || (idxB |> Array.exists (fun i -> toExtract.[i].Row < n && (match analysed.[i] with Some a -> isFinite a.Context.PredictedIonMobility | None -> false)))
+                    )
+            model <- trainModel featureSet
+        let selectionModel = selectionModelOf model
+        // cross-fitting: an ion the run quantified itself is scored by the model trained on the other folds (folds of peptides,
+        // PepSequenceID), so its selection and probability are out-of-fold like those of the new ions, which get the model of all
+        // training ions
+        foldOf <- assignFolds processParams.Seed selectionFolds (Seq.append (analysedA |> Seq.map (fun a -> a.Ion.Align.PepSequenceID)) peptidesB)
+        foldModels <-
+            match model with
+            | None -> [||]
+            | Some _ ->
+                Array.init selectionFolds (fun f ->
+                    match fitOn featureSet (training |> Array.filter (fun (a, _) -> foldOf.[a.Ion.Align.PepSequenceID] <> f)) with
+                    | Some (m, _, _) -> Some m
+                    | None ->
+                        logger.Warn (sprintf "%s: the training candidates outside fold %i are all of one class; the ions of fold %i the run quantified itself are chosen with the fixed score." runName f f)
+                        None
+                    )
+        let mutable overlap = analysedA |> Array.choose (fun a -> ownOf a |> Option.map (fun qp -> a, qp))
+        let chosenCorrect (sel: (AnalysedIon*QuantificationResult) []) =
+            if sel.Length = 0 then nan
+            else 100. * (sel |> Array.filter (fun (a, qp) -> isCorrect qp (a.Candidates |> Array.maxBy (score a))) |> Array.length |> float) / float sel.Length
+        logger.Info (sprintf "%s: chosen candidate within 1 sd of the own PSM peak: %.1f %% of %i clean overlap ions, %.1f %% of %i overlap ions (%s, out-of-fold)" runName (chosenCorrect training) training.Length (chosenCorrect overlap) overlap.Length selectionModel)
+        // fits of the ions still waiting: the overlap ions (all ions if the second sweep could change the features); their traces
+        // are released one by one
+        analysedA <- [||]
+        training <- [||]
+        overlap <- [||]
+        for i in 0 .. toExtract.Length - 1 do
+            match analysed.[i] with
+            | Some a -> fitAt i a
+            | None -> ()
+        let quantResults = [| for i in 0 .. prepared.Length - 1 do match results.[i] with Some q -> yield q | None -> () |]
         logger.Info (
             sprintf "%s: %i of %i .align rows quantified%s; not quantified: %s (%.1f s)"
                 runName quantResults.Length alignments.Length
@@ -1534,16 +1593,14 @@ module AlignmentBasedQuantification_v2 =
         // decoy transfers: left out if the ion's own scan time is inside the decoy XIC; the others are fitted and written to <run>.aligndecoy,
         // also those without fit: the .quant columns, PredictedScanTime of the decoy and the .alignfeatures columns without the ion key
         if processParams.DecoyFraction > 0. then
-            let chosen = Dictionary<int,float>()
-            for a in analysed do
-                if decoyAlign.[a.Ion.Row].IsSome then chosen.[a.Ion.Row] <- (fst (rank a).[0]).Center
+            let chosen = chosenCenter
             let ownPeakInside (ion: PreparedIon) =
                 let row = ion.Row - n
                 let scanTime = match chosen.TryGetValue row with | true, t -> t | _ -> alignments.[row].PredictedScanTime
                 abs (scanTime - ion.Align.PredictedScanTime) <= processParams.XicExtraction.ScanTimeWindow + decoyMargin
             let excluded = decoys |> Array.filter ownPeakInside |> Array.map (fun ion -> ion.Row) |> HashSet
             for _ in excluded do decoySkips.Add "own peak inside the decoy XIC"
-            let decoyResults = dict [ for a in analysedDecoys do if not (excluded.Contains a.Ion.Row) then match fit a with Some q -> yield a.Ion.Row, q | None -> () ]
+            let decoyResults = dict [ for i in prepared.Length .. toExtract.Length - 1 do if not (excluded.Contains toExtract.[i].Row) then match results.[i] with Some q -> yield toExtract.[i].Row, q | None -> () ]
             let decoyRows =
                 decoys
                 |> Array.filter (fun ion -> not (excluded.Contains ion.Row))
