@@ -108,6 +108,27 @@ let all =
                 Expect.throws (fun () -> SpectrumIndex.readMs1Index reader runId warnings.Add ignore |> ignore) "no MS1 left"
                 Expect.equal warnings.Count 1 "the skipped descriptions are still counted"
                 Expect.throwsC (fun () -> SpectrumIndex.readMs1Index reader runId ignore ignore |> ignore) (fun e -> Expect.stringContains e.Message "no MS1 spectrum" "says what is missing"))
+        testCase "the MS2 headers count every row in Position, order equal scan times by it, and skip the invalid ones" <| fun _ ->
+            let ms2 id (scanTime: float) (precursorMz: float) =
+                sprintf "{\"ID\":\"%s\",\"properties\":{\"MS:1000511\":{\"Values\":[\"2\"]}},\"Scans\":{\"properties\":{\"s\":{\"properties\":{\"MS:1000016\":{\"Values\":[\"%g\"]}}}}},\"Precursors\":{\"properties\":{\"p\":{\"SelectedIons\":{\"properties\":{\"i\":{\"properties\":{\"MS:1002234\":{\"Values\":[\"%g\"]},\"MS:1000041\":{\"Values\":[\"2\"]}}}}}}}}}" id scanTime precursorMz
+            let added =
+                [
+                    "ms2_a", ms2 "ms2_a" 1e9 500.
+                    "bad_json", "{\"ID\":\"bad_json\",\"properties\":{"
+                    "ms1_x", description "ms1_x" 1 (Some "5.0")
+                    "ms2_bad", ms2 "ms2_bad" 1e9 0.5
+                    "ms2_b", ms2 "ms2_b" 1e9 600.
+                    "ms2_c", ms2 "ms2_c" 5e8 700.
+                ]
+            withReader added (fun reader ->
+                let log = ResizeArray<string>()
+                let headers = SpectrumIndex.readMs2Headers reader runId log.Add
+                Expect.equal log.Count 2 "the unreadable and the invalid description are logged"
+                Expect.stringContains log.[0] "position 63" "the unreadable one is the 64th row"
+                Expect.stringContains log.[1] "position 65" "the invalid one is the 66th row"
+                let tail = headers |> Array.skip 62 |> Array.map (fun h -> h.Id, h.Position)
+                Expect.equal headers.Length 65 "the fixture and the three valid added spectra"
+                Expect.equal tail [| "ms2_c", 67; "ms2_a", 62; "ms2_b", 66 |] "the position counts skipped and MS1 rows; equal scan times keep the file order")
         testCase "closestIndex equals the first minimum of Array.minBy, also with equal scan times and equal distances" <| fun _ ->
             let rng = Random 11
             for _ in 1 .. 300 do
@@ -115,6 +136,15 @@ let all =
                 for target in [ -3.; 0.; 0.5; 1.; 2.5; 4.5; 9.5; 12. ] @ [ for _ in 1 .. 5 -> float (rng.Next 20) / 2. - 2. ] do
                     let expected = times |> Array.mapi (fun i t -> i, t) |> Array.minBy (fun (_, t) -> abs (t - target)) |> fst
                     Expect.equal (SortedSearch.closestIndex times target) expected (sprintf "%A %f" times target)
+        testCase "closestIndex with non-integer scan times and with NaN and infinite targets" <| fun _ ->
+            let times = [| 0.25; 1.5; 1.5; 2.75; 7.125 |]
+            Expect.equal (SortedSearch.closestIndex times 2.1) 1 "closer to 1.5: the first of the equal values"
+            Expect.equal (SortedSearch.closestIndex times 2.125) 1 "equal distance to 1.5 and 2.75: the earlier one"
+            Expect.equal (SortedSearch.closestIndex times 4.5) 3 "closer to 2.75 than to 7.125"
+            Expect.equal (SortedSearch.closestIndex times nan) 0 "NaN gives the first index"
+            Expect.equal (SortedSearch.closestIndex times Double.NegativeInfinity) 0 "-infinity gives the first index"
+            Expect.equal (SortedSearch.closestIndex times Double.PositiveInfinity) 4 "+infinity gives the last index"
+            Expect.equal (SortedSearch.closestIndex [| 3.; 3. |] Double.PositiveInfinity) 0 "the first of equal values"
         testCase "initClosestMs1 gives the item of the closest scan time" <| fun _ ->
             let closest = SpectrumIndex.initClosestMs1 [| 1.0, "a"; 2.0, "b"; 2.0, "c"; 4.0, "d" |]
             Expect.equal (closest 0.) "a" "before the first"
@@ -129,6 +159,15 @@ let all =
             Expect.equal sorted.Intensity [| 30.; 50.; 60.; 10.; 40. |] "intensities follow"
             Expect.equal sorted.IonMobility [| 0.3; 0.5; 0.6; 0.1; 0.4 |] "ion mobilities follow"
             Expect.isEmpty (TimsPeaks.sortPeakArraysByMz [| 2.; 1. |] [| 1.; 2. |] [||]).IonMobility "no ion mobility stays empty"
+        testCase "the m/z sort of empty input and of input without any m/z" <| fun _ ->
+            let empty = TimsPeaks.sortPeakArraysByMz [||] [||] [||]
+            Expect.isEmpty empty.Mz "no m/z"
+            Expect.isEmpty empty.Intensity "no intensity"
+            Expect.isEmpty empty.Index "no index"
+            let allNan = TimsPeaks.sortPeakArraysByMz [| nan; nan |] [| 1.; 2. |] [| 0.1; 0.2 |]
+            Expect.isEmpty allNan.Mz "every peak is dropped"
+            Expect.isEmpty allNan.Intensity "no intensity"
+            Expect.isEmpty allNan.IonMobility "the ion mobilities of the dropped peaks go too"
         testCase "mapiOrderedBy runs in the order of the key and returns the results in the order of the input" <| fun _ ->
             let calls = ResizeArray<int * float>()
             let keys = [| 3.; nan; 1.; 3.; 2. |]
