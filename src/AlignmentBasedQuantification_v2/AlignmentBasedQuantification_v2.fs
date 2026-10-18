@@ -961,22 +961,42 @@ module AlignmentBasedQuantification_v2 =
         let alignments =
             Csv.CsvReader<AlignmentResultV2>().ReadFile(alignmentResults,'\t',false,1)
             |> Array.ofSeq
-        let psmQuant =
-            Csv.CsvReader<QuantificationResult>().ReadFile(psmbasedQuant,'\t',false,1)
-            |> Array.ofSeq
-        // own PSM quantification of the ions, the label of the selection model
-        let ownQuant = Dictionary<(string*int*int),QuantificationResult>(HashIdentity.Structural)
-        for qp in psmQuant do
-            let scanTime = getTargetScanTime qp
-            let sd = getTargetStabw qp
-            if isFinite scanTime && isFinite sd && sd > 0. then
-                ownQuant.[(qp.StringSequence, qp.GlobalMod, qp.Charge)] <- qp
-        logger.Info (sprintf "%s: %i .align rows, %i PSM based rows (%i ions with a fitted peak)" runName alignments.Length psmQuant.Length ownQuant.Count)
-        // ions whose PSM based row has a fitted scan time: Stats_v2 keeps this row, the alignment row is a training example and the truth
-        let psmPeakIons = HashSet<(string*int*int)>(HashIdentity.Structural)
-        for qp in psmQuant do
-            let key = (qp.StringSequence, qp.GlobalMod, qp.Charge)
-            if isFinite (getTargetScanTime qp) then psmPeakIons.Add key |> ignore else psmPeakIons.Remove key |> ignore
+        // The PSM based rows are read once and what the run needs from them is collected. If every row is its own group in the
+        // output, the rows with a fitted peak are written to the output file right away and the alignment rows are appended later,
+        // so the traces of all PSM based rows are not held while the run is processed.
+        let outTmpPath = outFilePath + ".tmp"
+        if File.Exists outTmpPath then File.Delete outTmpPath
+        let psmCount, psmFitted, psmWritten, psmRowsHeld, ownQuant, psmPeakIons, psmIons, psmMzOffsets =
+            let psmQuant =
+                Csv.CsvReader<QuantificationResult>().ReadFile(psmbasedQuant,'\t',false,1)
+                |> Array.ofSeq
+            // own PSM quantification of the ions, the label of the selection model; without the traces
+            let withoutTraces (qp: QuantificationResult) =
+                { qp with
+                    RtTrace_Light = [||]; IntensityTrace_Observed_Light = [||]; IntensityTrace_Corrected_Light = [||]
+                    RtTrace_Heavy = [||]; IntensityTrace_Observed_Heavy = [||]; IntensityTrace_Corrected_Heavy = [||] }
+            let ownQuant = Dictionary<(string*int*int),QuantificationResult>(HashIdentity.Structural)
+            for qp in psmQuant do
+                let scanTime = getTargetScanTime qp
+                let sd = getTargetStabw qp
+                if isFinite scanTime && isFinite sd && sd > 0. then
+                    ownQuant.[(qp.StringSequence, qp.GlobalMod, qp.Charge)] <- withoutTraces qp
+            // ions whose PSM based row has a fitted scan time: Stats_v2 keeps this row, the alignment row is a training example and the truth
+            let psmPeakIons = HashSet<(string*int*int)>(HashIdentity.Structural)
+            for qp in psmQuant do
+                let key = (qp.StringSequence, qp.GlobalMod, qp.Charge)
+                if isFinite (getTargetScanTime qp) then psmPeakIons.Add key |> ignore else psmPeakIons.Remove key |> ignore
+            let psmIons = HashSet<(string*int*int)>(psmQuant |> Seq.map (fun qp -> qp.StringSequence, qp.GlobalMod, qp.Charge), HashIdentity.Structural)
+            let psmMzOffsets = precursorMzOffsets psmQuant
+            let psmRows = psmQuant |> Array.filter (fun qp -> (tryTargetGetScanTime qp).IsSome)
+            let keyOf (qp: QuantificationResult) = qp.StringSequence, qp.ModSequenceID, qp.Charge, qp.GlobalMod, qp.QuantificationSource
+            let ownGroups =
+                psmRows |> Array.forall (fun qp -> qp.QuantificationSource = QuantificationSource.PSM)
+                && (psmRows |> Array.distinctBy keyOf).Length = psmRows.Length
+            if ownGroups then
+                File.WriteAllLines(outTmpPath, psmRows |> SeqIO'.csv "\t" true false)
+            psmQuant.Length, psmRows.Length, (if ownGroups then psmRows.Length else 0), (if ownGroups then [||] else psmRows), ownQuant, psmPeakIons, psmIons, psmMzOffsets
+        logger.Info (sprintf "%s: %i .align rows, %i PSM based rows (%i ions with a fitted peak)" runName alignments.Length psmCount ownQuant.Count)
 
         // the peptide data base is read from disk: only the ions of the .align file are looked up, and a copy in memory
         // (as v1) costs the size of the data base per run (5.5 GB for the TIMs data base)
@@ -1009,7 +1029,7 @@ module AlignmentBasedQuantification_v2 =
 
         // m/z calibration measured in the MS1 spectra: offset of the peak closest to the theoretical m/z (within +-calibrationMzWindow)
         // at the fitted scan time of the ions the run quantified itself. The precursor m/z of the .quant rows is only the start.
-        let initialCalibration = fitMzCalibration (precursorMzOffsets psmQuant)
+        let initialCalibration = fitMzCalibration psmMzOffsets
         let calibrationIons =
             let ions = ownQuant.Values |> Array.ofSeq |> Array.sortBy getTargetScanTime
             let step = max 1 (ions.Length / maxCalibrationIons)
@@ -1205,7 +1225,6 @@ module AlignmentBasedQuantification_v2 =
         // predicted scan time shifted to where their own peak is not. They take the path of the other ions, are not used to train the
         // selection model and are written to <run>.aligndecoy only.
         let decoys =
-            let psmIons = HashSet<(string*int*int)>(psmQuant |> Seq.map (fun qp -> qp.StringSequence, qp.GlobalMod, qp.Charge), HashIdentity.Structural)
             let pool = prepared |> Array.filter (fun ion -> not (psmIons.Contains ((ion.Align.StringSequence, ion.Align.GlobalMod, ion.Align.Charge))))
             let ownScanTimes = ownQuant.Values |> Seq.map getTargetScanTime |> Array.ofSeq |> Array.sort
             if processParams.DecoyFraction <= 0. || pool.Length = 0 then
@@ -1545,17 +1564,20 @@ module AlignmentBasedQuantification_v2 =
 
         // output as v1: the PSM based rows with a fitted peak, then the alignment rows; of several rows of an ion and source
         // the one with the smallest |Difference_SearchRT_FittedRT|
-        let psmRows = psmQuant |> Array.filter (fun qp -> (tryTargetGetScanTime qp).IsSome)
         let outputRows =
-            Array.append psmRows quantResults
+            Array.append psmRowsHeld quantResults
             |> Array.groupBy (fun qp -> qp.StringSequence, qp.ModSequenceID, qp.Charge, qp.GlobalMod, qp.QuantificationSource)
             |> Array.map (fun (_, rows) ->
                 rows |> Array.minBy (fun qp -> let d = abs (getTargetScanTimeDifference qp) in if isFinite d then d else infinity)
                 )
-        let repeated = psmRows.Length + quantResults.Length - outputRows.Length
-        if psmRows.Length < psmQuant.Length || repeated > 0 then
-            logger.Info (sprintf "%s: not written: %i PSM based rows without fitted peak, %i repeated rows of an ion" runName (psmQuant.Length - psmRows.Length) repeated)
-        File.WriteAllLines(outFilePath, outputRows |> SeqIO'.csv "\t" true false)
+        let repeated = psmFitted + quantResults.Length - (psmWritten + outputRows.Length)
+        if psmFitted < psmCount || repeated > 0 then
+            logger.Info (sprintf "%s: not written: %i PSM based rows without fitted peak, %i repeated rows of an ion" runName (psmCount - psmFitted) repeated)
+        if File.Exists outTmpPath then
+            File.AppendAllLines(outTmpPath, outputRows |> SeqIO'.csv "\t" false false)
+            File.Move(outTmpPath, outFilePath, true)
+        else
+            File.WriteAllLines(outFilePath, outputRows |> SeqIO'.csv "\t" true false)
         let featuresOf (row: int) =
             match features.[row] with
             | Some f -> f
