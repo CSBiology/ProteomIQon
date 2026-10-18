@@ -1017,6 +1017,8 @@ module AlignmentBasedQuantification_v2 =
             |> Array.ofSeq
         let outTmpPath = outFilePath + ".tmp"
         if File.Exists outTmpPath then File.Delete outTmpPath
+        // removes the file of the early write if the run fails; after the move there is nothing left to remove
+        use _tmpGuard = { new IDisposable with member _.Dispose() = try (if File.Exists outTmpPath then File.Delete outTmpPath) with _ -> () }
         let psm = readPsmBasedQuantification psmbasedQuant outTmpPath
         logger.Info (sprintf "%s: %i .align rows, %i PSM based rows (%i ions with a fitted peak)" runName alignments.Length psm.PsmCount psm.OwnQuant.Count)
 
