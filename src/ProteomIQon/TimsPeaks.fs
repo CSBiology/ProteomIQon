@@ -82,7 +82,8 @@ module TimsPeaks =
                 let intensities = next ()
                 let mzs = next ()
                 let ionMobilities = next ()
-                // a blob of another layout (not ending after the three arrays, arrays of different lengths) is read by MzIO
+                // a blob of another layout (not ending after the three arrays, arrays of different lengths) is read by MzIO; a
+                // truncated or corrupt blob throws
                 if position = data.Length && mzs.Length = intensities.Length && mzs.Length = ionMobilities.Length then
                     ofArrays mzs intensities ionMobilities
                 else
