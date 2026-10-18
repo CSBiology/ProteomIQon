@@ -272,7 +272,7 @@ module PeakSelection =
         | _ -> Array.copy y
 
     /// The traces with the given indices of the raw XIC; the first index is the monoisotopic trace.
-    let createTraceSet (baseline: Domain.BaseLineCorrection option) (raw: XicSweep.RawXic) (traces: int []) =
+    let createTraceSet (baseline: Domain.BaseLineCorrection option) (keepIonMobility: bool) (raw: XicSweep.RawXic) (traces: int []) =
         let keep = keepMask raw.Intensity.[traces.[0]]
         let pick (a: float []) = [| for i in 0 .. a.Length - 1 do if keep.[i] then yield a.[i] |]
         let intensity = traces |> Array.map (fun t -> pick raw.Intensity.[t])
@@ -281,7 +281,8 @@ module PeakSelection =
             Corrected   = subtractBaseline baseline intensity.[0]
             Intensity   = intensity
             ObservedMz  = traces |> Array.map (fun t -> pick raw.ObservedMz.[t])
-            IonMobility = traces |> Array.map (fun t -> pick raw.IonMobility.[t])
+            // only the monoisotopic ion mobility of the target is read afterwards
+            IonMobility = if keepIonMobility then [| pick raw.IonMobility.[traces.[0]] |] else [||]
         }
 
     /// Window width estimation of the second derivative peak detection, as AlignmentBasedQuantification.
@@ -1256,9 +1257,9 @@ module AlignmentBasedQuantification_v2 =
                 guarded ion.Row "peak detection" <| fun () ->
                     let align = ion.Align
                     let nTarget = ion.TargetIsotopes.Length
-                    let targetTraces = createTraceSet processParams.BaseLineCorrection raw [|0 .. nTarget - 1|]
+                    let targetTraces = createTraceSet processParams.BaseLineCorrection true raw [|0 .. nTarget - 1|]
                     let partnerTraces =
-                        if ion.Partner.IsSome then Some (createTraceSet processParams.BaseLineCorrection raw [|nTarget .. nTarget + ion.PartnerIsotopes.Length - 1|])
+                        if ion.Partner.IsSome then Some (createTraceSet processParams.BaseLineCorrection false raw [|nTarget .. nTarget + ion.PartnerIsotopes.Length - 1|])
                         else None
                     if targetTraces.Rt.Length < 5 then
                         dropIon ion.Row "XIC with fewer than 5 points"
@@ -1287,7 +1288,7 @@ module AlignmentBasedQuantification_v2 =
                                 dropIon ion.Row "no peak detected in the candidate window"
                                 None
                             else
-                                Some { Ion = ion; Context = context; Target = targetTraces; Partner = partnerTraces; Candidates = candidates }
+                                Some { Ion = ion; Context = { context with SourceRt = [||]; SourceIntensity = [||] }; Target = targetTraces; Partner = partnerTraces; Candidates = candidates }
         let spectraRead = sweep readSpectrum ms1 (toExtract |> Array.map (fun ion -> ion.Request)) analyse
         let analysedDecoys = analysed |> Array.choose id |> Array.filter (fun a -> a.Ion.Row >= n)
         let analysed = analysed |> Array.choose id |> Array.filter (fun a -> a.Ion.Row < n)
