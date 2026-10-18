@@ -1,4 +1,5 @@
 #### Unreleased
+* Read the isotope patterns of the precursor ions from the table IsotopePattern of the peptide data base where PSMStatistics stored them and compute them otherwise; the results do not change
 * Skip with a warning the spectrum descriptions that cannot be read and the MS1 spectra without a finite scan time or an ID
 * Update BioFSharp.Mz to 0.2.2
 * Read the .qpsm of PSMStatistics, which MsFraggerToPSM now writes too, and fail with the missing columns when a .qpsm has another layout. Breaking: .qpsm files of earlier MsFraggerToPSM releases have to be regenerated

@@ -574,19 +574,11 @@ module AlignmentBasedQuantification =
             FSharp.Stats.Correlation.Seq.pearson yQ yI
         | _ -> nan
 
-    ///Predicts an isotopic distribution of the given formula at the given charge, normalized by the sum of probabilities, using the MIDAs algorithm
-    let generateIsotopicDistributionOfFormulaBySum (charge:int) (seq:AminoAcids.AminoAcid list) =
-        seq
-        |> BioList.toFormula
-        |> Formula.add Formula.Table.H2O
-        |> IsotopicDistribution.MIDA.ofFormula IsotopicDistribution.MIDA.normalizeByProbSum 0.01 0.001 charge 
-        |> Array.ofList
-
     ///
-    let initComparePredictedAndMeasuredIsotopicCluster inReader (getClosestMs1: float -> MzIO.Model.MassSpectrum) ms1AccuracyEstimate (x_Xic:float[]) (y_Xic:float[]) y_Xic_uncorrected ch peptideSequence tarRt tarMz =    
+    let initComparePredictedAndMeasuredIsotopicCluster (isotopePatterns: IsotopePatterns.IsotopePatternLookUp) inReader (getClosestMs1: float -> MzIO.Model.MassSpectrum) ms1AccuracyEstimate (x_Xic:float[]) (y_Xic:float[]) y_Xic_uncorrected ch (peptide: LookUpResult<AminoAcids.AminoAcid>) tarRt tarMz =    
         /// IsotopicCluster
         let targetIsotopicPattern_predicted = 
-            generateIsotopicDistributionOfFormulaBySum ch peptideSequence
+            isotopePatterns.Get (peptide, ch)
         let baseLineCorrectionF = getBaseLineCorrectionOffsetAt tarRt x_Xic y_Xic y_Xic_uncorrected
         let closestMS1 = getClosestMs1 tarRt
         let peaks' = 
@@ -678,6 +670,7 @@ module AlignmentBasedQuantification =
         logger.Trace "Get peptide lookUp function"
         let dBParams = BioFSharp.Mz.SearchDB.getSDBParamsByCn memoryDB
         let peptideLookUp = SearchDB.getThreadSafePeptideLookUpFromFileBySequenceAndGMod memoryDB dBParams
+        let isotopePatterns = new IsotopePatterns.IsotopePatternLookUp(logger, memoryDB)
         let calcIonSeries aal = Fragmentation.Series.fragmentMasses Fragmentation.Series.bOfBioList Fragmentation.Series.yOfBioList dBParams.MassFunction aal
         logger.Trace "Get peptide lookUp function: finished"
         // initialize Reader and Transaction
@@ -809,7 +802,7 @@ module AlignmentBasedQuantification =
         
         logger.Trace "init lookup functions"   
         ///
-        let comparePredictedAndMeasuredIsotopicCluster = initComparePredictedAndMeasuredIsotopicCluster inReader (SpectrumIndex.initClosestMs1 ms1SortedByScanTime) ms1AccuracyEstimate     
+        let comparePredictedAndMeasuredIsotopicCluster = initComparePredictedAndMeasuredIsotopicCluster isotopePatterns inReader (SpectrumIndex.initClosestMs1 ms1SortedByScanTime) ms1AccuracyEstimate     
         
         let readSpecPeaksWithMem = FSharpAux.Memoization.memoize inReader.ReadSpectrumPeaks
         let getPeaks = Query.initRTProfile readSpecPeaksWithMem
@@ -853,7 +846,7 @@ module AlignmentBasedQuantification =
                     None
                 else
                 let inferredScanTime = chooseScanTime processParams.XicExtraction.ScanTimeWindow searchRTMinusFittedRT refinedXIC.FinalTargetScanTime quantP 
-                let clusterComparisonTarget = comparePredictedAndMeasuredIsotopicCluster refinedXIC.X_Xic refinedXIC.Y_Xic refinedXIC.Y_Xic_uncorrected testPep.Charge targetPeptide.BioSequence quantP.EstimatedParams.[1] refinedXIC.FinalPrecMz 
+                let clusterComparisonTarget = comparePredictedAndMeasuredIsotopicCluster refinedXIC.X_Xic refinedXIC.Y_Xic refinedXIC.Y_Xic_uncorrected testPep.Charge targetPeptide quantP.EstimatedParams.[1] refinedXIC.FinalPrecMz 
                 if diagCharts then 
                     saveMetricChart testPep.Sequence testPep.GlobalMod testPep.Charge refinedXIC.X_Xic refinedXIC.Y_Xic testPep.Y_Test testPep.X_Test
                                 peakToQuantify.XData quantP.YPredicted quantP.YPredicted 
@@ -920,7 +913,7 @@ module AlignmentBasedQuantification =
                 None
             else
             let inferredScanTime = chooseScanTime processParams.XicExtraction.ScanTimeWindow searchRTMinusFittedRT refinedXIC.FinalTargetScanTime quantP 
-            let clusterComparisonTarget = comparePredictedAndMeasuredIsotopicCluster refinedXIC.X_Xic refinedXIC.Y_Xic refinedXIC.Y_Xic_uncorrected alignmentResult.Charge targetPeptide.BioSequence quantP.EstimatedParams.[1] refinedXIC.FinalPrecMz            
+            let clusterComparisonTarget = comparePredictedAndMeasuredIsotopicCluster refinedXIC.X_Xic refinedXIC.Y_Xic refinedXIC.Y_Xic_uncorrected alignmentResult.Charge targetPeptide quantP.EstimatedParams.[1] refinedXIC.FinalPrecMz            
             if alignmentResult.GlobalMod = 0 then
                 let mzHeavy = 
                     let mz = Mass.toMZ (labeledPeptide.Mass) (alignmentResult.Charge|> float)
@@ -943,7 +936,7 @@ module AlignmentBasedQuantification =
                     else
                     // let inferred_Heavy = quantifyInferredPeak getXIC identifyPeaks mz_Heavy averagePSM.WeightedAvgScanTime inferredScanTime
                     let searchRTMinusFittedRTHeavy = searchRTMinusFittedRtTarget inferredScanTime quantPHeavy
-                    let clusterComparisonHeavy = comparePredictedAndMeasuredIsotopicCluster inferredXicHeavy.X_Xic inferredXicHeavy.Y_Xic inferredXicHeavy.Y_Xic_uncorrected alignmentResult.Charge labeledPeptide.BioSequence quantP.EstimatedParams.[1] mzHeavy
+                    let clusterComparisonHeavy = comparePredictedAndMeasuredIsotopicCluster inferredXicHeavy.X_Xic inferredXicHeavy.Y_Xic inferredXicHeavy.Y_Xic_uncorrected alignmentResult.Charge labeledPeptide quantP.EstimatedParams.[1] mzHeavy
                     let corrLightHeavy  = calcCorrelation refinedXIC.X_Xic quantP quantPHeavy
                     {
                     Model                       = quantPHeavy.Model
@@ -1096,7 +1089,7 @@ module AlignmentBasedQuantification =
                     else
                     // let inferred_Heavy = quantifyInferredPeak getXIC identifyPeaks mz_Heavy averagePSM.WeightedAvgScanTime inferredScanTime
                     let searchRTMinusFittedRTLight = searchRTMinusFittedRtTarget inferredScanTime quantPLight
-                    let clusterComparisonLight = comparePredictedAndMeasuredIsotopicCluster inferredXicLight.X_Xic inferredXicLight.Y_Xic inferredXicLight.Y_Xic_uncorrected alignmentResult.Charge unlabledPeptide.BioSequence quantP.EstimatedParams.[1] mzLight
+                    let clusterComparisonLight = comparePredictedAndMeasuredIsotopicCluster inferredXicLight.X_Xic inferredXicLight.Y_Xic inferredXicLight.Y_Xic_uncorrected alignmentResult.Charge unlabledPeptide quantP.EstimatedParams.[1] mzLight
                     let corrLightHeavy  = calcCorrelation refinedXIC.X_Xic quantP quantPLight
                     {
                     Model                       = quantPLight.Model
@@ -1261,7 +1254,7 @@ module AlignmentBasedQuantification =
                     None
                 else
                 let inferredScanTime = chooseScanTime processParams.XicExtraction.ScanTimeWindow searchRTMinusFittedRT refinedXIC.FinalTargetScanTime quantP 
-                let clusterComparisonTarget = comparePredictedAndMeasuredIsotopicCluster refinedXIC.X_Xic refinedXIC.Y_Xic refinedXIC.Y_Xic_uncorrected alignmentResult.Charge targetPeptide.BioSequence quantP.EstimatedParams.[1] refinedXIC.FinalPrecMz
+                let clusterComparisonTarget = comparePredictedAndMeasuredIsotopicCluster refinedXIC.X_Xic refinedXIC.Y_Xic refinedXIC.Y_Xic_uncorrected alignmentResult.Charge targetPeptide quantP.EstimatedParams.[1] refinedXIC.FinalPrecMz
                 if diagCharts then 
                     saveChart alignmentResult.StringSequence alignmentResult.GlobalMod alignmentResult.Charge refinedXIC.X_Xic refinedXIC.Y_Xic alignmentResult.PredictedScanTime
                                 peakToQuantify.XData quantP.YPredicted quantP.YPredicted 
@@ -1377,7 +1370,9 @@ module AlignmentBasedQuantification =
         |> FSharpAux.IO.SeqIO.Seq.writeOrAppend (outFilePath)
         inTr.Commit()
         inTr.Dispose()
+        logger.Trace (sprintf "Isotope patterns: %i read from the peptide data base, %i computed" isotopePatterns.Read isotopePatterns.Computed)
         inReader.Dispose()
+        (isotopePatterns :> System.IDisposable).Dispose()
         memoryDB.Dispose()
         logger.Trace "executing quantification:finished"
 

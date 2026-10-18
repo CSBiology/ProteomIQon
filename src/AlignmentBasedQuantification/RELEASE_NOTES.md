@@ -1,4 +1,5 @@
 #### Unreleased
+* Read the isotope patterns of the precursor ions from the table IsotopePattern of the peptide data base where PSMStatistics stored them and compute them otherwise; the results do not change
 * Fixed bug when using single file option caused by switched parameterss
 * Update BioFSharp.Mz to 0.2.2
 * Update BioFSharp.Mz to 0.2.3

@@ -645,21 +645,12 @@ module AlignmentBasedQuantification_v2 =
             RelFrequency : float
         }
 
-    /// Predicts the isotopic distribution of the peptide at the given charge, normalized by the sum of probabilities, using the MIDAs algorithm.
-    /// The fine structure is merged at 0.01, as in the other quantification tools.
-    let generateIsotopicDistributionOfFormulaBySum (charge:int) (seq:AminoAcids.AminoAcid list) =
-        seq
-        |> BioList.toFormula
-        |> Formula.add Formula.Table.H2O
-        |> IsotopicDistribution.MIDA.ofFormula IsotopicDistribution.MIDA.normalizeByProbSum 0.01 0.001 charge
-        |> Array.ofList
-
     /// The predicted isotope peaks within the isotope range, summed per isotope; monoisotopic peak first, M+1 second.
-    let isotopePeaks (charge: int) (peptide: SearchDB.LookUpResult<AminoAcids.AminoAcid>) =
+    let isotopePeaks (getPattern: SearchDB.LookUpResult<AminoAcids.AminoAcid> -> int -> (float * float) []) (charge: int) (peptide: SearchDB.LookUpResult<AminoAcids.AminoAcid>) =
         let monoMz = Mass.toMZ peptide.Mass (float charge)
         let spacing = 1.0033548378 / float charge
         let byIsotope =
-            generateIsotopicDistributionOfFormulaBySum charge peptide.BioSequence
+            getPattern peptide charge
             |> Array.groupBy (fun (mz, _) -> int (Math.Round ((mz - monoMz) / spacing)))
             |> Array.map (fun (k, peaks) ->
                 let frequency = peaks |> Array.sumBy snd
@@ -1027,6 +1018,7 @@ module AlignmentBasedQuantification_v2 =
         use peptideDB = SearchDB.getDBConnection d
         let dBParams = SearchDB.getSDBParamsByCn peptideDB
         let peptideLookUp = SearchDB.getThreadSafePeptideLookUpFromFileBySequenceAndGMod peptideDB dBParams
+        use isotopePatterns = new IsotopePatterns.IsotopePatternLookUp(logger, peptideDB)
 
         use inReader = Core.MzIO.Reader.getReader instrumentOutput :?> MzIO.MzSQL.MzSQL
         inReader.Connection.Open()
@@ -1158,7 +1150,7 @@ module AlignmentBasedQuantification_v2 =
             match isotopes.TryGetValue key with
             | true, peaks -> peaks
             | _ ->
-                let peaks = isotopePeaks align.Charge peptide
+                let peaks = isotopePeaks (fun lookUpResult charge -> isotopePatterns.Get (lookUpResult, charge)) align.Charge peptide
                 isotopes.[key] <- peaks
                 peaks
 
@@ -1290,6 +1282,7 @@ module AlignmentBasedQuantification_v2 =
             rows |> Array.choose (fun row -> prepare row (alignOf row))
 
         logger.Info (sprintf "%s: data base look ups %i (%i hits), isotope patterns %i (%i hits)" runName lookUpCalls.Value (lookUpCalls.Value - lookUps.Count) isotopeCalls.Value (isotopeCalls.Value - isotopes.Count))
+        logger.Info (sprintf "%s: isotope patterns read from the peptide data base %i, computed %i" runName isotopePatterns.Read isotopePatterns.Computed)
 
         // XIC extraction and candidates, as soon as an XIC window is passed. Two sweeps: first the ions the run quantified itself
         // (they train the selection model and are scored by the model of the other folds, which needs the peptides of all

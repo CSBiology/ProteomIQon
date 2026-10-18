@@ -447,19 +447,11 @@ module PSMBasedQuantification =
             FSharp.Stats.Correlation.Seq.pearson yQ yI
         | _ -> nan
 
-    ///Predicts an isotopic distribution of the given formula at the given charge, normalized by the sum of probabilities, using the MIDAs algorithm
-    let generateIsotopicDistributionOfFormulaBySum (charge:int) (seq:AminoAcids.AminoAcid list) =
-        seq
-        |> BioList.toFormula
-        |> Formula.add Formula.Table.H2O
-        |> IsotopicDistribution.MIDA.ofFormula IsotopicDistribution.MIDA.normalizeByProbSum 0.01 0.001 charge 
-        |> Array.ofList
-
     ///
-    let initComparePredictedAndMeasuredIsotopicCluster inReader (getClosestMs1: float -> string) ms1AccuracyEstimate (x_Xic:float[]) (y_Xic:float[]) y_Xic_uncorrected ch peptideSequence tarRt tarMz =    
+    let initComparePredictedAndMeasuredIsotopicCluster (isotopePatterns: IsotopePatterns.IsotopePatternLookUp) inReader (getClosestMs1: float -> string) ms1AccuracyEstimate (x_Xic:float[]) (y_Xic:float[]) y_Xic_uncorrected ch (peptide: LookUpResult<AminoAcids.AminoAcid>) tarRt tarMz =    
         /// IsotopicCluster
         let targetIsotopicPattern_predicted = 
-            generateIsotopicDistributionOfFormulaBySum ch peptideSequence
+            isotopePatterns.Get (peptide, ch)
         let baseLineCorrectionF = getBaseLineCorrectionOffsetAt tarRt x_Xic y_Xic y_Xic_uncorrected
         let closestMS1 = getClosestMs1 tarRt
         let peaks' = 
@@ -529,6 +521,7 @@ module PSMBasedQuantification =
         let dBParams     = getSDBParamsByCn memoryDB
         //let massLookUp = prepareSelectMassByModSequenceAndGlobalMod memoryDB
         let peptideLookUp = getThreadSafePeptideLookUpFromFileBySequenceAndGMod memoryDB dBParams
+        let isotopePatterns = new IsotopePatterns.IsotopePatternLookUp(logger, memoryDB)
         let calcIonSeries aal = Fragmentation.Series.fragmentMasses Fragmentation.Series.bOfBioList Fragmentation.Series.yOfBioList dBParams.MassFunction aal
         logger.Trace "Get peptide lookUp function: finished"
         // initialize Reader and Transaction
@@ -671,7 +664,7 @@ module PSMBasedQuantification =
            
         logger.Trace "init lookup functions"        
         ///
-        let comparePredictedAndMeasuredIsotopicCluster = initComparePredictedAndMeasuredIsotopicCluster inReader (SpectrumIndex.initClosestMs1 ms1SortedByScanTime) ms1AccuracyEstimate     
+        let comparePredictedAndMeasuredIsotopicCluster = initComparePredictedAndMeasuredIsotopicCluster isotopePatterns inReader (SpectrumIndex.initClosestMs1 ms1SortedByScanTime) ms1AccuracyEstimate     
         
         let mzWindow = 
             match processParams.XicExtraction.MzWindow_Da with 
@@ -718,7 +711,7 @@ module PSMBasedQuantification =
                 None
             else
             let inferredScanTime = chooseScanTime processParams.XicExtraction.ScanTimeWindow searchRTMinusFittedRT averagePSM.WeightedAvgScanTime quantP 
-            let clusterComparisonTarget = comparePredictedAndMeasuredIsotopicCluster averagePSM.X_Xic averagePSM.Y_Xic averagePSM.Y_Xic_uncorrected pepIon.Charge targetPeptide.BioSequence quantP.EstimatedParams.[1] averagePSM.MeanPrecMz            
+            let clusterComparisonTarget = comparePredictedAndMeasuredIsotopicCluster averagePSM.X_Xic averagePSM.Y_Xic averagePSM.Y_Xic_uncorrected pepIon.Charge targetPeptide quantP.EstimatedParams.[1] averagePSM.MeanPrecMz            
             if pepIon.GlobalMod = 0 then
                 let mzHeavy = 
                     let mz = Mass.toMZ (labeledPeptide.Mass) (pepIon.Charge|> float)
@@ -741,7 +734,7 @@ module PSMBasedQuantification =
                     else
                     // let inferred_Heavy = quantifyInferredPeak getXIC identifyPeaks mz_Heavy averagePSM.WeightedAvgScanTime inferredScanTime
                     let searchRTMinusFittedRTHeavy = searchRTMinusFittedRtTarget inferredScanTime quantPHeavy
-                    let clusterComparisonHeavy = comparePredictedAndMeasuredIsotopicCluster inferredXicHeavy.X_Xic inferredXicHeavy.Y_Xic inferredXicHeavy.Y_Xic_uncorrected pepIon.Charge labeledPeptide.BioSequence quantP.EstimatedParams.[1] mzHeavy
+                    let clusterComparisonHeavy = comparePredictedAndMeasuredIsotopicCluster inferredXicHeavy.X_Xic inferredXicHeavy.Y_Xic inferredXicHeavy.Y_Xic_uncorrected pepIon.Charge labeledPeptide quantP.EstimatedParams.[1] mzHeavy
                     let corrLightHeavy  = calcCorrelation averagePSM.X_Xic quantP quantPHeavy
                     {
                     Model                       = quantPHeavy.Model
@@ -888,7 +881,7 @@ module PSMBasedQuantification =
                     else
                     // let inferred_Heavy = quantifyInferredPeak getXIC identifyPeaks mz_Heavy averagePSM.WeightedAvgScanTime inferredScanTime
                     let searchRTMinusFittedRTLight = searchRTMinusFittedRtTarget inferredScanTime quantPLight
-                    let clusterComparisonLight = comparePredictedAndMeasuredIsotopicCluster inferredXicLight.X_Xic inferredXicLight.Y_Xic inferredXicLight.Y_Xic_uncorrected pepIon.Charge unlabledPeptide.BioSequence quantP.EstimatedParams.[1] mzLight
+                    let clusterComparisonLight = comparePredictedAndMeasuredIsotopicCluster inferredXicLight.X_Xic inferredXicLight.Y_Xic inferredXicLight.Y_Xic_uncorrected pepIon.Charge unlabledPeptide quantP.EstimatedParams.[1] mzLight
                     let corrLightHeavy  = calcCorrelation averagePSM.X_Xic quantP quantPLight
                     {
                     Model                       = quantPLight.Model
@@ -1043,7 +1036,7 @@ module PSMBasedQuantification =
                 logger.Trace (sprintf "Quant failed: Peak fitting failed, Sequence:%s, GlobalMod:%s, Charge:%s" (pepIon.Sequence |> String.filter (fun x -> x <> '*')) (pepIon.GlobalMod.ToString()) (pepIon.Charge.ToString()))
                 None
             else
-            let clusterComparisonTarget = comparePredictedAndMeasuredIsotopicCluster averagePSM.X_Xic averagePSM.Y_Xic averagePSM.Y_Xic_uncorrected pepIon.Charge unlabledPeptide.BioSequence quantP.EstimatedParams.[1] averagePSM.MeanPrecMz
+            let clusterComparisonTarget = comparePredictedAndMeasuredIsotopicCluster averagePSM.X_Xic averagePSM.Y_Xic averagePSM.Y_Xic_uncorrected pepIon.Charge unlabledPeptide quantP.EstimatedParams.[1] averagePSM.MeanPrecMz
             if diagCharts then 
                 saveChart pepIon.Sequence pepIon.GlobalMod pepIon.Charge averagePSM.X_Xic averagePSM.Y_Xic ms2s averagePSM.WeightedAvgScanTime
                                     peakToQuantify.XData peakToQuantify.YData quantP.YPredicted  [||] [||] [||] [||] peaks clusterComparisonTarget.PeakComparisons plotDirectory
@@ -1166,9 +1159,11 @@ module PSMBasedQuantification =
                             Directory.Delete (plotDirectory, true)
                         | Error ex -> logger.Trace (sprintf "Error saving zipped directory: %A" ex)
                 | Error ex -> logger.Trace (sprintf "Error zipping directory: %A" ex)
+        logger.Trace (sprintf "Isotope patterns: %i read from the peptide data base, %i computed" isotopePatterns.Read isotopePatterns.Computed)
         inTr.Commit()
         inTr.Dispose()
         inReader.Dispose()
+        (isotopePatterns :> System.IDisposable).Dispose()
         memoryDB.Dispose()
         logger.Trace "executing quantification:finished"
         
