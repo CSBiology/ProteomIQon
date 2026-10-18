@@ -129,6 +129,12 @@ let all =
                 let tail = headers |> Array.skip 62 |> Array.map (fun h -> h.Id, h.Position)
                 Expect.equal headers.Length 65 "the fixture and the three valid added spectra"
                 Expect.equal tail [| "ms2_c", 67; "ms2_a", 62; "ms2_b", 66 |] "the position counts skipped and MS1 rows; equal scan times keep the file order")
+        testCase "MS1 spectra of equal scan time keep the file order, also beyond the size of an insertion sort" <| fun _ ->
+            let added = [ for i in 0 .. 199 -> sprintf "ms1_%03i" i, description (sprintf "ms1_%03i" i) 1 (Some (if i % 2 = 0 then "2.0" else "1.0")) ]
+            withReader added (fun reader ->
+                let index = SpectrumIndex.readMs1Index reader runId ignore ignore
+                let expected = Array.append [| for i in 1 .. 2 .. 199 -> 1.0, sprintf "ms1_%03i" i |] [| for i in 0 .. 2 .. 198 -> 2.0, sprintf "ms1_%03i" i |]
+                Expect.equal index expected "scan time order, file order on ties")
         testCase "the MS1 index and the MS2 headers from one pass equal the two readers, with negative scan times" <| fun _ ->
             let ms2 id (scanTime: float) =
                 sprintf "{\"ID\":\"%s\",\"properties\":{\"MS:1000511\":{\"Values\":[\"2\"]}},\"Scans\":{\"properties\":{\"s\":{\"properties\":{\"MS:1000016\":{\"Values\":[\"%g\"]}}}}},\"Precursors\":{\"properties\":{\"p\":{\"SelectedIons\":{\"properties\":{\"i\":{\"properties\":{\"MS:1002234\":{\"Values\":[\"500\"]},\"MS:1000041\":{\"Values\":[\"2\"]}}}}}}}}}" id scanTime
