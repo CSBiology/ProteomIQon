@@ -209,6 +209,13 @@ module PSMStatistics =
             |> FSharpAux.IO.SeqIO.Seq.CSV "\t" true true
             |> FSharpAux.IO.FileIO.writeToFile false outFilePath
 
+    /// The distinct (sequence, global modification, charge) ions of a file of results.
+    let readIons (qpsmPath: string) =
+        FSharpAux.IO.SchemaReader.Csv.CsvReader<Dto.PSMStatisticsResult>(SchemaMode=FSharpAux.IO.SchemaReader.Csv.Fill).ReadFile(qpsmPath,'\t',false,1)
+        |> Seq.map (fun x -> x.StringSequence, x.GlobalMod, x.Charge)
+        |> Seq.distinct
+        |> Array.ofSeq
+
     ///
     let psmStats diagCharts (processParams:PSMStatisticsParams) (outputDir:string) (cn:SQLiteConnection) (psms:string) =
 

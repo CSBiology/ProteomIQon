@@ -124,6 +124,63 @@ let qpsmProblems (qValueThreshold: float) (pepThreshold: float) (referencePath: 
             ]
         if problems.Length > 10 then List.truncate 10 problems @ [ sprintf "and %i more" (problems.Length - 10) ] else problems
 
+/// A copy of a peptide data base in the temp folder, for the tools that write to it.
+let tempCopy (source: string) =
+    let path = Path.Combine(Path.GetTempPath(), sprintf "pipeline_%s_%s" (Guid.NewGuid().ToString "N") (Path.GetFileName source))
+    File.Copy(source, path)
+    path
+
+/// Deletes a temporary copy; SQLite keeps the file open until the commands of the look ups of BioFSharp.Mz, which are not disposed, are finalized.
+let deleteTemp (path: string) =
+    GC.Collect()
+    GC.WaitForPendingFinalizers()
+    try File.Delete path with _ -> ()
+
+/// The bytes of a file that may still be open in another process.
+let fileBytes (path: string) =
+    use stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite)
+    use memory = new MemoryStream()
+    stream.CopyTo memory
+    memory.ToArray()
+
+/// The distinct (sequence, global modification, charge) ions of a .qpsm file.
+let readIons (qpsmPath: string) =
+    FSharpAux.IO.SchemaReader.Csv.CsvReader<ProteomIQon.Dto.PSMStatisticsResult>(SchemaMode=FSharpAux.IO.SchemaReader.Csv.Fill).ReadFile(qpsmPath,'\t',false,1)
+    |> Seq.map (fun x -> x.StringSequence, x.GlobalMod, x.Charge)
+    |> Seq.distinct
+    |> Array.ofSeq
+
+/// How many isotope patterns of the (sequence, global modification, charge) ions of a .qpsm file the IsotopePatternLookUp reads from the
+/// peptide data base and how many it computes, and the number of requests that are in the data base: both global modifications of every ion if the
+/// data base has isotopic modifications, else the global modification of the ion.
+let isotopePatternCounts (dbPath: string) (qpsmPath: string) =
+    let ions = readIons qpsmPath
+    use cn = new SQLiteConnection(sprintf "Data Source=%s;Version=3" dbPath)
+    cn.Open()
+    let sdbParams = SearchDB.getSDBParamsByCn cn
+    let lookUp = SearchDB.getThreadSafePeptideLookUpFromFileBySequenceAndGMod cn sdbParams
+    let requests =
+        ions
+        |> Array.collect (fun (sequence, globalMod, charge) -> (if sdbParams.IsotopicMod.IsEmpty then [| globalMod |] else [| 0; 1 |]) |> Array.map (fun gMod -> sequence, gMod, charge))
+        |> Array.distinct
+    // a peptide that is not in the data base has the ID -1, its pattern is never stored
+    let found =
+        requests
+        |> Array.map (fun (sequence, gMod, charge) -> lookUp sequence gMod, charge)
+        |> Array.filter (fun (peptide, _) -> peptide.ModSequenceID >= 0)
+        |> Array.distinctBy (fun (peptide, charge) -> peptide.ModSequenceID, charge)
+    use patterns = new ProteomIQon.IsotopePatterns.IsotopePatternLookUp(NLog.LogManager.CreateNullLogger(), cn)
+    for (peptide, charge) in found do
+        patterns.Get (peptide, charge) |> ignore
+    patterns.Read, patterns.Computed, found.Length
+
+/// Whether the data base has the table of the isotope patterns.
+let hasIsotopePatternTable (dbPath: string) =
+    use cn = new SQLiteConnection(sprintf "Data Source=%s;Version=3" dbPath)
+    cn.Open()
+    use cmd = new SQLiteCommand("SELECT COUNT(*) FROM sqlite_master WHERE name = 'IsotopePattern'", cn)
+    Convert.ToInt32 (cmd.ExecuteScalar()) > 0
+
 let selectAllModSequence cn =
     let querystring = "SELECT * FROM ModSequence"
     use cmd = new SQLiteCommand(querystring, cn)
@@ -243,8 +300,12 @@ let pipelineTests =
 
         testCase "PSMStatistics" <| fun _ ->
             let relToDirectory = getRelativePath baseDir
-            let dbEstimate = relToDirectory "../../../data/PSMStatistics/in/MinimalEstimate.db"
-            let dbFixed = relToDirectory "../../../data/PSMStatistics/in/MinimalFixed.db"
+            // the tool stores the isotope patterns in the peptide data base, so it runs on copies; the tracked data bases must not change
+            let originalEstimate = relToDirectory "../../../data/PSMStatistics/in/MinimalEstimate.db"
+            let originalFixed = relToDirectory "../../../data/PSMStatistics/in/MinimalFixed.db"
+            let originalBytes = fileBytes originalEstimate, fileBytes originalFixed
+            let dbEstimate = tempCopy originalEstimate
+            let dbFixed = tempCopy originalFixed
             let psmEstimate = relToDirectory "../../../data/PSMStatistics/in/minimalEstimate.psm"
             let psmFixed = relToDirectory "../../../data/PSMStatistics/in/minimalFixed.psm"
             let psmStatsParamsEstimate = relToDirectory "../../../data/PSMStatistics/in/pSMStatisticsParamsEstimate.json"
@@ -255,6 +316,9 @@ let pipelineTests =
             // run tool
             runDotNet (sprintf "%s -i %s -o %s -p %s -d %s" psmStatsExe psmEstimate outDirectoryEstimate psmStatsParamsEstimate dbEstimate) baseDir
             runDotNet (sprintf "%s -i %s -o %s -p %s -d %s" psmStatsExe psmFixed outDirectoryFixed psmStatsParamsFixed dbFixed) baseDir
+            let estimateCounts = isotopePatternCounts dbEstimate (relToDirectory "../../../data/PSMStatistics/out/estimateOut/minimalEstimate.qpsm")
+            let fixedCounts = isotopePatternCounts dbFixed (relToDirectory "../../../data/PSMStatistics/out/fixedOut/minimalFixed.qpsm")
+            let unchanged = (fileBytes originalEstimate, fileBytes originalFixed) = originalBytes
             // the cutoffs of pSMStatisticsParamsEstimate.json
             let estimateProblems =
                 qpsmProblems 0.01 0.05
@@ -273,19 +337,26 @@ let pipelineTests =
             File.Delete (relToDirectory "../../../data/PSMStatistics/out/estimateOut/minimalEstimate_log.txt")
             File.Delete (relToDirectory "../../../data/PSMStatistics/out/estimateOut/PSMStatistics_log.txt")
             Directory.Delete (relToDirectory "../../../data/PSMStatistics/out/estimateOut/minimalEstimate_plots")
+            deleteTemp dbEstimate
+            deleteTemp dbFixed
             Expect.isTrue (List.isEmpty estimateProblems) (String.concat "; " estimateProblems)
             Expect.isTrue fixedEqual "QPSMs are different"
+            Expect.isTrue unchanged "the data bases of the test data are not changed"
+            for name, (stored, computed, requests) in [ "estimate", estimateCounts; "fixed", fixedCounts ] do
+                Expect.isGreaterThan requests 0 (sprintf "%s: the .qpsm holds ions" name)
+                Expect.equal (stored, computed) (requests, 0) (sprintf "%s: the data base holds the patterns of the ions of the .qpsm" name)
 
         testCase "PSMStatisticsTIMs" <| fun _ ->
             // a .psm of PeptideSpectrumMatchingTIMs, which carries the hyperscore and the expectation value
             let relToDirectory = getRelativePath baseDir
-            let db = relToDirectory "../../../data/PSMStatistics/in/MinimalTIMs.db"
+            let db = tempCopy (relToDirectory "../../../data/PSMStatistics/in/MinimalTIMs.db")
             let psm = relToDirectory "../../../data/PSMStatistics/in/minimalTIMs.psm"
             let psmStatsParams = relToDirectory "../../../data/PSMStatistics/in/pSMStatisticsParamsEstimate.json"
             let outDirectory = relToDirectory "../../../data/PSMStatistics/out/timsOut"
             let psmStatsExe = toolDll "PSMStatistics"
             runDotNet (sprintf "%s -i %s -o %s -p %s -d %s" psmStatsExe psm outDirectory psmStatsParams db) baseDir
             let log = File.ReadAllText (relToDirectory "../../../data/PSMStatistics/out/timsOut/minimalTIMs_log.txt")
+            let stored, computed, requests = isotopePatternCounts db (relToDirectory "../../../data/PSMStatistics/out/timsOut/minimalTIMs.qpsm")
             // the cutoffs of pSMStatisticsParamsEstimate.json
             let problems =
                 qpsmProblems 0.01 0.05
@@ -295,12 +366,15 @@ let pipelineTests =
             File.Delete (relToDirectory "../../../data/PSMStatistics/out/timsOut/minimalTIMs_log.txt")
             File.Delete (relToDirectory "../../../data/PSMStatistics/out/timsOut/PSMStatistics_log.txt")
             Directory.Delete (relToDirectory "../../../data/PSMStatistics/out/timsOut/minimalTIMs_plots")
+            deleteTemp db
+            Expect.isGreaterThan requests 0 "the .qpsm holds ions"
+            Expect.equal (stored, computed) (requests, 0) "the data base holds the patterns of both global modifications of the ions"
             Expect.stringContains log "Hyperscore and expectation value present: true" "the hyperscore and the expectation value are used"
             Expect.isTrue (List.isEmpty problems) (String.concat "; " problems)
 
         testCase "PSMStatisticsCrossValidation" <| fun _ ->
             let relToDirectory = getRelativePath baseDir
-            let db = relToDirectory "../../../data/PSMStatistics/in/MinimalTIMs.db"
+            let db = tempCopy (relToDirectory "../../../data/PSMStatistics/in/MinimalTIMs.db")
             let psm = relToDirectory "../../../data/PSMStatistics/in/minimalTIMs.psm"
             let psmStatsParams = relToDirectory "../../../data/PSMStatistics/in/pSMStatisticsParamsCrossValidation.json"
             let outDirectory = relToDirectory "../../../data/PSMStatistics/out/timsCvOut"
@@ -310,6 +384,7 @@ let pipelineTests =
             let log = File.ReadAllText (Path.Combine(outDirectory, "minimalTIMs_log.txt"))
             let qpsmLines = File.ReadAllLines (Path.Combine(outDirectory, "minimalTIMs.qpsm")) |> Array.filter (fun line -> line <> "")
             Directory.Delete(outDirectory, true)
+            deleteTemp db
             Expect.stringContains log "Cross-validated scores" "the scans are scored by cross-validation"
             Expect.isGreaterThan qpsmLines.Length 1 "the qpsm holds PSMs"
 
@@ -415,6 +490,51 @@ let pipelineTests =
                 if unequalFields |> Array.isEmpty then true , ""
                 else false, unequalFields |> String.concat ";"
             Expect.isTrue compare (sprintf "Quants are different in the following fields: %s" fields)
+        testCase "PSMStatisticsStoreIsotopePatternsFalse" <| fun _ ->
+            let relToDirectory = getRelativePath baseDir
+            let original = relToDirectory "../../../data/PSMStatistics/in/MinimalFixed.db"
+            let db = tempCopy original
+            let psm = relToDirectory "../../../data/PSMStatistics/in/minimalFixed.psm"
+            let outDirectory = Path.Combine(Path.GetTempPath(), sprintf "psmStatistics_%s" (Guid.NewGuid().ToString "N"))
+            Directory.CreateDirectory outDirectory |> ignore
+            // the fixed cutoffs of the test with the parameter off
+            let psmStatsParams = Path.Combine(outDirectory, "params.json")
+            File.WriteAllText(psmStatsParams, (File.ReadAllText (relToDirectory "../../../data/PSMStatistics/in/pSMStatisticsParamsFixed.json")).Replace("\"StoreIsotopePatterns\":true", "\"StoreIsotopePatterns\":false"))
+            let before = fileBytes db
+            let psmStatsExe = toolDll "PSMStatistics"
+            runDotNet (sprintf "%s -i %s -o %s -p %s -d %s" psmStatsExe psm outDirectory psmStatsParams db) baseDir
+            let qpsmLines = File.ReadAllLines (Path.Combine(outDirectory, "minimalFixed.qpsm")) |> Array.filter (fun line -> line <> "")
+            let unchanged = fileBytes db = before
+            let hasTable = hasIsotopePatternTable db
+            deleteTemp db
+            try Directory.Delete(outDirectory, true) with _ -> ()
+            Expect.isGreaterThan qpsmLines.Length 1 "the .qpsm holds PSMs"
+            Expect.isTrue unchanged "the data base is not written to"
+            Expect.isFalse hasTable "the data base has no table of isotope patterns"
+
+        testCase "PSMStatisticsIsotopePatternsOfSeveralFiles" <| fun _ ->
+            // two files with the same ions: the union is stored once
+            let relToDirectory = getRelativePath baseDir
+            let db = tempCopy (relToDirectory "../../../data/PSMStatistics/in/MinimalFixed.db")
+            let inDirectory = Path.Combine(Path.GetTempPath(), sprintf "psmStatistics_%s" (Guid.NewGuid().ToString "N"))
+            let outDirectory = Path.Combine(inDirectory, "out")
+            Directory.CreateDirectory inDirectory |> ignore
+            File.Copy(relToDirectory "../../../data/PSMStatistics/in/minimalFixed.psm", Path.Combine(inDirectory, "a.psm"))
+            File.Copy(relToDirectory "../../../data/PSMStatistics/in/minimalFixed.psm", Path.Combine(inDirectory, "b.psm"))
+            let psmStatsExe = toolDll "PSMStatistics"
+            runDotNet (sprintf "%s -i %s -o %s -p %s -d %s -c 2" psmStatsExe inDirectory outDirectory (relToDirectory "../../../data/PSMStatistics/in/pSMStatisticsParamsFixed.json") db) baseDir
+            let stored, computed, requests = isotopePatternCounts db (Path.Combine(outDirectory, "a.qpsm"))
+            let rows =
+                use cn = new SQLiteConnection(sprintf "Data Source=%s;Version=3" db)
+                cn.Open()
+                use cmd = new SQLiteCommand("SELECT COUNT(*) FROM IsotopePattern", cn)
+                Convert.ToInt32 (cmd.ExecuteScalar())
+            deleteTemp db
+            try Directory.Delete(inDirectory, true) with _ -> ()
+            Expect.isGreaterThan requests 0 "the .qpsm holds ions"
+            Expect.equal (stored, computed) (requests, 0) "the data base holds the patterns of the ions"
+            Expect.equal rows requests "each pattern is stored once"
+
         testCase "MsFraggerToPSM" <| fun _ ->
             let relToDirectory = getRelativePath baseDir
             let tsv = relToDirectory "../../../data/MsFraggerToPSM/in/minimal.tsv"

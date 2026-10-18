@@ -45,14 +45,16 @@ The tool writes the best candidate of a scan when it is a target with a q-value 
 | Flag | Meaning | Comes from |
 |------|---------|------------|
 | `-i` | one or more `.psm` files, or a directory that is searched for `*.psm` (not recursive) | [PeptideSpectrumMatching]({{root}}tools/PeptideSpectrumMatching.html), [PeptideSpectrumMatchingTIMs]({{root}}tools/PeptideSpectrumMatchingTIMs.html) |
-| `-d` | the SQLite peptide database | [PeptideDB]({{root}}tools/PeptideDB.html) |
+| `-d` | the SQLite peptide database, written to when `StoreIsotopePatterns` is on | [PeptideDB]({{root}}tools/PeptideDB.html) |
 | `-o` | the output directory, created when missing | |
 | `-p` | the parameter file in JSON | this page |
 | `-dc` | switch: save diagnostic charts to the output directory | |
-| `-c` | number of files scored at the same time, default 1 | |
+| `-c` | number of files scored at the same time and the number of cores used to compute the isotope patterns, default 1 | |
 
 For every input `run.psm` the tool writes `run.qpsm` to the output directory. The file is tab separated with a header and holds one row per scan: the identifiers of the peptide and its modification state, the search scores, the combined `ModelScore`, `QValue`, `PEPValue`, the sequence and the protein names.
 [ProteinInference]({{root}}tools/ProteinInference.html), [PSMBasedQuantification]({{root}}tools/PSMBasedQuantification.html) and [PSMBasedQuantificationTIMs]({{root}}tools/PSMBasedQuantificationTIMs.html) read `.qpsm` files.
+
+With `StoreIsotopePatterns`, the tool adds the isotope patterns of the ions in the `.qpsm` files (sequence, global modification, charge) to the peptide database after the last file is scored, for both global modifications if the database has isotopic modifications. A database that cannot be written only gives a warning. PSMStatistics changes the file given with `-d`, so on a network file system with unreliable file locking run one process at a time or set `StoreIsotopePatterns` to `false`, because concurrent writes can corrupt the database.
 
 The tool also creates a `run_plots` directory per input. It stays empty unless you pass `-dc`. Each training then writes `InitialSeparation.html` (target and decoy histograms of the starting score with its q-values), `Metrics.html` (the metrics on the 10 % test split of the last model fitted) and one `separationAtIteration_<n>.html` per retraining, counted from 0 (the chart of the first model is overwritten by retraining 0; target and decoy histograms of the model score with the q-value and PEP curves). With `CrossValidation` the names start with `Fold1_` to `Fold3_`, and the charts show the two training folds of that model. `Threshold.Fixed` writes no charts. Log output goes to `PSMStatistics_log.txt` and `run_log.txt` in the output directory.
 
@@ -64,6 +66,7 @@ The tool also creates a `run_plots` directory per input. It stays empty unless y
 | `Threshold` (alternative) | `Threshold.Fixed { SequestLike = 0.; Andromeda = 0. }` | Skip the learning. Among the matches whose `SequestScore` exceeds `SequestLike` and whose `AndroScore` exceeds `Andromeda`, keep the one with the highest `SequestScore` per scan, and drop it when it is a decoy. `ModelScore`, `QValue` and `PEPValue` are written as `nan`. Pick your own cutoffs; these values are placeholders. |
 | `ParseProteinIDRegexPattern` | `"id"` | Regex applied to the protein names of the database to produce the `ProteinNames` column. `"id"` keeps them unchanged. The database holds the names as PeptideDB cut them, so keep `"id"`. Another pattern is applied to those stored names and keeps the matched part (empty when it does not match). |
 | `KeepTemporaryFiles` | `true` | Not used by PSMStatistics. |
+| `StoreIsotopePatterns` | `true` | Store the theoretical isotope patterns of the ions in the `.qpsm` files in the table `IsotopePattern` of the peptide database (`-d`). |
 
 The fields of `Threshold.Estimate`:
 
@@ -98,6 +101,7 @@ let psmStatisticsParams : Dto.PSMStatisticsParams =
                 }
         ParseProteinIDRegexPattern = "id"
         KeepTemporaryFiles         = true
+        StoreIsotopePatterns       = true
     }
 
 // Replace the temp folder with your project folder.

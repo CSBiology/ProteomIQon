@@ -708,6 +708,7 @@ module Dto =
             Threshold                   : Domain.Threshold 
             ParseProteinIDRegexPattern  : string 
             KeepTemporaryFiles          : bool
+            StoreIsotopePatterns        : bool
         }
 
 
@@ -718,6 +719,7 @@ module Dto =
                 Threshold           = dtoPSMStatisticsParams.Threshold
                 FastaHeaderToName   = parseProteinIdUsing dtoPSMStatisticsParams.ParseProteinIDRegexPattern
                 KeepTemporaryFiles  = dtoPSMStatisticsParams.KeepTemporaryFiles
+                StoreIsotopePatterns = dtoPSMStatisticsParams.StoreIsotopePatterns
             }
 
     type PSMStatisticsResult = {

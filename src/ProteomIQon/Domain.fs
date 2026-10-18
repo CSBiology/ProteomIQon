@@ -156,6 +156,8 @@ module Domain =
             Threshold                   : Threshold 
             FastaHeaderToName           : string -> string
             KeepTemporaryFiles          : bool
+            /// Write the isotope patterns of the identified precursor ions into the peptide data base.
+            StoreIsotopePatterns        : bool
         }
 
     type WindowSize = 

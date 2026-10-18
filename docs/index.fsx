@@ -43,7 +43,7 @@ column, and the next tool reads them.
 | Convert raw data | [MzMLToMzLite]({{root}}tools/MzMLToMzLite.html) | .mzML (from msconvert) | .mzlite |
 | Build the search space | [PeptideDB]({{root}}tools/PeptideDB.html) | FASTA | .db (SQLite) |
 | Identify spectra | [PeptideSpectrumMatching]({{root}}tools/PeptideSpectrumMatching.html) | .mzlite, .db | .psm |
-| Control the FDR | [PSMStatistics]({{root}}tools/PSMStatistics.html) | .psm, .db | .qpsm |
+| Control the FDR | [PSMStatistics]({{root}}tools/PSMStatistics.html) | .psm, .db | .qpsm, isotope patterns into the .db |
 | Quantify identified peptide ions | [PSMBasedQuantification]({{root}}tools/PSMBasedQuantification.html) | .mzlite, .qpsm, .db | .quant |
 | Infer proteins | [ProteinInference]({{root}}tools/ProteinInference.html) | .qpsm, .db | .prot |
 | Join peptides and proteins | [JoinQuantPepIonsWithProteins]({{root}}tools/JoinQuantPepIonsWithProteins.html) | .quant, .prot | .quantAndProt |

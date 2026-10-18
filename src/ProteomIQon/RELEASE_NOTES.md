@@ -1,4 +1,6 @@
 #### Unreleased
+* Add StoreIsotopePatterns to the PSMStatistics parameters and the default parameters
+* Add IsotopePatterns: the isotope pattern of a peptide at a charge (MIDA, resolution 0.01, minimum probability 0.001) for the quantification tools, its BLOB encoding, the table IsotopePattern of the peptide data base with a look up that reads the table and computes missing patterns, and the function that stores the patterns
 * Add SpectrumIndex (the MS1 index and the MS2 headers from one pass over the spectrum descriptions, skipping with a warning the descriptions that cannot be read) and SortedSearch (binary searches and the closest scan time), and the m/z sort of the peaks of a spectrum in TimsPeaks, shared by the quantification and search tools
 * Add PeakDataEncoder to TimsPeaks, the direct encoding of the peak data of TIMS spectra, the counterpart of its decoding
 * Use CrossValidation and no PEP cutoff (PepValueThreshold 1.0) in the default PSMStatistics parameters

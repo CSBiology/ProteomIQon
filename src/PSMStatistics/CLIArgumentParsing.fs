@@ -27,6 +27,6 @@ module CLIArgumentParsing =
                 | OutputDirectory  _    -> "Specify the output directory."
                 | ParamFile _           -> "Specify parameter file for computation of psm statistics."
                 | DiagnosticCharts _    -> "Set to save diagnostic charts to the output directory."
-                | Parallelism_Level _   -> "Set the number of cores the programm can use. Parallelization occurs on file level. This flag is only of effect if a input directory (-i) is specified."
+                | Parallelism_Level _   -> "Set the number of cores the program can use: several .psm files are processed in parallel, and the isotope patterns are stored in at most this many parts."
                 | Log_Level _           -> "Set the log level."
                 | Verbosity_Level _     -> "Set the verbosity level."
