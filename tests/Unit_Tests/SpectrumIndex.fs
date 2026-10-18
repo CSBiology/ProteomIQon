@@ -129,6 +129,28 @@ let all =
                 let tail = headers |> Array.skip 62 |> Array.map (fun h -> h.Id, h.Position)
                 Expect.equal headers.Length 65 "the fixture and the three valid added spectra"
                 Expect.equal tail [| "ms2_c", 67; "ms2_a", 62; "ms2_b", 66 |] "the position counts skipped and MS1 rows; equal scan times keep the file order")
+        testCase "the MS1 index and the MS2 headers from one pass equal the two readers, with negative scan times" <| fun _ ->
+            let ms2 id (scanTime: float) =
+                sprintf "{\"ID\":\"%s\",\"properties\":{\"MS:1000511\":{\"Values\":[\"2\"]}},\"Scans\":{\"properties\":{\"s\":{\"properties\":{\"MS:1000016\":{\"Values\":[\"%g\"]}}}}},\"Precursors\":{\"properties\":{\"p\":{\"SelectedIons\":{\"properties\":{\"i\":{\"properties\":{\"MS:1002234\":{\"Values\":[\"500\"]},\"MS:1000041\":{\"Values\":[\"2\"]}}}}}}}}}" id scanTime
+            let added = goodMs1 @ badRows @ [ "ms1_neg", description "ms1_neg" 1 (Some "-2.0"); "ms2_neg", ms2 "ms2_neg" -1. ]
+            withReader added (fun reader ->
+                let warnings = ResizeArray<string>()
+                let log = ResizeArray<string>()
+                let ms1s, ms2s = SpectrumIndex.readMs1AndMs2 reader runId warnings.Add log.Add
+                Expect.equal ms1s (SpectrumIndex.readMs1Index reader runId ignore ignore) "the MS1 index of readMs1Index"
+                // without IonMobility, which is NaN here and never equal to itself
+                let fields (h: SpectrumIndex.Ms2Header) = h.Id, h.Position, h.ScanTime, h.PrecursorMz, h.Charge
+                Expect.equal (ms2s |> Array.map fields) (SpectrumIndex.readMs2Headers reader runId ignore |> Array.map fields) "the MS2 headers of readMs2Headers"
+                Expect.equal ms1s.[0] (-2.0, "ms1_neg") "a MS1 with a negative scan time is used"
+                Expect.equal ms2s.[0].Id "ms2_neg" "a MS2 with a negative scan time is used"
+                Expect.equal warnings.Count 1 "one warning for the MS1 spectra without an ID or a finite scan time"
+                Expect.stringContains warnings.[0] "4 MS1 spectra" "counts them without the unreadable descriptions"
+                Expect.equal log.Count 2 "the unreadable descriptions are logged one by one")
+        testCase "readMs1AndMs2 gives an empty MS1 index when the run has no usable MS1" <| fun _ ->
+            withReader badRows (fun reader ->
+                let ms1s, ms2s = SpectrumIndex.readMs1AndMs2 reader runId ignore ignore
+                Expect.isEmpty ms1s "no MS1"
+                Expect.equal ms2s.Length 62 "the MS2 spectra of the fixture")
         testCase "closestIndex equals the first minimum of Array.minBy, also with equal scan times and equal distances" <| fun _ ->
             let rng = Random 11
             for _ in 1 .. 300 do
