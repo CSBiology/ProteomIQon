@@ -945,6 +945,60 @@ module AlignmentBasedQuantification_v2 =
 
     let private ionName (align: AlignmentResultV2) = sprintf "%s, GlobalMod %i, charge %i" align.StringSequence align.GlobalMod align.Charge
 
+    /// What the run needs from the PSM based quantification. The rows keep their traces only in PsmRowsHeld, when they could not be written early.
+    type private PsmBasedRun =
+        { PsmCount: int
+          PsmFitted: int
+          PsmWrittenEarly: bool
+          PsmWritten: int
+          PsmRowsHeld: QuantificationResult []
+          OwnQuant: Dictionary<(string*int*int),QuantificationResult>
+          PsmPeakIons: HashSet<(string*int*int)>
+          PsmIons: HashSet<(string*int*int)>
+          PsmMzOffsets: (float*float) [] }
+
+    /// Reads the PSM based rows once and collects what the run needs from them. If every row is its own group in the output,
+    /// the rows with a fitted peak are written to outTmpPath right away and the alignment rows are appended later, so the
+    /// traces of all PSM based rows are not held while the run is processed.
+    let private readPsmBasedQuantification (psmbasedQuant: string) (outTmpPath: string) =
+        let psmQuant =
+            Csv.CsvReader<QuantificationResult>().ReadFile(psmbasedQuant,'\t',false,1)
+            |> Array.ofSeq
+        // own PSM quantification of the ions, the label of the selection model; without the traces
+        let withoutTraces (qp: QuantificationResult) =
+            { qp with
+                RtTrace_Light = [||]; IntensityTrace_Observed_Light = [||]; IntensityTrace_Corrected_Light = [||]
+                RtTrace_Heavy = [||]; IntensityTrace_Observed_Heavy = [||]; IntensityTrace_Corrected_Heavy = [||] }
+        let ownQuant = Dictionary<(string*int*int),QuantificationResult>(HashIdentity.Structural)
+        for qp in psmQuant do
+            let scanTime = getTargetScanTime qp
+            let sd = getTargetStabw qp
+            if isFinite scanTime && isFinite sd && sd > 0. then
+                ownQuant.[(qp.StringSequence, qp.GlobalMod, qp.Charge)] <- withoutTraces qp
+        // ions whose PSM based row has a fitted scan time: Stats_v2 keeps this row, the alignment row is a training example and the truth
+        let psmPeakIons = HashSet<(string*int*int)>(HashIdentity.Structural)
+        for qp in psmQuant do
+            let key = (qp.StringSequence, qp.GlobalMod, qp.Charge)
+            if isFinite (getTargetScanTime qp) then psmPeakIons.Add key |> ignore else psmPeakIons.Remove key |> ignore
+        let psmIons = HashSet<(string*int*int)>(psmQuant |> Seq.map (fun qp -> qp.StringSequence, qp.GlobalMod, qp.Charge), HashIdentity.Structural)
+        let psmMzOffsets = precursorMzOffsets psmQuant
+        let psmRows = psmQuant |> Array.filter (fun qp -> (tryTargetGetScanTime qp).IsSome)
+        let keyOf (qp: QuantificationResult) = qp.StringSequence, qp.ModSequenceID, qp.Charge, qp.GlobalMod, qp.QuantificationSource
+        let ownGroups =
+            psmRows |> Array.forall (fun qp -> qp.QuantificationSource = QuantificationSource.PSM)
+            && (psmRows |> Array.distinctBy keyOf).Length = psmRows.Length
+        if ownGroups then
+            File.WriteAllLines(outTmpPath, psmRows |> SeqIO'.csv "\t" true false)
+        { PsmCount = psmQuant.Length
+          PsmFitted = psmRows.Length
+          PsmWrittenEarly = ownGroups
+          PsmWritten = (if ownGroups then psmRows.Length else 0)
+          PsmRowsHeld = (if ownGroups then [||] else psmRows)
+          OwnQuant = ownQuant
+          PsmPeakIons = psmPeakIons
+          PsmIons = psmIons
+          PsmMzOffsets = psmMzOffsets }
+
     /// Quantifies the ions of one .align file in one run and writes <run>.quant and <run>.alignfeatures.
     let quantifyPeptides diagCharts (processParams:Domain.AlignmentBasedQuantificationV2Params) (outputDir:string) (d:string) (instrumentOutput:string) (psmbasedQuant:string) (alignmentResults:string) =
         let runName = Path.GetFileNameWithoutExtension instrumentOutput
@@ -961,42 +1015,10 @@ module AlignmentBasedQuantification_v2 =
         let alignments =
             Csv.CsvReader<AlignmentResultV2>().ReadFile(alignmentResults,'\t',false,1)
             |> Array.ofSeq
-        // The PSM based rows are read once and what the run needs from them is collected. If every row is its own group in the
-        // output, the rows with a fitted peak are written to the output file right away and the alignment rows are appended later,
-        // so the traces of all PSM based rows are not held while the run is processed.
         let outTmpPath = outFilePath + ".tmp"
         if File.Exists outTmpPath then File.Delete outTmpPath
-        let psmCount, psmFitted, psmWritten, psmRowsHeld, ownQuant, psmPeakIons, psmIons, psmMzOffsets =
-            let psmQuant =
-                Csv.CsvReader<QuantificationResult>().ReadFile(psmbasedQuant,'\t',false,1)
-                |> Array.ofSeq
-            // own PSM quantification of the ions, the label of the selection model; without the traces
-            let withoutTraces (qp: QuantificationResult) =
-                { qp with
-                    RtTrace_Light = [||]; IntensityTrace_Observed_Light = [||]; IntensityTrace_Corrected_Light = [||]
-                    RtTrace_Heavy = [||]; IntensityTrace_Observed_Heavy = [||]; IntensityTrace_Corrected_Heavy = [||] }
-            let ownQuant = Dictionary<(string*int*int),QuantificationResult>(HashIdentity.Structural)
-            for qp in psmQuant do
-                let scanTime = getTargetScanTime qp
-                let sd = getTargetStabw qp
-                if isFinite scanTime && isFinite sd && sd > 0. then
-                    ownQuant.[(qp.StringSequence, qp.GlobalMod, qp.Charge)] <- withoutTraces qp
-            // ions whose PSM based row has a fitted scan time: Stats_v2 keeps this row, the alignment row is a training example and the truth
-            let psmPeakIons = HashSet<(string*int*int)>(HashIdentity.Structural)
-            for qp in psmQuant do
-                let key = (qp.StringSequence, qp.GlobalMod, qp.Charge)
-                if isFinite (getTargetScanTime qp) then psmPeakIons.Add key |> ignore else psmPeakIons.Remove key |> ignore
-            let psmIons = HashSet<(string*int*int)>(psmQuant |> Seq.map (fun qp -> qp.StringSequence, qp.GlobalMod, qp.Charge), HashIdentity.Structural)
-            let psmMzOffsets = precursorMzOffsets psmQuant
-            let psmRows = psmQuant |> Array.filter (fun qp -> (tryTargetGetScanTime qp).IsSome)
-            let keyOf (qp: QuantificationResult) = qp.StringSequence, qp.ModSequenceID, qp.Charge, qp.GlobalMod, qp.QuantificationSource
-            let ownGroups =
-                psmRows |> Array.forall (fun qp -> qp.QuantificationSource = QuantificationSource.PSM)
-                && (psmRows |> Array.distinctBy keyOf).Length = psmRows.Length
-            if ownGroups then
-                File.WriteAllLines(outTmpPath, psmRows |> SeqIO'.csv "\t" true false)
-            psmQuant.Length, psmRows.Length, (if ownGroups then psmRows.Length else 0), (if ownGroups then [||] else psmRows), ownQuant, psmPeakIons, psmIons, psmMzOffsets
-        logger.Info (sprintf "%s: %i .align rows, %i PSM based rows (%i ions with a fitted peak)" runName alignments.Length psmCount ownQuant.Count)
+        let psm = readPsmBasedQuantification psmbasedQuant outTmpPath
+        logger.Info (sprintf "%s: %i .align rows, %i PSM based rows (%i ions with a fitted peak)" runName alignments.Length psm.PsmCount psm.OwnQuant.Count)
 
         // the peptide data base is read from disk: only the ions of the .align file are looked up, and a copy in memory
         // (as v1) costs the size of the data base per run (5.5 GB for the TIMs data base)
@@ -1029,9 +1051,9 @@ module AlignmentBasedQuantification_v2 =
 
         // m/z calibration measured in the MS1 spectra: offset of the peak closest to the theoretical m/z (within +-calibrationMzWindow)
         // at the fitted scan time of the ions the run quantified itself. The precursor m/z of the .quant rows is only the start.
-        let initialCalibration = fitMzCalibration psmMzOffsets
+        let initialCalibration = fitMzCalibration psm.PsmMzOffsets
         let calibrationIons =
-            let ions = ownQuant.Values |> Array.ofSeq |> Array.sortBy getTargetScanTime
+            let ions = psm.OwnQuant.Values |> Array.ofSeq |> Array.sortBy getTargetScanTime
             let step = max 1 (ions.Length / maxCalibrationIons)
             ions |> Array.indexed |> Array.filter (fun (i, _) -> i % step = 0) |> Array.map snd
         let calibration =
@@ -1155,7 +1177,7 @@ module AlignmentBasedQuantification_v2 =
                 | Some target ->
                 // the alignment row of an overlap ion with a fitted PSM based peak is a training example and the truth of
                 // AlignmentBasedQuantStatistics_v2 only, which reads the quantification of the ion itself
-                let partnerSkipped = processParams.PerformLabeledQuantification && psmPeakIons.Contains ((align.StringSequence, align.GlobalMod, align.Charge))
+                let partnerSkipped = processParams.PerformLabeledQuantification && psm.PsmPeakIons.Contains ((align.StringSequence, align.GlobalMod, align.Charge))
                 let partner =
                     if processParams.PerformLabeledQuantification && not partnerSkipped then
                         let p = lookUp align.StringSequence (if align.GlobalMod = 0 then 1 else 0)
@@ -1225,8 +1247,8 @@ module AlignmentBasedQuantification_v2 =
         // predicted scan time shifted to where their own peak is not. They take the path of the other ions, are not used to train the
         // selection model and are written to <run>.aligndecoy only.
         let decoys =
-            let pool = prepared |> Array.filter (fun ion -> not (psmIons.Contains ((ion.Align.StringSequence, ion.Align.GlobalMod, ion.Align.Charge))))
-            let ownScanTimes = ownQuant.Values |> Seq.map getTargetScanTime |> Array.ofSeq |> Array.sort
+            let pool = prepared |> Array.filter (fun ion -> not (psm.PsmIons.Contains ((ion.Align.StringSequence, ion.Align.GlobalMod, ion.Align.Charge))))
+            let ownScanTimes = psm.OwnQuant.Values |> Seq.map getTargetScanTime |> Array.ofSeq |> Array.sort
             if processParams.DecoyFraction <= 0. || pool.Length = 0 then
                 [||]
             elif ownScanTimes.Length = 0 then
@@ -1312,29 +1334,29 @@ module AlignmentBasedQuantification_v2 =
                             else
                                 Some { Ion = ion; Context = { context with SourceRt = [||]; SourceIntensity = [||] }; Target = targetTraces; Partner = partnerTraces; Candidates = candidates }
         let ownOfIon (ion: PreparedIon) =
-            match ownQuant.TryGetValue ((ion.Align.StringSequence, ion.Align.GlobalMod, ion.Align.Charge)) with
+            match psm.OwnQuant.TryGetValue ((ion.Align.StringSequence, ion.Align.GlobalMod, ion.Align.Charge)) with
             | true, qp -> Some qp
             | _ -> None
         let ownOf (a: AnalysedIon) = ownOfIon a.Ion
         let isCorrect (qp: QuantificationResult) (c: Candidate) = abs (c.Center - getTargetScanTime qp) <= getTargetStabw qp
-        let idxA = [| for i in 0 .. toExtract.Length - 1 do if (ownOfIon toExtract.[i]).IsSome then yield i |]
-        let idxB = [| for i in 0 .. toExtract.Length - 1 do if (ownOfIon toExtract.[i]).IsNone then yield i |]
+        let ownIdx = [| for i in 0 .. toExtract.Length - 1 do if (ownOfIon toExtract.[i]).IsSome then yield i |]
+        let newIdx = [| for i in 0 .. toExtract.Length - 1 do if (ownOfIon toExtract.[i]).IsNone then yield i |]
         let sweepOver (indices: int []) (callback: int -> RawXic -> unit) =
             sweep readSpectrum ms1 (indices |> Array.map (fun i -> toExtract.[i].Request)) (fun j raw -> callback indices.[j] raw)
-        let spectraReadA = sweepOver idxA analyse
-        let mutable analysedA = idxA |> Array.choose (fun i -> analysed.[i])
+        let ownSpectraRead = sweepOver ownIdx analyse
+        let mutable analysedOwn = ownIdx |> Array.choose (fun i -> analysed.[i])
         let baseFeatures = [| RtZ; RtZ2; ShapeCorr; LogRelHeight; AbsLog2FwhmRatio; Log2NCandidates; IsoCorr; IsoRatioLog2; AbsPpmMono |]
         let withIonMobilityFeature (exists: bool) = if useIonMobility && exists then Array.append baseFeatures [|ImZ|] else baseFeatures
         // the ion mobility feature is used if any ion with candidates has a predicted ion mobility; the ions of the second sweep
         // can only add one if they have the data for it
-        let existsImA = analysedA |> Array.exists (fun a -> isFinite a.Context.PredictedIonMobility)
-        let potentialImB =
-            idxB |> Array.exists (fun i ->
+        let ownHasIm = analysedOwn |> Array.exists (fun a -> isFinite a.Context.PredictedIonMobility)
+        let newMayHaveIm =
+            newIdx |> Array.exists (fun i ->
                 let ion = toExtract.[i]
                 ion.Row < n && isFinite ion.Request.ImLow && isFinite ion.Align.PredictedIonMobility && isFinite ion.Align.PredictedIonMobilitySd)
-        let eager = existsImA || not potentialImB
+        let eager = ownHasIm || not newMayHaveIm
         let mutable training =
-            analysedA
+            analysedOwn
             |> Array.choose (fun a ->
                 match ownOf a with
                 | Some qp when abs (getTargetScanTimeDifference qp) / getTargetStabw qp < 2. -> Some (a, qp)
@@ -1365,7 +1387,7 @@ module AlignmentBasedQuantification_v2 =
                         )
                     Some m
         // set after the first sweep (then all ions can be scored by it) or, if the second sweep can change the features, after it
-        let mutable featureSet = withIonMobilityFeature existsImA
+        let mutable featureSet = withIonMobilityFeature ownHasIm
         let mutable model : LogisticModel option = None
         let mutable foldOf : Dictionary<int,int> = Dictionary<int,int>()
         let mutable foldModels : LogisticModel option [] = [||]
@@ -1496,10 +1518,10 @@ module AlignmentBasedQuantification_v2 =
             if a.Ion.Row < n && decoyAlign.[a.Ion.Row].IsSome then chosenCenter.[a.Ion.Row] <- (fst (rank a).[0]).Center
             results.[i] <- fit a
             analysed.[i] <- None
-        let peptidesB = HashSet<int>()
-        let mutable candidatesB = 0
-        let mutable ionsB = 0
-        let mutable decoysB = 0
+        let newPeptides = HashSet<int>()
+        let mutable newCandidates = 0
+        let mutable newIons = 0
+        let mutable newDecoys = 0
         if eager then
             model <- trainModel featureSet
         let analyseAndFit (i: int) (raw: RawXic) =
@@ -1507,28 +1529,28 @@ module AlignmentBasedQuantification_v2 =
             match analysed.[i] with
             | Some a ->
                 if a.Ion.Row < n then
-                    peptidesB.Add a.Ion.Align.PepSequenceID |> ignore
-                    ionsB <- ionsB + 1
-                    candidatesB <- candidatesB + a.Candidates.Length
+                    newPeptides.Add a.Ion.Align.PepSequenceID |> ignore
+                    newIons <- newIons + 1
+                    newCandidates <- newCandidates + a.Candidates.Length
                 else
-                    decoysB <- decoysB + 1
+                    newDecoys <- newDecoys + 1
                 if eager then fitAt i a
             | None -> ()
-        let spectraRead = spectraReadA + sweepOver idxB analyseAndFit
-        let nIons = analysedA.Length + ionsB
-        logger.Info (sprintf "%s: XICs extracted from %i MS1 spectra (two sweeps), %i ions with candidates, %.1f candidates per ion, %i decoys with candidates (%.1f s)" runName spectraRead nIons (if nIons = 0 then nan else float ((analysedA |> Array.sumBy (fun a -> a.Candidates.Length)) + candidatesB) / float nIons) decoysB (elapsed ()))
+        let spectraRead = ownSpectraRead + sweepOver newIdx analyseAndFit
+        let nIons = analysedOwn.Length + newIons
+        logger.Info (sprintf "%s: XICs extracted from %i MS1 spectra (two sweeps), %i ions with candidates, %.1f candidates per ion, %i decoys with candidates (%.1f s)" runName spectraRead nIons (if nIons = 0 then nan else float ((analysedOwn |> Array.sumBy (fun a -> a.Candidates.Length)) + newCandidates) / float nIons) newDecoys (elapsed ()))
         if not eager then
             featureSet <-
                 withIonMobilityFeature (
-                    existsImA
-                    || (idxB |> Array.exists (fun i -> toExtract.[i].Row < n && (match analysed.[i] with Some a -> isFinite a.Context.PredictedIonMobility | None -> false)))
+                    ownHasIm
+                    || (newIdx |> Array.exists (fun i -> toExtract.[i].Row < n && (match analysed.[i] with Some a -> isFinite a.Context.PredictedIonMobility | None -> false)))
                     )
             model <- trainModel featureSet
         let selectionModel = selectionModelOf model
         // cross-fitting: an ion the run quantified itself is scored by the model trained on the other folds (folds of peptides,
         // PepSequenceID), so its selection and probability are out-of-fold like those of the new ions, which get the model of all
         // training ions
-        foldOf <- assignFolds processParams.Seed selectionFolds (Seq.append (analysedA |> Seq.map (fun a -> a.Ion.Align.PepSequenceID)) peptidesB)
+        foldOf <- assignFolds processParams.Seed selectionFolds (Seq.append (analysedOwn |> Seq.map (fun a -> a.Ion.Align.PepSequenceID)) newPeptides)
         foldModels <-
             match model with
             | None -> [||]
@@ -1540,14 +1562,14 @@ module AlignmentBasedQuantification_v2 =
                         logger.Warn (sprintf "%s: the training candidates outside fold %i are all of one class; the ions of fold %i the run quantified itself are chosen with the fixed score." runName f f)
                         None
                     )
-        let mutable overlap = analysedA |> Array.choose (fun a -> ownOf a |> Option.map (fun qp -> a, qp))
+        let mutable overlap = analysedOwn |> Array.choose (fun a -> ownOf a |> Option.map (fun qp -> a, qp))
         let chosenCorrect (sel: (AnalysedIon*QuantificationResult) []) =
             if sel.Length = 0 then nan
             else 100. * (sel |> Array.filter (fun (a, qp) -> isCorrect qp (a.Candidates |> Array.maxBy (score a))) |> Array.length |> float) / float sel.Length
         logger.Info (sprintf "%s: chosen candidate within 1 sd of the own PSM peak: %.1f %% of %i clean overlap ions, %.1f %% of %i overlap ions (%s, out-of-fold)" runName (chosenCorrect training) training.Length (chosenCorrect overlap) overlap.Length selectionModel)
         // fits of the ions still waiting: the overlap ions (all ions if the second sweep could change the features); their traces
         // are released one by one
-        analysedA <- [||]
+        analysedOwn <- [||]
         training <- [||]
         overlap <- [||]
         for i in 0 .. toExtract.Length - 1 do
@@ -1565,15 +1587,15 @@ module AlignmentBasedQuantification_v2 =
         // output as v1: the PSM based rows with a fitted peak, then the alignment rows; of several rows of an ion and source
         // the one with the smallest |Difference_SearchRT_FittedRT|
         let outputRows =
-            Array.append psmRowsHeld quantResults
+            Array.append psm.PsmRowsHeld quantResults
             |> Array.groupBy (fun qp -> qp.StringSequence, qp.ModSequenceID, qp.Charge, qp.GlobalMod, qp.QuantificationSource)
             |> Array.map (fun (_, rows) ->
                 rows |> Array.minBy (fun qp -> let d = abs (getTargetScanTimeDifference qp) in if isFinite d then d else infinity)
                 )
-        let repeated = psmFitted + quantResults.Length - (psmWritten + outputRows.Length)
-        if psmFitted < psmCount || repeated > 0 then
-            logger.Info (sprintf "%s: not written: %i PSM based rows without fitted peak, %i repeated rows of an ion" runName (psmCount - psmFitted) repeated)
-        if File.Exists outTmpPath then
+        let repeated = psm.PsmFitted + quantResults.Length - (psm.PsmWritten + outputRows.Length)
+        if psm.PsmFitted < psm.PsmCount || repeated > 0 then
+            logger.Info (sprintf "%s: not written: %i PSM based rows without fitted peak, %i repeated rows of an ion" runName (psm.PsmCount - psm.PsmFitted) repeated)
+        if psm.PsmWrittenEarly then
             File.AppendAllLines(outTmpPath, outputRows |> SeqIO'.csv "\t" false false)
             File.Move(outTmpPath, outFilePath, true)
         else
@@ -1615,10 +1637,9 @@ module AlignmentBasedQuantification_v2 =
         // decoy transfers: left out if the ion's own scan time is inside the decoy XIC; the others are fitted and written to <run>.aligndecoy,
         // also those without fit: the .quant columns, PredictedScanTime of the decoy and the .alignfeatures columns without the ion key
         if processParams.DecoyFraction > 0. then
-            let chosen = chosenCenter
             let ownPeakInside (ion: PreparedIon) =
                 let row = ion.Row - n
-                let scanTime = match chosen.TryGetValue row with | true, t -> t | _ -> alignments.[row].PredictedScanTime
+                let scanTime = match chosenCenter.TryGetValue row with | true, t -> t | _ -> alignments.[row].PredictedScanTime
                 abs (scanTime - ion.Align.PredictedScanTime) <= processParams.XicExtraction.ScanTimeWindow + decoyMargin
             let excluded = decoys |> Array.filter ownPeakInside |> Array.map (fun ion -> ion.Row) |> HashSet
             for _ in excluded do decoySkips.Add "own peak inside the decoy XIC"
