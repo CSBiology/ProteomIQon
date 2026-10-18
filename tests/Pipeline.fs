@@ -277,6 +277,76 @@ let isotopePatternEquivalenceCase name (tool: string) (dataDirectory: string) (p
                 |> Array.map (fun line -> String.Join("\t", line.Split('\t') |> Array.truncate 3))
             Expect.equal (ionsOf quantWith) (ionsOf quantWithout) "the .quant files have the same ions"
 
+/// The spectra of an mzML file, decoded without MzIO: ID, MS level, scan start time and its unit, m/z of the first selected ion
+/// (nan without one), and the m/z, intensity and ion mobility arrays (32 or 64 bit floats, zlib compressed or not).
+let readMzMLSpectra (path: string) =
+    let ns = Xml.Linq.XNamespace.Get "http://psi.hupo.org/ms/mzml"
+    let attribute (name: string) (element: Xml.Linq.XElement) = element.Attribute(Xml.Linq.XName.Get name).Value
+    let tryCv (accession: string) (element: Xml.Linq.XElement) =
+        element.Elements(ns + "cvParam") |> Seq.tryFind (fun p -> attribute "accession" p = accession)
+    let decode (array: Xml.Linq.XElement) =
+        let bytes = Convert.FromBase64String (array.Element(ns + "binary").Value)
+        let raw =
+            if (tryCv "MS:1000574" array).IsSome then
+                use input = new MemoryStream(bytes)
+                use zlib = new Compression.ZLibStream(input, Compression.CompressionMode.Decompress)
+                use output = new MemoryStream()
+                zlib.CopyTo output
+                output.ToArray()
+            else bytes
+        if (tryCv "MS:1000521" array).IsSome then Array.init (raw.Length / 4) (fun i -> float (BitConverter.ToSingle(raw, 4 * i)))
+        else Array.init (raw.Length / 8) (fun i -> BitConverter.ToDouble(raw, 8 * i))
+    Xml.Linq.XDocument.Load(path).Descendants(ns + "spectrum")
+    |> Seq.map (fun spectrum ->
+        let arrays = spectrum.Descendants(ns + "binaryDataArray") |> Array.ofSeq
+        let arrayOf accession = arrays |> Array.find (fun a -> (tryCv accession a).IsSome) |> decode
+        let scanTime = spectrum.Descendants(ns + "scan") |> Seq.pick (tryCv "MS:1000016")
+        let selectedIonMz =
+            spectrum.Descendants(ns + "selectedIon") |> Seq.tryHead |> Option.bind (tryCv "MS:1000744")
+            |> Option.map (attribute "value" >> float) |> Option.defaultValue nan
+        {|
+            ID            = attribute "id" spectrum
+            MsLevel       = tryCv "MS:1000511" spectrum |> Option.get |> attribute "value" |> int
+            ScanTime      = float (attribute "value" scanTime)
+            ScanTimeUnit  = attribute "unitAccession" scanTime
+            SelectedIonMz = selectedIonMz
+            Mz            = arrayOf "MS:1000514"
+            Intensity     = arrayOf "MS:1000515"
+            IonMobility   = arrayOf "MS:1003006"
+        |})
+    |> Array.ofSeq
+
+/// The spectra of an mzlite file read with MzIO, by ID: MS level, scan time and its unit, precursor m/z and peaks.
+let readMzliteSpectra (path: string) =
+    use reader = new MzIO.MzSQL.MzSQL(path)
+    reader.Connection.Open()
+    reader.ReadMassSpectra "sample=0"
+    |> Seq.map (fun spectrum ->
+        let scanTimeUnit =
+            spectrum.Scans.GetProperties false
+            |> Seq.pick (fun scan ->
+                match scan.Value with
+                | :? MzIO.Model.Scan as s -> s.TryGetValue MzIO.MetaData.PSIMSExtension.PSIMS_Scan.ScanStartTime
+                | _ -> None)
+            |> fun p -> MzIO.Model.CvParam.tryGetCvUnitAccession (p :?> MzIO.Model.CvParam.IParamBase<IConvertible>)
+        spectrum.ID,
+        (MzIO.Processing.MassSpectrum.getMsLevel spectrum, MzIO.Processing.MassSpectrum.getScanTime spectrum, scanTimeUnit,
+         MzIO.Processing.MassSpectrum.getPrecursorMZ spectrum, reader.ReadSpectrumPeaks(spectrum.ID).Peaks |> Array.ofSeq))
+    |> Map.ofSeq
+
+/// Deletes a directory whose SQLite files may still be open: MzIO does not dispose its commands, so a file stays open until they are
+/// finalized.
+let deleteDirectory (path: string) =
+    let rec attempt n =
+        GC.Collect()
+        GC.WaitForPendingFinalizers()
+        GC.Collect()
+        try Directory.Delete(path, true)
+        with :? IOException | :? UnauthorizedAccessException when n > 0 ->
+            Threading.Thread.Sleep 500
+            attempt (n - 1)
+    attempt 10
+
 [<Tests>]
 let pipelineTests =
     testList "Pipeline" [
@@ -819,6 +889,33 @@ let pipelineTests =
                     (relToDirectory "../../../data/QuantBasedAlignment_v2/out/test/trunc1.align")
             Directory.Delete(outDirectory, true)
             Expect.isTrue compare "Alignments are different"
+
+        testCase "MzMLToMzLiteIonMobility" <| fun _ ->
+            // the first 40 spectra (11 MS1, 29 MS2) of a timsTOF DDA run converted by msconvert: m/z, intensity and ion mobility as zlib
+            // compressed 64 bit floats, the layout the raw reader of MzIO reads; spectrum 5 is stored uncompressed and spectrum 12 as
+            // 32 bit floats, so the XML reader reads them
+            let relToDirectory = getRelativePath baseDir
+            let mzML = relToDirectory "../../../data/MzMLToMzLiteIonMobility/in/minimal.mzML"
+            let convParams = relToDirectory "../../../data/MzMLToMzLiteIonMobility/in/mzMLToMzLiteParams.json"
+            let outDirectory = relToDirectory "../../../data/MzMLToMzLiteIonMobility/out/"
+            if Directory.Exists outDirectory then Directory.Delete(outDirectory, true)
+            runDotNet (sprintf "%s -i %s -o %s -p %s" (toolDll "MzMLToMzLiteIonMobility") mzML outDirectory convParams) baseDir
+            let expected = readMzMLSpectra mzML
+            let converted = readMzliteSpectra (Path.Combine(outDirectory, "minimal.mzlite"))
+            deleteDirectory outDirectory
+            Expect.equal expected.Length 40 "the mzML holds 40 spectra"
+            Expect.equal (converted |> Map.keys |> Set.ofSeq) (expected |> Array.map (fun s -> s.ID) |> Set.ofArray) "the mzlite holds the spectra of the mzML"
+            for s in expected do
+                let msLevel, scanTime, scanTimeUnit, precursorMz, peaks = converted.[s.ID]
+                Expect.equal msLevel s.MsLevel (sprintf "%s: MS level" s.ID)
+                Expect.equal s.ScanTimeUnit "UO:0000010" (sprintf "%s: the scan time of the mzML is in seconds" s.ID)
+                Expect.equal scanTimeUnit (Some "UO:0000031") (sprintf "%s: the scan time of the mzlite is in minutes" s.ID)
+                Expect.floatClose Accuracy.veryHigh scanTime (s.ScanTime / 60.) (sprintf "%s: scan time" s.ID)
+                if s.MsLevel = 2 then Expect.equal precursorMz s.SelectedIonMz (sprintf "%s: precursor m/z" s.ID)
+                // the peaks in the order of the file, values unchanged
+                Expect.equal (peaks |> Array.map (fun p -> p.Mz)) s.Mz (sprintf "%s: m/z" s.ID)
+                Expect.equal (peaks |> Array.map (fun p -> p.Intensity)) s.Intensity (sprintf "%s: intensities" s.ID)
+                Expect.equal (peaks |> Array.map (fun p -> p.IonMobility)) (s.IonMobility |> Array.map Some) (sprintf "%s: ion mobilities" s.ID)
 
         testCase "ProteinInference" <| fun _ ->
             let relToDirectory = getRelativePath baseDir
