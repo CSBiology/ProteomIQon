@@ -153,9 +153,8 @@ module PeptideSpectrumMatchingTIMs =
             |> Array.mapi (fun i name -> sprintf "%s %.1f s" name (seconds ticks.[i]))
             |> String.concat ", "
 
-    /// MS2 spectra of the run in scan time order. ScanNr is the position in that order. The peaks
-    /// of a spectrum are read when the sequence reaches it and are dropped again afterwards. A
-    /// spectrum whose peaks cannot be read is logged and skipped.
+    /// The MS2 headers of the run in scan time order, equal scan times in file order. ScanNr is the position in that
+    /// order. Only the headers are read, the peaks are not. A description that cannot be read is logged and skipped.
     let readMs2Headers (reader: IMzIODataReader) (runId: string) (log: string -> unit) =
         let started = Diagnostics.Stopwatch.GetTimestamp()
         let headers =
