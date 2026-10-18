@@ -646,12 +646,12 @@ module AlignmentBasedQuantification_v2 =
         }
 
     /// Predicts the isotopic distribution of the peptide at the given charge, normalized by the sum of probabilities, using the MIDAs algorithm.
-    /// The fine structure is merged at 0.1 (v1 0.01): the same isotope frequencies at a ninth of the cost.
+    /// The fine structure is merged at 0.01, as in the other quantification tools.
     let generateIsotopicDistributionOfFormulaBySum (charge:int) (seq:AminoAcids.AminoAcid list) =
         seq
         |> BioList.toFormula
         |> Formula.add Formula.Table.H2O
-        |> IsotopicDistribution.MIDA.ofFormula IsotopicDistribution.MIDA.normalizeByProbSum 0.1 0.001 charge
+        |> IsotopicDistribution.MIDA.ofFormula IsotopicDistribution.MIDA.normalizeByProbSum 0.01 0.001 charge
         |> Array.ofList
 
     /// The predicted isotope peaks within the isotope range, summed per isotope; monoisotopic peak first, M+1 second.

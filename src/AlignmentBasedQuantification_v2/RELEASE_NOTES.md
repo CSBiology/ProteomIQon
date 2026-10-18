@@ -8,7 +8,7 @@
 * Extract the XICs faster and with less memory
 * Ion mobility: window of at least +-0.05 around the predicted ion mobility, sum per m/z over the mobility scans as PSMBasedQuantificationTIMs, ion mobility distance as candidate feature, ion mobility of the chosen peak in the IonMobility column
 * Compare the isotope pattern on isotope traces extracted with the same windows
-* Compute the ALS baseline as the other quantification tools
+* Compute the ALS baseline and predict the isotope patterns as the other quantification tools
 * Default to wavelet BorderPadMethod Zero, which gives identical results between runs; warn on Random
 * Write the PSM based rows with a fitted peak followed by the alignment rows, one row per ion and source, and the candidate features per ion to <run>.alignfeatures; no .alignquantMetrics
 * Drop an ion instead of the run when its processing fails, with the reason in the log
