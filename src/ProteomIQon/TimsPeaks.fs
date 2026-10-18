@@ -90,34 +90,3 @@ module TimsPeaks =
             | _ ->
                 fallback (reader.ReadSpectrumPeaks spectrumID)
         read, cmd
-
-    /// Encodes the peak data of TIMS spectra: the intensities, the m/z and the ion mobilities, each as length and deflated bytes
-    /// of the float64 values. These are the bytes MzIO's encoder writes for ZLib compression and a Peak1DArray with ion mobility
-    /// (the layout initReadPeakArrays decodes), made without peak objects and with buffers that are reused from spectrum to spectrum.
-    type PeakDataEncoder() =
-        let output = new IO.MemoryStream(1 <<< 20)
-        let lengthPlaceholder : byte[] = Array.zeroCreate 4
-        let mutable bytes : byte[] = Array.zeroCreate (1 <<< 16)
-
-        let write (values: float[]) (count: int) =
-            let lengthPosition = int output.Position
-            output.Write(lengthPlaceholder, 0, 4)
-            if bytes.Length < count * 8 then bytes <- Array.zeroCreate (max (count * 8) (bytes.Length * 2))
-            Buffer.BlockCopy(values, 0, bytes, 0, count * 8)
-            do
-                use deflate = new IO.Compression.DeflateStream(output, IO.Compression.CompressionMode.Compress, true)
-                deflate.Write(bytes, 0, count * 8)
-            let length = int output.Position - lengthPosition - 4
-            let buffer = output.GetBuffer()
-            buffer.[lengthPosition] <- byte length
-            buffer.[lengthPosition + 1] <- byte (length >>> 8)
-            buffer.[lengthPosition + 2] <- byte (length >>> 16)
-            buffer.[lengthPosition + 3] <- byte (length >>> 24)
-
-        /// The peak data of the first count values of the three arrays.
-        member _.Encode(intensities: float[], mzs: float[], ionMobilities: float[], count: int) : byte[] =
-            output.SetLength 0L
-            write intensities count
-            write mzs count
-            write ionMobilities count
-            output.ToArray()
