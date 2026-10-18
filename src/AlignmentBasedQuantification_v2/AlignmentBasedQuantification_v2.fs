@@ -1140,7 +1140,8 @@ module AlignmentBasedQuantification_v2 =
             match lookUps.TryGetValue ((sequence, gMod)) with
             | true, found -> found
             | _ ->
-                let found = try Some (peptideLookUp sequence gMod) with _ -> None
+                // a sequence without a row in the data base comes back with the ID -1
+                let found = try Some (peptideLookUp sequence gMod) |> Option.filter (fun peptide -> peptide.ModSequenceID >= 0) with _ -> None
                 lookUps.[(sequence, gMod)] <- found
                 found
         let isotopes = Dictionary<(string*int*int), IsotopePeak []>(HashIdentity.Structural)
