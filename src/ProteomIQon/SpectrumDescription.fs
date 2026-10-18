@@ -228,6 +228,10 @@ module SpectrumIndex =
         | Some scanTime when isFinite scanTime && not (String.IsNullOrWhiteSpace h.ID) -> Some (scanTime, h.ID)
         | _ -> None
 
+    /// Sorted by scan time, equal scan times in file order (Seq.sortBy is stable).
+    let private sortMs1 (entries: ResizeArray<float*string>) =
+        entries |> Seq.sortBy fst |> Array.ofSeq
+
     let private noMs1 = "The run has no MS1 spectrum with an ID and a finite scan time, which the quantification needs."
 
     /// Scan time and ID of the MS1 spectra of the run, sorted by scan time (file order on equal scan times), from one
@@ -250,7 +254,7 @@ module SpectrumIndex =
         if unreadable > 0 then
             warn (sprintf "%i spectrum descriptions cannot be read or lack the ID or scan time; these spectra are not used." unreadable)
         if entries.Count = 0 then failwith noMs1
-        entries.ToArray() |> Array.sortBy fst
+        sortMs1 entries
 
     /// The values the search needs from a MS2 spectrum description. Position is the place of the spectrum in the
     /// file, which orders spectra that share a scan time.
@@ -325,7 +329,7 @@ module SpectrumIndex =
             position <- position + 1
         if skippedMs1 > 0 then
             warn (sprintf "%i MS1 spectra lack the ID or a finite scan time; these spectra are not used." skippedMs1)
-        ms1s.ToArray() |> Array.sortBy fst, sortMs2 ms2s
+        sortMs1 ms1s, sortMs2 ms2s
 
     /// The item of (scan time, item) pairs sorted by scan time whose scan time is closest to a given one; the first
     /// of equal scan times, the earlier item on equal distance.
