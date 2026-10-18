@@ -203,7 +203,8 @@ module SpectrumIndex =
 
     /// Scan time and ID of the MS1 spectra of the run, sorted by scan time (file order on equal scan times), from one
     /// pass over the spectrum descriptions with the streaming parser instead of the object model. A description that
-    /// cannot be read and a MS1 without a finite scan time or an ID are not used; one warning gives their number.
+    /// cannot be read and a MS1 without a finite scan time or an ID are not used; one warning gives their number. Fails
+    /// if no MS1 is left.
     /// onOther is called with every readable header that is not of a MS1.
     let readMs1Index (reader: MzIO.MzSQL.MzSQL) (runID: string) (warn: string -> unit) (onOther: SpectrumHeader -> unit) =
         let entries = ResizeArray<float*string>()
@@ -219,6 +220,8 @@ module SpectrumIndex =
                 onOther header
         if unreadable > 0 then
             warn (sprintf "%i spectrum descriptions cannot be read or lack the ID or scan time; these spectra are not used." unreadable)
+        if entries.Count = 0 then
+            failwith "The run has no MS1 spectrum with an ID and a finite scan time, which the quantification needs."
         entries.ToArray() |> Array.sortBy fst
 
     /// The values the search needs from a MS2 spectrum description. Position is the place of the spectrum in the

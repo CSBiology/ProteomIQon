@@ -102,6 +102,12 @@ let all =
                 Expect.equal headers.Length 62 "the MS2 spectra of the fixture"
                 Expect.equal log.Count 1 "the bad description is logged"
                 Expect.isTrue (headers |> Array.pairwise |> Array.forall (fun (a, b) -> (a.ScanTime, a.Position) <= (b.ScanTime, b.Position))) "scan time order, file order on ties")
+        testCase "readMs1Index fails with one message when the run has no usable MS1" <| fun _ ->
+            withReader badRows (fun reader ->
+                let warnings = ResizeArray<string>()
+                Expect.throws (fun () -> SpectrumIndex.readMs1Index reader runId warnings.Add ignore |> ignore) "no MS1 left"
+                Expect.equal warnings.Count 1 "the skipped descriptions are still counted"
+                Expect.throwsC (fun () -> SpectrumIndex.readMs1Index reader runId ignore ignore |> ignore) (fun e -> Expect.stringContains e.Message "no MS1 spectrum" "says what is missing"))
         testCase "closestIndex equals the first minimum of Array.minBy, also with equal scan times and equal distances" <| fun _ ->
             let rng = Random 11
             for _ in 1 .. 300 do
