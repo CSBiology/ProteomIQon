@@ -169,7 +169,8 @@ module SortedSearch =
         lo
 
     /// Index of the value of the sorted, non-empty array closest to t: the first of equal values, and the
-    /// earlier value when two are equally close (as Array.minBy over the array).
+    /// earlier value when two are equally close (as Array.minBy over the array). A NaN or -infinity target gives
+    /// the first index and +infinity the last one, where Array.minBy gives the first.
     let closestIndex (sorted: float []) (t: float) =
         let i = lowerBound sorted t
         let closest =
