@@ -2195,9 +2195,9 @@ module PSMBasedQuantificationTIMs =
         let psmsWithoutIonMobility = qpsms.Length - psmsNotInMzlite - psmsWithIonMobility
         logger.Trace (sprintf "Create RetentionTime index, read the ms1s and the ion mobility of the PSM spectra:finished, %i MS1s, %i of %i PSMs have an ion mobility in their spectrum" ms1SortedByScanTime.Length psmsWithIonMobility qpsms.Length)
         if qpsms.Length > 0 && psmsWithIonMobility = 0 then
-            failwithf "No PSM of %s refers to a spectrum of %s with an ion mobility (MS:1002815): %i PSMIds not found in the mzlite (wrong mzlite?), %i spectra without ion mobility. The PSMId has to be the ID of an MS2 spectrum of this mzlite." scoredPSMs instrumentOutput psmsNotInMzlite psmsWithoutIonMobility
+            failwithf "No PSM of %s refers to a spectrum of %s with an ion mobility (MS:1002815): %i PSMIds not found or not readable in the mzlite (wrong mzlite?), %i spectra without ion mobility. The PSMId has to be the ID of an MS2 spectrum of this mzlite." scoredPSMs instrumentOutput psmsNotInMzlite psmsWithoutIonMobility
         if psmsWithIonMobility < qpsms.Length then
-            logger.Warn (sprintf "%i PSMIds not found in the mzlite (wrong mzlite?), %i spectra without ion mobility of %i PSMs in %s, they do not count for the ion mobility of their ion." psmsNotInMzlite psmsWithoutIonMobility qpsms.Length instrumentOutput)
+            logger.Warn (sprintf "%i PSMIds not found or not readable in the mzlite (wrong mzlite?), %i spectra without ion mobility of %i PSMs in %s, they do not count for the ion mobility of their ion." psmsNotInMzlite psmsWithoutIonMobility qpsms.Length instrumentOutput)
         
         logger.Trace "Estimate precursor mz standard deviation and mz correction."
         ///
