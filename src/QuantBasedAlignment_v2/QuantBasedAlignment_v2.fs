@@ -36,24 +36,6 @@ module RobustShift =
             let hi = min (lo + 1) (sorted.Length - 1)
             sorted.[lo] + (pos - float lo) * (sorted.[hi] - sorted.[lo])
 
-    /// Index of the first value >= v in the sorted array.
-    let private lowerBound (sorted: float []) (v: float) =
-        let mutable lo = 0
-        let mutable hi = sorted.Length
-        while lo < hi do
-            let mid = (lo + hi) / 2
-            if sorted.[mid] < v then lo <- mid + 1 else hi <- mid
-        lo
-
-    /// Index of the first value > v in the sorted array.
-    let private upperBound (sorted: float []) (v: float) =
-        let mutable lo = 0
-        let mutable hi = sorted.Length
-        while lo < hi do
-            let mid = (lo + hi) / 2
-            if sorted.[mid] <= v then lo <- mid + 1 else hi <- mid
-        lo
-
     type Settings =
         {
             /// Candidate numbers of neighbours of the running median.
@@ -80,7 +62,7 @@ module RobustShift =
         elif x >= xs.[n - 1] then curve.Shift.[n - 1]
         else
             // xs.[lo] <= x < xs.[hi]
-            let hi = upperBound xs x
+            let hi = SortedSearch.upperBound xs x
             let lo = hi - 1
             let t = (x - xs.[lo]) / (xs.[hi] - xs.[lo])
             curve.Shift.[lo] + t * (curve.Shift.[hi] - curve.Shift.[lo])
@@ -224,8 +206,8 @@ module RobustShift =
             if not (isFinite x) then
                 scale.Global
             else
-                let lo = lowerBound scale.X (x - scale.HalfWindow)
-                let hi = upperBound scale.X (x + scale.HalfWindow)
+                let lo = SortedSearch.lowerBound scale.X (x - scale.HalfWindow)
+                let hi = SortedSearch.upperBound scale.X (x + scale.HalfWindow)
                 let window = scale.AbsError.[lo .. hi - 1]
                 let window =
                     match Array.tryFindIndex (fun e -> e = ownError) window with

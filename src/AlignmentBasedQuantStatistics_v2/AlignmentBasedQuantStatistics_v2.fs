@@ -30,24 +30,6 @@ module AlignmentFeatures =
             let n = sorted.Length
             if n % 2 = 1 then sorted.[n / 2] else 0.5 * (sorted.[n / 2 - 1] + sorted.[n / 2])
 
-    /// Index of the first value >= v in the sorted array.
-    let lowerBound (sorted: float []) (v: float) =
-        let mutable lo = 0
-        let mutable hi = sorted.Length
-        while lo < hi do
-            let mid = (lo + hi) / 2
-            if sorted.[mid] < v then lo <- mid + 1 else hi <- mid
-        lo
-
-    /// Index of the first value > v in the sorted array.
-    let upperBound (sorted: float []) (v: float) =
-        let mutable lo = 0
-        let mutable hi = sorted.Length
-        while lo < hi do
-            let mid = (lo + hi) / 2
-            if sorted.[mid] <= v then lo <- mid + 1 else hi <- mid
-        lo
-
     /// Population standard deviation.
     let private sd (values: float []) =
         let m = Array.average values
@@ -97,7 +79,7 @@ module AlignmentFeatures =
         if x < xs.[0] || x > xs.[n - 1] then 0.
         elif x = xs.[n - 1] then ys.[n - 1]
         else
-            let hi = upperBound xs x
+            let hi = SortedSearch.upperBound xs x
             let lo = hi - 1
             ys.[lo] + (x - xs.[lo]) / (xs.[hi] - xs.[lo]) * (ys.[hi] - ys.[lo])
 
@@ -300,8 +282,8 @@ module AlignmentFeatures =
         let predicted = order |> Array.map (fun i -> referencePredicted.[i])
         let absError = order |> Array.map (fun i -> referenceAbsError.[i])
         fun (x: float) ->
-            let lo = lowerBound predicted (x - 2.)
-            let hi = lowerBound predicted (x + 2.)
+            let lo = SortedSearch.lowerBound predicted (x - 2.)
+            let hi = SortedSearch.lowerBound predicted (x + 2.)
             if hi - lo >= 5 then median absError.[lo .. hi - 1] else nan
 
 
@@ -416,7 +398,7 @@ module AlignmentScoring =
     let absentQValues (pi: float) (newIonCount: int) (pDecoy: float []) (pNew: float []) (qWrong: float []) =
         let sortedDecoy = Array.sort pDecoy
         let sortedNew = Array.sort pNew
-        let atLeast (sorted: float []) t = sorted.Length - lowerBound sorted t
+        let atLeast (sorted: float []) t = sorted.Length - SortedSearch.lowerBound sorted t
         let q =
             Array.init pNew.Length (fun i ->
                 let t = pNew.[i]
