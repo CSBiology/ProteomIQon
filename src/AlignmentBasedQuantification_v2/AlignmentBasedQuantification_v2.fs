@@ -1537,9 +1537,9 @@ module AlignmentBasedQuantification_v2 =
                     newDecoys <- newDecoys + 1
                 if eager then fitAt i a
             | None -> ()
-        let spectraRead = ownSpectraRead + sweepOver newIdx analyseAndFit
+        let newSpectraRead = sweepOver newIdx analyseAndFit
         let nIons = analysedOwn.Length + newIons
-        logger.Info (sprintf "%s: XICs extracted from %i MS1 spectra (two sweeps), %i ions with candidates, %.1f candidates per ion, %i decoys with candidates (%.1f s)" runName spectraRead nIons (if nIons = 0 then nan else float ((analysedOwn |> Array.sumBy (fun a -> a.Candidates.Length)) + newCandidates) / float nIons) newDecoys (elapsed ()))
+        logger.Info (sprintf "%s: XICs extracted from %i + %i MS1 spectrum reads (own ions + new ions), %i ions with candidates, %.1f candidates per ion, %i decoys with candidates (%.1f s)" runName ownSpectraRead newSpectraRead nIons (if nIons = 0 then nan else float ((analysedOwn |> Array.sumBy (fun a -> a.Candidates.Length)) + newCandidates) / float nIons) newDecoys (elapsed ()))
         if not eager then
             featureSet <-
                 withIonMobilityFeature (
