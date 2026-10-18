@@ -595,12 +595,15 @@ module AlignmentBasedQuantification_v2 =
     let sourceIonMobilityWindow = 0.05
     /// Lower bound of the ion mobility scale in the candidate distance ImZ.
     let minIonMobilityScale = 0.001
-    /// MzWindow_Da Estimate: +-mzWindowSdFactor * the standard deviation of the precursor m/z after correction, as the PSM based quantification.
+    /// MzWindow_Da Estimate: +-mzWindowSdFactor * the standard deviation of the m/z offsets measured in the MS1 spectra after correction;
+    /// without the measurement, of the precursor m/z of the PSM based quantification.
     let mzWindowSdFactor = 4.
     /// Window used when the m/z standard deviation cannot be estimated.
     let fallbackMzWindow = 0.05
-    /// The m/z calibration is measured on up to maxCalibrationIons ions the run quantified itself (spread over the scan time),
-    /// with the peak closest to the theoretical m/z within +-calibrationMzWindow, and needs at least minCalibrationIons.
+    /// The m/z calibration is measured on every k-th ion the run quantified itself, k = max 1 (ions / maxCalibrationIons) (spread over
+    /// the scan time, so up to 2 * maxCalibrationIons - 1 ions),
+    /// with the peak closest to the theoretical m/z plus the initial correction within +-calibrationMzWindow, and needs at least
+    /// minCalibrationIons.
     let maxCalibrationIons = 2000
     let minCalibrationIons = 50
     let calibrationMzWindow = 0.05
@@ -1287,8 +1290,9 @@ module AlignmentBasedQuantification_v2 =
 
         // XIC extraction and candidates, as soon as an XIC window is passed. Two sweeps: first the ions the run quantified itself
         // (they train the selection model and are scored by the model of the other folds, which needs the peptides of all
-        // ions), then the other ions, which are scored by the model of all training ions and fitted as soon as their XIC is analysed,
-        // so only their rows, not their traces, are held until the end.
+        // ions), then the other ions, which are scored by the model of all training ions. If the second sweep cannot change the model
+        // (eager, below) they are fitted as soon as their XIC is analysed, so only their rows, not their traces, are held until the end;
+        // otherwise their traces are held until the model is trained.
         let toExtract = Array.append prepared decoys
         let analysed : AnalysedIon option [] = Array.create toExtract.Length None
         let analyse (i: int) (raw: RawXic) =

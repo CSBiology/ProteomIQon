@@ -530,7 +530,8 @@ module AlignmentBasedQuantStatistics_v2 =
         | Positive
         | Ambiguous
         | Negative
-        /// The own PSM quantification has no finite scan time, sd or quant; the ion is scored like a new ion.
+        /// The own PSM quantification has no finite scan time, sd or quant. Without a finite own scan time the ion is scored like a
+        /// new ion and its alignment row replaces the PSM row; otherwise the PSM row is kept and the alignment row is not written.
         | NoTruth
 
     ///
