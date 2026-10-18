@@ -31,7 +31,8 @@ module PSMBasedQuantificationTIMs =
             TimsPeaks.sortPeakArraysByMz
                 (ps |> Array.map (fun p -> p.Mz))
                 (ps |> Array.map (fun p -> p.Intensity))
-                (ps |> Array.map (fun p -> if Double.IsNaN p.Mz then nan else p.IonMobility.Value))
+                // a peak without ion mobility gets NaN and falls outside every ion mobility window
+                (ps |> Array.map (fun p -> match p.IonMobility with Some im when not (Double.IsNaN p.Mz) -> im | _ -> nan))
 
         /// Reads the peaks of a spectrum sorted by m/z. The layout of TIMS spectra is decoded from the peak data directly
         /// (TimsPeaks), other layouts are read by MzIO.
