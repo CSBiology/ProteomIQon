@@ -240,7 +240,7 @@ module SpectrumIndex =
         }
 
     /// The MS2 headers of the run in scan time order, equal scan times in file order, from one pass over the spectrum
-    /// descriptions. A description that cannot be read and a MS2 without ID, scan time >= 0, precursor m/z above the
+    /// descriptions. A description that cannot be read and a MS2 without ID, finite scan time, precursor m/z above the
     /// proton mass or with a negative charge are logged with log and skipped.
     let readMs2Headers (reader: MzIO.MzSQL.MzSQL) (runID: string) (log: string -> unit) =
         let headers = ResizeArray<Ms2Header>()
@@ -250,7 +250,7 @@ module SpectrumIndex =
                 log (sprintf "spectrum at position %i cannot be read: %s" position h.Error)
             elif h.MsLevel = Some 2 &&
                  (String.IsNullOrWhiteSpace h.ID ||
-                  not (h.ScanTime |> Option.exists (fun x -> isFinite x && x >= 0.)) ||
+                  not (h.ScanTime |> Option.exists isFinite) ||
                   not (h.PrecursorMz |> Option.exists (fun x -> isFinite x && x > BioFSharp.Mass.Table.PMassInU)) ||
                   (h.ChargeState |> Option.exists (fun x -> x < 0))) then
                 log (sprintf "spectrum at position %i has missing or invalid search metadata; skipped." position)
