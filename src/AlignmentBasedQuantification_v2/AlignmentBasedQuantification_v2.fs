@@ -1354,7 +1354,6 @@ module AlignmentBasedQuantification_v2 =
             newIdx |> Array.exists (fun i ->
                 let ion = toExtract.[i]
                 ion.Row < n && isFinite ion.Request.ImLow && isFinite ion.Align.PredictedIonMobility && isFinite ion.Align.PredictedIonMobilitySd)
-        let eager = ownHasIm || not newMayHaveIm
         let mutable training =
             analysedOwn
             |> Array.choose (fun a ->
@@ -1362,6 +1361,8 @@ module AlignmentBasedQuantification_v2 =
                 | Some qp when abs (getTargetScanTimeDifference qp) / getTargetStabw qp < 2. -> Some (a, qp)
                 | _ -> None
                 )
+        // the new ions are fitted as soon as they are analysed if the second pass cannot change the model; with too few training ions there is none
+        let eager = ownHasIm || not newMayHaveIm || training.Length < minTrainingIons
         let fitOn (featureSet: int []) (ions: (AnalysedIon*QuantificationResult) []) =
             let x = ions |> Array.collect (fun (a, _) -> a.Candidates |> Array.map (fun c -> c.Features))
             let y = ions |> Array.collect (fun (a, qp) -> a.Candidates |> Array.map (fun c -> if isCorrect qp c then 1. else 0.))
