@@ -970,6 +970,9 @@ module AlignmentBasedQuantStatistics_v2 =
                 let qNew =
                     if not useDecoys then
                         qWrong
+                    elif own.Length < minRunDecoys && pooledDecoys.Length = 0 then
+                        runLogger.Warn (sprintf "%s: the runs to score have no decoy transfers; AlignmentQValue does not include the false discovery rate of absent analytes." run.Name)
+                        qWrong
                     else
                         let pDecoy = if own.Length >= minRunDecoys then own else pooledDecoys
                         let newIonCount = newIons.Length + run.NewWithoutRow
