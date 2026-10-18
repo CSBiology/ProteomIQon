@@ -22,3 +22,4 @@
 * Breaking: .align files of earlier QuantBasedAlignment releases cannot be read, the runs have to be aligned again
 * Leave the labeled partner empty in the alignment row of an ion that has a fitted PSM based row of its own
 * Update MzIO to 0.1.8, MzIO.Processing to 0.1.8, MzIO.SQL to 0.1.10 and MzIO.MzML to 0.1.11
+* Read the isotope patterns from the table IsotopePattern of the peptide data base where PSMStatistics stored them and compute them otherwise

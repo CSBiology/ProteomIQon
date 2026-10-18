@@ -217,6 +217,66 @@ let selectAllProtein cn =
             yield (reader.GetValue(0), reader.GetValue(1))
     ]
 
+/// The parameters with the second derivative peak detection instead of the wavelet. FSharpStats'.Wavelet.identify ignores its parameters and pads the XIC borders
+/// with unseeded random numbers, so the quantification with the wavelet differs from run to run. The second derivative has no randomness, but initSpline shuffles the ions
+/// of the m/z correction once there are 500 PSMs or more; the 3 PSMs of the test data stay below that.
+let secondDerivativeParams (json: string) =
+    Text.RegularExpressions.Regex.Replace(
+        json,
+        "\"XicProcessing\":\s*\{\s*\"Case\":\s*\"Wavelet\".*?\}\s*\]\s*\}",
+        "\"XicProcessing\": {\"Case\": \"SecondDerivative\", \"Fields\": [{\"MinSNR\": 0.01, \"PolynomOrder\": 3, \"WindowSize\": {\"Case\": \"Fixed\", \"Fields\": [7]}}]}",
+        Text.RegularExpressions.RegexOptions.Singleline)
+
+/// Runs a quantification tool on a peptide data base without the isotope patterns and on a copy that PSMStatistics' store filled with the patterns of the
+/// ions of the .qpsm: the logs of the tools show that the first computed every pattern and the second read them, and the .quant files have to be byte identical.
+/// The wavelet pads randomly, so with deterministic = false the .quant files only have to hold the same ions.
+let isotopePatternEquivalenceCase name (tool: string) (dataDirectory: string) (paramsFile: string) (editParams: string -> string) (deterministic: bool) =
+    testCase name <| fun _ ->
+        let relToDirectory = getRelativePath baseDir
+        let inDirectory = relToDirectory (sprintf "../../../data/%s/in/" dataDirectory)
+        let work = Path.Combine(Path.GetTempPath(), sprintf "isotopePatterns_%s" (Guid.NewGuid().ToString "N"))
+        Directory.CreateDirectory work |> ignore
+        // copies, as the tools lock the mzlite
+        let mzlite = Path.Combine(work, "minimal.mzlite")
+        let qpsm = Path.Combine(work, "minimal.qpsm")
+        let quantParams = Path.Combine(work, paramsFile)
+        File.Copy(Path.Combine(inDirectory, "minimal.mzlite"), mzlite)
+        File.Copy(Path.Combine(inDirectory, "minimal.qpsm"), qpsm)
+        File.WriteAllText(quantParams, editParams (File.ReadAllText (Path.Combine(inDirectory, paramsFile))))
+        let dbName = Directory.GetFiles(inDirectory, "*.db") |> Array.exactlyOne
+        let dbWithout = Path.Combine(work, "without.db")
+        let dbWith = Path.Combine(work, "with.db")
+        File.Copy(dbName, dbWithout)
+        File.Copy(dbName, dbWith)
+        ProteomIQon.IsotopePatterns.store (NLog.LogManager.CreateNullLogger()) dbWith (readIons qpsm)
+        let quantExe = toolDll tool
+        let run (db: string) (outDirectory: string) =
+            runDotNet (sprintf "%s -i %s -ii %s -o %s -p %s -d %s" quantExe mzlite qpsm outDirectory quantParams db) baseDir
+            let log = File.ReadAllText (Path.Combine(outDirectory, "minimal_log.txt"))
+            let m = Text.RegularExpressions.Regex.Match(log, @"Isotope patterns: (\d+) read from the peptide data base, (\d+) computed")
+            Expect.isTrue m.Success "the log has the counts of the isotope patterns"
+            File.ReadAllBytes (Path.Combine(outDirectory, "minimal.quant")), int m.Groups.[1].Value, int m.Groups.[2].Value
+        let quantWithout, storedWithout, computedWithout = run dbWithout (Path.Combine(work, "without"))
+        let quantWith, storedWith, computedWith = run dbWith (Path.Combine(work, "with"))
+        let isFilled = hasIsotopePatternTable dbWith
+        GC.Collect()
+        GC.WaitForPendingFinalizers()
+        try Directory.Delete(work, true) with _ -> ()
+        Expect.isTrue isFilled "the store filled the data base"
+        Expect.equal storedWithout 0 "without the table nothing is read"
+        Expect.isGreaterThan computedWithout 0 "without the table the patterns are computed"
+        Expect.isGreaterThan storedWith 0 "with the table the patterns are read"
+        Expect.equal computedWith 0 "with the table no pattern is computed"
+        Expect.equal storedWith computedWithout "the same patterns are requested"
+        if deterministic then
+            Expect.isTrue (quantWith = quantWithout) "the .quant files are byte identical"
+        else
+            // the wavelet pads randomly: the same ions in the same order
+            let ionsOf (quant: byte[]) =
+                Text.Encoding.UTF8.GetString(quant).Split('\n')
+                |> Array.map (fun line -> String.Join("\t", line.Split('\t') |> Array.truncate 3))
+            Expect.equal (ionsOf quantWith) (ionsOf quantWithout) "the .quant files have the same ions"
+
 [<Tests>]
 let pipelineTests =
     testList "Pipeline" [
@@ -534,6 +594,14 @@ let pipelineTests =
             Expect.isGreaterThan requests 0 "the .qpsm holds ions"
             Expect.equal (stored, computed) (requests, 0) "the data base holds the patterns of the ions"
             Expect.equal rows requests "each pattern is stored once"
+
+        // sequenced, as the tools lock the data bases they read and the runs compare the CPU bound tools
+        isotopePatternEquivalenceCase "PSMBasedQuantificationIsotopePatterns" "PSMBasedQuantification" "PSMBasedQuantification" "QuantificationParams.json" secondDerivativeParams true |> testSequenced
+        isotopePatternEquivalenceCase "PSMBasedQuantificationIsotopePatternsLabelFree" "PSMBasedQuantification" "PSMBasedQuantification" "QuantificationParams.json" (fun json -> (secondDerivativeParams json).Replace("N15Labeling", "Unlabeled")) true |> testSequenced
+        isotopePatternEquivalenceCase "PSMBasedQuantificationWaveletIsotopePatterns" "PSMBasedQuantification" "PSMBasedQuantification" "QuantificationParams.json" id false |> testSequenced
+        isotopePatternEquivalenceCase "PSMBasedQuantificationTIMsIsotopePatterns" "PSMBasedQuantificationTIMs" "PSMBasedQuantificationTIMs" "QuantificationTIMsParams.json" id true |> testSequenced
+        isotopePatternEquivalenceCase "PSMBasedQuantificationTIMsLabelledIsotopePatterns" "PSMBasedQuantificationTIMs" "PSMBasedQuantificationTIMs" "QuantificationTIMsParams.json" (fun json -> json.Replace("Unlabeled", "N15Labeling")) true |> testSequenced
+        isotopePatternEquivalenceCase "PSMBasedQuantificationTIMsWaveletIsotopePatterns" "PSMBasedQuantificationTIMs" "PSMBasedQuantificationTIMs" "QuantificationTIMsWaveletParams.json" id false |> testSequenced
 
         testCase "MsFraggerToPSM" <| fun _ ->
             let relToDirectory = getRelativePath baseDir
