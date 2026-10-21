@@ -1666,3 +1666,7 @@ module AlignmentBasedQuantification_v2 =
                     (decoyRows |> Array.countBy (fun (_, _, f) -> f.Status) |> Array.map (fun (s, c) -> sprintf "%s: %i" s c) |> String.concat ", ")
                     decoySkips.Summary (elapsed ())
                 )
+        // AlignmentBasedQuantStatistics reads <run>.aligndecoy whenever it exists, so the decoys of an earlier run would be used
+        elif File.Exists decoyFilePath then
+            File.Delete decoyFilePath
+            logger.Info (sprintf "%s: DecoyFraction is 0; %s of an earlier run deleted" runName decoyFilePath)
