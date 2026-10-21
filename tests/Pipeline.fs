@@ -359,39 +359,50 @@ let parseFloat (s: string) = Double.Parse(s, Globalization.CultureInfo.Invariant
 /// 01 to 03, with the MS1 spectra 2 min around it, their peaks within m/z 448.5 to 500, and the peptide data base rows of their ions.
 let alignmentRuns = [| "UPS1_01"; "UPS1_02"; "UPS1_03" |]
 
-/// Runs QuantBasedAlignment_v2, AlignmentBasedQuantification_v2 and AlignmentBasedQuantStatistics_v2 on the three UPS1 runs twice and
-/// returns the output files of both runs (path relative to the run folder -> bytes); the output folders are deleted. Shared by the tests
-/// of both tools, which run at the same time.
+/// Runs QuantBasedAlignment_v2, AlignmentBasedQuantification_v2 and AlignmentBasedQuantStatistics_v2 on the runs of a test data folder
+/// (mzlite, quant, peptide data base and the ABQ params file in its in folder) twice and returns the output files of both runs (path
+/// relative to the run folder -> bytes); the output folders are deleted.
+let runAlignmentChain (dataFolder: string) (dbFile: string) (abqParamsFile: string) (statsParamsFile: string) =
+    let relToDirectory = getRelativePath baseDir
+    let inDirectory = relToDirectory (sprintf "../../../data/%s/in" dataFolder)
+    let quant = Path.Combine(inDirectory, "quant")
+    let abqParams = Path.Combine(inDirectory, abqParamsFile)
+    let statsParams = relToDirectory statsParamsFile
+    let run (name: string) =
+        let outDirectory = relToDirectory (sprintf "../../../data/%s/out/%s" dataFolder name)
+        if Directory.Exists outDirectory then Directory.Delete(outDirectory, true)
+        let mzlite = Path.Combine(outDirectory, "mzlite")
+        Directory.CreateDirectory mzlite |> ignore
+        // copies, as the tool locks the mzlite and the peptide data base
+        for file in Directory.GetFiles(Path.Combine(inDirectory, "mzlite")) do
+            File.Copy(file, Path.Combine(mzlite, Path.GetFileName file))
+        let db = Path.Combine(outDirectory, dbFile)
+        File.Copy(Path.Combine(inDirectory, dbFile), db)
+        let align, abq, stats = Path.Combine(outDirectory, "align"), Path.Combine(outDirectory, "abq"), Path.Combine(outDirectory, "stats")
+        runDotNet (sprintf "%s -i %s -ii %s -o %s" (toolDll "QuantBasedAlignment_v2") quant quant align) baseDir
+        runDotNet (sprintf "%s -i %s -ii %s -iv %s -d %s -o %s -p %s -mf" (toolDll "AlignmentBasedQuantification_v2") mzlite align quant db abq abqParams) baseDir
+        runDotNet (sprintf "%s -i %s -ii %s -iii %s -l %s -ll %s -lll %s -o %s -p %s -mf" (toolDll "AlignmentBasedQuantStatistics_v2") quant align abq quant align abq stats statsParams) baseDir
+        let files =
+            [ for folder in [ align; abq; stats ] do
+                for file in Directory.GetFiles folder do
+                    yield sprintf "%s/%s" (Path.GetFileName folder) (Path.GetFileName file), File.ReadAllBytes file ]
+            |> Map.ofList
+        deleteDirectory outDirectory
+        files
+    run "first", run "second"
+
+/// The chain on the three UPS1 runs. Shared by the tests of both tools, which run at the same time.
 let alignmentChainOutputs =
-    lazy (
-        let relToDirectory = getRelativePath baseDir
-        let inDirectory = relToDirectory "../../../data/AlignmentBasedQuantification_v2/in"
-        let quant = Path.Combine(inDirectory, "quant")
-        let abqParams = Path.Combine(inDirectory, "AlignmentBasedQuantificationParams.json")
-        let statsParams = relToDirectory "../../../data/AlignmentBasedQuantStatistics_v2/in/AlignmentBasedQuantStatisticsParams.json"
-        let run (name: string) =
-            let outDirectory = relToDirectory ("../../../data/AlignmentBasedQuantification_v2/out/" + name)
-            if Directory.Exists outDirectory then Directory.Delete(outDirectory, true)
-            let mzlite = Path.Combine(outDirectory, "mzlite")
-            Directory.CreateDirectory mzlite |> ignore
-            // copies, as the tool locks the mzlite and the peptide data base
-            for file in Directory.GetFiles(Path.Combine(inDirectory, "mzlite")) do
-                File.Copy(file, Path.Combine(mzlite, Path.GetFileName file))
-            let db = Path.Combine(outDirectory, "UPS1.db")
-            File.Copy(Path.Combine(inDirectory, "UPS1.db"), db)
-            let align, abq, stats = Path.Combine(outDirectory, "align"), Path.Combine(outDirectory, "abq"), Path.Combine(outDirectory, "stats")
-            runDotNet (sprintf "%s -i %s -ii %s -o %s" (toolDll "QuantBasedAlignment_v2") quant quant align) baseDir
-            runDotNet (sprintf "%s -i %s -ii %s -iv %s -d %s -o %s -p %s -mf" (toolDll "AlignmentBasedQuantification_v2") mzlite align quant db abq abqParams) baseDir
-            runDotNet (sprintf "%s -i %s -ii %s -iii %s -l %s -ll %s -lll %s -o %s -p %s -mf" (toolDll "AlignmentBasedQuantStatistics_v2") quant align abq quant align abq stats statsParams) baseDir
-            let files =
-                [ for folder in [ align; abq; stats ] do
-                    for file in Directory.GetFiles folder do
-                        yield sprintf "%s/%s" (Path.GetFileName folder) (Path.GetFileName file), File.ReadAllBytes file ]
-                |> Map.ofList
-            deleteDirectory outDirectory
-            files
-        run "first", run "second"
-    )
+    lazy (runAlignmentChain "AlignmentBasedQuantification_v2" "UPS1.db" "AlignmentBasedQuantificationParams.json" "../../../data/AlignmentBasedQuantStatistics_v2/in/AlignmentBasedQuantStatisticsParams.json")
+
+/// The three labeled runs of the alignment test: a 4 minute, 50 m/z slice (fitted scan time 31 to 35 min, light and heavy m/z 500 to 550)
+/// of the 14N/15N Chlamydomonas TripleTOF runs 3501, 3509 and 3517 of a dilution series, with the MS1 spectra 2 min around it, their peaks
+/// within m/z 498.5 to 555, and the peptide data base rows of their ions.
+let labeledAlignmentRuns = [| "Chlamy_3501"; "Chlamy_3509"; "Chlamy_3517" |]
+
+/// The chain on the three labeled runs with PerformLabeledQuantification.
+let labeledAlignmentChainOutputs =
+    lazy (runAlignmentChain "AlignmentLabeled" "Chlamy.db" "AlignmentBasedQuantificationParams.json" "../../../data/AlignmentLabeled/in/AlignmentBasedQuantStatisticsParams.json")
 
 /// The rows of an output of the alignment chain as maps from column name to cell.
 let alignmentOutputRows (files: Map<string, byte[]>) (file: string) =
@@ -1052,6 +1063,68 @@ let pipelineTests =
                 for (highScore, highQ), (lowScore, lowQ) in scores |> Array.sortByDescending fst |> Array.pairwise do
                     Expect.isTrue (if lowScore = highScore then lowQ = highQ else lowQ >= highQ) (sprintf "%s: q-value %f at score %f, %f at score %f" run highQ highScore lowQ lowScore)
                 passing <- passing + (scores |> Array.filter (fun (_, q) -> q <= 0.05) |> Array.length)
+            Expect.isGreaterThan passing 0 "new ions pass q <= 0.05"
+
+        testCase "AlignmentBasedQuantification_v2 and AlignmentBasedQuantStatistics_v2 labeled" <| fun _ ->
+            // 14N/15N runs: ions whose labeled partner the run quantified through its PSM based row are not transferred
+            let first, second = labeledAlignmentChainOutputs.Force()
+            let mutable passing = 0
+            for run in labeledAlignmentRuns do
+                for file in [ sprintf "align/%s.align" run; sprintf "abq/%s.quant" run; sprintf "abq/%s.alignfeatures" run; sprintf "abq/%s.aligndecoy" run; sprintf "stats/%s.quant" run ] do
+                    Expect.isTrue (first.ContainsKey file) (sprintf "%s is written" file)
+                    Expect.isTrue (first.[file] = second.[file]) (sprintf "%s is the same in both runs" file)
+                let abqLog = Text.Encoding.UTF8.GetString first.[sprintf "abq/%s_log.txt" run]
+                let statsLog = Text.Encoding.UTF8.GetString first.[sprintf "stats/%s_log.txt" run]
+                let align = alignmentOutputRows first (sprintf "align/%s.align" run)
+                let features = alignmentOutputRows first (sprintf "abq/%s.alignfeatures" run)
+                let quant = alignmentOutputRows first (sprintf "abq/%s.quant" run)
+                let skipped = features |> Array.filter (fun row -> row.["Status"] = ProteomIQon.Dto.LabeledPartnerQuantifiedStatus)
+                Expect.equal (features |> Array.map ionKey) (align |> Array.map ionKey) (sprintf "%s: one .alignfeatures row per .align row" run)
+                Expect.isGreaterThan skipped.Length 0 (sprintf "%s: ions are not transferred because their labeled partner is PSM based" run)
+                // the entry of the reason in the list of not quantified ions: "not quantified: a: 1, b: 2 (time)"
+                let entry = Text.RegularExpressions.Regex(sprintf "(not quantified: |, )%s: %i(,| \(|\r?$)" (Text.RegularExpressions.Regex.Escape ProteomIQon.Dto.LabeledPartnerQuantifiedStatus) skipped.Length, Text.RegularExpressions.RegexOptions.Multiline)
+                Expect.isTrue (entry.IsMatch abqLog) (sprintf "%s: ABQ logs the ions of the labeled partner" run)
+                Expect.stringContains statsLog (sprintf "(left out: %i ions quantified through their labeled partner's PSM based row)" skipped.Length) (sprintf "%s: Stats leaves the ions out" run)
+                // the rule: no PSM row of its own with a fitted peak, and the PSM row of the partner has a fitted peak and a quantity of the label of the ion
+                let psmHeader, psmCells = readTable (getRelativePath baseDir (sprintf "../../../data/AlignmentLabeled/in/quant/%s.quant" run))
+                let cell (cells: string[]) (name: string) = cells.[psmHeader.[name]]
+                let psmKey (cells: string[]) = cell cells "StringSequence", cell cells "GlobalMod", cell cells "Charge"
+                let psmIons = psmCells |> Array.map psmKey |> Set.ofArray
+                // fitted peak as in AlignmentBasedQuantification: scan time and sd at positions 1 and 2 of the parameters of the label of the row
+                let hasFittedPeak (cells: string[]) =
+                    let parameters = (cell cells (if cell cells "GlobalMod" = "0" then "Params_Light" else "Params_Heavy")).Split ';'
+                    parameters.Length > 2 && Double.IsFinite (parseFloat parameters.[1]) && parseFloat parameters.[2] > 0.
+                // the ions with a PSM row that has a fitted own peak
+                let ownFitted = psmCells |> Array.filter hasFittedPeak |> Array.map psmKey |> Set.ofArray
+                // (sequence, global modification, charge) of the ions whose partner row has a fitted peak and a quantity of the label of the ion
+                let partnerQuantified =
+                    psmCells
+                    |> Array.filter (fun cells ->
+                        let ionLabel = if cell cells "GlobalMod" = "0" then "Heavy" else "Light"
+                        hasFittedPeak cells
+                        && (let q = parseFloat (cell cells ("Quant_" + ionLabel)) in Double.IsFinite q && q > 0.))
+                    |> Array.map (fun cells -> cell cells "StringSequence", (if cell cells "GlobalMod" = "0" then "1" else "0"), cell cells "Charge")
+                    |> Set.ofArray
+                for row in features do
+                    let expected = not (ownFitted.Contains (ionKey row)) && partnerQuantified.Contains (ionKey row)
+                    Expect.equal (row.["Status"] = ProteomIQon.Dto.LabeledPartnerQuantifiedStatus) expected (sprintf "%s: %A is skipped exactly by the rule" run (ionKey row))
+                // none of them has a transferred row
+                let alignmentRows = quant |> Array.filter (fun row -> row.["QuantificationSource"] = "Alignment")
+                let transferred = alignmentRows |> Array.map ionKey |> Set.ofArray
+                for row in skipped do
+                    Expect.isFalse (transferred.Contains (ionKey row)) (sprintf "%s: %A has no transferred row" run (ionKey row))
+                // the transferred ions have a quantity of their own label
+                Expect.isNonEmpty alignmentRows (sprintf "%s: ions are transferred" run)
+                for row in alignmentRows do
+                    let own = if row.["GlobalMod"] = "0" then "Quant_Light" else "Quant_Heavy"
+                    Expect.isGreaterThan (parseFloat row.[own]) 0. (sprintf "%s: %A has a quantity" run (ionKey row))
+                // the new ions are scored
+                let scored = alignmentOutputRows first (sprintf "stats/%s.quant" run) |> Array.filter (fun row -> row.["QuantificationSource"] = "Alignment")
+                Expect.equal (scored |> Array.map ionKey |> Set.ofArray) (alignmentRows |> Array.filter (fun row -> not (psmIons.Contains (ionKey row))) |> Array.map ionKey |> Set.ofArray) (sprintf "%s: the new ions are scored" run)
+                for row in scored do
+                    let score, qValue = parseFloat row.["AlignmentScore"], parseFloat row.["AlignmentQValue"]
+                    Expect.isTrue (score >= 0. && score <= 1. && qValue >= 0. && qValue <= 1.) (sprintf "%s: %A has a score %f and q-value %f in [0, 1]" run (ionKey row) score qValue)
+                passing <- passing + (scored |> Array.filter (fun row -> parseFloat row.["AlignmentQValue"] <= 0.05) |> Array.length)
             Expect.isGreaterThan passing 0 "new ions pass q <= 0.05"
 
         testCase "ProteinInference" <| fun _ ->
