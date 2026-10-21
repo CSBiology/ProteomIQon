@@ -48,11 +48,13 @@ module TimsPeaks =
     let initReadPeakArrays (reader: MzIO.MzSQL.MzSQL) (fallback: Peak1DArray -> 'T) (ofArrays: float[] -> float[] -> float[] -> 'T) =
         let cmd = new SQLiteCommand("SELECT PeakArray, PeakData FROM Spectrum WHERE SpectrumID = @spectrumID", reader.Connection)
         let spectrumIDParameter = cmd.Parameters.Add("@spectrumID", Data.DbType.String)
-        let inflate (data: byte[]) (offset: int) (length: int) =
+        let inflate (spectrumID: string) (data: byte[]) (offset: int) (length: int) =
             use input = new IO.MemoryStream(data, offset, length)
             use deflate = new IO.Compression.DeflateStream(input, IO.Compression.CompressionMode.Decompress)
             use output = new IO.MemoryStream()
             deflate.CopyTo output
+            if output.Length % 8L <> 0L then
+                failwithf "The peak data of spectrum %s hold an array of %i bytes, which is not a whole number of float64 values." spectrumID output.Length
             let values = Array.zeroCreate<float> (int output.Length / 8)
             Buffer.BlockCopy(output.GetBuffer(), 0, values, 0, values.Length * 8)
             values
@@ -76,7 +78,7 @@ module TimsPeaks =
                 let mutable position = 0
                 let next () =
                     let length = BitConverter.ToInt32(data, position)
-                    let values = inflate data (position + 4) length
+                    let values = inflate spectrumID data (position + 4) length
                     position <- position + 4 + length
                     values
                 let intensities = next ()
