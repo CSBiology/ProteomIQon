@@ -893,7 +893,10 @@ module AlignmentBasedQuantStatistics_v2 =
         let calibrationOf (heldOut: ((string * Ion) * float) []) =
             let calibrationSet = heldOut |> Array.filter (fun ((_, ion), _) -> ion.Truth.Value <> Ambiguous)
             fitPlatt (calibrationSet |> Array.map snd) (calibrationSet |> Array.map (fun ((_, ion), _) -> ion.Truth.Value = Positive))
-        let folds, heldOut =
+        // Platt needs both classes: on one class it fits p near 0 or 1 for every score, and without ions it keeps (1, 0)
+        let bothClasses (heldOut: ((string * Ion) * float) []) =
+            heldOut |> Array.exists (fun ((_, ion), _) -> ion.Truth.Value = Positive) && heldOut |> Array.exists (fun ((_, ion), _) -> ion.Truth.Value = Negative)
+        let fitted, heldOut, ownCalibration =
             [| 0 .. p.NumberOfFolds - 1 |]
             |> Array.map (fun f ->
                 let train = evaluated |> Array.filter (fun (_, ion) -> foldOf.[ion.Key.PepSequenceID] <> f && (ion.Truth.Value = Positive || ion.Truth.Value = Negative))
@@ -909,11 +912,31 @@ module AlignmentBasedQuantStatistics_v2 =
                         (Array.append labels (Array.create decoys.Length false))
                 let fold0 = { Medians = medians; Model = model; Calibration = (1., 0.) }
                 let heldOutScores = rawScores mlContext fold0 (heldOut |> Array.map (snd >> featureVector fs))
-                let calibration = calibrationOf (Array.zip heldOut heldOutScores)
-                logger.Info (sprintf "Fold %i: %i training ions (%i positive), %i decoys, %i held out, Platt a %.4f b %.4f" f train.Length (labels |> Array.filter id |> Array.length) decoys.Length heldOut.Length (fst calibration) (snd calibration))
-                { fold0 with Calibration = calibration }, Array.zip heldOut heldOutScores
+                let scored = Array.zip heldOut heldOutScores
+                if bothClasses scored then
+                    let calibration = calibrationOf scored
+                    logger.Info (sprintf "Fold %i: %i training ions (%i positive), %i decoys, %i held out, Platt a %.4f b %.4f" f train.Length (labels |> Array.filter id |> Array.length) decoys.Length heldOut.Length (fst calibration) (snd calibration))
+                    { fold0 with Calibration = calibration }, scored, true
+                else
+                    logger.Info (sprintf "Fold %i: %i training ions (%i positive), %i decoys, %i held out" f train.Length (labels |> Array.filter id |> Array.length) decoys.Length heldOut.Length)
+                    fold0, scored, false
                 )
-            |> Array.unzip
+            |> Array.unzip3
+        // a fold whose held-out ions are not of both classes is calibrated on the held-out ions of all folds, as the out-of-fold
+        // check pools the scores of several fold models; they have both classes, since every fold's training ions have
+        let folds =
+            if Array.forall id ownCalibration then
+                fitted
+            else
+                let pooled = calibrationOf (Array.concat heldOut)
+                fitted
+                |> Array.mapi (fun f fold ->
+                    if ownCalibration.[f] then
+                        fold
+                    else
+                        logger.Warn (sprintf "Fold %i: the held-out ions are not of both classes; Platt on the held-out ions of all folds a %.4f b %.4f" f (fst pooled) (snd pooled))
+                        { fold with Calibration = pooled }
+                    )
         // out-of-fold probabilities of the check: the scores of a fold are calibrated on the held-out scores of the other
         // folds, so that the check does not use a calibration fitted on the ions it checks
         let oof =
