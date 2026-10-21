@@ -1158,10 +1158,25 @@ module AlignmentBasedQuantification_v2 =
                 isotopes.[key] <- peaks
                 peaks
 
+        // an ion without a fitted quantification of its own in the run (no PSM based row, or one without a fitted peak) whose labeled partner
+        // the run quantified through its own PSM based row with a fitted peak, with a value of the label of the ion, is not transferred:
+        // the PSM based row has more evidence than a match through alignment
+        let labeledPartnerQuantified (align: AlignmentResultV2) =
+            processParams.PerformLabeledQuantification
+            && not (psm.OwnQuant.ContainsKey ((align.StringSequence, align.GlobalMod, align.Charge)))
+            && (match psm.OwnQuant.TryGetValue ((align.StringSequence, (if align.GlobalMod = 0 then 1 else 0), align.Charge)) with
+                | true, qp ->
+                    let value = if align.GlobalMod = 0 then qp.Quant_Light else qp.Quant_Heavy
+                    isFinite value && value > 0.
+                | _ -> false)
+
         // windows per ion
         let prepare (row: int) (align: AlignmentResultV2) =
             guarded row "window preparation" <| fun () ->
-                if not processParams.PerformLabeledQuantification && align.GlobalMod <> 0 then
+                if row < n && labeledPartnerQuantified align then
+                    dropIon row LabeledPartnerQuantifiedStatus
+                    None
+                elif not processParams.PerformLabeledQuantification && align.GlobalMod <> 0 then
                     dropIon row "label-free quantification of an ion with GlobalMod <> 0"
                     None
                 elif not (isFinite align.PredictedScanTime) then

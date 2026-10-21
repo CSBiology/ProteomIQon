@@ -100,6 +100,9 @@ deviation of its centre.
 With `PerformLabeledQuantification` the partner of the other label is extracted with the same windows. Its peak is taken at the fitted
 scan time of the ion. A partner that cannot be quantified keeps its m/z and traces but gets no quantity, and the row is kept.
 
+An ion that the run did not quantify itself is not transferred when the PSM based row of its labeled partner has a fitted peak and a
+quantity of the ion's label. Its `Status` is `labeled partner quantified by its PSM based row`.
+
 ## Inputs and outputs
 
 | Flag | Meaning | Comes from |

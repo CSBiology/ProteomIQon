@@ -1162,6 +1162,11 @@ module Dto =
             PredictedIonMobilitySd       : float
         }
 
+    /// Status of an ion in the .alignfeatures file of AlignmentBasedQuantification_v2 that is not transferred because its labeled partner
+    /// was quantified through the PSM based row of the run. AlignmentBasedQuantStatistics_v2 does not count these ions as missing.
+    [<Literal>]
+    let LabeledPartnerQuantifiedStatus = "labeled partner quantified by its PSM based row"
+
     /////
     //type AlignmentModelMetrics<'Metrics> = 
     //    {
