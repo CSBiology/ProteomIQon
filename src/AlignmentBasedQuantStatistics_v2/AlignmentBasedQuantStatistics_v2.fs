@@ -564,7 +564,8 @@ module AlignmentBasedQuantStatistics_v2 =
             Ions       : Ion []
             /// The values of the SelectionModel column of the .alignfeatures file.
             SelectionModels : string []
-            /// New ions of the .align file without alignment row.
+            /// New ions of the .align file without alignment row, without the ions AlignmentBasedQuantification did not transfer because the
+            /// PSM based row of their labeled partner quantified them.
             NewWithoutRow  : int
             /// The run has a .aligndecoy file (read unless AbsentAnalyteFdr is Off).
             DecoyFile      : bool
@@ -583,8 +584,8 @@ module AlignmentBasedQuantStatistics_v2 =
         | _ ->
             if s = "" then Some nan else None
 
-    /// Reads the numeric columns of the .alignfeatures file of AlignmentBasedQuantification_v2 and the distinct values of its
-    /// SelectionModel column.
+    /// Reads the numeric columns of the .alignfeatures file of AlignmentBasedQuantification_v2, the distinct values of its
+    /// SelectionModel column and the keys of the ions whose Status is LabeledPartnerQuantifiedStatus.
     let readSidecar (logger: NLog.Logger) (path: string) =
         let lines = File.ReadAllLines path
         let header = lines.[0].Split('\t') |> Array.map (fun s -> s.Trim('"', ' '))
@@ -600,18 +601,22 @@ module AlignmentBasedQuantStatistics_v2 =
         if skipped.Length > 0 then
             logger.Info (sprintf "%s: columns that are not numeric and not used: %s" path (String.concat ", " skipped))
         let byIon = Dictionary<IonKey,Dictionary<string,float>>(HashIdentity.Structural)
+        let partnerQuantified = HashSet<IonKey>(HashIdentity.Structural)
+        let statusIndex = Array.IndexOf(header, "Status")
         rows
         |> Array.iteri (fun r row ->
             let key = { StringSequence = row.[keyIndices.[0]].Trim('"', ' '); GlobalMod = int row.[keyIndices.[1]]; Charge = int row.[keyIndices.[2]]; PepSequenceID = int row.[keyIndices.[3]]; ModSequenceID = int row.[keyIndices.[4]] }
             let values = Dictionary<string,float>()
             numeric |> Array.iter (fun (j, column) -> values.[header.[j]] <- (column.[r] |> Option.get))
             byIon.[key] <- values
+            if row.[statusIndex].Trim('"', ' ') = LabeledPartnerQuantifiedStatus then
+                partnerQuantified.Add key |> ignore
             )
         let selectionIndex = Array.IndexOf(header, "SelectionModel")
         let selectionModels = rows |> Array.map (fun row -> row.[selectionIndex].Trim('"', ' ')) |> Array.distinct |> Array.sort
         let names = numeric |> Array.map (fun (j, _) -> header.[j])
         logger.Info (sprintf "%s: %i ions, %i numeric feature columns: %s; selection models: %s" path byIon.Count names.Length (String.concat ", " names) (String.concat ", " selectionModels))
-        byIon, selectionModels
+        byIon, selectionModels, partnerQuantified
 
     let private readQuant (path: string) =
         Csv.CsvReader<QuantificationResult>().ReadFile(path,'\t',false,1)
@@ -667,7 +672,7 @@ module AlignmentBasedQuantStatistics_v2 =
             readQuant alignQuantPath
             |> Array.filter (fun q -> q.QuantificationSource = QuantificationSource.Alignment)
         let sidecarPath = Path.Combine(Path.GetDirectoryName(Path.GetFullPath alignQuantPath), Path.GetFileNameWithoutExtension alignQuantPath + ".alignfeatures")
-        let sidecarByIon, selectionModels = readSidecar logger sidecarPath
+        let sidecarByIon, selectionModels, partnerQuantified = readSidecar logger sidecarPath
         let drops = SortedDictionary<string,int>()
         let seen = HashSet<IonKey>(HashIdentity.Structural)
         let ions =
@@ -699,6 +704,9 @@ module AlignmentBasedQuantStatistics_v2 =
                     }
                 )
         let notQuantified = align.Keys |> Seq.filter (fun key -> seen.Contains key |> not) |> Array.ofSeq
+        // ions AlignmentBasedQuantification did not transfer because the PSM based row of their labeled partner quantified them
+        let notTransferred = notQuantified |> Array.filter (fun key -> partnerQuantified.Contains key)
+        let notQuantified = notQuantified |> Array.filter (fun key -> partnerQuantified.Contains key |> not)
         for key in notQuantified do
             logger.Debug (sprintf ".align ion without alignment row of AlignmentBasedQuantification: %s" (keyName key))
         // decoy transfers of AlignmentBasedQuantification_v2: .quant columns, the shifted PredictedScanTime and the .alignfeatures columns
@@ -706,7 +714,7 @@ module AlignmentBasedQuantStatistics_v2 =
         let decoyFile = p.AbsentAnalyteFdr <> Domain.AbsentAnalyteFdr.Off && File.Exists decoyPath
         let decoys, unscoredDecoys =
             if decoyFile then
-                let byIon, _ = readSidecar logger decoyPath
+                let byIon, _, _ = readSidecar logger decoyPath
                 let decoys =
                     readDecoyQuant decoyPath
                     |> Array.choose (fun row ->
@@ -725,10 +733,10 @@ module AlignmentBasedQuantStatistics_v2 =
             else [||], 0
         let truthCounts = ions |> Array.countBy (fun ion -> match ion.Truth with Some t -> sprintf "%A" t | None -> "New")
         logger.Info (
-            sprintf "%s: %i PSM rows (%i repeated), %i .align rows, %i alignment rows; %i ions scored or used (%s); not used: %s; .align ions without alignment row: %i"
+            sprintf "%s: %i PSM rows (%i repeated), %i .align rows, %i alignment rows; %i ions scored or used (%s); not used: %s; .align ions without alignment row: %i (left out: %i ions quantified through their labeled partner's PSM based row)"
                 name psmRows.Length psmDuplicates alignRows.Length alignmentRows.Length ions.Length
                 (truthCounts |> Array.map (fun (t, c) -> sprintf "%s %i" t c) |> String.concat ", ")
-                (formatCounts drops) notQuantified.Length
+                (formatCounts drops) notQuantified.Length notTransferred.Length
             )
         if decoyFile then
             logger.Info (sprintf "%s: %i decoy transfers, %i with fitted peak" name (decoys.Length + unscoredDecoys) decoys.Length)
