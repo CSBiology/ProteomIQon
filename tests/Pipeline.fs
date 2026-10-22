@@ -678,6 +678,8 @@ let pipelineTests =
                                 nanCasesForUnlabledData 0.9 1.1 test.KLDiv_Observed_Theoretical_Heavy reference.KLDiv_Observed_Theoretical_Heavy
                             "Correlation_Light_Heavy",
                                 nanCasesForUnlabledData 0.99 1.01 test.Correlation_Light_Heavy reference.Correlation_Light_Heavy
+                            "AlignmentQValue",
+                                test.AlignmentQValue = 0.
                             "QuantificationSource",
                                 test.QuantificationSource = reference.QuantificationSource
                         |]
@@ -866,6 +868,8 @@ let pipelineTests =
                                     nanCasesForUnlabledData 0.9 1.1 test.KLDiv_Observed_Theoretical_Heavy reference.KLDiv_Observed_Theoretical_Heavy
                                 "Correlation_Light_Heavy",
                                     nanCasesForUnlabledData 0.99 1.01 test.Correlation_Light_Heavy reference.Correlation_Light_Heavy
+                                "AlignmentQValue",
+                                    test.AlignmentQValue = 0.
                                 "QuantificationSource",
                                     test.QuantificationSource = reference.QuantificationSource
                                 "IonMobility",

@@ -802,7 +802,7 @@ module PSMBasedQuantification =
                     IntensityTrace_Observed_Heavy               = successfulQuant.Y_Xic_uncorrected
                     IntensityTrace_Corrected_Heavy              = successfulQuant.Y_Xic
                     AlignmentScore                              = nan
-                    AlignmentQValue                             = nan
+                    AlignmentQValue                             = 0.
                     IonMobility                                 = nan
                     }
                     |> Option.Some
@@ -855,7 +855,7 @@ module PSMBasedQuantification =
                     IntensityTrace_Observed_Heavy               = [||]
                     IntensityTrace_Corrected_Heavy              = [||]
                     AlignmentScore                              = nan
-                    AlignmentQValue                             = nan
+                    AlignmentQValue                             = 0.
                     IonMobility                                 = nan
                     }
                     |> Option.Some
@@ -949,7 +949,7 @@ module PSMBasedQuantification =
                     IntensityTrace_Observed_Heavy               = averagePSM.Y_Xic_uncorrected
                     IntensityTrace_Corrected_Heavy              = averagePSM.Y_Xic
                     AlignmentScore                              = nan
-                    AlignmentQValue                             = nan
+                    AlignmentQValue                             = 0.
                     IonMobility                                 = nan
                     }
                     |> Option.Some
@@ -1002,7 +1002,7 @@ module PSMBasedQuantification =
                     IntensityTrace_Observed_Heavy               = averagePSM.Y_Xic_uncorrected
                     IntensityTrace_Corrected_Heavy              = averagePSM.Y_Xic
                     AlignmentScore                              = nan
-                    AlignmentQValue                             = nan
+                    AlignmentQValue                             = 0.
                     IonMobility                                 = nan
                     }
                     |> Option.Some
@@ -1085,7 +1085,7 @@ module PSMBasedQuantification =
             IntensityTrace_Observed_Heavy               = [||]
             IntensityTrace_Corrected_Heavy              = [||]
             AlignmentScore                              = nan
-            AlignmentQValue                             = nan
+            AlignmentQValue                             = 0.
             IonMobility                                 = nan
             }
             |> Option.Some

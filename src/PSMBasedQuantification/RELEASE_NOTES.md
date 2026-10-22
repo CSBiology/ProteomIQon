@@ -7,6 +7,7 @@
 * Update BioFSharp.Mz to 0.2.3
 * Speed up the wavelet peak detection with the same results
 * Update MzIO to 0.1.8, MzIO.Processing to 0.1.8, MzIO.SQL to 0.1.10 and MzIO.MzML to 0.1.11
+* Write AlignmentQValue 0 instead of NaN for the .quant rows
 
 #### 0.0.12 - Wednesday, September 2, 2026
 * Fall back to a median mz correction when the smoothing spline cannot be fitted on sparse data
