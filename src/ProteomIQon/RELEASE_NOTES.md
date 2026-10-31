@@ -12,7 +12,6 @@
 * Add CrossValidation to the PSMStatistics EstimationParams
 * Add BaselineAls, the ALS baseline of FSharp.Stats baselineAls' computed faster with the same values, shared by PSMBasedQuantification, PSMBasedQuantificationTIMs and AlignmentBasedQuantification
 * Update BioFSharp.Mz to 0.2.3
-* Add TimsPeaks, the direct decoding of the peak data of TIMS spectra, shared by PSMBasedQuantificationTIMs and AlignmentBasedQuantification
 * Speed up the wavelet peak detection of FSharpStats'.Wavelet with the same results
 * Update MzIO to 0.1.8, MzIO.Processing to 0.1.8, MzIO.SQL to 0.1.10 and MzIO.MzML to 0.1.11
 
