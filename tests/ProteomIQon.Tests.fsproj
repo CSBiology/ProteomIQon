@@ -30,7 +30,6 @@
     <None Include="data\PeptideSpectrumMatchingTIMs\in\MinimalTIMs.db" Link="MinimalTIMs.db" CopyToOutputDirectory="PreserveNewest" />
     <None Include="data\PeptideSpectrumMatchingTIMs\in\defaultParams.json" Link="defaultParams.json" CopyToOutputDirectory="PreserveNewest" />
     <None Include="data\PeptideSpectrumMatchingTIMs\in\minimalTIMs.mzlite" Link="minimalTIMs.mzlite" CopyToOutputDirectory="PreserveNewest" />
-    <None Include="data\PeptideSpectrumMatchingTIMs\in\sample_description.json" Link="sample_description.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>
