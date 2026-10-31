@@ -9,7 +9,6 @@ open Plotly.NET
 open BioFSharp
 open BioFSharp.Mz
 open BioFSharp.Mz.Quantification
-open MzIO.Binary
 open MzIO.Processing
 open Dto
 open Dto.QuantificationResult
@@ -109,14 +108,10 @@ module XicSweep =
 
     open Numerics
 
-    /// Sorts the peaks of a spectrum read by MzIO.
-    let sortPeaks (peaks: Peak1DArray) =
-        let ps = peaks.Peaks |> Seq.toArray
-        let hasIonMobility = ps.Length > 0 && ps.[0].IonMobility.IsSome
-        TimsPeaks.sortPeakArraysByMz
-            (ps |> Array.map (fun p -> p.Mz))
-            (ps |> Array.map (fun p -> p.Intensity))
-            (if hasIonMobility then ps |> Array.map (fun p -> match p.IonMobility with Some im -> im | None -> nan) else [||])
+    /// Reads the peaks of a spectrum sorted by m/z. The ion mobilities are empty when the spectrum has none.
+    let readSortedPeaks (reader: MzIO.MzSQL.MzSQL) (spectrumID: string) =
+        let struct (mzs, intensities, ionMobilities) = reader.ReadSpectrumPeaksAsArrays spectrumID
+        TimsPeaks.sortPeakArraysByMz mzs intensities (if isNull ionMobilities then [||] else ionMobilities)
 
     /// One XIC point: the peak closest to lockMz within +-halfWindow; intensity 0 if there is none.
     /// With ion mobility the peaks inside the ion mobility window (no window if imLow is nan) are first summed per m/z,
@@ -1027,9 +1022,7 @@ module AlignmentBasedQuantification_v2 =
         inReader.Connection.Open()
         let inRunID  = Core.MzIO.Reader.getDefaultRunID inReader
         let ms1 = SpectrumIndex.readMs1Index inReader inRunID (fun message -> logger.Warn message) ignore
-        // TIMS spectra are decoded from the peak data directly, other layouts are read by MzIO
-        let readSpectrum, readSpectrumCommand = TimsPeaks.initReadPeakArrays inReader XicSweep.sortPeaks TimsPeaks.sortPeakArraysByMz
-        use _readSpectrumCommand = readSpectrumCommand
+        let readSpectrum = XicSweep.readSortedPeaks inReader
         let spectraHaveIonMobility =
             ms1
             |> Seq.skip (ms1.Length / 2)

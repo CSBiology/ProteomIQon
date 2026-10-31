@@ -25,20 +25,11 @@ module PSMBasedQuantificationTIMs =
         open MzIO.Processing.MzIOLinq
         open MzIO.Binary
          
-        /// Sorts the peaks of a spectrum by m/z.
-        let sortPeaksByMz (peaks: Peak1DArray) =
-            let ps = peaks.Peaks |> Seq.toArray
-            TimsPeaks.sortPeakArraysByMz
-                (ps |> Array.map (fun p -> p.Mz))
-                (ps |> Array.map (fun p -> p.Intensity))
-                // a peak without ion mobility gets NaN and falls outside every ion mobility window
-                (ps |> Array.map (fun p -> match p.IonMobility with Some im when not (Double.IsNaN p.Mz) -> im | _ -> nan))
-
-        /// Reads the peaks of a spectrum sorted by m/z. The layout of TIMS spectra is decoded from the peak data directly
-        /// (TimsPeaks), other layouts are read by MzIO.
-        /// Returns the read function and its command, which the caller disposes when the file is done.
-        let initReadSortedPeaks (reader: MzIO.MzSQL.MzSQL) =
-            TimsPeaks.initReadPeakArrays reader sortPeaksByMz TimsPeaks.sortPeakArraysByMz
+        /// Reads the peaks of a spectrum sorted by m/z.
+        let readSortedPeaks (reader: MzIO.MzSQL.MzSQL) (spectrumID: string) =
+            let struct (mzs, intensities, ionMobilities) = reader.ReadSpectrumPeaksAsArrays spectrumID
+            // a peak without ion mobility gets NaN and falls outside every ion mobility window
+            TimsPeaks.sortPeakArraysByMz mzs intensities (if isNull ionMobilities then Array.create mzs.Length nan else ionMobilities)
 
         /// Cache of the sorted peaks of MS1 spectra that keeps at most maxEntries spectra. When it is full, the tenth of
         /// the spectra that was used least recently is dropped.
@@ -2313,7 +2304,7 @@ module PSMBasedQuantificationTIMs =
 
         let readSpecPeaksWithMem = FSharpAux.Memoization.memoize inReader.ReadSpectrumPeaks
         ///
-        let readSortedPeaks, readSortedPeaksCommand = Query.initReadSortedPeaks inReader
+        let readSortedPeaks = Query.readSortedPeaks inReader
         // The ions are quantified in the order of their scan time and their XICs read the MS1 spectra of a window of
         // 2 x ScanTimeWindow, so the spectra of twice the widest window are kept instead of all MS1 spectra of the file.
         let peakCache =
@@ -3219,7 +3210,6 @@ module PSMBasedQuantificationTIMs =
                 | Error ex -> logger.Trace (sprintf "Error zipping directory: %A" ex)
         inTr.Commit()
         inTr.Dispose()
-        readSortedPeaksCommand.Dispose()
         inReader.Dispose()
         if peakCache.Reads > 0 then logger.Trace (sprintf "%i MS1 spectra were read for %i MS1s of the file (cache of %i spectra)" peakCache.Reads ms1SortedByScanTime.Length peakCache.Capacity)
         logger.Trace (sprintf "Isotope patterns: %i read from the peptide data base, %i computed" isotopePatterns.Read isotopePatterns.Computed)
