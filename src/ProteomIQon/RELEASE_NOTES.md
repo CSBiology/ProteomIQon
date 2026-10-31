@@ -3,7 +3,6 @@
 * Add IsotopePatterns: the isotope pattern of a peptide at a charge (MIDA, resolution 0.01, minimum probability 0.001) for the quantification tools, its BLOB encoding, the table IsotopePattern of the peptide data base with a look up that reads the table and computes missing patterns, and the function that stores the patterns
 * Add SpectrumIndex (the MS1 index and the MS2 headers from one pass over the spectrum descriptions, skipping with a warning the descriptions that cannot be read) and SortedSearch (binary searches and the closest scan time), and the m/z sort of the peaks of a spectrum in TimsPeaks, shared by the quantification and search tools
 * Use CrossValidation and no PEP cutoff (PepValueThreshold 1.0) in the default PSMStatistics parameters
-* Add SpectrumDescription, a streaming parser of the spectrum description that reads only the fields the spectrum search needs, shared by PeptideSpectrumMatching and PeptideSpectrumMatchingTIMs
 * Add a result type for the .align output of QuantBasedAlignment: the AlignmentResult columns followed by the local scan time error scale, the source run, the source model error and the predicted ion mobility with its error scale
 * Add the parameter record and default parameters of AlignmentBasedQuantification with the candidate window, ion mobility, decoy and seed parameters
 * Add the parameter record and default parameters of AlignmentBasedQuantStatistics with the label, feature, trainer, absent-analyte FDR and seed parameters
