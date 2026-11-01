@@ -504,6 +504,18 @@ module PSMBasedQuantification =
             let fileName = (Path.GetFileNameWithoutExtension instrumentOutput) + ".quant"
             Path.Combine [|outputDir;fileName|]
         logger.Trace (sprintf "outFilePath:%s" outFilePath)
+        logger.Trace "Read scored PSMs"
+        ///
+        let qpsms =
+            Csv.CsvReader<PSMStatisticsResult>(SchemaMode=Csv.Fill).ReadFile(scoredPSMs,'\t',false,1)
+            |> Array.ofSeq
+        logger.Trace "Read scored PSMs:finished"
+        if Array.isEmpty qpsms then
+            logger.Warn (sprintf "%s contains no PSMs, %s gets no quantifications." scoredPSMs outFilePath)
+            Seq.empty<QuantificationResult>
+            |> SeqIO'.csv "\t" true false
+            |> FSharpAux.IO.SeqIO.Seq.writeOrAppend (outFilePath)
+        else
         //
         let plotDirectory =
             let fileName = sprintf "%s_plots" (Path.GetFileNameWithoutExtension instrumentOutput)
@@ -554,13 +566,6 @@ module PSMBasedQuantification =
         /// retTimeIdxed and ms1SortedByScanTime: the MS1s sorted by their scanTime
         let retTimeIdxed, ms1SortedByScanTime = Query.readMs1Index inReader inRunID (fun message -> logger.Warn message)
         logger.Trace (sprintf "Create RetentionTime index and read the ms1s:finished, %i MS1s" ms1SortedByScanTime.Length)
-        
-        logger.Trace "Read scored PSMs"
-        ///
-        let qpsms =
-            Csv.CsvReader<PSMStatisticsResult>(SchemaMode=Csv.Fill).ReadFile(scoredPSMs,'\t',false,1)
-            |> Array.ofSeq
-        logger.Trace "Read scored PSMs:finished"
         
         logger.Trace "Estimate precursor mz standard deviation and mz correction."
         ///

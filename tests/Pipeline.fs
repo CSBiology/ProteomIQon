@@ -227,6 +227,34 @@ let secondDerivativeParams (json: string) =
         "\"XicProcessing\": {\"Case\": \"SecondDerivative\", \"Fields\": [{\"MinSNR\": 0.01, \"PolynomOrder\": 3, \"WindowSize\": {\"Case\": \"Fixed\", \"Fields\": [7]}}]}",
         Text.RegularExpressions.RegexOptions.Singleline)
 
+/// Runs a quantification tool on a .qpsm without PSMs (header only): the tool has to write a warning and a .quant with the header and no rows.
+let emptyQpsmCase name (tool: string) (dataDirectory: string) (paramsFile: string) (editParams: string -> string) =
+    testCase name <| fun _ ->
+        let relToDirectory = getRelativePath baseDir
+        let inDirectory = relToDirectory (sprintf "../../../data/%s/in/" dataDirectory)
+        let work = Path.Combine(Path.GetTempPath(), sprintf "emptyQpsm_%s" (Guid.NewGuid().ToString "N"))
+        Directory.CreateDirectory work |> ignore
+        // copies, as the tools lock the mzlite
+        let mzlite = Path.Combine(work, "minimal.mzlite")
+        let quantParams = Path.Combine(work, paramsFile)
+        File.Copy(Path.Combine(inDirectory, "minimal.mzlite"), mzlite)
+        File.WriteAllText(quantParams, editParams (File.ReadAllText (Path.Combine(inDirectory, paramsFile))))
+        let qpsm = relToDirectory "../../../data/PSMBasedQuantification/in/empty.qpsm"
+        let db = Directory.GetFiles(inDirectory, "*.db") |> Array.exactlyOne
+        let outDirectory = Path.Combine(work, "out")
+        runDotNet (sprintf "%s -i %s -ii %s -o %s -p %s -d %s" (toolDll tool) mzlite qpsm outDirectory quantParams db) baseDir
+        let lines = File.ReadAllLines (Path.Combine(outDirectory, "minimal.quant")) |> Array.filter (fun line -> line <> "")
+        let log = File.ReadAllText (Path.Combine(outDirectory, "empty_log.txt"))
+        GC.Collect()
+        GC.WaitForPendingFinalizers()
+        Directory.Delete(work, true)
+        let expectedHeader =
+            Reflection.FSharpType.GetRecordFields(typeof<ProteomIQon.Dto.QuantificationResult>)
+            |> Array.map (fun field -> field.Name)
+        Expect.stringContains log "contains no PSMs" "the tool warns about the missing PSMs"
+        Expect.equal lines.Length 1 "the .quant has the header and no rows"
+        Expect.equal (lines.[0].Split '\t') expectedHeader "the header is the one of QuantificationResult"
+
 /// Runs a quantification tool on a peptide data base without the isotope patterns and on a copy that PSMStatistics' store filled with the patterns of the
 /// ions of the .qpsm: the logs of the tools show that the first computed every pattern and the second read them, and the .quant files have to be byte identical.
 /// The wavelet pads randomly, so with deterministic = false the .quant files only have to hold the same ions.
@@ -744,6 +772,10 @@ let pipelineTests =
         isotopePatternEquivalenceCase "PSMBasedQuantificationTIMsIsotopePatterns" "PSMBasedQuantificationTIMs" "PSMBasedQuantificationTIMs" "QuantificationTIMsParams.json" id true |> testSequenced
         isotopePatternEquivalenceCase "PSMBasedQuantificationTIMsLabelledIsotopePatterns" "PSMBasedQuantificationTIMs" "PSMBasedQuantificationTIMs" "QuantificationTIMsParams.json" (fun json -> json.Replace("Unlabeled", "N15Labeling")) true |> testSequenced
         isotopePatternEquivalenceCase "PSMBasedQuantificationTIMsWaveletIsotopePatterns" "PSMBasedQuantificationTIMs" "PSMBasedQuantificationTIMs" "QuantificationTIMsWaveletParams.json" id false |> testSequenced
+        emptyQpsmCase "PSMBasedQuantificationEmptyQpsmLabelled" "PSMBasedQuantification" "PSMBasedQuantification" "QuantificationParams.json" id |> testSequenced
+        emptyQpsmCase "PSMBasedQuantificationEmptyQpsmLabelFree" "PSMBasedQuantification" "PSMBasedQuantification" "QuantificationParams.json" (fun json -> json.Replace("N15Labeling", "Unlabeled")) |> testSequenced
+        emptyQpsmCase "PSMBasedQuantificationTIMsEmptyQpsmLabelFree" "PSMBasedQuantificationTIMs" "PSMBasedQuantificationTIMs" "QuantificationTIMsParams.json" id |> testSequenced
+        emptyQpsmCase "PSMBasedQuantificationTIMsEmptyQpsmLabelled" "PSMBasedQuantificationTIMs" "PSMBasedQuantificationTIMs" "QuantificationTIMsParams.json" (fun json -> json.Replace("Unlabeled", "N15Labeling")) |> testSequenced
 
         testCase "MsFraggerToPSM" <| fun _ ->
             let relToDirectory = getRelativePath baseDir
