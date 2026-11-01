@@ -27,6 +27,7 @@ module console1 =
         let mf = results.Contains MatchFiles
         let dc = results.Contains DiagnosticCharts
         let z = results.Contains ZipCharts
+        Core.Charts.useReferenceEqualityForJson ()
         Logging.generateConfig o
         let logger = Logging.createLogger "PSMBasedQuantification"
         logger.Info (sprintf "InputFilePath -i = %A" i)
