@@ -207,3 +207,19 @@ module Core =
                     Ok ()
             with e ->
                 Error <| logger.Trace (sprintf "Cannot save directory %s: %s" fileName e.Message)
+
+    module Charts =
+
+        open Plotly.NET
+
+        /// Compares by reference.
+        type private ReferenceComparer() =
+            interface System.Collections.IEqualityComparer with
+                member _.Equals(a: obj, b: obj) = obj.ReferenceEquals(a, b)
+                member _.GetHashCode(a: obj) = System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode a
+
+        /// Makes the JSON serialization of Plotly.NET charts compare objects by reference.
+        /// Newtonsoft.Json compares each serialized object with the objects on its serialization path to detect loops, and the DynamicObj equality of Plotly.NET objects hashes the whole object by reflection, which makes saving charts slow.
+        /// Plotly.NET serializes with ReferenceLoopHandling.Serialize, so the comparison never changes the output.
+        let useReferenceEqualityForJson () =
+            Globals.JSON_CONFIG.EqualityComparer <- ReferenceComparer()

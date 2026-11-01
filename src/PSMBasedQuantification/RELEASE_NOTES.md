@@ -8,6 +8,7 @@
 * Speed up the wavelet peak detection with the same results
 * Update MzIO to 0.1.8, MzIO.Processing to 0.1.8, MzIO.SQL to 0.1.10 and MzIO.MzML to 0.1.11
 * Write AlignmentQValue 0 instead of NaN for the .quant rows
+* Write the diagnostic charts faster with the same content
 * Write an empty .quant with a warning for a run without PSMs instead of stopping
 
 #### 0.0.12 - Wednesday, September 2, 2026
