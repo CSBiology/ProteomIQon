@@ -12,95 +12,8 @@ open BioFSharp.Mz.Quantification
 open MzIO.Processing
 open Dto
 open Dto.QuantificationResult
-
-
-/// Small numeric helpers on float arrays.
-module Numerics =
-
-    let isFinite (v: float) = not (Double.IsNaN v || Double.IsInfinity v)
-
-    /// Median of the values, nan for an empty array.
-    let median (values: float []) =
-        if values.Length = 0 then
-            nan
-        else
-            let sorted = Array.sort values
-            let n = sorted.Length
-            if n % 2 = 1 then sorted.[n / 2] else 0.5 * (sorted.[n / 2 - 1] + sorted.[n / 2])
-
-    /// Pearson correlation, nan for fewer than 4 points or a constant input.
-    let pearson (a: float []) (b: float []) =
-        let n = a.Length
-        if n < 4 || b.Length <> n then
-            nan
-        else
-            let ma = Array.average a
-            let mb = Array.average b
-            let mutable sab = 0.
-            let mutable saa = 0.
-            let mutable sbb = 0.
-            for i in 0 .. n - 1 do
-                let da = a.[i] - ma
-                let db = b.[i] - mb
-                sab <- sab + da * db
-                saa <- saa + da * da
-                sbb <- sbb + db * db
-            if saa <= 0. || sbb <= 0. then nan else sab / sqrt (saa * sbb)
-
-    /// Linear interpolation in (xs, ys) sorted by xs, 0 outside.
-    let interpolateOrZero (xs: float []) (ys: float []) (x: float) =
-        let n = xs.Length
-        if n = 0 || x < xs.[0] || x > xs.[n - 1] then
-            0.
-        else
-            let hi = SortedSearch.upperBound xs x
-            if hi >= n then ys.[n - 1]
-            else
-                let lo = hi - 1
-                if lo < 0 then ys.[0]
-                else
-                    let t = (x - xs.[lo]) / (xs.[hi] - xs.[lo])
-                    ys.[lo] + t * (ys.[hi] - ys.[lo])
-
-    /// Quantile of a sorted array, linear between neighbouring values (numpy's default); nan for an empty array.
-    let quantileSorted (sorted: float []) (q: float) =
-        if sorted.Length = 0 then
-            nan
-        else
-            let h = q * float (sorted.Length - 1)
-            let lo = int (floor h)
-            let hi = min (lo + 1) (sorted.Length - 1)
-            sorted.[lo] + (h - float lo) * (sorted.[hi] - sorted.[lo])
-
-    /// Median distance between neighbouring values of a sorted array, nan for fewer than two values.
-    let medianSpacing (sorted: float []) =
-        if sorted.Length < 2 then nan else Array.init (sorted.Length - 1) (fun i -> sorted.[i + 1] - sorted.[i]) |> median
-
-    /// Running median of y over the k neighbouring points of the points sorted by x, linearly interpolated in between and constant beyond the ends.
-    let runningMedianCurve (k: int) (x: float []) (y: float []) =
-        let n = x.Length
-        let k = max 1 (min k n)
-        let fitted =
-            Array.init n (fun i ->
-                let lo = max 0 (min (i - k / 2) (n - k))
-                y.[lo .. lo + k - 1] |> median
-                )
-        let knots =
-            Array.zip x fitted
-            |> Array.groupBy fst
-            |> Array.map (fun (xv, group) -> xv, group |> Array.averageBy snd)
-        let kx = Array.map fst knots
-        let ky = Array.map snd knots
-        fun (v: float) ->
-            let m = kx.Length
-            if m = 0 || Double.IsNaN v then nan
-            elif v <= kx.[0] then ky.[0]
-            elif v >= kx.[m - 1] then ky.[m - 1]
-            else
-                let hi = SortedSearch.upperBound kx v
-                let lo = hi - 1
-                let t = (v - kx.[lo]) / (kx.[hi] - kx.[lo])
-                ky.[lo] + t * (ky.[hi] - ky.[lo])
+open Xic
+open MzCalibration
 
 
 /// MS1 access: every spectrum is read once, its peaks sorted by m/z, and the points of all XICs whose scan time window contains it are taken from it.
@@ -247,24 +160,6 @@ module PeakSelection =
             ObservedMz  : float [] []
             IonMobility : float [] []
         }
-
-    /// As AlignmentBasedQuantification: a zero point that follows a point more than 100 times higher is a drop-out and removed.
-    let keepMask (y: float []) =
-        Array.init y.Length (fun i ->
-            if i = 0 || i = y.Length - 1 || y.[i] > 0. then
-                true
-            else
-                let previous = y.[i - 1]
-                previous = 0. || previous <= 100. * (y.[i] + 1.)
-            )
-
-    /// ALS baseline subtraction as AlignmentBasedQuantification (only XICs of 3 to 500 points).
-    let subtractBaseline (baseline: Domain.BaseLineCorrection option) (y: float []) =
-        match baseline with
-        | Some p when y.Length >= 3 && y.Length <= 500 ->
-            let b = BaselineAls.baselineAls p.MaxIterations p.Lambda p.P y
-            Array.map2 (fun v bv -> max 0. (v - bv)) y b
-        | _ -> Array.copy y
 
     /// The traces with the given indices of the raw XIC; the first index is the monoisotopic trace.
     let createTraceSet (baseline: Domain.BaseLineCorrection option) (keepIonMobility: bool) (raw: XicSweep.RawXic) (traces: int []) =
@@ -742,43 +637,6 @@ module AlignmentBasedQuantification_v2 =
 
     let isValidFit (q: HULQ.QuantifiedPeak) =
         q.EstimatedParams.Length >= 3 && (q.EstimatedParams |> Array.forall isFinite) && isFinite q.Area
-
-    /// m/z correction of the run.
-    type MzCalibration =
-        {
-            /// Scan time -> m/z offset (measured - theoretical).
-            Correction : float -> float
-            /// Standard deviation of the offsets (inside the fences) around the correction; nan if it cannot be estimated.
-            Sd         : float
-            /// (scan time, offset) of the ions used.
-            Points     : (float*float) []
-        }
-
-    /// Fits the m/z offset over scan time: offsets outside the Tukey fences (3 IQR) or above 0.1 Da are left out, as in the PSM based
-    /// quantification; the correction is a running median over scan time (instead of the unseeded spline of v1) for runs longer than
-    /// 20 minutes with more than 500 points, else the median.
-    let fitMzCalibration (points: (float*float) []) =
-        let points = points |> Array.filter (fun (t, d) -> isFinite t && isFinite d) |> Array.sortBy fst
-        if points.Length < 3 then
-            { Correction = (fun _ -> 0.); Sd = nan; Points = points }
-        else
-        let lower, upper =
-            match (points |> Array.map snd |> FSharp.Stats.Signal.Outliers.tukey 3.).TryToTuple with
-            | Some borders -> borders
-            | None -> nan, nan
-        let filtered =
-            if Double.IsNaN upper || Double.IsNaN lower then points
-            else points |> Array.filter (fun (_, d) -> d <= upper && d >= lower && d < 0.1)
-        let runTime = points |> Array.last |> fst
-        let correction =
-            if runTime > 20. && filtered.Length > 500 then
-                runningMedianCurve 101 (Array.map fst filtered) (Array.map snd filtered)
-            else
-                let m = filtered |> Array.map snd |> median
-                fun _ -> m
-        let residuals = filtered |> Array.map (fun (t, d) -> d - correction t)
-        let sd = if residuals.Length < 3 then nan else FSharp.Stats.Seq.stDev residuals
-        { Correction = correction; Sd = sd; Points = points }
 
     /// Offsets of the precursor m/z written by the PSM based quantification from the theoretical m/z.
     let precursorMzOffsets (psmQuant: QuantificationResult []) =
