@@ -80,7 +80,7 @@ The fields of `Threshold.Estimate`:
 | `MinimumIncreaseBetweenIterations` | `0.005` | Stop when a retraining raises the number of passing scans by less than this fraction of the new number. With `CrossValidation` this number counts the targets with q <= 0.01. Without it, it is the smaller of the numbers of best candidates per scan with q <= `QValueThreshold` and with PEP <= `PepValueThreshold`. |
 | `PepValueFittingMethod` | `PepValueFittingMethod.IRLS` | How the PEP curve is fitted. `IRLS` (iteratively reweighted least squares) is the only case. |
 | `CrossValidation` | `true` | Score each scan with the model trained on the other two of three scan folds, and normalize the scores per fold. Each fold retrains on the targets with q < 0.01, independent of `QValueThreshold` and `PepValueThreshold`, which then only filter the output. The training runs three times per file, each time on two thirds of the scans, so a run takes about two to three times as long as without `CrossValidation`. Parameter files without this field use `false`. |
-| `RetentionTimeFeature` | `false` | Add the features `RtDeviation` and `AbsRtDeviation`, the deviation of the scan time from the time predicted from the sequence. |
+| `RetentionTimeFeature` | `true` | Add the features `RtDeviation` and `AbsRtDeviation`, the deviation of the scan time from the time predicted from the sequence. Parameter files without this field use `false`. |
 
 The default file is [pSMStatisticsParams.json](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/pSMStatisticsParams.json).
 
@@ -101,7 +101,7 @@ let psmStatisticsParams : Dto.PSMStatisticsParams =
                     MinimumIncreaseBetweenIterations = 0.005
                     PepValueFittingMethod            = PepValueFittingMethod.IRLS
                     CrossValidation                  = true
-                    RetentionTimeFeature             = false
+                    RetentionTimeFeature             = true
                 }
         ParseProteinIDRegexPattern = "id"
         KeepTemporaryFiles         = true

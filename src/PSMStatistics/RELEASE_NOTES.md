@@ -8,7 +8,7 @@
 * With CrossValidation, retrain each fold on the targets with q < 0.01 and accept a retrained model by its targets with q <= 0.01, independent of QValueThreshold and PepValueThreshold, which then only filter the output
 * Train FastTree on one thread, so that the results no longer depend on the number of cores of the machine
 * Write only the header instead of failing when no PSM passes the thresholds
-* Add the parameter RetentionTimeFeature (default false): predict the scan time of a peptide from its sequence with a model trained on the confident peptides of the file in folds of peptide groups, and add the deviation of the scan time from the prediction in robust standard deviations and its absolute value (RtDeviation, AbsRtDeviation) as model features; the feature is not used, with a warning, when the file has fewer than 500 confident unique peptides or the out-of-fold R2 is below 0.3
+* Add the parameter RetentionTimeFeature (default true): predict the scan time of a peptide from its sequence with a model trained on the confident peptides of the file in folds of peptide groups, and add the deviation of the scan time from the prediction in robust standard deviations and its absolute value (RtDeviation, AbsRtDeviation) as model features; the feature is not used, with a warning, when the file has fewer than 500 confident unique peptides or the out-of-fold R2 is below 0.3
 * With Threshold Fixed, write the SequestScore as ModelScore, which was NaN
 
 #### 0.0.11 - Monday, September 28, 2026
