@@ -65,7 +65,7 @@ The tool also creates a `run_plots` directory per input. It stays empty unless y
 | Parameter | Default | Meaning |
 |-----------|---------|---------|
 | `Threshold` | `Threshold.Estimate estimationParams` | Learn the combined score and filter by q-value and PEP value. The nested record is listed below. |
-| `Threshold` (alternative) | `Threshold.Fixed { SequestLike = 0.; Andromeda = 0. }` | Skip the learning. Among the matches whose `SequestScore` exceeds `SequestLike` and whose `AndroScore` exceeds `Andromeda`, keep the one with the highest `SequestScore` per scan, and drop it when it is a decoy. `ModelScore`, `QValue` and `PEPValue` are written as `nan`. Pick your own cutoffs; these values are placeholders. |
+| `Threshold` (alternative) | `Threshold.Fixed { SequestLike = 0.; Andromeda = 0. }` | Skip the learning. Among the matches whose `SequestScore` exceeds `SequestLike` and whose `AndroScore` exceeds `Andromeda`, keep the one with the highest `SequestScore` per scan, and drop it when it is a decoy. `ModelScore` holds the `SequestScore`, and `QValue` and `PEPValue` are `NaN`. Pick your own cutoffs; these values are placeholders. |
 | `ParseProteinIDRegexPattern` | `"id"` | Regex applied to the protein names of the database to produce the `ProteinNames` column. `"id"` keeps them unchanged. The database holds the names as PeptideDB cut them, so keep `"id"`. Another pattern is applied to those stored names and keeps the matched part (empty when it does not match). |
 | `KeepTemporaryFiles` | `true` | Not used by PSMStatistics. |
 | `StoreIsotopePatterns` | `true` | Store the theoretical isotope patterns of the ions in the `.qpsm` files in the table `IsotopePattern` of the peptide database (`-d`), where the quantification tools read them. |
@@ -141,9 +141,9 @@ Columns of the `.qpsm` file:
 | XtandemScore               | X!Tandem-like score                                                                                              |
 | XtandemNormDeltaBestToRest | (best X!Tandem score of the spectrum - this score) / best score; 0 for the top candidate                         |
 | XtandemNormDeltaNext       | (this X!Tandem score - next lower X!Tandem score of the spectrum) / best score                                   |
-| ModelScore                 | Score of the learned model; with `CrossValidation` the fold-normalized score (0 at the lowest-scoring target with q <= 0.01 of its fold, -1 at the median decoy of the fold); without it the FastTree score |
-| QValue                     | q-value of the `ModelScore`                                                                                      |
-| PEPValue                   | Posterior error probability of the `ModelScore`                                                                  |
+| ModelScore                 | Score of the learned model; with `CrossValidation` the fold-normalized score (0 at the lowest-scoring target with q <= 0.01 of its fold, -1 at the median decoy of the fold); without it the FastTree score. With `Threshold.Fixed` it is the `SequestScore` |
+| QValue                     | q-value of the `ModelScore`, NaN with `Threshold.Fixed`                                                                                    |
+| PEPValue                   | Posterior error probability of the `ModelScore`, NaN with `Threshold.Fixed`                                                                |
 | StringSequence             | Peptide sequence of the match, as in the `.psm` input                                                            |
 | ProteinNames               | Names of the proteins that contain the peptide, separated by `;`                                                 |
 
