@@ -25,8 +25,11 @@ index: 9
 
 # PSMBasedQuantificationTIMs
 
-PSMBasedQuantificationTIMs is the [PSMBasedQuantification]({{root}}tools/PSMBasedQuantification.html) variant for timsTOF runs. On these instruments a peptide ion is a peak in two dimensions, retention time and ion mobility, so the tool extracts an intensity grid over that plane around every identification instead of a one dimensional [ion chromatogram](https://www.biofsharp.com/BioFSharp.Mz/03_01_quantification.html#Building-an-XIC-trace).
-By default it locates the peak on the grid with a Gabor filter (a Gaussian envelope multiplied with a cosine wave, tuned in size, width, frequency and angle), then [fits and integrates](https://www.biofsharp.com/BioFSharp.Mz/03_01_quantification.html#Fitting-and-integrating-the-main-peak) it. The output has the layout of PSMBasedQuantification. The alignment tools need `.quant` files from `Wavelet` or `SecondDerivative` processing.
+PSMBasedQuantificationTIMs is the [PSMBasedQuantification]({{root}}tools/PSMBasedQuantification.html) variant for timsTOF runs. On these instruments a peptide ion is a peak in two dimensions, retention time and ion mobility, so the tool extracts the signal around every identification in both dimensions.
+
+An XIC point is the sum of the intensity within 0.05 of the identification's ion mobility.
+
+The points form a retention time [ion chromatogram](https://www.biofsharp.com/BioFSharp.Mz/03_01_quantification.html#Building-an-XIC-trace). As PSMBasedQuantification does, the tool locates the peak on the trace and [fits and integrates](https://www.biofsharp.com/BioFSharp.Mz/03_01_quantification.html#Fitting-and-integrating-the-main-peak) it. The output has the layout of PSMBasedQuantification.
 
 ## Inputs and outputs
 
@@ -60,20 +63,24 @@ The parameter record is the one of PSMBasedQuantification. The defaults below ar
 | `FragPipe` | `true` | Not read by this tool. |
 | `XicExtraction.ScanTimeWindow` | `2.0` | Half width of the retention time range around the identification that is extracted, in the scan time unit of the run. |
 | `XicExtraction.MzWindow_Da` | `Window.Estimate` | Half width of the m/z window, in Da. `Estimate` uses four times the MS1 mass error measured on the identifications. `Window.Fixed 0.07` sets it to 0.07 Da. |
-| `XicExtraction.XicProcessing` | `XicProcessing.Gabor3D gaborParams` | Peak detection on the retention time and mobility grid. The Gabor parameters are listed below. `Wavelet` and `SecondDerivative` fall back to the one dimensional processing of PSMBasedQuantification. |
+| `XicExtraction.XicProcessing` | `XicProcessing.Wavelet waveletParams` | Peak detection on the retention time trace, summed over a 0.05 ion mobility window. The wavelet parameters are listed below. `SecondDerivative` is the other supported case. `Gabor3D` is in development and does not work currently. |
 | `XicExtraction.TopKPSMs` | `None` | `Some k` keeps only the k identifications with the highest `ModelScore` per peptide ion when placing the peak. |
-| `BaseLineCorrection` | `None` | No baseline subtraction. `Some { MaxIterations = 10; Lambda = 6; P = 0.05 }` enables the asymmetric least squares baseline. |
+| `BaseLineCorrection` | `Some { MaxIterations = 10; Lambda = 6; P = 0.05 }` | Asymmetric least squares baseline subtraction before peak detection. `None` skips it. |
 
-The Gabor parameters. The tool rejects a kernel size at or below zero and any width, frequency or angle that is not finite (widths must also be positive).
+The wavelet parameters:
 
 | Parameter | Default | Meaning |
 |-----------|---------|---------|
-| `sizeX` | `41` | Kernel size along retention time, in grid bins. Half of it is the kernel radius, which widens the search window around the expected position. |
-| `sizeY` | `41` | Kernel size along ion mobility, in grid bins. |
-| `sigmaX` | `8.0` | Width of the Gaussian envelope along the first kernel axis, in bins. |
-| `sigmaY` | `8.0` | Width of the Gaussian envelope along the second kernel axis, in bins. |
-| `frequency` | `2.0` | Frequency of the cosine wave inside the kernel. |
-| `theta` | `0.06` | Rotation of the kernel in the plane, in radians. |
+| `Borderpadding` | `None` | Number of points padded at both ends of the trace. `None` derives it from the data. |
+| `BorderPadMethod` | `Padding.BorderPaddingMethod.Random` | How the border points are filled (`Random` or `Zero`). |
+| `InternalPaddingMethod` | `Padding.InternalPaddingMethod.LinearInterpolation` | How small gaps inside the trace are filled. |
+| `HugeGapPaddingMethod` | `Padding.HugeGapPaddingMethod.Zero` | How gaps longer than `HugeGapPaddingDistance` are filled. |
+| `HugeGapPaddingDistance` | `100.` | Gap length from which a gap counts as huge. |
+| `MinPeakDistance` | `Some 0.1` | Peaks closer than this (in minutes) are merged. The distance is at least 1.5 times the median point spacing of the trace, which is also what `None` uses. |
+| `MinPeakLength` | `Some 0.1` | Smallest peak width the wavelet scales start at. |
+| `MaxPeakLength` | `1.5` | Largest peak width the wavelet scales go up to. |
+| `NoiseQuantile` | `0.01` | Quantile of the wavelet correlation used as noise level. |
+| `MinSNR` | `0.01` | A peak needs a correlation above `MinSNR` times the noise level. |
 
 The default file is [QuantificationTIMsParams.json](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/QuantificationTIMsParams.json).
 
@@ -82,15 +89,20 @@ The default file is [QuantificationTIMsParams.json](https://github.com/CSBiology
 
 open ProteomIQon
 open ProteomIQon.Domain
+open FSharp.Stats.Signal
 
-let gaborParams : Gabor3DParams =
+let waveletParams : WaveletParameters =
     {
-        sizeX     = 41
-        sizeY     = 41
-        sigmaX    = 8.0
-        sigmaY    = 8.0
-        frequency = 2.0
-        theta     = 0.06
+        Borderpadding          = None
+        BorderPadMethod        = Padding.BorderPaddingMethod.Random
+        InternalPaddingMethod  = Padding.InternalPaddingMethod.LinearInterpolation
+        HugeGapPaddingMethod   = Padding.HugeGapPaddingMethod.Zero
+        HugeGapPaddingDistance = 100.
+        MinPeakDistance        = Some 0.1
+        MinPeakLength          = Some 0.1
+        MaxPeakLength          = 1.5
+        NoiseQuantile          = 0.01
+        MinSNR                 = 0.01
     }
 
 let quantificationTIMsParams : Dto.QuantificationParams =
@@ -101,10 +113,10 @@ let quantificationTIMsParams : Dto.QuantificationParams =
             {
                 ScanTimeWindow = 2.
                 MzWindow_Da    = Window.Estimate
-                XicProcessing  = XicProcessing.Gabor3D gaborParams
+                XicProcessing  = XicProcessing.Wavelet waveletParams
                 TopKPSMs       = None
             }
-        BaseLineCorrection = None
+        BaseLineCorrection = Some { MaxIterations = 10; Lambda = 6; P = 0.05 }
     }
 
 // Replace the temp folder with your project folder.
