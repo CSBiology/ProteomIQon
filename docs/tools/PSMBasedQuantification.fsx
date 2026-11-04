@@ -75,7 +75,7 @@ The wavelet parameters:
 | `InternalPaddingMethod` | `Padding.InternalPaddingMethod.LinearInterpolation` | How small gaps inside the trace are filled. |
 | `HugeGapPaddingMethod` | `Padding.HugeGapPaddingMethod.Zero` | How gaps longer than `HugeGapPaddingDistance` are filled. |
 | `HugeGapPaddingDistance` | `100.` | Gap length from which a gap counts as huge. |
-| `MinPeakDistance` | `None` | Peaks closer than this are merged. `None` uses the point spacing of the trace. |
+| `MinPeakDistance` | `Some 0.1` | Peaks closer than this (in minutes) are merged. The distance is at least 1.5 times the median point spacing of the trace, which is also what `None` uses. |
 | `MinPeakLength` | `Some 0.1` | Smallest peak width the wavelet scales start at. |
 | `MaxPeakLength` | `1.5` | Largest peak width the wavelet scales go up to. |
 | `NoiseQuantile` | `0.01` | Quantile of the wavelet correlation used as noise level. |
@@ -97,7 +97,7 @@ let waveletParams : WaveletParameters =
         InternalPaddingMethod  = Padding.InternalPaddingMethod.LinearInterpolation
         HugeGapPaddingMethod   = Padding.HugeGapPaddingMethod.Zero
         HugeGapPaddingDistance = 100.
-        MinPeakDistance        = None
+        MinPeakDistance        = Some 0.1
         MinPeakLength          = Some 0.1
         MaxPeakLength          = 1.5
         NoiseQuantile          = 0.01
