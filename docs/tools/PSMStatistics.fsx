@@ -36,6 +36,8 @@ The training is semi-supervised. The first model starts from a single score: the
 
 With `CrossValidation`, the scans are shuffled and split into three folds whose scan counts differ by at most one. The training runs three times, each time on the candidates of two folds, and the resulting model scores the remaining fold, so no scan is scored by a model that was trained on it. As in Percolator, the scores of each fold are then shifted and scaled so that the lowest scoring target with q <= 0.01 of that fold gets 0 and the median decoy gets -1. The q-values and PEPs are computed on the pooled scores of the three folds. Without `CrossValidation`, one model is trained on all scans and scores them.
 
+With `RetentionTimeFeature`, the tool predicts the scan time of every candidate from its sequence before the first model is trained and adds two features: `RtDeviation`, the observed minus the predicted scan time in robust standard deviations, and its absolute value. The predictor is a FastTree regression (200 trees, 64 leaves), fitted per file on the targets with q < 0.01 among the best candidates per scan by the starting score, with one row per modified sequence and global modification (median scan time). Its inputs are the amino acid counts, the length, the counts of each modification, the unordered residue pairs at positions 1 and n-1 and at positions 2 and n-2, and the C-terminal residue, which give a peptide and its pseudo-reversed decoy the same prediction. The peptides are split into five folds by sequence, a peptide and its pseudo-reversal in the same fold, and each fold is predicted by the predictor trained on the other four. The robust standard deviation is 1.4826 times the median absolute deviation of these held-out residuals. If the file has fewer than 500 such peptides or the held-out R2 is below 0.3, the tool logs a warning and trains without the two features.
+
 The q-values and PEPs are computed on the best candidate per scan, targets and decoys. The q-value of a score is the number of decoys divided by the number of targets among the best candidates that score at least as high, made monotone (`FDRControl.calculateQValueStorey` of BioFSharp.Mz, without a π0 estimate). For the PEP, the scores are binned with a width of one unit of the FastTree score (with `CrossValidation`, that unit converted to the normalized scale and averaged over the three folds), and the logit of the decoy share per bin is fitted with a smoothing spline by iteratively reweighted least squares, as in Percolator. The PEP of a target is the fitted decoy to target ratio at its score, capped at 1 and made non-increasing with the score.
 
 The tool writes the best candidate of a scan when it is a target with a q-value below `QValueThreshold` and a PEP below `PepValueThreshold`. If no candidate passes, the `.qpsm` file holds only the header. If the estimation throws, the file also holds only the header and `run_log.txt` holds the exception.
@@ -78,6 +80,7 @@ The fields of `Threshold.Estimate`:
 | `MinimumIncreaseBetweenIterations` | `0.005` | Stop when a retraining raises the number of passing scans by less than this fraction of the new number. With `CrossValidation` this number counts the targets with q <= 0.01. Without it, it is the smaller of the numbers of best candidates per scan with q <= `QValueThreshold` and with PEP <= `PepValueThreshold`. |
 | `PepValueFittingMethod` | `PepValueFittingMethod.IRLS` | How the PEP curve is fitted. `IRLS` (iteratively reweighted least squares) is the only case. |
 | `CrossValidation` | `true` | Score each scan with the model trained on the other two of three scan folds, and normalize the scores per fold. Each fold retrains on the targets with q < 0.01, independent of `QValueThreshold` and `PepValueThreshold`, which then only filter the output. The training runs three times per file, each time on two thirds of the scans, so a run takes about two to three times as long as without `CrossValidation`. Parameter files without this field use `false`. |
+| `RetentionTimeFeature` | `false` | Add the features `RtDeviation` and `AbsRtDeviation`, the deviation of the scan time from the time predicted from the sequence. |
 
 The default file is [pSMStatisticsParams.json](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/pSMStatisticsParams.json).
 
@@ -98,6 +101,7 @@ let psmStatisticsParams : Dto.PSMStatisticsParams =
                     MinimumIncreaseBetweenIterations = 0.005
                     PepValueFittingMethod            = PepValueFittingMethod.IRLS
                     CrossValidation                  = true
+                    RetentionTimeFeature             = false
                 }
         ParseProteinIDRegexPattern = "id"
         KeepTemporaryFiles         = true
