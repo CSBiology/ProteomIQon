@@ -52,7 +52,7 @@ With one file per flag the pair is used as given. With lists, the n-th mzlite fi
 For every run the tool writes `run.quant`, tab separated with a header and one row per quantified peptide ion. Next to the identifiers and the best q-value and PEP value of the ion it reports the fitted quantity (`Quant_Light`, `Quant_Heavy`), the apex intensity, the fit parameters, the difference between identification and fitted scan time, the extracted traces and the isotope pattern for both channels.
 [QuantBasedAlignment]({{root}}tools/QuantBasedAlignment.html), [AlignmentBasedQuantification]({{root}}tools/AlignmentBasedQuantification.html), [AlignmentBasedQuantStatistics]({{root}}tools/AlignmentBasedQuantStatistics.html) and [JoinQuantPepIonsWithProteins]({{root}}tools/JoinQuantPepIonsWithProteins.html) read `.quant` files.
 
-With `-dc` the tool writes one chart per peptide ion into `run_plots`, plus `mzErrorAndCorrection.html` and `precMzCorrected.html` for the m/z calibration it derives from the identifications. `-z` packs that directory into `run_plots.zip` and deletes it. Delete an existing `run.quant` in the output directory before a rerun, the tool appends to it. Logs go to `PSMBasedQuantification_log.txt` and `run_log.txt` in the output directory.
+With `-dc` the tool writes one chart per peptide ion into `run_plots`, plus `mzErrorAndCorrection.html` for the m/z calibration it derives from the identifications. `-z` packs that directory into `run_plots.zip` and deletes it. Delete an existing `run.quant` in the output directory before a rerun, the tool appends to it. Logs go to `PSMBasedQuantification_log.txt` and `run_log.txt` in the output directory.
 
 ## Parameters
 

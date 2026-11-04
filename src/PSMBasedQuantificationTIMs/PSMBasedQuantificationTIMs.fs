@@ -15,6 +15,8 @@ open BioFSharp
 open MzIO.Processing
 open BioFSharp.Mz.SearchDB
 open Gabor3D.algorithm
+open PeakQuantification
+open PSMQuantification
 
 module PSMBasedQuantificationTIMs =
     module Query = 
@@ -186,53 +188,6 @@ module PSMBasedQuantificationTIMs =
                 |> MzIO.Commons.Arrays.MzIOArray.ToMzIOArray
             rtIndex, ms1SortedByScanTime, mobilities
 
-    type PeptideIon =
-        {
-            Sequence             : string
-            GlobalMod            : int
-            Charge               : int
-            ModSequenceID        : int
-            PepSequenceID        : int
-        }
-            
-    type AveragePSM = {
-        MeanPrecMz   : float
-        MeanScanTime : float
-        WeightedAvgScanTime:float
-        WeightedAvgIM:float
-        MeanScore   : float
-        X_Xic         : float []
-        Y_Xic         : float []
-        Y_Xic_uncorrected: float []
-        }
-
-    ///
-    let createAveragePSM meanPrecMz meanScanTime weightedAvgScanTime weightedAvgIM meanScore xXic yXic yXic_uncorrected = {
-        MeanPrecMz    = meanPrecMz
-        MeanScanTime  = meanScanTime
-        WeightedAvgScanTime= weightedAvgScanTime
-        WeightedAvgIM = weightedAvgIM
-        MeanScore = meanScore
-        X_Xic         = xXic
-        Y_Xic         = yXic
-        Y_Xic_uncorrected= yXic_uncorrected
-        }
-
-
-    type PeakComparison = {
-        Mz: float
-        MeasuredIntensity: float
-        MeasuredIntensityCorrected:float
-        PredictedRelFrequency:float
-        }
-
-
-    type ClusterComparison = {
-        PeakComparisons     : PeakComparison []
-        KLDiv_UnCorrected   : float
-        KLDiv_Corrected     : float
-        }
-
     ///
     let initSpline binningWindowWidth (scanTimeVsDiff: (float*float) []) = 
         let getBinIdx width scantime = int ((scantime / width))    
@@ -275,13 +230,6 @@ module PSMBasedQuantificationTIMs =
             |> Array.maxBy fst          
         rSquared, model
 
-    ///
-    let getBaseLineCorrectionOffsetAt tarRT x_Xic y_Xic y_Xic_uncorrected =
-        let (rt,y,yUncorr) = 
-            Array.zip3 x_Xic y_Xic y_Xic_uncorrected 
-            |> Array.minBy (fun (rt,y,yUncorr) -> abs (rt - tarRT))
-        yUncorr - y
-       
     ///
     let getSpec (reader:MzIO.IO.IMzIODataReader) (ms1ID: string)  =
         Peaks.unzipIMzliteArray (reader.ReadSpectrumPeaks(ms1ID).Peaks)
@@ -408,11 +356,6 @@ module PSMBasedQuantificationTIMs =
             | _ ->
                 [||]
     
-    /// Calculates the Kullback-Leibler divergence Dkl(p||q) from q (theory, model, description, or approximation of p) 
-    /// to p (the "true" distribution of data, observations, or a precisely calculated theoretical distribution).
-    let klDiv (p:float []) (q:float []) = 
-        Array.fold2 (fun acc p q -> (System.Math.Log(p/q)*p) + acc ) 0. p q
-     
     ///
     let substractBaseLine (logger: NLog.Logger) (baseLineParams:Domain.BaseLineCorrection) (yData:float []) =
         if yData.Length > 500 then
@@ -1810,78 +1753,11 @@ module PSMBasedQuantificationTIMs =
                 expectedMobility
 
         
-    ///
-    let initGetIsotopicEnvelope reader idx scanTimeWindow mzWindow_Da ch meanScanTime meanPrecMz =
-        let rtQuery   = Query.createRangeQuery meanScanTime scanTimeWindow
-        let mzQueries = 
-            [|
-                for i = 0 to 2 do 
-                    let mz = meanPrecMz + (float i) * (Mass.Table.PMassInU / (ch|> float)) 
-                    Query.createRangeQuery mz mzWindow_Da 
-            |]
-            |> Array.filter (fun x ->  abs (meanPrecMz-x.LockValue) < 1.)                 
-        let retData',itzData' =
-            let query = Query.getXICs reader idx rtQuery mzQueries 
-            [|
-                for i = 0 to query.[*,0].Length-1 do 
-                let tmp = query.[i,*]
-                yield (tmp.[0].Rt,tmp |> Array.sumBy (fun p -> p.Intensity))
-
-            |]
-            |> Array.unzip 
-        retData',itzData'
-
-    ///
-    let weightedMean (weights:seq<float>) (items:seq<float>) =
-        let sum,n = Seq.fold2 (fun (sum,n) w i -> w*i+sum,n + w ) (0.,0.) weights items
-        sum / n
-        
     /// The PSM with the lowest QValue. A PSM without QValue (NaN) is taken only when no PSM has one.
     let bestPsmByQValue (psms: PSMStatisticsResult []) =
         match psms |> Array.filter (fun x -> not (Double.IsNaN x.QValue)) with
         | [||] -> psms.[0]
         | withQValue -> withQValue |> Array.minBy (fun x -> x.QValue)
-
-    ///
-    /// ionMobilityOf gives the ion mobility of the MS2 spectrum of a PSM by its PSMId. The top 3 PSMs are taken
-    /// among the PSMs whose spectrum has an ion mobility, among all when none has one.
-    let average (ionMobilityOf: string -> float) getXic scanTimeToMzCorrection theoMz (psms:(PSMStatisticsResult*float) []) =
-            //let meanPrecMz   = psms |> Seq.meanBy (fun (psm,m) -> psm.PrecursorMZ)
-
-            let meanScanTime = psms |> Seq.meanBy (fun (psm,m) -> psm.ScanTime)
-            let meanScore = psms |> Seq.averageBy (fun (psm,m) -> psm.ModelScore)
-            let psms' =
-                let withIonMobility = psms |> Array.filter (fun (psm,m) -> Double.IsFinite (ionMobilityOf psm.PSMId))
-                let tmp = Array.sortByDescending (fun (psm,m) -> m) (if Array.isEmpty withIonMobility then psms else withIonMobility)
-                if tmp.Length > 3 then tmp.[..2] else tmp 
-            let weightedAvgScanTime =
-                let scanTimes = psms' |> Array.map (fun (psm,m) -> psm.ScanTime)
-                let weights = psms' |> Array.map snd
-                weightedMean weights scanTimes
-            let weightedAvgIM =
-                let ims = psms' |> Array.map (fun (psm,m) -> ionMobilityOf psm.PSMId)
-                let weights = psms' |> Array.map snd
-                weightedMean weights ims
-            let correctedMz = scanTimeToMzCorrection weightedAvgScanTime + theoMz
-            let (retData,itzDataCorrected,ItzDataUncorrected) = getXic weightedAvgScanTime correctedMz weightedAvgIM
-            createAveragePSM correctedMz meanScanTime weightedAvgScanTime weightedAvgIM meanScore retData itzDataCorrected ItzDataUncorrected
-
-
-
-    type InferredXic = {
-        X_Xic                       :float[]
-        Y_Xic                       :float[]
-        Y_Xic_uncorrected           :float[]
-        }
-    
-    let getInferredXic getXic targetScanTime targetMz targetIM =
-        let (retData,itzData,uncorrectedItzData)   =
-                getXic targetScanTime targetMz targetIM
-        {
-        X_Xic               = retData
-        Y_Xic               = itzData
-        Y_Xic_uncorrected   = uncorrectedItzData
-        }
 
     type InferredQuantification = {
         Model                       :HULQ.PeakModel option
@@ -1899,120 +1775,6 @@ module PSMBasedQuantificationTIMs =
         yFitted                     :float[]
         }
 
-    /// Calculates the difference between the scan time used to retreave the peak and the fitted peak midpoint.
-    let searchRTMinusFittedRtTarget searchRT (fit:HULQ.QuantifiedPeak) = 
-        try
-            searchRT - fit.EstimatedParams.[1] 
-        with
-        | _ -> nan
-
-    /// Calculates the difference between the scan time used to retreave the peak and the fitted peak midpoint.
-    let searchRTMinusFittedRtInferred searchRT fit = 
-        try
-            searchRT - fit.EstimatedParams.[1] 
-        with
-        | _ -> nan
-    
-    /// Aims to provide the best scan time estimate when quanitfying a inferred peak.
-    let chooseScanTime maxDiff searchRTMinusFittedRT initialScanTime (quantP:HULQ.QuantifiedPeak) = 
-        if Array.isEmpty quantP.EstimatedParams then
-            initialScanTime 
-        elif abs searchRTMinusFittedRT > maxDiff then
-            initialScanTime 
-        else
-            quantP.EstimatedParams.[1]
-
-    ///
-    let saveChart sequence globalMod ch (xXic:float[]) (yXic:float[]) ms2s avgScanTime (xToQuantify:float[]) (ypToQuantify:float[]) (fitY:float[])
-            (xXicInferred:float[]) (yXicinferred:float[]) (xInferred:float[]) (inferredFit:float[]) (*(xEnvelopeSum:float[]) (yEnvelopeSum:float[])*) (peaks:FSharp.Stats.Signal.PeakDetection.IdentifiedPeak []) (pattern:PeakComparison []) plotDirectory =
-        let xic = 
-            [
-            Chart.Point(xXic, yXic)                     |> Chart.withTraceInfo "Target XIC"
-            peaks
-            |> Array.map (fun x -> Chart.Point(x.XData,x.YData)) 
-            |> Chart.combine
-            Chart.Point(ms2s)                           |> Chart.withTraceInfo "MS2s with scores"
-            Chart.Point([avgScanTime],[1.])             |> Chart.withTraceInfo "Weighted Mean of Ms2 scan times"
-            Chart.Point((xToQuantify), (ypToQuantify))  |> Chart.withTraceInfo "Identified Target Peak"
-            Chart.Line(xToQuantify,fitY)                |> Chart.withTraceInfo "Fit of target Peak"
-            Chart.Point(xXicInferred, yXicinferred)     |> Chart.withTraceInfo "Inferred XIC"
-            Chart.Line(xInferred,inferredFit)           |> Chart.withTraceInfo "Fit of inferred Peak"
-            //Chart.Point(xEnvelopeSum, yEnvelopeSum)     |> Chart.withTraceInfo "Target Envelope Sum"
-            ]
-            |> Chart.combine
-        let pattern = 
-            [
-            Chart.Point(pattern |> Array.map (fun x -> x.Mz), pattern |> Array.map (fun x -> x.MeasuredIntensity))          |> Chart.withTraceInfo "Measured"
-            Chart.Point(pattern |> Array.map (fun x -> x.Mz), pattern |> Array.map (fun x -> x.MeasuredIntensityCorrected)) |> Chart.withTraceInfo "Measured Corrected"
-            Chart.Point(pattern |> Array.map (fun x -> x.Mz), pattern |> Array.map (fun x -> x.PredictedRelFrequency))      |> Chart.withTraceInfo "Predicted Relative Frequency"
-            //Chart.Point(xEnvelopeSum, yEnvelopeSum)     |> Chart.withTraceInfo "Target Envelope Sum"
-            ]
-            |> Chart.combine
-        [xic;pattern]
-        |> Chart.Grid(1, 2, XGap = 0.1, YGap = 0.1)
-        |> Chart.withTitle(sprintf "Sequence= %s,globalMod = %i" sequence globalMod)
-        |> Chart.withSize(2500,800)
-        |> Chart.saveHtml(Path.Combine[|plotDirectory; ((sequence |> String.filter (fun x -> x <> '*')) + "_GMod_" + globalMod.ToString() + "Ch" + ch.ToString())|])
-
-    let saveErrorChart (xXic:float[]) (yXic:float[]) pepIon desc plotDirectory =      
-        Chart.Point(xXic, yXic)
-        |> Chart.withTitle(sprintf "Sequence= %s,globalMod = %i_%s" pepIon.Sequence pepIon.GlobalMod desc)
-        |> Chart.withSize(1500,800)
-        |> Chart.saveHtml(Path.Combine[|plotDirectory; ((pepIon.Sequence |> String.filter (fun x -> x <> '*')) + "_GMod_" + pepIon.GlobalMod.ToString() + "Ch" + pepIon.Charge.ToString() + "_notQuantified")|])
-            
-    // Method is based on: https://doi.org/10.1021/ac0600196
-    /// Estimates the autocorrelation at lag 1 of a blank signal (containing only noise). Subsequently, the signal of interest is smoothed
-    /// several times by a savitzky golay filter using constant polynomial order and variing windowWidth. For each iteration, the deviation
-    /// of the smoothed to the original signal is computed and the autocorrelation at lag 1 of this residual noise is computed. The function returns the optimized
-    /// window width yielding a autocorrelation at lag 1 closest to the value computed for the blank signal.
-    let optimizeWindowWidth polOrder (windowWidthToTest:int[]) noiseAutoCorr (signalOfInterest:float[]) =
-        let signalOfInterest' = signalOfInterest |> vector
-        //let noiseAutoCorr = Correlation.Vector.autoCorrelation 1 (blankSignal |> vector)
-        let filterF w yData = FSharp.Stats.Signal.Filtering.savitzkyGolay w polOrder 0 0 yData |> vector
-        let windowWidthToTest' = windowWidthToTest |> Array.filter (fun x -> x%2 <> 0)
-        let optimizedWindowWidth =
-            windowWidthToTest'
-            |> Array.map (fun w ->
-                let smoothedY = filterF w signalOfInterest
-                let noise = smoothedY - (signalOfInterest')
-                w, Correlation.Vector.autoCorrelation 1 noise
-                )
-            |> Array.minBy (fun (w,ac) -> (ac - noiseAutoCorr) |> abs )
-            |> fst
-        optimizedWindowWidth
-    
-    ///
-    let initGetWindowWidth (windowEst:Domain.WindowSize) polynomOrder (windowWidthToTest:int[]) =
-        match windowEst with
-        | Domain.WindowSize.Fixed w  -> fun yData -> w
-        | Domain.WindowSize.EstimateUsingAutoCorrelation noiseAutoCorr -> fun yData -> optimizeWindowWidth polynomOrder windowWidthToTest noiseAutoCorr yData
-
-    ///
-    let initIdentifyPeaks (peakDetectionParams:Domain.XicProcessing) =
-        match peakDetectionParams with 
-        | Domain.XicProcessing.SecondDerivative parameters ->
-            let getWindowWidth = initGetWindowWidth parameters.WindowSize parameters.PolynomOrder [|5 .. 2 .. 60|] 
-            (fun xData yData -> 
-                try
-                let  windowSize = getWindowWidth yData
-                FSharp.Stats.Signal.PeakDetection.SecondDerivative.getPeaks parameters.MinSNR parameters.PolynomOrder windowSize xData yData
-                with 
-                | ex ->
-                    // logger.Trace (sprintf "Quant failed: Peak detection failed with: %A" ex)
-                    [||]
-                )
-        | Domain.XicProcessing.Wavelet parameters ->
-            (fun xData yData -> 
-                try
-                FSharpStats'.Wavelet.identify parameters xData yData
-                with 
-                | ex ->
-                    // logger.Trace (sprintf "Quant failed: Peak detection failed with: %A" ex)
-                    [||]
-                )
-        | Domain.XicProcessing.Gabor3D _ ->
-            fun _ _ -> [||]
-        
     ///
     let calcCorrelation (xValues:float []) (quantifiedPeak:HULQ.QuantifiedPeak) (inferredPeak:HULQ.QuantifiedPeak) = 
         let getValue (model:HULQ.PeakModel) estParams =
@@ -2034,51 +1796,6 @@ module PSMBasedQuantificationTIMs =
             FSharp.Stats.Correlation.Seq.pearson yQ yI
         | _ -> nan
 
-    ///
-    /// getMs1Peaks gives the peaks of a MS1 spectrum (by ID) with lowMz < m/z < highMz in file order.
-    let initComparePredictedAndMeasuredIsotopicCluster (isotopePatterns: IsotopePatterns.IsotopePatternLookUp) (getMs1Peaks: string -> float -> float -> Peak[]) (getClosestMs1: float -> string) ms1AccuracyEstimate (x_Xic:float[]) (y_Xic:float[]) y_Xic_uncorrected ch (peptide: LookUpResult<AminoAcids.AminoAcid>) tarRt tarMz =    
-        /// IsotopicCluster
-        let targetIsotopicPattern_predicted = 
-            isotopePatterns.Get (peptide, ch)
-        let baseLineCorrectionF = getBaseLineCorrectionOffsetAt tarRt x_Xic y_Xic y_Xic_uncorrected
-        let closestMS1 = getClosestMs1 tarRt
-        let peaks' = 
-            getMs1Peaks closestMS1 (tarMz - 0.6) (tarMz + 1.)
-        let recordedVsPredictedPattern = 
-            targetIsotopicPattern_predicted
-            |> Array.choose (fun (mz,relFreq) ->
-                if peaks' |> Array.isEmpty then None
-                else
-                    let closestRealPeak = peaks' |> Array.minBy (fun peak -> abs(peak.Mz - mz)) 
-                    if (abs(closestRealPeak.Mz - mz) < 4. * ms1AccuracyEstimate) then  
-                        Some (closestRealPeak,relFreq)
-                    else None
-                )
-            |> Array.groupBy fst
-            |> Array.map (fun ((peak),list) -> 
-                let (mz,measuredIntensity,predictedRelFrequency) = peak.Mz,peak.Intensity,list |> Array.sumBy snd 
-                {Mz=mz;MeasuredIntensity=measuredIntensity;MeasuredIntensityCorrected=measuredIntensity - baseLineCorrectionF;PredictedRelFrequency= predictedRelFrequency}
-                )
-            |> Array.filter (fun (isoP:PeakComparison) -> isoP.MeasuredIntensityCorrected > 0.)
-        let recordedVsPredictedPatternNorm = 
-            let sumMeasured = recordedVsPredictedPattern |> Array.sumBy (fun x -> x.MeasuredIntensity)
-            let sumMeasuredCorr = recordedVsPredictedPattern |> Array.sumBy (fun x -> x.MeasuredIntensityCorrected)
-            let sumMeasuredPred = recordedVsPredictedPattern |> Array.sumBy (fun x -> x.PredictedRelFrequency)
-            recordedVsPredictedPattern
-            |>Array.map (fun isoP -> 
-                {isoP with 
-                    MeasuredIntensity = isoP.MeasuredIntensity / sumMeasured; 
-                    MeasuredIntensityCorrected = isoP.MeasuredIntensityCorrected / sumMeasuredCorr; 
-                    PredictedRelFrequency = isoP.PredictedRelFrequency / sumMeasuredPred }
-                )
-        let klUnCorr = klDiv (recordedVsPredictedPatternNorm |> Array.map (fun x -> x.MeasuredIntensity)) (recordedVsPredictedPatternNorm |> Array.map (fun x -> x.PredictedRelFrequency))
-        let klCorr   = klDiv (recordedVsPredictedPatternNorm |> Array.map (fun x -> x.MeasuredIntensityCorrected)) (recordedVsPredictedPatternNorm |> Array.map (fun x -> x.PredictedRelFrequency))
-        {
-            PeakComparisons     = recordedVsPredictedPatternNorm
-            KLDiv_UnCorrected   = klUnCorr
-            KLDiv_Corrected     = klCorr
-        }
-       
     /// Maps f over xs in the order of key (ascending) and returns the results in the order of xs. f gets the position of the
     /// element in the order of key.
     let mapiOrderedBy (key: 'a -> float) (f: int -> 'a -> 'b) (xs: 'a []) =
@@ -2249,48 +1966,6 @@ module PSMBasedQuantificationTIMs =
             stDev, scanTimeToMzCorrection 
         logger.Trace (sprintf "Estimate precursor mz standard deviation and mz correction.:finished, standard deviation: %f" ms1AccuracyEstimate) 
 
-        let qpsmsMzRefined = 
-            let refined = 
-                qpsms
-                |> Array.map (fun x -> 
-                    let precMz = x.PrecursorMZ
-                    let theoMz  = Mass.toMZ x.TheoMass (float x.Charge)
-                    let diffPToTheo = precMz - theoMz 
-                    let absDiffToPredDiff = 
-                        (abs (scanTimeToMzCorrection x.ScanTime)) - (abs diffPToTheo)
-                        |> abs
-                    if absDiffToPredDiff > 4.*ms1AccuracyEstimate then 
-                        let precMz' = theoMz + scanTimeToMzCorrection x.ScanTime
-                        {x with PrecursorMZ = precMz'}
-                    else    
-                        x
-                    )
-            if diagCharts then 
-                [
-                qpsms
-                |> Array.map (fun x -> 
-                    let precMz = x.PrecursorMZ
-                    let theoMz  = Mass.toMZ x.TheoMass (float x.Charge)
-                    let diff = precMz - theoMz 
-                    x.ScanTime,diff
-                    )
-                |> Chart.Point
-                |> Chart.withTraceInfo "Raw"
-                refined
-                |> Array.map (fun x -> 
-                    let precMz = x.PrecursorMZ
-                    let theoMz  = Mass.toMZ x.TheoMass (float x.Charge)
-                    let diff = precMz - theoMz 
-                    x.ScanTime,diff
-                    )
-                |> Chart.Point
-                |> Chart.withTraceInfo "Corrected"
-                ]
-                |> Chart.combine
-                |> Chart.saveHtml(Path.Combine[|plotDirectory; "precMzCorrected"|])
-            refined
-                
-           
         logger.Trace "init lookup functions"        
         ///
         
@@ -3139,7 +2814,7 @@ module PSMBasedQuantificationTIMs =
         //group after peptide ion
         // -> all PSMs that have the same modifiction peptide with the same charge are getting grouped
         let quantResults = 
-            qpsmsMzRefined 
+            qpsms 
             |> Array.groupBy (fun x -> 
                 {
                     Sequence             = x.StringSequence     

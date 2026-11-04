@@ -40,6 +40,11 @@
     <Compile Include="SpectrumIndex.fs" />
     <Compile Include="BaselineAls.fs" />
     <Compile Include="TimsPeaks.fs" />
+    <Compile Include="Numerics.fs" />
+    <Compile Include="Xic.fs" />
+    <Compile Include="MzCalibration.fs" />
+    <Compile Include="PeakQuantification.fs" />
+    <Compile Include="PSMQuantification.fs" />
     <None Include="Scripts\createTIMsMzMLtoMzLiteParams.fsx" />
     <None Include="Scripts\createAlignmentBasedQuantStatisticsParams.fsx" />
     <None Include="Scripts\createLabeledQuantificationParams.fsx" />
