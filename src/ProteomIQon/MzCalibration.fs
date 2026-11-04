@@ -34,7 +34,7 @@ module MzCalibration =
                 ky.[lo] + t * (ky.[hi] - ky.[lo])
 
     /// m/z correction of the run.
-    type MzCalibration =
+    type Calibration =
         {
             /// Scan time -> m/z offset (measured - theoretical).
             Correction : float -> float
@@ -47,7 +47,7 @@ module MzCalibration =
     /// Fits the m/z offset over scan time: offsets outside the Tukey fences (3 IQR) or above 0.1 Da are left out, as in the PSM based
     /// quantification; the correction is a running median over scan time for runs longer than
     /// 20 minutes with more than 500 points, else the median.
-    let fitMzCalibration (points: (float*float) []) =
+    let fit (points: (float*float) []) =
         let points = points |> Array.filter (fun (t, d) -> isFinite t && isFinite d) |> Array.sortBy fst
         if points.Length < 3 then
             { Correction = (fun _ -> 0.); Sd = nan; Points = points }

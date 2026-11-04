@@ -1,5 +1,6 @@
 namespace ProteomIQon
 
+open System
 open System.IO
 open FSharp.Stats
 open Plotly.NET
@@ -46,6 +47,12 @@ module PSMQuantification =
         let sum,n = Seq.fold2 (fun (sum,n) w i -> w*i+sum,n + w ) (0.,0.) weights items
         sum / n
         
+    /// The PSM with the lowest QValue. A PSM without QValue (NaN) is taken only when no PSM has one.
+    let bestPsmByQValue (psms: PSMStatisticsResult []) =
+        match psms |> Array.filter (fun x -> not (Double.IsNaN x.QValue)) with
+        | [||] -> psms.[0]
+        | withQValue -> withQValue |> Array.minBy (fun x -> x.QValue)
+
     ///
     /// ionMobilityOf gives the ion mobility of the MS2 spectrum of a PSM by its PSMId. The top 3 PSMs are taken
     /// among the PSMs whose spectrum has an ion mobility, among all when none has one.

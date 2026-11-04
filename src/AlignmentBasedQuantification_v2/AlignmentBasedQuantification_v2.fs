@@ -13,7 +13,7 @@ open MzIO.Processing
 open Dto
 open Dto.QuantificationResult
 open Xic
-open MzCalibration
+open PeakQuantification
 
 
 /// MS1 access: every spectrum is read once, its peaks sorted by m/z, and the points of all XICs whose scan time window contains it are taken from it.
@@ -25,50 +25,6 @@ module XicSweep =
     let readSortedPeaks (reader: MzIO.MzSQL.MzSQL) (spectrumID: string) =
         let struct (mzs, intensities, ionMobilities) = reader.ReadSpectrumPeaksAsArrays spectrumID
         TimsPeaks.sortPeakArraysByMz mzs intensities (if isNull ionMobilities then [||] else ionMobilities)
-
-    /// One XIC point: the peak closest to lockMz within +-halfWindow; intensity 0 if there is none.
-    /// With ion mobility the peaks inside the ion mobility window (no window if imLow is nan) are first summed per m/z,
-    /// because one m/z is spread over the mobility scans; this is the XIC of PSMBasedQuantificationTIMs (Wavelet).
-    /// Returns intensity, observed m/z and the intensity weighted ion mobility of the chosen m/z (nan without ion mobility).
-    let extractPoint (spectrum: TimsPeaks.MzSortedPeaks) (lockMz: float) (halfWindow: float) (imLow: float) (imHigh: float) =
-        let mz = spectrum.Mz
-        let intensity = spectrum.Intensity
-        let high = lockMz + halfWindow
-        let mutable i = SortedSearch.lowerBound mz (lockMz - halfWindow)
-        let mutable bestDistance = infinity
-        let mutable bestIntensity = 0.
-        let mutable bestMz = nan
-        let mutable bestIonMobility = nan
-        if spectrum.IonMobility.Length = 0 then
-            while i < mz.Length && mz.[i] <= high do
-                let distance = abs (mz.[i] - lockMz)
-                if distance < bestDistance then
-                    bestDistance <- distance
-                    bestIntensity <- intensity.[i]
-                    bestMz <- mz.[i]
-                i <- i + 1
-        else
-            let im = spectrum.IonMobility
-            let filterIonMobility = not (Double.IsNaN imLow)
-            while i < mz.Length && mz.[i] <= high do
-                let groupMz = mz.[i]
-                let mutable n = 0
-                let mutable sum = 0.
-                let mutable sumIm = 0.
-                while i < mz.Length && mz.[i] = groupMz do
-                    if not filterIonMobility || (im.[i] > imLow && im.[i] < imHigh) then
-                        n <- n + 1
-                        sum <- sum + intensity.[i]
-                        sumIm <- sumIm + intensity.[i] * im.[i]
-                    i <- i + 1
-                if n > 0 then
-                    let distance = abs (groupMz - lockMz)
-                    if distance < bestDistance then
-                        bestDistance <- distance
-                        bestIntensity <- sum
-                        bestMz <- groupMz
-                        bestIonMobility <- if sum > 0. then sumIm / sum else nan
-        bestIntensity, bestMz, bestIonMobility
 
     /// The XIC traces of one ion: one trace per lock m/z, all with the same scan time and ion mobility window.
     type XicRequest =
@@ -174,39 +130,6 @@ module PeakSelection =
             // only the monoisotopic ion mobility of the target is read afterwards
             IonMobility = if keepIonMobility then [| pick raw.IonMobility.[traces.[0]] |] else [||]
         }
-
-    /// Window width estimation of the second derivative peak detection, as AlignmentBasedQuantification.
-    let optimizeWindowWidth polOrder (windowWidthToTest:int[]) noiseAutoCorr (signalOfInterest:float[]) =
-        let signalOfInterest' = signalOfInterest |> vector
-        let filterF w yData = FSharp.Stats.Signal.Filtering.savitzkyGolay w polOrder 0 0 yData |> vector
-        windowWidthToTest
-        |> Array.filter (fun x -> x % 2 <> 0)
-        |> Array.map (fun w ->
-            let smoothedY = filterF w signalOfInterest
-            let noise = smoothedY - signalOfInterest'
-            w, Correlation.Vector.autoCorrelation 1 noise
-            )
-        |> Array.minBy (fun (_, ac) -> abs (ac - noiseAutoCorr))
-        |> fst
-
-    ///
-    let initIdentifyPeaks (xicProcessing: Domain.XicProcessing) : float [] -> float [] -> FSharp.Stats.Signal.PeakDetection.IdentifiedPeak [] =
-        match xicProcessing with
-        | Domain.XicProcessing.SecondDerivative parameters ->
-            let getWindowWidth =
-                match parameters.WindowSize with
-                | Domain.WindowSize.Fixed w -> fun _ -> w
-                | Domain.WindowSize.EstimateUsingAutoCorrelation noiseAutoCorr -> optimizeWindowWidth parameters.PolynomOrder [|5 .. 2 .. 60|] noiseAutoCorr
-            fun xData yData ->
-                FSharp.Stats.Signal.PeakDetection.SecondDerivative.getPeaks parameters.MinSNR parameters.PolynomOrder (getWindowWidth yData) xData yData
-        | Domain.XicProcessing.Wavelet parameters ->
-            fun xData yData ->
-                FSharpStats'.Wavelet.identifyPeaks parameters (Array.zip xData yData)
-                |> List.choose id
-                |> List.map FSharpStats'.Wavelet.toIdentifiedPeak
-                |> Array.ofList
-        | Domain.XicProcessing.Gabor3D _ ->
-            failwith "XicProcessing Gabor3D is not supported by AlignmentBasedQuantification_v2; use Wavelet or SecondDerivative."
 
     /// Names of the candidate features, in the order of Candidate.Features.
     let featureNames = [|"RtZ"; "RtZ2"; "ShapeCorr"; "LogRelHeight"; "AbsLog2FwhmRatio"; "Log2NCandidates"; "IsoCorr"; "IsoRatioLog2"; "AbsPpmMono"; "ImZ"|]
@@ -479,10 +402,10 @@ module AlignmentBasedQuantification_v2 =
     let minScanTimeScale = 0.03
     /// IonMobilityWindow Estimate: +-max(minIonMobilityWindow, ionMobilityWindowSdFactor * PredictedIonMobilitySd). The minimum is the
     /// window of PSMBasedQuantificationTIMs; with +-0.02 the quantities of the ions the run quantified itself were 10 % lower.
-    let minIonMobilityWindow = 0.05
+    let minIonMobilityWindow = ionMobilityHalfWindow
     let ionMobilityWindowSdFactor = 4.
     /// Ions without predicted but with a source ion mobility get a window of +-0.05 around it, as AlignmentBasedQuantification.
-    let sourceIonMobilityWindow = 0.05
+    let sourceIonMobilityWindow = ionMobilityHalfWindow
     /// Lower bound of the ion mobility scale in the candidate distance ImZ.
     let minIonMobilityScale = 0.001
     /// MzWindow_Da Estimate: +-mzWindowSdFactor * the standard deviation of the m/z offsets measured in the MS1 spectra after correction;
@@ -560,25 +483,6 @@ module AlignmentBasedQuantification_v2 =
             |> Array.ofSeq
         Array.append [|get 0; get 1|] others
 
-    type PeakComparison =
-        {
-            Mz                         : float
-            MeasuredIntensity          : float
-            MeasuredIntensityCorrected : float
-            PredictedRelFrequency      : float
-        }
-
-    type ClusterComparison =
-        {
-            PeakComparisons   : PeakComparison []
-            KLDiv_UnCorrected : float
-            KLDiv_Corrected   : float
-        }
-
-    /// Kullback-Leibler divergence Dkl(p||q).
-    let klDiv (p:float []) (q:float []) =
-        Array.fold2 (fun acc p q -> (System.Math.Log(p/q)*p) + acc ) 0. p q
-
     /// Measured against predicted isotope pattern at the XIC point closest to the scan time, as AlignmentBasedQuantification:
     /// the baseline offset of the monoisotopic trace at that point is subtracted from every isotope peak.
     let compareIsotopicCluster (traces: TraceSet) (isotopes: IsotopePeak []) (scanTime: float) =
@@ -618,25 +522,6 @@ module AlignmentBasedQuantification_v2 =
             KLDiv_UnCorrected = klDiv (normalised |> Array.map (fun x -> x.MeasuredIntensity)) predicted
             KLDiv_Corrected   = klDiv (normalised |> Array.map (fun x -> x.MeasuredIntensityCorrected)) predicted
         }
-
-    /// Correlation of the fitted light and heavy peaks, as AlignmentBasedQuantification.
-    let calcCorrelation (xValues:float []) (quantifiedPeak:HULQ.QuantifiedPeak) (inferredPeak:HULQ.QuantifiedPeak) =
-        let getValue (model:HULQ.PeakModel) estParams =
-            match model with
-            | HULQ.PeakModel.Gaussian m -> m.GetFunctionValue (vector estParams)
-            | HULQ.PeakModel.EMG m -> m.GetFunctionValue (vector estParams)
-        match quantifiedPeak.Model, inferredPeak.Model with
-        | Some q , Some i when xValues.Length > 1 ->
-            let step = (medianSpacing (Array.sort xValues)) / 2.
-            if not (step > 0.) then nan else
-            let xValues = [|xValues.[0] .. step .. xValues.[xValues.Length-1]|]
-            let fQ = getValue q quantifiedPeak.EstimatedParams
-            let fI = getValue i inferredPeak.EstimatedParams
-            FSharp.Stats.Correlation.Seq.pearson (xValues |> Array.map fQ) (xValues |> Array.map fI)
-        | _ -> nan
-
-    let isValidFit (q: HULQ.QuantifiedPeak) =
-        q.EstimatedParams.Length >= 3 && (q.EstimatedParams |> Array.forall isFinite) && isFinite q.Area
 
     /// Offsets of the precursor m/z written by the PSM based quantification from the theoretical m/z.
     let precursorMzOffsets (psmQuant: QuantificationResult []) =
@@ -899,7 +784,7 @@ module AlignmentBasedQuantification_v2 =
 
         // m/z calibration measured in the MS1 spectra: offset of the peak closest to the theoretical m/z (within +-calibrationMzWindow)
         // at the fitted scan time of the ions the run quantified itself. The precursor m/z of the .quant rows is only the start.
-        let initialCalibration = fitMzCalibration psm.PsmMzOffsets
+        let initialCalibration = MzCalibration.fit psm.PsmMzOffsets
         let calibrationIons =
             let ions = psm.OwnQuant.Values |> Array.ofSeq |> Array.sortBy getTargetScanTime
             let step = max 1 (ions.Length / maxCalibrationIons)
@@ -930,7 +815,7 @@ module AlignmentBasedQuantification_v2 =
                     points.Add (getTargetScanTime qp, raw.ObservedMz.[0].[0] - Mass.toMZ qp.TheoMass (float qp.Charge))
                 )
             |> ignore
-            let measured = fitMzCalibration (points.ToArray())
+            let measured = MzCalibration.fit (points.ToArray())
             if measured.Points.Length >= minCalibrationIons && isFinite measured.Sd && measured.Sd > 0. then
                 measured
             else

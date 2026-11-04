@@ -80,32 +80,44 @@ module PeakQuantification =
         | Domain.WindowSize.Fixed w  -> fun yData -> w
         | Domain.WindowSize.EstimateUsingAutoCorrelation noiseAutoCorr -> fun yData -> optimizeWindowWidth polynomOrder windowWidthToTest noiseAutoCorr yData
 
-    ///
-    let initIdentifyPeaks (peakDetectionParams:Domain.XicProcessing) =
+    /// The peak detection of the XIC processing as a function of the scan times and intensities. It does not catch exceptions of
+    /// the peak detection. Gabor3D is not an XIC based peak detection, its function fails when it is called.
+    let initIdentifyPeaks (peakDetectionParams:Domain.XicProcessing) : float [] -> float [] -> FSharp.Stats.Signal.PeakDetection.IdentifiedPeak [] =
         match peakDetectionParams with 
         | Domain.XicProcessing.SecondDerivative parameters ->
             let getWindowWidth = initGetWindowWidth parameters.WindowSize parameters.PolynomOrder [|5 .. 2 .. 60|] 
             (fun xData yData -> 
-                try
                 let  windowSize = getWindowWidth yData
                 FSharp.Stats.Signal.PeakDetection.SecondDerivative.getPeaks parameters.MinSNR parameters.PolynomOrder windowSize xData yData
-                with 
-                | ex ->
-                    // logger.Trace (sprintf "Quant failed: Peak detection failed with: %A" ex)
-                    [||]
                 )
         | Domain.XicProcessing.Wavelet parameters ->
             (fun xData yData -> 
-                try
                 FSharpStats'.Wavelet.identify parameters xData yData
-                with 
-                | ex ->
-                    // logger.Trace (sprintf "Quant failed: Peak detection failed with: %A" ex)
-                    [||]
                 )
         | Domain.XicProcessing.Gabor3D _ ->
-            fun _ _ -> [||]
-        
+            fun _ _ -> failwith "Gabor3D peak detection works on the ion mobility dimension, not on an XIC."
+
+    /// A fit is valid when it has at least 3 parameters, all parameters and the area are finite.
+    let isValidFit (q: HULQ.QuantifiedPeak) =
+        q.EstimatedParams.Length >= 3 && (q.EstimatedParams |> Array.forall Numerics.isFinite) && Numerics.isFinite q.Area
+
+    /// Correlation of the fitted light and heavy peak over the scan times of the XIC; nan if a peak has no model, the scan time grid
+    /// has fewer than 2 points or no positive spacing.
+    let calcCorrelation (xValues:float []) (quantifiedPeak:HULQ.QuantifiedPeak) (inferredPeak:HULQ.QuantifiedPeak) =
+        let getValue (model:HULQ.PeakModel) estParams =
+            match model with
+            | HULQ.PeakModel.Gaussian m -> m.GetFunctionValue (vector estParams)
+            | HULQ.PeakModel.EMG m -> m.GetFunctionValue (vector estParams)
+        match quantifiedPeak.Model, inferredPeak.Model with
+        | Some q , Some i when xValues.Length > 1 ->
+            let step = (Numerics.medianSpacing (Array.sort xValues)) / 2.
+            if not (step > 0.) then nan else
+            let xValues = [|xValues.[0] .. step .. xValues.[xValues.Length-1]|]
+            let fQ = getValue q quantifiedPeak.EstimatedParams
+            let fI = getValue i inferredPeak.EstimatedParams
+            FSharp.Stats.Correlation.Seq.pearson (xValues |> Array.map fQ) (xValues |> Array.map fI)
+        | _ -> nan
+
     ///
     /// getMs1Peaks gives the peaks of a MS1 spectrum (by ID) with lowMz < m/z < highMz in file order.
     let initComparePredictedAndMeasuredIsotopicCluster (isotopePatterns: IsotopePatterns.IsotopePatternLookUp) (getMs1Peaks: string -> float -> float -> Peak[]) (getClosestMs1: float -> string) ms1AccuracyEstimate (x_Xic:float[]) (y_Xic:float[]) y_Xic_uncorrected ch (peptide: LookUpResult<AminoAcids.AminoAcid>) tarRt tarMz =    
