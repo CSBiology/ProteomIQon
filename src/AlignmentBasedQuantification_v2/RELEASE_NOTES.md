@@ -24,3 +24,4 @@
 * Update MzIO to 0.1.8, MzIO.Processing to 0.1.8, MzIO.SQL to 0.1.10 and MzIO.MzML to 0.1.11
 * Do not transfer an ion without a fitted PSM based row of its own whose labeled partner the run quantified through its PSM based row
 * Read the isotope patterns from the table IsotopePattern of the peptide data base where PSMStatistics stored them and compute them otherwise
+* Quantify ions with short XIC traces, on which the wavelet peak detection failed

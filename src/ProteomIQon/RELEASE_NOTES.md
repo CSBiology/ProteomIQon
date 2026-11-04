@@ -14,7 +14,7 @@
 * Update BioFSharp.Mz to 0.2.3
 * Speed up the wavelet peak detection of FSharpStats'.Wavelet with the same results
 * Update MzIO to 0.1.8, MzIO.Processing to 0.1.8, MzIO.SQL to 0.1.10 and MzIO.MzML to 0.1.11
-* FSharpStats'.Wavelet.identify uses the parameters it is given; they were ignored before
+* FSharpStats'.Wavelet.identify uses the parameters it is given, which were ignored before, and handles short traces, on which it failed
 * Set MinPeakDistance 0.1 in the default parameters QuantificationParams
 * Use the Wavelet peak detection with the ALS baseline correction in the default parameters QuantificationTIMsParams
 * Add RetentionTimeFeature to the PSMStatistics EstimationParams, false in the default parameters

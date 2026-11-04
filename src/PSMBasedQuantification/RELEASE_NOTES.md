@@ -13,6 +13,7 @@
 * Use the Wavelet settings of the parameter file in the wavelet peak detection; they were ignored before
 * Default to MinPeakDistance 0.1 min
 * Pick the top PSMs of TopKPSMs by ModelScore instead of SequestScore
+* Quantify ions with short XIC traces, on which the wavelet peak detection failed
 
 #### 0.0.12 - Wednesday, September 2, 2026
 * Fall back to a median mz correction when the smoothing spline cannot be fitted on sparse data

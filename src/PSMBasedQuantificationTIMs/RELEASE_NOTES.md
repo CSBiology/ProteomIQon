@@ -17,6 +17,7 @@
 * Write AlignmentQValue 0 instead of NaN for the .quant rows
 * Use the Wavelet settings of the parameter file in the wavelet peak detection; they were ignored before
 * Default to the Wavelet peak detection with the ALS baseline correction
+* Quantify ions with short XIC traces, on which the wavelet peak detection failed
 
 #### 0.0.13 - Wednesday, September 2, 2026
 * Add Gabor3D algorithm for peak detection
