@@ -18,6 +18,7 @@
 * Set MinPeakDistance 0.1 in the default parameters QuantificationParams
 * Use the Wavelet peak detection with the ALS baseline correction in the default parameters QuantificationTIMsParams
 * Add RetentionTimeFeature to the PSMStatistics EstimationParams, false in the default parameters
+* Correct the default parameters QuantificationParams_NoBaseline, which could not be read, and make them equal to QuantificationParams except for the baseline correction
 
 #### 0.0.12 - Monday, September 28, 2026
 * Extend PeptideSpectrumMatchingResult with IonMobility, Hyperscore, Expectscore, MatchedIons and TotalIons. Breaking: .psm files written by earlier releases have 23 columns and have to be regenerated before PSMStatistics of this release reads them
