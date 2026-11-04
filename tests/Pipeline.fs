@@ -942,6 +942,8 @@ let pipelineTests =
         quantTIMsCase "PSMBasedQuantificationTIMs" "QuantificationTIMsParams.json" "" "minimalReference.quant" |> testSequenced
         // wavelet path with baseline correction, in its own folder
         quantTIMsCase "PSMBasedQuantificationTIMsWavelet" "QuantificationTIMsWaveletParams.json" "/wavelet" "minimalWaveletReference.quant" |> testSequenced
+        // wavelet path with N15 labeling and Zero border padding (deterministic), in its own folder
+        quantTIMsCase "PSMBasedQuantificationTIMsWaveletLabeled" "QuantificationTIMsWaveletLabeledParams.json" "/waveletLabeled" "minimalWaveletLabeledReference.quant" |> testSequenced
             
 
         testCase "QuantBasedAlignment" <| fun _ ->

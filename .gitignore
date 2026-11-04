@@ -214,3 +214,5 @@ tests/data/**/*_Metrics.html
 tests/data/QuantBasedAlignment/out/trunc?.align
 tests/data/QuantBasedAlignment/out/trunc?.alignmetric
 tests/data/PSMBasedQuantification/out/minimal.quant
+tests/data/PSMBasedQuantificationTIMs/out/wavelet/minimal.quant
+tests/data/PSMBasedQuantificationTIMs/out/waveletLabeled/minimal.quant
