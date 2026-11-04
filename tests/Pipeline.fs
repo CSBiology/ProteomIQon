@@ -616,6 +616,27 @@ let pipelineTests =
             Expect.stringContains log "Cross-validated scores" "the scans are scored by cross-validation"
             Expect.isGreaterThan qpsmLines.Length 1 "the qpsm holds PSMs"
 
+        testCase "PSMStatisticsRetentionTime" <| fun _ ->
+            // too few confident peptides for the predictor: the tool logs the reason and gives the result without the feature
+            let relToDirectory = getRelativePath baseDir
+            let db = tempCopy (relToDirectory "../../../data/PSMStatistics/in/MinimalEstimate.db")
+            let psm = relToDirectory "../../../data/PSMStatistics/in/minimalEstimate.psm"
+            let psmStatsParams = relToDirectory "../../../data/PSMStatistics/in/pSMStatisticsParamsRetentionTime.json"
+            let outDirectory = relToDirectory "../../../data/PSMStatistics/out/retentionTimeOut"
+            let psmStatsExe = toolDll "PSMStatistics"
+            if Directory.Exists outDirectory then Directory.Delete(outDirectory, true)
+            runDotNet (sprintf "%s -i %s -o %s -p %s -d %s" psmStatsExe psm outDirectory psmStatsParams db) baseDir
+            let log = File.ReadAllText (Path.Combine(outDirectory, "minimalEstimate_log.txt"))
+            let qpsm = Path.Combine(outDirectory, "minimalEstimate.qpsm")
+            let reference = relToDirectory "../../../data/PSMStatistics/out/estimateOut/minimalReference.qpsm"
+            let problems = qpsmProblems 0.01 0.05 reference qpsm
+            let equal = tsvFilesEqual 1e-9 reference qpsm
+            Directory.Delete(outDirectory, true)
+            deleteTemp db
+            Expect.stringContains log "Retention time feature not used (fewer than 500 confident unique peptides)" "the skip is logged"
+            Expect.isTrue (List.isEmpty problems) (String.concat "; " problems)
+            Expect.isTrue equal "the result equals the reference"
+
         testCase "PSMBasedQuantification" <| fun _ ->
             let relToDirectory = getRelativePath baseDir
             let db = relToDirectory "../../../data/PSMBasedQuantification/in/Minimal.db"

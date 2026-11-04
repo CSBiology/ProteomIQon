@@ -140,6 +140,8 @@ module Domain =
         PepValueFittingMethod           : PepValueFittingMethod
         /// Score each scan with a model trained on the other two of three scan folds (Percolator-style cross-validation).
         CrossValidation                 : bool
+        /// Add the deviation of the observed retention time from a time predicted from the peptide sequence as model features.
+        RetentionTimeFeature            : bool
     }
 
     type ScoreCutoff = {

@@ -15,6 +15,7 @@
     <Compile Include="Unit_Tests\PepValueCalculation.fs"/>
     <Compile Include="Unit_Tests\SpectrumIndex.fs"/>
     <Compile Include="Unit_Tests\IsotopePatterns.fs"/>
+    <Compile Include="Unit_Tests\PSMStatisticsRetentionTime.fs"/>
     <Compile Include="Main.fs" />
   </ItemGroup>
 
@@ -43,7 +44,7 @@
     <ProjectReference Include="..\src\PeptideDB\PeptideDB.fsproj" ReferenceOutputAssembly="false" />
     <ProjectReference Include="..\src\PeptideSpectrumMatching\PeptideSpectrumMatching.fsproj" ReferenceOutputAssembly="false" />
     <ProjectReference Include="..\src\PeptideSpectrumMatchingTIMs\PeptideSpectrumMatchingTIMs.fsproj" ReferenceOutputAssembly="true" />
-    <ProjectReference Include="..\src\PSMStatistics\PSMStatistics.fsproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\src\PSMStatistics\PSMStatistics.fsproj" ReferenceOutputAssembly="true" />
     <ProjectReference Include="..\src\MsFraggerToPSM\MsFraggerToPSM.fsproj" ReferenceOutputAssembly="false" />
     <ProjectReference Include="..\src\PSMBasedQuantification\PSMBasedQuantification.fsproj" ReferenceOutputAssembly="true" />
     <ProjectReference Include="..\src\QuantBasedAlignment_win-x64\QuantBasedAlignment_win-x64.fsproj" ReferenceOutputAssembly="false" Condition="'$(OS)' == 'Windows_NT'" />
