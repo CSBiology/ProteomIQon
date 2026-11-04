@@ -63,7 +63,7 @@ With `-dc` the tool writes one chart per peptide ion into `run_plots`, plus `mzE
 | `XicExtraction.ScanTimeWindow` | `2.0` | Half width of the scan time window around the identification that is extracted and searched for the peak, in the scan time unit of the run. |
 | `XicExtraction.MzWindow_Da` | `Window.Estimate` | Half width of the m/z window of the trace, in Da. `Estimate` uses four times the MS1 mass error the tool measures on the precursor m/z of the identifications. `Window.Fixed 0.07` sets it to 0.07 Da. |
 | `XicExtraction.XicProcessing` | `XicProcessing.Wavelet waveletParams` | Peak detection on the trace. The wavelet parameters are listed below. `SecondDerivative` is the other supported case. `Gabor3D` belongs to the TIMs tool and makes this tool fail. |
-| `XicExtraction.TopKPSMs` | `None` | `Some k` keeps only the k identifications with the highest `SequestScore` per peptide ion when placing the scan time. |
+| `XicExtraction.TopKPSMs` | `None` | `Some k` keeps only the k identifications with the highest `ModelScore` per peptide ion when placing the scan time. |
 | `BaseLineCorrection` | `Some { MaxIterations = 10; Lambda = 6; P = 0.05 }` | Asymmetric least squares baseline subtraction on the trace before peak detection. `None` skips it. |
 
 The wavelet parameters:

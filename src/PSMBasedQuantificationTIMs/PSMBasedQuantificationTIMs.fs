@@ -65,43 +65,22 @@ module PSMBasedQuantificationTIMs =
         /// Mz range peak aggregation is closest lock mz.
         /// Profile array with index corresponding to continous mass spectra over rt range and mz range given.
         /// The peaks inside the m/z and ion mobility range are summed per exact m/z and the sum closest
-        /// to the lock m/z is taken, the first in file order on a tie.
-        let initRTProfile (readSortedPeaks:string -> TimsPeaks.MzSortedPeaks)  (rtIndex: IMzIOArray<RtIndexEntry>) (rtRange: RangeQuery) (mzRange: RangeQuery) (ionMobilityRange: RangeQuery)=
+        /// to the lock m/z is taken (Xic.extractPoint). Without an ion mobility to look for, every point has intensity 0.
+        let initRTProfile (readSortedPeaks:string -> TimsPeaks.MzSortedPeaks)  (rtIndex: IMzIOArray<RtIndexEntry>) (rtRange: RangeQuery) (lockMz: float) (mzHalfWindow: float) (ionMobilityRange: RangeQuery)=
             let entries = RtIndexEntry.Search(rtIndex, rtRange)
             entries
             |>Seq.map (fun entry ->
                 let peaks = readSortedPeaks entry.SpectrumID
-                let n = peaks.Mz.Length
-                // first peak with Mz > mzRange.LowValue
-                let mutable k = SortedSearch.upperBound peaks.Mz mzRange.LowValue
-                let mutable found = false
-                let mutable bestMz = nan
-                let mutable bestIntensity = 0.
-                let mutable bestDistance = nan
-                let mutable bestFirst = Int32.MaxValue
-                while k < n && peaks.Mz.[k] < mzRange.HighValue do
-                    let mz = peaks.Mz.[k]
-                    let mutable sum = 0.
-                    let mutable first = -1
-                    while k < n && peaks.Mz.[k] = mz do
-                        let im = peaks.IonMobility.[k]
-                        if im < ionMobilityRange.HighValue && im > ionMobilityRange.LowValue then
-                            sum <- sum + peaks.Intensity.[k]
-                            if first < 0 then first <- peaks.Index.[k]
-                        k <- k + 1
-                    if first >= 0 then
-                        let distance = Math.Abs(mz - mzRange.LockValue)
-                        let c = if found then distance.CompareTo bestDistance else -1
-                        if c < 0 || (c = 0 && first < bestFirst) then
-                            found <- true
-                            bestMz <- mz
-                            bestIntensity <- sum
-                            bestDistance <- distance
-                            bestFirst <- first
-                if not found then
-                    RtIndexEntry.AsPeak2D ((new Peak1D(0., mzRange.LockValue, ionMobilityRange.LockValue)),entry.Rt)
+                let intensity, mz =
+                    if Double.IsNaN ionMobilityRange.LockValue then
+                        0., nan
+                    else
+                        let intensity, mz, _ = Xic.extractPoint peaks lockMz mzHalfWindow ionMobilityRange.LowValue ionMobilityRange.HighValue
+                        intensity, mz
+                if Double.IsNaN mz then
+                    RtIndexEntry.AsPeak2D ((new Peak1D(0., lockMz, ionMobilityRange.LockValue)),entry.Rt)
                 else
-                    RtIndexEntry.AsPeak2D (new Peak1D(bestIntensity, bestMz), entry.Rt)
+                    RtIndexEntry.AsPeak2D (new Peak1D(intensity, mz), entry.Rt)
             )
             |> Array.ofSeq
 
@@ -357,45 +336,14 @@ module PSMBasedQuantificationTIMs =
                 [||]
     
     ///
-    let substractBaseLine (logger: NLog.Logger) (baseLineParams:Domain.BaseLineCorrection) (yData:float []) =
-        if yData.Length > 500 then
-            yData
-        else
-            let baseLine = BaselineAls.baselineAls baseLineParams.MaxIterations baseLineParams.Lambda baseLineParams.P yData
-            Array.map2 (fun y b ->
-                           let c = y - b
-                           if c < 0. then 0. else c
-                       ) yData baseLine
-
-    ///
-    let initGetProcessedXIC logger (baseLineCorrection:Domain.BaseLineCorrection option) getPeaks idx scanTimeWindow mzWindow_Da imWindow meanScanTime meanPrecMz meanIM =
+    let initGetProcessedXIC (baseLineCorrection:Domain.BaseLineCorrection option) getPeaks idx scanTimeWindow mzWindow_Da imWindow meanScanTime meanPrecMz meanIM =
         let rtQuery = Query.createRangeQuery meanScanTime scanTimeWindow
-        let mzQuery = Query.createRangeQuery meanPrecMz mzWindow_Da
         let imQuery = Query.createRangeQuery meanIM imWindow
-        let retData',itzData' =
-            let tmp =
-                getPeaks idx rtQuery mzQuery imQuery
-                |> Array.map (fun (p:MzIO.Binary.Peak2D) -> p.Rt , p.Intensity)
-            tmp
-            |> Array.mapi (fun i (rt,intensity) ->
-                            if i = 0 || i = tmp.Length-1 || intensity > 0. then
-                                Some (rt,intensity)
-                            else
-                                let rt',intensity' = tmp.[i-1]
-                                if intensity' = 0. then
-                                    Some (rt,intensity)
-                                elif intensity' > (100. * (intensity+1.)) then
-                                    None
-                                else
-                                    Some (rt,intensity)
-                          )
-            |> Array.choose id
+        let rt, intensity =
+            getPeaks idx rtQuery meanPrecMz mzWindow_Da imQuery
+            |> Array.map (fun (p:MzIO.Binary.Peak2D) -> p.Rt , p.Intensity)
             |> Array.unzip
-        match baseLineCorrection with
-        | Some baseLineParams ->
-            retData', substractBaseLine logger baseLineParams itzData', itzData'
-        | None ->
-            retData',itzData',itzData'
+        Xic.processXic baseLineCorrection rt intensity
 
 
     [<Literal>]
@@ -1753,12 +1701,6 @@ module PSMBasedQuantificationTIMs =
                 expectedMobility
 
         
-    /// The PSM with the lowest QValue. A PSM without QValue (NaN) is taken only when no PSM has one.
-    let bestPsmByQValue (psms: PSMStatisticsResult []) =
-        match psms |> Array.filter (fun x -> not (Double.IsNaN x.QValue)) with
-        | [||] -> psms.[0]
-        | withQValue -> withQValue |> Array.minBy (fun x -> x.QValue)
-
     type InferredQuantification = {
         Model                       :HULQ.PeakModel option
         Area                        :float
@@ -1774,27 +1716,6 @@ module PSMBasedQuantificationTIMs =
         xPeak                       :float[]
         yFitted                     :float[]
         }
-
-    ///
-    let calcCorrelation (xValues:float []) (quantifiedPeak:HULQ.QuantifiedPeak) (inferredPeak:HULQ.QuantifiedPeak) = 
-        let getValue (model:HULQ.PeakModel) estParams =
-            match model with
-            | HULQ.PeakModel.Gaussian m -> 
-                m.GetFunctionValue (vector estParams)
-            | HULQ.PeakModel.EMG m -> 
-                m.GetFunctionValue (vector estParams)
-        match quantifiedPeak.Model, inferredPeak.Model with 
-        | Some q , Some i -> 
-            let xValuesBW = 
-                [|for i = 1 to xValues.Length-1 do abs(xValues.[i] - xValues.[i-1])|]
-                |> Array.median
-            let xValues = [|xValues.[0] .. xValuesBW/2. .. xValues.[xValues.Length-1]|]
-            let fQ = getValue q quantifiedPeak.EstimatedParams
-            let yQ = xValues |> Array.map fQ
-            let fI = getValue i inferredPeak.EstimatedParams
-            let yI = xValues |> Array.map fI
-            FSharp.Stats.Correlation.Seq.pearson yQ yI
-        | _ -> nan
 
     /// Maps f over xs in the order of key (ascending) and returns the results in the order of xs. f gets the position of the
     /// element in the order of key.
@@ -1923,11 +1844,15 @@ module PSMBasedQuantificationTIMs =
                 scanTimeVsDelta
                 |> Seq.map snd
                 |> Array.ofSeq
-                |> FSharp.Stats.Testing.Outliers.tukey 3.
+                |> FSharp.Stats.Signal.Outliers.tukey 3.
+            let lowerFence, upperFence =
+                match borders.TryToTuple with
+                | Some fences -> fences
+                | None -> nan, nan
             let filteredValues =
                 scanTimeVsDelta
                 |> Array.ofSeq
-                |> Array.filter (fun (s,d) -> (d <= borders.Upper && d >= borders.Lower) && d < 0.1)
+                |> Array.filter (fun (s,d) -> (d <= upperFence && d >= lowerFence) && d < 0.1)
             let scanTimeToMzCorrection =
                 let runTime = scanTimeVsDelta |> Array.maxBy fst |> fst
                 if runTime > 20. && qpsms.Length > 500 then
@@ -2009,9 +1934,16 @@ module PSMBasedQuantificationTIMs =
                 closestMs1
                 ms1AccuracyEstimate
         let getPeaks = Query.initRTProfile readSortedPeaksWithMem
-        let getXIC = initGetProcessedXIC logger processParams.BaseLineCorrection getPeaks retTimeIdxed processParams.XicExtraction.ScanTimeWindow mzWindow 0.05        
+        let getXIC = initGetProcessedXIC processParams.BaseLineCorrection getPeaks retTimeIdxed processParams.XicExtraction.ScanTimeWindow mzWindow Xic.ionMobilityHalfWindow        
         ///
         let identifyPeaks = initIdentifyPeaks processParams.XicExtraction.XicProcessing
+        // a failing peak detection of the partner leaves the partner without quantification, the quantification of the ion stays
+        let identifyPartnerPeaks xData yData =
+            try
+                identifyPeaks xData yData
+            with ex ->
+                logger.Trace (sprintf "Quant failed: Peak detection of the labeled partner failed with: %A" ex)
+                [||]
         logger.Trace "init lookup functions:finished"
         
         let getGaborPeaks =
@@ -2023,7 +1955,7 @@ module PSMBasedQuantificationTIMs =
                 retTimeIdxed
                 processParams.XicExtraction.ScanTimeWindow
                 mzWindow
-                0.05
+                Xic.ionMobilityHalfWindow
                 processParams.BaseLineCorrection
         logger.Trace "init quantification functions"
 
@@ -2420,7 +2352,7 @@ module PSMBasedQuantificationTIMs =
             let peakToQuantify = BioFSharp.Mz.Quantification.HULQ.getPeakBy peaks averagePSM.WeightedAvgScanTime
             let quantP = BioFSharp.Mz.Quantification.HULQ.quantifyPeak peakToQuantify                        
             let searchRTMinusFittedRT = searchRTMinusFittedRtTarget averagePSM.WeightedAvgScanTime quantP
-            if quantP.EstimatedParams |> Array.exists nan.Equals || Array.isEmpty quantP.EstimatedParams then 
+            if not (isValidFit quantP) then 
                 if diagCharts then saveErrorChart averagePSM.X_Xic averagePSM.Y_Xic pepIon "fittingFailed" plotDirectory    
                 logger.Trace (sprintf "Quant failed: Peak fitting failed, Sequence:%s, GlobalMod:%s, Charge:%s" (pepIon.Sequence |> String.filter (fun x -> x <> '*')) (pepIon.GlobalMod.ToString()) (pepIon.Charge.ToString()))
                 None
@@ -2434,7 +2366,7 @@ module PSMBasedQuantificationTIMs =
                     correctedMz 
                 let inferredQuant = 
                     let inferredXicHeavy = getInferredXic getXIC averagePSM.WeightedAvgScanTime mzHeavy averagePSM.WeightedAvgIM
-                    let inferredPeaksHeavy = identifyPeaks inferredXicHeavy.X_Xic inferredXicHeavy.Y_Xic
+                    let inferredPeaksHeavy = identifyPartnerPeaks inferredXicHeavy.X_Xic inferredXicHeavy.Y_Xic
                     if Array.isEmpty inferredPeaksHeavy then 
                         if diagCharts then saveErrorChart inferredXicHeavy.X_Xic inferredXicHeavy.Y_Xic pepIon "noInferredPeaks" plotDirectory
                         logger.Trace (sprintf "Quant failed: No Peak detected, Sequence:%s, GlobalMod:%s, Charge:%s" (pepIon.Sequence |> String.filter (fun x -> x <> '*')) (pepIon.GlobalMod.ToString()) (pepIon.Charge.ToString()))
@@ -2442,7 +2374,7 @@ module PSMBasedQuantificationTIMs =
                     else
                     let peakToQuantifyHeavy = BioFSharp.Mz.Quantification.HULQ.getPeakBy inferredPeaksHeavy inferredScanTime
                     let quantPHeavy         = BioFSharp.Mz.Quantification.HULQ.quantifyPeak peakToQuantifyHeavy          
-                    if quantPHeavy.EstimatedParams |> Array.exists nan.Equals || Array.isEmpty quantPHeavy.EstimatedParams then 
+                    if not (isValidFit quantPHeavy) then 
                         if diagCharts then saveErrorChart inferredXicHeavy.X_Xic inferredXicHeavy.Y_Xic pepIon "fittingInferredFailed" plotDirectory    
                         logger.Trace (sprintf "Quant failed: Peak fitting failed, Sequence:%s, GlobalMod:%s, Charge:%s" (pepIon.Sequence |> String.filter (fun x -> x <> '*')) (pepIon.GlobalMod.ToString()) (pepIon.Charge.ToString()))
                         None
@@ -2581,7 +2513,7 @@ module PSMBasedQuantificationTIMs =
                     correctedMz   
                 let inferredQuant = 
                     let inferredXicLight = getInferredXic getXIC averagePSM.WeightedAvgScanTime mzLight averagePSM.WeightedAvgIM
-                    let inferredPeaksLight = identifyPeaks inferredXicLight.X_Xic inferredXicLight.Y_Xic
+                    let inferredPeaksLight = identifyPartnerPeaks inferredXicLight.X_Xic inferredXicLight.Y_Xic
                     if Array.isEmpty inferredPeaksLight then 
                         if diagCharts then saveErrorChart inferredXicLight.X_Xic inferredXicLight.Y_Xic pepIon "noInferredPeaks" plotDirectory
                         logger.Trace (sprintf "Quant failed: No Peak detected, Sequence:%s, GlobalMod:%s, Charge:%s" (pepIon.Sequence |> String.filter (fun x -> x <> '*')) (pepIon.GlobalMod.ToString()) (pepIon.Charge.ToString()))
@@ -2589,7 +2521,7 @@ module PSMBasedQuantificationTIMs =
                     else
                     let peakToQuantifyLight = BioFSharp.Mz.Quantification.HULQ.getPeakBy inferredPeaksLight inferredScanTime
                     let quantPLight         = BioFSharp.Mz.Quantification.HULQ.quantifyPeak peakToQuantifyLight          
-                    if quantPLight.EstimatedParams |> Array.exists nan.Equals || Array.isEmpty quantPLight.EstimatedParams then 
+                    if not (isValidFit quantPLight) then 
                         if diagCharts then saveErrorChart inferredXicLight.X_Xic inferredXicLight.Y_Xic pepIon "fittingInferredFailed" plotDirectory    
                         logger.Trace (sprintf "Quant failed: Peak fitting failed, Sequence:%s, GlobalMod:%s, Charge:%s" (pepIon.Sequence |> String.filter (fun x -> x <> '*')) (pepIon.GlobalMod.ToString()) (pepIon.Charge.ToString()))
                         None
@@ -2746,7 +2678,7 @@ module PSMBasedQuantificationTIMs =
             let peakToQuantify = BioFSharp.Mz.Quantification.HULQ.getPeakBy peaks averagePSM.WeightedAvgScanTime
             let quantP = BioFSharp.Mz.Quantification.HULQ.quantifyPeak peakToQuantify
             let searchRTMinusFittedRT = searchRTMinusFittedRtTarget averagePSM.WeightedAvgScanTime quantP 
-            if quantP.EstimatedParams |> Array.exists nan.Equals || Array.isEmpty quantP.EstimatedParams then 
+            if not (isValidFit quantP) then 
                 if diagCharts then saveErrorChart averagePSM.X_Xic averagePSM.Y_Xic pepIon "fittingFailed" plotDirectory    
                 logger.Trace (sprintf "Quant failed: Peak fitting failed, Sequence:%s, GlobalMod:%s, Charge:%s" (pepIon.Sequence |> String.filter (fun x -> x <> '*')) (pepIon.GlobalMod.ToString()) (pepIon.Charge.ToString()))
                 None
