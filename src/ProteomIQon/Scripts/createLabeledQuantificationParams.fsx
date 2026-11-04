@@ -30,6 +30,7 @@ let defaultLabeledQuantificationParams :Dto.LabeledQuantificationParams =
         }
     {
         Correlation_Light_Heavy_Threshold    = None
+        Alignment_QValue                     = Some 0.05
         ModificationFilter                   = UseModifiedPeptides.All 
         AggregateGlobalModificationsParams   = globalModParams
         AggregatePeptideChargeStatesParams   = None

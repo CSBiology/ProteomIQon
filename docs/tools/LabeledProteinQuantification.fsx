@@ -46,7 +46,7 @@ The tool writes up to five tab separated tables into the output directory. GlobM
 | Parameter | Default | Meaning |
 |---|---|---|
 | Correlation_Light_Heavy_Threshold | None | Some 0.9 keeps only rows whose light and heavy elution profiles correlate above 0.9. None keeps everything. The filter is applied in the first step. |
-| Alignment_QValue | None | Rows that came from alignment and have an alignment q-value at or above this value are dropped, None keeps everything. |
+| Alignment_QValue | Some 0.05 | Rows that came from alignment and have an alignment q-value at or above this value are dropped. PSM based quantifications carry the q-value 0, and rows without an alignment q-value are kept. None keeps every row. |
 | ModificationFilter | UseModifiedPeptides.All | Which peptides enter the aggregation. All keeps every peptide, No drops every peptide with a modification, UseOnly mods keeps unmodified peptides and peptides whose modifications are all in the list. |
 | AggregateGlobalModificationsParams | { LabeledTransform = None; LabeledSingleFilters = None; LabeledGroupFilters = None; LabeledAggregation = { Light = Mean; Heavy = Mean; Ratio = Mean } } | The first step, always run. |
 | AggregatePeptideChargeStatesParams | None | Some params runs the charge step with the given AggregationParams. None skips it. |
@@ -62,7 +62,7 @@ An AggregationParams record describes one step. Each of its fields has a Light, 
 | LabeledGroupFilters | None | Some { Light = Some (seq [Tukey 1.5]); Heavy = None; Ratio = None } removes outliers within each group before aggregation. GroupFilter is Tukey factor, Stdev factor or TopX count. |
 | LabeledAggregation | { Light = Mean; Heavy = Mean; Ratio = Mean } | How the remaining values of a group are combined per series. NumericAggregation is Mean, Median or Sum. |
 
-Five default files exist. [LabeledQuantificationParams.json](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/LabeledQuantificationParams.json) is the table above. [LabeledQuantificationParams_withCorrFilter.json](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/LabeledQuantificationParams_withCorrFilter.json) sets Correlation_Light_Heavy_Threshold to Some 0.9. [LabeledQuantificationParams_CorrFilter_ChargeAgg.json](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/LabeledQuantificationParams_CorrFilter_ChargeAgg.json) sets the threshold to Some 0.0 and adds the charge step with Mean. [LabeledQuantificationParams_CorrFilter_ChargeAgg_ModAgg.json](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/LabeledQuantificationParams_CorrFilter_ChargeAgg_ModAgg.json) sets the threshold to Some 0.0 and adds the charge and the modification step, both with Mean. [LabeledQuantificationParams_Transform_Filter_Sum.json](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/LabeledQuantificationParams_Transform_Filter_Sum.json) log2 transforms light, heavy and ratio in the first step, keeps only log2 ratios below 0.0 there, and sums light and heavy in the protein step while the ratio is still averaged.
+Five default files exist, all with Alignment_QValue set to Some 0.05. [LabeledQuantificationParams.json](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/LabeledQuantificationParams.json) is the table above. [LabeledQuantificationParams_withCorrFilter.json](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/LabeledQuantificationParams_withCorrFilter.json) sets Correlation_Light_Heavy_Threshold to Some 0.9. [LabeledQuantificationParams_CorrFilter_ChargeAgg.json](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/LabeledQuantificationParams_CorrFilter_ChargeAgg.json) sets the threshold to Some 0.0 and adds the charge step with Mean. [LabeledQuantificationParams_CorrFilter_ChargeAgg_ModAgg.json](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/LabeledQuantificationParams_CorrFilter_ChargeAgg_ModAgg.json) sets the threshold to Some 0.0 and adds the charge and the modification step, both with Mean. [LabeledQuantificationParams_Transform_Filter_Sum.json](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/LabeledQuantificationParams_Transform_Filter_Sum.json) log2 transforms light, heavy and ratio in the first step, keeps only log2 ratios below 0.0 there, and sums light and heavy in the protein step while the ratio is still averaged.
 
 ## Writing a parameter file
 *)
@@ -87,7 +87,7 @@ let meanOfAll : Common.LabeledProteinQuantification.AggregationParams =
 let labeledQuantificationParams : Dto.LabeledQuantificationParams =
     {
         Correlation_Light_Heavy_Threshold  = None
-        Alignment_QValue                   = None
+        Alignment_QValue                   = Some 0.05
         ModificationFilter                 = UseModifiedPeptides.All
         AggregateGlobalModificationsParams = meanOfAll
         AggregatePeptideChargeStatesParams = None
