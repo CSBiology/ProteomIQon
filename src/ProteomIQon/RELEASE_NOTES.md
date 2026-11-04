@@ -16,6 +16,7 @@
 * Update MzIO to 0.1.8, MzIO.Processing to 0.1.8, MzIO.SQL to 0.1.10 and MzIO.MzML to 0.1.11
 * FSharpStats'.Wavelet.identify uses the parameters it is given; they were ignored before
 * Set MinPeakDistance 0.1 in the default parameters QuantificationParams
+* Use the Wavelet peak detection with the ALS baseline correction in the default parameters QuantificationTIMsParams
 
 #### 0.0.12 - Monday, September 28, 2026
 * Extend PeptideSpectrumMatchingResult with IonMobility, Hyperscore, Expectscore, MatchedIons and TotalIons. Breaking: .psm files written by earlier releases have 23 columns and have to be regenerated before PSMStatistics of this release reads them
