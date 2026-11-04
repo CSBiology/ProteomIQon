@@ -39,7 +39,7 @@
     <Compile Include="IsotopePatterns.fs" />
     <Compile Include="SpectrumIndex.fs" />
     <Compile Include="BaselineAls.fs" />
-    <Compile Include="TimsPeaks.fs" />
+    <Compile Include="SortedPeaks.fs" />
     <Compile Include="Numerics.fs" />
     <Compile Include="Xic.fs" />
     <Compile Include="MzCalibration.fs" />

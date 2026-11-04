@@ -181,35 +181,35 @@ let all =
             Expect.equal (closest 3.) "b" "equal distance to 2 and 4: the earlier one"
             Expect.equal (closest 100.) "d" "after the last"
         testCase "the m/z sort drops peaks without m/z and keeps the file order of equal m/z" <| fun _ ->
-            let sorted = TimsPeaks.sortPeakArraysByMz [| 5.; nan; 3.; 5.; 3.; 4. |] [| 10.; 20.; 30.; 40.; 50.; 60. |] [| 0.1; 0.2; 0.3; 0.4; 0.5; 0.6 |]
+            let sorted = SortedPeaks.sortPeakArraysByMz [| 5.; nan; 3.; 5.; 3.; 4. |] [| 10.; 20.; 30.; 40.; 50.; 60. |] [| 0.1; 0.2; 0.3; 0.4; 0.5; 0.6 |]
             Expect.equal sorted.Mz [| 3.; 3.; 4.; 5.; 5. |] "sorted by m/z, NaN dropped"
             Expect.equal sorted.Index [| 2; 4; 5; 0; 3 |] "equal m/z in file order"
             Expect.equal sorted.Intensity [| 30.; 50.; 60.; 10.; 40. |] "intensities follow"
             Expect.equal sorted.IonMobility [| 0.3; 0.5; 0.6; 0.1; 0.4 |] "ion mobilities follow"
-            Expect.isEmpty (TimsPeaks.sortPeakArraysByMz [| 2.; 1. |] [| 1.; 2. |] [||]).IonMobility "no ion mobility stays empty"
+            Expect.isEmpty (SortedPeaks.sortPeakArraysByMz [| 2.; 1. |] [| 1.; 2. |] [||]).IonMobility "no ion mobility stays empty"
         testCase "the m/z sort of empty input and of input without any m/z" <| fun _ ->
-            let empty = TimsPeaks.sortPeakArraysByMz [||] [||] [||]
+            let empty = SortedPeaks.sortPeakArraysByMz [||] [||] [||]
             Expect.isEmpty empty.Mz "no m/z"
             Expect.isEmpty empty.Intensity "no intensity"
             Expect.isEmpty empty.Index "no index"
-            let allNan = TimsPeaks.sortPeakArraysByMz [| nan; nan |] [| 1.; 2. |] [| 0.1; 0.2 |]
+            let allNan = SortedPeaks.sortPeakArraysByMz [| nan; nan |] [| 1.; 2. |] [| 0.1; 0.2 |]
             Expect.isEmpty allNan.Mz "every peak is dropped"
             Expect.isEmpty allNan.Intensity "no intensity"
             Expect.isEmpty allNan.IonMobility "the ion mobilities of the dropped peaks go too"
         testCase "mapiOrderedBy runs in the order of the key and returns the results in the order of the input" <| fun _ ->
             let calls = ResizeArray<int * float>()
             let keys = [| 3.; nan; 1.; 3.; 2. |]
-            let results = PSMBasedQuantificationTIMs.mapiOrderedBy id (fun position key -> calls.Add((position, key)); sprintf "%i:%g" position key) keys
+            let results = Xic.mapiOrderedBy id (fun position key -> calls.Add((position, key)); sprintf "%i:%g" position key) keys
             Expect.equal (calls |> Seq.map fst |> Seq.toList) [ 0; 1; 2; 3; 4 ] "the positions in the order of the key"
             Expect.equal (calls |> Seq.map snd |> Seq.toList |> List.map (fun k -> if Double.IsNaN k then -1. else k)) [ -1.; 1.; 2.; 3.; 3. ] "NaN first, equal keys in the order of the input"
             Expect.equal results [| "3:3"; "0:NaN"; "1:1"; "4:3"; "2:2" |] "the results stay in the order of the input"
-            Expect.isEmpty (PSMBasedQuantificationTIMs.mapiOrderedBy id (fun _ _ -> 0) [||]) "nothing to map"
+            Expect.isEmpty (Xic.mapiOrderedBy id (fun _ _ -> 0) [||]) "nothing to map"
         testCase "the peak cache keeps at most its capacity, drops the least recently used and counts the reads" <| fun _ ->
             let reads = ResizeArray<string>()
             let read (id: string) =
                 reads.Add id
-                TimsPeaks.sortPeakArraysByMz [| float id.Length |] [| 1. |] [||]
-            let cache = PSMBasedQuantificationTIMs.Query.PeakCache(read, 10)
+                SortedPeaks.sortPeakArraysByMz [| float id.Length |] [| 1. |] [||]
+            let cache = Xic.PeakCache(read, 10)
             for i in 1 .. 10 do cache.Get (string (i * 11)) |> ignore
             Expect.equal cache.Reads 10 "ten different spectra"
             cache.Get "11" |> ignore

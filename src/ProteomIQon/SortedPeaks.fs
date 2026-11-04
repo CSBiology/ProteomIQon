@@ -2,8 +2,8 @@ namespace ProteomIQon
 
 open System
 
-// The m/z sort of the peaks of TIMS spectra, shared by PSMBasedQuantificationTIMs and AlignmentBasedQuantification_v2.
-module TimsPeaks =
+// The peaks of a spectrum sorted by m/z, read by the XIC extraction of the quantification tools.
+module SortedPeaks =
     /// The peaks of a spectrum sorted by m/z, ties in file order. Index is the position of the peak in the file,
     /// peaks without a m/z are left out. IonMobility is empty when the spectrum has none.
     type MzSortedPeaks =

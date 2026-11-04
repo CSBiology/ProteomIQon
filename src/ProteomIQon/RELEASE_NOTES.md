@@ -1,7 +1,7 @@
 #### Unreleased
 * Add StoreIsotopePatterns to the PSMStatistics parameters and the default parameters
 * Add IsotopePatterns: the isotope pattern of a peptide at a charge (MIDA, resolution 0.01, minimum probability 0.001) for the quantification tools, its BLOB encoding, the table IsotopePattern of the peptide data base with a look up that reads the table and computes missing patterns, and the function that stores the patterns
-* Add SpectrumIndex (the MS1 index and the MS2 headers from one pass over the spectrum descriptions, skipping with a warning the descriptions that cannot be read) and SortedSearch (binary searches and the closest scan time), and the m/z sort of the peaks of a spectrum in TimsPeaks, shared by the quantification and search tools
+* Add SpectrumIndex (the MS1 index and the MS2 headers from one pass over the spectrum descriptions, skipping with a warning the descriptions that cannot be read) and SortedSearch (binary searches and the closest scan time), and the m/z sort of the peaks of a spectrum in SortedPeaks, shared by the quantification and search tools
 * Use CrossValidation and no PEP cutoff (PepValueThreshold 1.0) in the default PSMStatistics parameters
 * Add Charts.useReferenceEqualityForJson, which makes saving Plotly.NET charts faster with the same output
 * Add a result type for the .align output of QuantBasedAlignment: the AlignmentResult columns followed by the local scan time error scale, the source run, the source model error and the predicted ion mobility with its error scale
