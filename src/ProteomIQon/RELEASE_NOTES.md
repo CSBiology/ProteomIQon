@@ -17,7 +17,7 @@
 * FSharpStats'.Wavelet.identify uses the parameters it is given, which were ignored before, and handles short traces, on which it failed
 * Set MinPeakDistance 0.1 in the default parameters QuantificationParams
 * Use the Wavelet peak detection with the ALS baseline correction in the default parameters QuantificationTIMsParams
-* Add RetentionTimeFeature to the PSMStatistics EstimationParams, false in the default parameters
+* Add RetentionTimeFeature to the PSMStatistics EstimationParams, true in the default parameters
 * Correct the default parameters QuantificationParams_NoBaseline, which could not be read, and make them equal to QuantificationParams except for the baseline correction
 * Set Alignment_QValue 0.05 in the default parameters of LabelFreeProteinQuantification and LabeledProteinQuantification
 * Set MinPepLength 6 in the default parameters of PeptideDB
