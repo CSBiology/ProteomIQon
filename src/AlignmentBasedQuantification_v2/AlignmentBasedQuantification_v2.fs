@@ -21,11 +21,6 @@ module XicSweep =
 
     open Numerics
 
-    /// Reads the peaks of a spectrum sorted by m/z. The ion mobilities are empty when the spectrum has none.
-    let readSortedPeaks (reader: MzIO.MzSQL.MzSQL) (spectrumID: string) =
-        let struct (mzs, intensities, ionMobilities) = reader.ReadSpectrumPeaksAsArrays spectrumID
-        TimsPeaks.sortPeakArraysByMz mzs intensities (if isNull ionMobilities then [||] else ionMobilities)
-
     /// The XIC traces of one ion: one trace per lock m/z, all with the same scan time and ion mobility window.
     type XicRequest =
         {
@@ -63,7 +58,7 @@ module XicSweep =
     /// Walks once through the MS1 spectra (sorted by scan time), reads only spectra inside at least one window
     /// and hands every XIC to onComplete as soon as its window is passed. Only the current spectrum and the XICs
     /// of open windows are held in memory. Returns the number of spectra read.
-    let sweep (readSpectrum: string -> TimsPeaks.MzSortedPeaks) (ms1: (float*string) []) (requests: XicRequest []) (onComplete: int -> RawXic -> unit) =
+    let sweep (readSpectrum: string -> SortedPeaks.MzSortedPeaks) (ms1: (float*string) []) (requests: XicRequest []) (onComplete: int -> RawXic -> unit) =
         let n = requests.Length
         let order =
             Array.init n id
@@ -765,7 +760,7 @@ module AlignmentBasedQuantification_v2 =
         inReader.Connection.Open()
         let inRunID  = Core.MzIO.Reader.getDefaultRunID inReader
         let ms1 = SpectrumIndex.readMs1Index inReader inRunID (fun message -> logger.Warn message) ignore
-        let readSpectrum = XicSweep.readSortedPeaks inReader
+        let readSpectrum = Xic.readSortedPeaks inReader
         let spectraHaveIonMobility =
             ms1
             |> Seq.skip (ms1.Length / 2)

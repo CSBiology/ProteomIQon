@@ -18,29 +18,9 @@ open PSMQuantification
 
 module PSMBasedQuantification =
     module Query = 
-        open System
-        open System.Collections.Generic
-        open System.Linq
         open MzIO.Commons.Arrays
         open MzIO.Processing.MzIOLinq
-        open MzIO.Binary
          
-        /// Extract a rt profile for specified target mass and rt range.
-        /// Mz range peak aggregation is closest lock mz.
-        /// Profile array with index corresponding to continous mass spectra over rt range and mz range given.
-        let initRTProfile (readspecPeaks:string -> Peak1DArray)  (rtIndex: IMzIOArray<RtIndexEntry>) (rtRange: RangeQuery) (mzRange: RangeQuery) =
-            let entries = RtIndexEntry.Search(rtIndex, rtRange).ToArray()
-            //printfn "RtProfile %i" entries.Length
-            let profile = Array.zeroCreate<Peak2D> entries.Length
-            for rtIdx = 0 to entries.Length-1 do
-                let entry = entries.[rtIdx]
-                let peaks = (readspecPeaks entry.SpectrumID).Peaks
-                let p = (RtIndexEntry.MzSearch (peaks, mzRange)).DefaultIfEmpty(Peak1D(0., mzRange.LockValue))
-                        |> fun x -> RtIndexEntry.ClosestMz (x, mzRange.LockValue)
-                        |> fun x -> RtIndexEntry.AsPeak2D (x, entry.Rt)
-                profile.[rtIdx] <- p
-            profile
-
         /// The retention time index and the scan times of the MS1 spectra, both sorted by scan time, from one pass
         /// over the spectrum descriptions with the streaming parser (SpectrumIndex.readMs1Index).
         let readMs1Index (reader: MzIO.MzSQL.MzSQL) (runID: string) (warn: string -> unit) =
@@ -95,11 +75,6 @@ module PSMBasedQuantification =
         rSquared, model
 
     ///
-    let getSpec (reader:MzIO.IO.IMzIODataReader) (ms1ID: string)  =
-        Peaks.unzipIMzliteArray (reader.ReadSpectrumPeaks(ms1ID).Peaks)
-        |> fun (mzData,intensityData) -> PeakArray.zip mzData intensityData
-    
-    ///
     let lightQualityFilter lowerBorder upperBorder (quantResults:QuantificationResult[]) =
         let medianApexIntensities = 
             quantResults
@@ -144,13 +119,9 @@ module PSMBasedQuantification =
             )
     
     ///
-    let initGetProcessedXIC (baseLineCorrection:Domain.BaseLineCorrection option) getPeaks idx scanTimeWindow mzWindow_Da meanScanTime meanPrecMz =
+    let initGetProcessedXIC (baseLineCorrection:Domain.BaseLineCorrection option) readSortedPeaks idx scanTimeWindow mzWindow_Da meanScanTime meanPrecMz =
         let rtQuery = Query.createRangeQuery meanScanTime scanTimeWindow
-        let mzQuery = Query.createRangeQuery meanPrecMz mzWindow_Da
-        let rt, intensity =
-            getPeaks idx rtQuery mzQuery
-            |> Array.map (fun (p:MzIO.Binary.Peak2D) -> p.Rt , p.Intensity)
-            |> Array.unzip
+        let rt, intensity = Xic.rtProfile readSortedPeaks idx rtQuery meanPrecMz mzWindow_Da nan nan
         Xic.processXic baseLineCorrection rt intensity
 
     ///
@@ -291,8 +262,14 @@ module PSMBasedQuantification =
         logger.Trace (sprintf "Estimate precursor mz standard deviation and mz correction.:finished, standard deviation: %f" ms1AccuracyEstimate) 
 
         logger.Trace "init lookup functions"        
-        ///
-        let comparePredictedAndMeasuredIsotopicCluster = initComparePredictedAndMeasuredIsotopicCluster isotopePatterns (fun ms1ID lowMz highMz -> getSpec inReader ms1ID |> Array.filter (fun x -> x.Mz < highMz && x.Mz > lowMz)) (SpectrumIndex.initClosestMs1 ms1SortedByScanTime) ms1AccuracyEstimate     
+        // The ions are quantified in the order of their scan time and their XICs read the MS1 spectra of a window of
+        // 2 x ScanTimeWindow, so the spectra of twice the widest window are kept instead of all MS1 spectra of the file.
+        let peakCache =
+            let cacheSize, widestWindow = Xic.peakCacheSize (ms1SortedByScanTime |> Array.map fst) processParams.XicExtraction.ScanTimeWindow
+            logger.Trace (sprintf "MS1 peaks cache: %i spectra (%i MS1s in the widest XIC window)" cacheSize widestWindow)
+            Xic.PeakCache(Xic.readSortedPeaks inReader, cacheSize)
+        let readSortedPeaksWithMem = peakCache.Get
+        let comparePredictedAndMeasuredIsotopicCluster = initComparePredictedAndMeasuredIsotopicCluster isotopePatterns (fun ms1ID lowMz highMz -> Xic.getPeaksInMzRange (readSortedPeaksWithMem ms1ID) lowMz highMz) (SpectrumIndex.initClosestMs1 ms1SortedByScanTime) ms1AccuracyEstimate     
         
         let mzWindow = 
             match processParams.XicExtraction.MzWindow_Da with 
@@ -302,10 +279,8 @@ module PSMBasedQuantification =
                 logger.Trace (sprintf "optimal mz Window for XIC look up found by estimation :%f Da" mzW)  
                 mzW
 
-        let readSpecPeaksWithMem = FSharpAux.Memoization.memoize inReader.ReadSpectrumPeaks
         ///
-        let getPeaks = Query.initRTProfile readSpecPeaksWithMem
-        let getXIC = initGetProcessedXIC processParams.BaseLineCorrection getPeaks retTimeIdxed processParams.XicExtraction.ScanTimeWindow mzWindow    
+        let getXIC = initGetProcessedXIC processParams.BaseLineCorrection readSortedPeaksWithMem retTimeIdxed processParams.XicExtraction.ScanTimeWindow mzWindow    
         // PSMBasedQuantification has no ion mobility.
         let getXICWithIM scanTime mz (_: float) = getXIC scanTime mz
         
@@ -356,7 +331,7 @@ module PSMBasedQuantification =
                         pepIon,
                         psms                  
                 )
-            |> Array.mapi (fun i (pepIon,psms) -> 
+            |> Xic.mapiOrderedBy (fun (_, psms: PSMStatisticsResult []) -> if psms.Length = 0 then infinity else psms |> Array.averageBy (fun x -> x.ScanTime)) (fun i (pepIon,psms) -> 
                 if i % 100 = 0 then logger.Trace (sprintf "%i peptides quantified" i)
                 
                 match processParams.PerformLabeledQuantification with 
@@ -398,6 +373,7 @@ module PSMBasedQuantification =
                         | Error ex -> logger.Trace (sprintf "Error saving zipped directory: %A" ex)
                 | Error ex -> logger.Trace (sprintf "Error zipping directory: %A" ex)
         logger.Trace (sprintf "Isotope patterns: %i read from the peptide data base, %i computed" isotopePatterns.Read isotopePatterns.Computed)
+        if peakCache.Reads > 0 then logger.Trace (sprintf "%i MS1 spectra were read for %i MS1s of the file (cache of %i spectra)" peakCache.Reads ms1SortedByScanTime.Length peakCache.Capacity)
         inTr.Commit()
         inTr.Dispose()
         inReader.Dispose()

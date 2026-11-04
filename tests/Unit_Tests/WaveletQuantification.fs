@@ -30,7 +30,7 @@ let private baselineParams : Domain.BaseLineCorrection = { MaxIterations = 10; L
 
 /// The peak extraction of PSMBasedQuantificationTIMs before it was shared: the peaks with lowMz < m/z < highMz and the ion mobility
 /// window are summed per exact m/z, the sum closest to the lock m/z is taken, the first in file order on a tie.
-let private oldExtract (peaks: TimsPeaks.MzSortedPeaks) lockMz halfWindow imLow imHigh =
+let private oldExtract (peaks: SortedPeaks.MzSortedPeaks) lockMz halfWindow imLow imHigh =
     let low, high = lockMz - halfWindow, lockMz + halfWindow
     let n = peaks.Mz.Length
     let mutable k = SortedSearch.upperBound peaks.Mz low
@@ -141,7 +141,7 @@ let all =
                 let mzs = Array.init n (fun _ -> 500. + float (rnd.Next(0, 400)) * 0.001 + 1e-7)
                 let intensities = Array.init n (fun _ -> float (rnd.Next(1, 1000)))
                 let ims = Array.init n (fun _ -> if rnd.Next 20 = 0 then nan else 0.8 + rnd.NextDouble() * 0.4)
-                let peaks = TimsPeaks.sortPeakArraysByMz mzs intensities ims
+                let peaks = SortedPeaks.sortPeakArraysByMz mzs intensities ims
                 let lock = 500.2 + rnd.NextDouble() * 0.0003
                 let halfWindow = 0.05 + rnd.NextDouble() * 0.05
                 let imLow, imHigh = 0.9, 1.1
@@ -153,7 +153,7 @@ let all =
         testCase "extractPoint takes the edges of the window, the lower m/z of two equidistant peaks and spectra without ion mobility" <| fun _ ->
             let spectrum mzs ims =
                 let mzs = Array.ofList mzs
-                TimsPeaks.sortPeakArraysByMz mzs (Array.init mzs.Length (fun i -> float (i + 1) * 10.)) (Array.ofList ims)
+                SortedPeaks.sortPeakArraysByMz mzs (Array.init mzs.Length (fun i -> float (i + 1) * 10.)) (Array.ofList ims)
             // a peak exactly at lockMz +- halfWindow is inside the window
             let edge = spectrum [ 500.25; 500.75 ] [ 1.; 1. ]
             let intensity, mz, _ = Xic.extractPoint edge 500.5 0.25 0.5 1.5

@@ -21,7 +21,6 @@ open PSMQuantification
 module PSMBasedQuantificationTIMs =
     module Query = 
         open System
-        open System.Collections.Generic
         open System.Linq
         open MzIO.Commons.Arrays
         open MzIO.Processing.MzIOLinq
@@ -29,61 +28,9 @@ module PSMBasedQuantificationTIMs =
          
         /// Reads the peaks of a spectrum sorted by m/z.
         let readSortedPeaks (reader: MzIO.MzSQL.MzSQL) (spectrumID: string) =
-            let struct (mzs, intensities, ionMobilities) = reader.ReadSpectrumPeaksAsArrays spectrumID
+            let peaks = Xic.readSortedPeaks reader spectrumID
             // a peak without ion mobility gets NaN and falls outside every ion mobility window
-            TimsPeaks.sortPeakArraysByMz mzs intensities (if isNull ionMobilities then Array.create mzs.Length nan else ionMobilities)
-
-        /// Cache of the sorted peaks of MS1 spectra that keeps at most maxEntries spectra. When it is full, the tenth of
-        /// the spectra that was used least recently is dropped.
-        type PeakCache(read: string -> TimsPeaks.MzSortedPeaks, maxEntries: int) =
-            let cache = Dictionary<string, struct (TimsPeaks.MzSortedPeaks * int64 ref)>()
-            let mutable clock = 0L
-            let mutable reads = 0
-            /// The number of spectra that were read, including the ones that were read again after they were dropped.
-            member _.Reads = reads
-            member _.Capacity = maxEntries
-            member _.Get(spectrumID: string) =
-                clock <- clock + 1L
-                match cache.TryGetValue spectrumID with
-                | true, struct (peaks, lastUse) ->
-                    lastUse.Value <- clock
-                    peaks
-                | _ ->
-                    let peaks = read spectrumID
-                    reads <- reads + 1
-                    if cache.Count >= maxEntries then
-                        cache
-                        |> Seq.map (fun kv -> let struct (_, lastUse) = kv.Value in kv.Key, lastUse.Value)
-                        |> Seq.sortBy snd
-                        |> Seq.truncate (max 1 (maxEntries / 10))
-                        |> Seq.toArray
-                        |> Array.iter (fun (key, _) -> cache.Remove key |> ignore)
-                    cache.[spectrumID] <- struct (peaks, ref clock)
-                    peaks
-
-        /// Extract a rt profile for specified target mass and rt range.
-        /// Mz range peak aggregation is closest lock mz.
-        /// Profile array with index corresponding to continous mass spectra over rt range and mz range given.
-        /// The peaks inside the m/z and ion mobility range are summed per exact m/z and the sum closest
-        /// to the lock m/z is taken (Xic.extractPoint). Without an ion mobility to look for, every point has intensity 0.
-        let initRTProfile (readSortedPeaks:string -> TimsPeaks.MzSortedPeaks)  (rtIndex: IMzIOArray<RtIndexEntry>) (rtRange: RangeQuery) (lockMz: float) (mzHalfWindow: float) (ionMobilityRange: RangeQuery)=
-            let entries = RtIndexEntry.Search(rtIndex, rtRange)
-            entries
-            |>Seq.map (fun entry ->
-                let peaks = readSortedPeaks entry.SpectrumID
-                let intensity, mz =
-                    if Double.IsNaN ionMobilityRange.LockValue then
-                        0., nan
-                    else
-                        let intensity, mz, _ = Xic.extractPoint peaks lockMz mzHalfWindow ionMobilityRange.LowValue ionMobilityRange.HighValue
-                        intensity, mz
-                if Double.IsNaN mz then
-                    RtIndexEntry.AsPeak2D ((new Peak1D(0., lockMz, ionMobilityRange.LockValue)),entry.Rt)
-                else
-                    RtIndexEntry.AsPeak2D (new Peak1D(intensity, mz), entry.Rt)
-            )
-            |> Array.ofSeq
-
+            if peaks.IonMobility.Length = 0 then { peaks with IonMobility = Array.create peaks.Mz.Length nan } else peaks
 
         // extracts retention time profile for given mz and rt range and ion mobility range. 
         let initRTProfileGabor(readSpecPeaks: string -> Peak1DArray)(rtIndex: IMzIOArray<RtIndexEntry>)(rtRange: RangeQuery)(mzRange: RangeQuery)(ionMobilityRange: RangeQuery) =
@@ -214,18 +161,6 @@ module PSMBasedQuantificationTIMs =
         Peaks.unzipIMzliteArray (reader.ReadSpectrumPeaks(ms1ID).Peaks)
         |> fun (mzData,intensityData) -> PeakArray.zip mzData intensityData
 
-    /// The peaks of a spectrum with lowMz < m/z < highMz, in file order.
-    let getPeaksInMzRange (peaks: TimsPeaks.MzSortedPeaks) lowMz highMz =
-        let n = peaks.Mz.Length
-        // first peak with Mz > lowMz
-        let lo = SortedSearch.upperBound peaks.Mz lowMz
-        let mutable last = lo
-        while last < n && peaks.Mz.[last] < highMz do
-            last <- last + 1
-        Array.init (last - lo) (fun k -> lo + k)
-        |> Array.sortBy (fun k -> peaks.Index.[k])
-        |> Array.map (fun k -> Peak(peaks.Mz.[k], peaks.Intensity.[k]))
-    
     /// Returns the median of positive, finite values or None if no usable value exists.
     let private tryMedianFinitePositive (values: float[]) =
         let usableValues =
@@ -336,13 +271,9 @@ module PSMBasedQuantificationTIMs =
                 [||]
     
     ///
-    let initGetProcessedXIC (baseLineCorrection:Domain.BaseLineCorrection option) getPeaks idx scanTimeWindow mzWindow_Da imWindow meanScanTime meanPrecMz meanIM =
+    let initGetProcessedXIC (baseLineCorrection:Domain.BaseLineCorrection option) readSortedPeaks idx scanTimeWindow mzWindow_Da imWindow meanScanTime meanPrecMz meanIM =
         let rtQuery = Query.createRangeQuery meanScanTime scanTimeWindow
-        let imQuery = Query.createRangeQuery meanIM imWindow
-        let rt, intensity =
-            getPeaks idx rtQuery meanPrecMz mzWindow_Da imQuery
-            |> Array.map (fun (p:MzIO.Binary.Peak2D) -> p.Rt , p.Intensity)
-            |> Array.unzip
+        let rt, intensity = Xic.rtProfile readSortedPeaks idx rtQuery meanPrecMz mzWindow_Da meanIM imWindow
         Xic.processXic baseLineCorrection rt intensity
 
 
@@ -1701,14 +1632,6 @@ module PSMBasedQuantificationTIMs =
                 expectedMobility
 
         
-    /// Maps f over xs in the order of key (ascending) and returns the results in the order of xs. f gets the position of the
-    /// element in the order of key.
-    let mapiOrderedBy (key: 'a -> float) (f: int -> 'a -> 'b) (xs: 'a []) =
-        let order = Array.init xs.Length id |> Array.sortBy (fun i -> key xs.[i], i)
-        let results = Array.zeroCreate xs.Length
-        order |> Array.iteri (fun position i -> results.[i] <- f position xs.[i])
-        results
-
     ///
     let quantifyPeptides diagCharts zipCharts (processParams:Domain.QuantificationParams) (outputDir:string) (cn:SQLiteConnection) (instrumentOutput:string) (scoredPSMs:string)  =
         let logger = Logging.createLogger (Path.GetFileNameWithoutExtension scoredPSMs)
@@ -1892,23 +1815,15 @@ module PSMBasedQuantificationTIMs =
         // The ions are quantified in the order of their scan time and their XICs read the MS1 spectra of a window of
         // 2 x ScanTimeWindow, so the spectra of twice the widest window are kept instead of all MS1 spectra of the file.
         let peakCache =
-            let windowWidth = 2. * processParams.XicExtraction.ScanTimeWindow
-            let ms1ScanTimes = ms1SortedByScanTime |> Array.map fst
-            let mutable windowEnd = 0
-            let mutable widestWindow = 1
-            for windowStart in 0 .. ms1ScanTimes.Length - 1 do
-                while windowEnd < ms1ScanTimes.Length && ms1ScanTimes.[windowEnd] < ms1ScanTimes.[windowStart] + windowWidth do
-                    windowEnd <- windowEnd + 1
-                widestWindow <- max widestWindow (windowEnd - windowStart)
-            let cacheSize = max 16 (2 * widestWindow)
+            let cacheSize, widestWindow = Xic.peakCacheSize (ms1SortedByScanTime |> Array.map fst) processParams.XicExtraction.ScanTimeWindow
             logger.Trace (sprintf "MS1 peaks cache: %i spectra (%i MS1s in the widest XIC window)" cacheSize widestWindow)
-            Query.PeakCache(readSortedPeaks, cacheSize)
+            Xic.PeakCache(readSortedPeaks, cacheSize)
         let readSortedPeaksWithMem = peakCache.Get
         let closestMs1 = SpectrumIndex.initClosestMs1 ms1SortedByScanTime
         let comparePredictedAndMeasuredIsotopicCluster =
             initComparePredictedAndMeasuredIsotopicCluster
                 isotopePatterns
-                (fun id lowMz highMz -> getPeaksInMzRange (readSortedPeaksWithMem id) lowMz highMz)
+                (fun id lowMz highMz -> Xic.getPeaksInMzRange (readSortedPeaksWithMem id) lowMz highMz)
                 closestMs1
                 ms1AccuracyEstimate
         let compareGaborPredictedAndMeasuredIsotopicCluster =
@@ -1917,8 +1832,7 @@ module PSMBasedQuantificationTIMs =
                 (fun id lowMz highMz -> getSpec inReader id |> Array.filter (fun x -> x.Mz < highMz && x.Mz > lowMz))
                 closestMs1
                 ms1AccuracyEstimate
-        let getPeaks = Query.initRTProfile readSortedPeaksWithMem
-        let getXIC = initGetProcessedXIC processParams.BaseLineCorrection getPeaks retTimeIdxed processParams.XicExtraction.ScanTimeWindow mzWindow Xic.ionMobilityHalfWindow        
+        let getXIC = initGetProcessedXIC processParams.BaseLineCorrection readSortedPeaksWithMem retTimeIdxed processParams.XicExtraction.ScanTimeWindow mzWindow Xic.ionMobilityHalfWindow        
         ///
         let identifyPeaks = initIdentifyPeaks processParams.XicExtraction.XicProcessing
         logger.Trace "init lookup functions:finished"
@@ -2350,7 +2264,7 @@ module PSMBasedQuantificationTIMs =
                         pepIon,
                         psms                  
                 )
-            |> mapiOrderedBy (fun (_, psms: PSMStatisticsResult []) -> if psms.Length = 0 then infinity else psms |> Array.averageBy (fun x -> x.ScanTime)) (fun i (pepIon,psms) -> 
+            |> Xic.mapiOrderedBy (fun (_, psms: PSMStatisticsResult []) -> if psms.Length = 0 then infinity else psms |> Array.averageBy (fun x -> x.ScanTime)) (fun i (pepIon,psms) -> 
                 if i % 100 = 0 then logger.Trace (sprintf "%i peptides quantified" i)
                 // check if unlabeled or labeled quantification should be performed and if gabor processing is requested
                 match processParams.XicExtraction.XicProcessing, processParams.PerformLabeledQuantification with 
