@@ -356,7 +356,8 @@ module FSharpStats' =
         let private aic n nParams likelihood = 
             (float n * Math.Log(likelihood / float n)) + 2. * (float nParams) 
     
-        /// Same values as ContinuousWavelet.transform with (-) as getDiff: the constants of the Ricker function are hoisted and the
+        /// Same values as ContinuousWavelet.transform with (-) as getDiff, where that one does not throw; beyond the padded trace the
+        /// kernel sees zeros. The constants of the Ricker function are hoisted and the
         /// kernel value of a pair of points is evaluated once, the right side of the left point and the left side of the right point
         /// share it (the same difference of the same two x values, the kernel is even). The sums run in the same order. A kernel value
         /// is a factor of the intensities of its two points only, with both intensities zero (or not an output point) it is not evaluated.
@@ -387,6 +388,9 @@ module FSharpStats' =
                 let mutable j = start
                 let mutable go = true
                 while go do
+                    // the kernel stops at the end of the padded trace, which is shorter than the kernel for short traces
+                    if j >= n then go <- false
+                    else
                     let diff = xs.[j] - xi
                     if diff > padd then go <- false
                     else
@@ -418,6 +422,8 @@ module FSharpStats' =
                 let mutable i = j - 1
                 let mutable go = true
                 while go do
+                    if i < 0 then go <- false
+                    else
                     let diff = xs.[j] - xs.[i]
                     if diff > padd then go <- false
                     else

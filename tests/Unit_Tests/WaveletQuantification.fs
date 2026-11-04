@@ -172,6 +172,19 @@ let all =
             Expect.equal (intensity, mz) (20., 500.45) "closest peak"
             Expect.isTrue (Double.IsNaN im) "no ion mobility"
 
+        testCase "the wavelet peak detection of a short trace, whose kernel reaches past the padded trace, finds the peak" <| fun _ ->
+            for n, spacing in [ 10, 0.1; 14, 0.07; 20, 0.05; 25, 0.04; 30, 0.03 ] do
+                let xs = Array.init n (fun i -> float i * spacing)
+                let center = xs.[n / 2]
+                let ys = xs |> Array.map (fun x -> 1000. * exp (-((x - center) ** 2.) / (2. * (2. * spacing) ** 2.)))
+                let peaks = FSharpStats'.Wavelet.identify waveletParameters xs ys
+                Expect.equal peaks.Length 1 (sprintf "%i points: one peak" n)
+                Expect.isLessThan (abs (peaks.[0].Apex.XVal - center)) (2. * spacing) (sprintf "%i points: at the center" n)
+            // a trace of 8 points with zeros: no exception
+            let xs = Array.init 8 (fun i -> float i * 0.04395373458)
+            let ys = [| 0.; 0.; 0.; 999.8592301; 0.; 616.0852004; 933.9307234; 0. |]
+            FSharpStats'.Wavelet.identify waveletParameters xs ys |> ignore
+
         testCase "initIdentifyPeaks fails for Gabor3D only when the function is called" <| fun _ ->
             let gabor : Domain.Gabor3DParams = { sizeX = 3; sizeY = 3; sigmaX = 1.; sigmaY = 1.; frequency = 1.; theta = 0. }
             let identify = PeakQuantification.initIdentifyPeaks (Domain.XicProcessing.Gabor3D gabor)
