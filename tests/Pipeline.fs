@@ -217,8 +217,8 @@ let selectAllProtein cn =
             yield (reader.GetValue(0), reader.GetValue(1))
     ]
 
-/// The parameters with the second derivative peak detection instead of the wavelet. FSharpStats'.Wavelet.identify ignores its parameters and pads the XIC borders
-/// with unseeded random numbers, so the quantification with the wavelet differs from run to run. The second derivative has no randomness, but initSpline shuffles the ions
+/// The parameters with the second derivative peak detection instead of the wavelet. The wavelet settings of the test parameter files pad the XIC borders
+/// with unseeded random numbers (BorderPadMethod Random), so the quantification with the wavelet differs from run to run. The second derivative has no randomness, but initSpline shuffles the ions
 /// of the m/z correction once there are 500 PSMs or more; the 3 PSMs of the test data stay below that.
 let secondDerivativeParams (json: string) =
     Text.RegularExpressions.Regex.Replace(

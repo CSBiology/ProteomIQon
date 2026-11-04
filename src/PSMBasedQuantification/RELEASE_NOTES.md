@@ -10,6 +10,7 @@
 * Write AlignmentQValue 0 instead of NaN for the .quant rows
 * Write the diagnostic charts faster with the same content
 * Write an empty .quant with a warning for a run without PSMs instead of stopping
+* Use the Wavelet settings of the parameter file in the wavelet peak detection; they were ignored before
 
 #### 0.0.12 - Wednesday, September 2, 2026
 * Fall back to a median mz correction when the smoothing spline cannot be fitted on sparse data

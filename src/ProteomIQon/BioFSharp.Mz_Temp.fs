@@ -750,7 +750,7 @@ module FSharpStats' =
         ///
         let identify parameters (x:float[]) (y:float[]) =
             let trace = (Array.zip x y)
-            identifyPeaks p trace
+            identifyPeaks parameters trace
             |> List.choose id 
             |> List.map toIdentifiedPeak
             |> Array.ofList
