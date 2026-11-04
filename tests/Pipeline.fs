@@ -1307,6 +1307,115 @@ let pipelineTests =
             File.Delete (relToDirectory "../../../data/LabelFreeProteinQuantification/out/transformFilterSum/ProteinAggregation.txt")
             Expect.isTrue compare "Output files are not identical"
 
+        testCase "ProteinQuantificationPresetsFilterAlignmentQValue" <| fun _ ->
+            let presets = Path.Combine(repoRoot, "src", "ProteomIQon", "defaultParams")
+            let testCopies (tool: string) = Path.Combine(repoRoot, "tests", "data", tool, "in")
+            let files (directory: string) pattern = Directory.GetFiles(directory, pattern)
+            let labeled = Array.append (files presets "LabeledQuantificationParams*.json") (files (testCopies "LabeledProteinQuantification") "LabeledQuantificationParams*.json")
+            let labelFree = Array.append (files presets "LabelFreeQuantificationParams*.json") (files (testCopies "LabelFreeProteinQuantification") "LabelFreeQuantificationParams*.json")
+            Expect.equal labeled.Length 10 "five labeled presets and four test copies"
+            Expect.equal labelFree.Length 8 "four label free presets and four test copies"
+            for file in labeled do
+                let p = ProteomIQon.Json.deserialize<ProteomIQon.Dto.LabeledQuantificationParams> (File.ReadAllText file)
+                Expect.equal p.Alignment_QValue (Some 0.05) (sprintf "%s sets Alignment_QValue" (Path.GetFileName file))
+            for file in labelFree do
+                let p = ProteomIQon.Json.deserialize<ProteomIQon.Dto.LabelFreeQuantificationParams> (File.ReadAllText file)
+                Expect.equal p.Alignment_QValue (Some 0.05) (sprintf "%s sets Alignment_QValue" (Path.GetFileName file))
+
+        testCase "LabeledProteinQuantificationAlignmentQValue" <| fun _ ->
+            let relToDirectory = getRelativePath baseDir
+            let work = Path.Combine(Path.GetTempPath(), sprintf "labeledAlignmentQValue_%s" (Guid.NewGuid().ToString "N"))
+            Directory.CreateDirectory work |> ignore
+            // APTMFTVR has no alignment q-value, ASDPFAK 0.5 and DWYDIK 0.01 in both of its global modifications; every other ion has 0
+            let lines = File.ReadAllLines (relToDirectory "../../../data/LabeledProteinQuantification/in/minimal.quantAndProt")
+            let column = lines.[0].Split('\t') |> Array.findIndex ((=) "AlignmentQValue")
+            let qValueOf = function
+                | "APTMFTVR" -> Some "NaN"
+                | "ASDPFAK" -> Some "0.5"
+                | "DWYDIK" -> Some "0.01"
+                | _ -> None
+            let edited =
+                lines
+                |> Array.mapi (fun i line ->
+                    let cells = line.Split '\t'
+                    if i > 0 then
+                        qValueOf cells.[3] |> Option.iter (fun q -> cells.[column] <- q)
+                    String.Join("\t", cells))
+            let quantAndProt = Path.Combine(work, "edited.quantAndProt")
+            File.WriteAllLines(quantAndProt, edited)
+            let defaultParams = File.ReadAllText (relToDirectory "../../../data/LabeledProteinQuantification/in/LabeledQuantificationParams.json")
+            let someParams = "\"Alignment_QValue\":{\"Case\":\"Some\",\"Fields\":[0.05]}"
+            Expect.stringContains defaultParams someParams "the preset filters on the alignment q-value"
+            let withFilter, noFilter, strictFilter =
+                try
+                    let run name (paramsText: string) =
+                        let paramsFile = Path.Combine(work, name + ".json")
+                        File.WriteAllText(paramsFile, paramsText)
+                        let outDirectory = Path.Combine(work, name)
+                        runDotNet (sprintf "%s -i %s -o %s -p %s" (toolDll "LabeledProteinQuantification") quantAndProt outDirectory paramsFile) baseDir
+                        File.ReadAllLines (Path.Combine(outDirectory, "GlobModAggregation.txt"))
+                        |> Array.skip 1
+                        |> Array.map (fun line -> line.Split('\t').[2])
+                        |> Set.ofArray
+                    let withFilter = run "some" defaultParams
+                    let noFilter = run "none" (defaultParams.Replace(someParams, "\"Alignment_QValue\":null"))
+                    let strictFilter = run "strict" (defaultParams.Replace("[0.05]", "[0.005]"))
+                    withFilter, noFilter, strictFilter
+                finally
+                    Directory.Delete(work, true)
+            Expect.isTrue (noFilter.Contains "ASDPFAK") "None keeps the ion with q-value 0.5"
+            Expect.isTrue (noFilter.Contains "APTMFTVR") "None keeps the ion without an alignment q-value"
+            Expect.isTrue (noFilter.Contains "DWYDIK") "None keeps the ion with q-value 0.01"
+            Expect.isFalse (withFilter.Contains "ASDPFAK") "0.05 drops the ion with q-value 0.5"
+            Expect.isTrue (withFilter.Contains "APTMFTVR") "0.05 keeps the ion without an alignment q-value"
+            Expect.isTrue (withFilter.Contains "DWYDIK") "0.05 keeps the ion with q-value 0.01"
+            Expect.isFalse (strictFilter.Contains "DWYDIK") "0.005 drops the ion with q-value 0.01"
+            Expect.equal (Set.difference noFilter withFilter) (Set.ofList ["ASDPFAK"]) "only the ion above the threshold is lost"
+
+        testCase "LabelFreeProteinQuantificationAlignmentQValue" <| fun _ ->
+            let relToDirectory = getRelativePath baseDir
+            let work = Path.Combine(Path.GetTempPath(), sprintf "labelFreeAlignmentQValue_%s" (Guid.NewGuid().ToString "N"))
+            Directory.CreateDirectory work |> ignore
+            try
+                // the file has no AlignmentScore and AlignmentQValue columns (the reader matches columns by position, so both are appended): ADGINPEELLGNSSAAAPR gets NaN, EFSIDVLEEMLEK 0.5, ISTWLELMK 0.01 and every other ion 0
+                let lines = File.ReadAllLines (relToDirectory "../../../data/LabelFreeProteinQuantification/in/minimal.quantAndProt")
+                let qValueOf = function
+                    | "ADGINPEELLGNSSAAAPR" -> "NaN"
+                    | "EFSIDVLEEMLEK" -> "0.5"
+                    | "ISTWLELMK" -> "0.01"
+                    | _ -> "0"
+                let edited =
+                    lines
+                    |> Array.mapi (fun i line ->
+                        let cells = line.Split '\t'
+                        String.Join("\t", Array.append cells (if i = 0 then [| "AlignmentScore"; "AlignmentQValue" |] else [| "NaN"; qValueOf cells.[3] |])))
+                let quantAndProt = Path.Combine(work, "edited.quantAndProt")
+                File.WriteAllLines(quantAndProt, edited)
+                let defaultParams = File.ReadAllText (relToDirectory "../../../data/LabelFreeProteinQuantification/in/LabelFreeQuantificationParams_ChargeAgg.json")
+                let someParams = "\"Alignment_QValue\":{\"Case\":\"Some\",\"Fields\":[0.05]}"
+                Expect.stringContains defaultParams someParams "the preset filters on the alignment q-value"
+                let run name (paramsText: string) =
+                    let paramsFile = Path.Combine(work, name + ".json")
+                    File.WriteAllText(paramsFile, paramsText)
+                    let outDirectory = Path.Combine(work, name)
+                    runDotNet (sprintf "%s -i %s -o %s -p %s" (toolDll "LabelFreeProteinQuantification") quantAndProt outDirectory paramsFile) baseDir
+                    File.ReadAllLines (Path.Combine(outDirectory, "ChargeAggregation.txt"))
+                    |> Array.skip 1
+                    |> Array.map (fun line -> line.Split('\t').[2])
+                    |> Set.ofArray
+                let withFilter = run "some" defaultParams
+                let noFilter = run "none" (defaultParams.Replace(someParams, "\"Alignment_QValue\":null"))
+                let strictFilter = run "strict" (defaultParams.Replace("[0.05]", "[0.005]"))
+                Expect.isTrue (noFilter.Contains "EFSIDVLEEMLEK") "None keeps the ion with q-value 0.5"
+                Expect.isTrue (noFilter.Contains "ADGINPEELLGNSSAAAPR") "None keeps the ion with NaN"
+                Expect.isFalse (withFilter.Contains "EFSIDVLEEMLEK") "0.05 drops the ion with q-value 0.5"
+                Expect.isTrue (withFilter.Contains "ADGINPEELLGNSSAAAPR") "0.05 keeps the ion without an alignment q-value"
+                Expect.isTrue (withFilter.Contains "ISTWLELMK") "0.05 keeps the ion with q-value 0.01"
+                Expect.isFalse (strictFilter.Contains "ISTWLELMK") "0.005 drops the ion with q-value 0.01"
+                Expect.equal (Set.difference noFilter withFilter) (Set.ofList ["EFSIDVLEEMLEK"]) "only the ion above the threshold is lost"
+            finally
+                Directory.Delete(work, true)
+
         testCase "LabeledProteinQuantification" <| fun _ ->
             let relToDirectory = getRelativePath baseDir
             let quantAndProt = relToDirectory "../../../data/LabeledProteinQuantification/in/minimal.quantAndProt"

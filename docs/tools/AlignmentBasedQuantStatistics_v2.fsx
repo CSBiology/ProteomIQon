@@ -38,7 +38,7 @@ New ions are the transferred ions without a PSM based quantification in the run.
 [JoinQuantPepIonsWithProteins]({{root}}tools/JoinQuantPepIonsWithProteins.html) reads the output.
 [LabelFreeProteinQuantification]({{root}}tools/LabelFreeProteinQuantification.html) and
 [LabeledProteinQuantification]({{root}}tools/LabeledProteinQuantification.html) filter on the q-value only if their `Alignment_QValue` parameter
-is set. They then drop transferred rows with a q-value at or above it. The default `None` keeps every transferred row.
+is set. They then drop transferred rows with a q-value at or above it. All their default files set it to `Some 0.05`, and `None` keeps every transferred row.
 
 <img src="{{root}}img/AlignmentV2Pipeline.png" width="1000" />
 
