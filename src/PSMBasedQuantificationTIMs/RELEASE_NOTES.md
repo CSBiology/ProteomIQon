@@ -18,6 +18,11 @@
 * Use the Wavelet settings of the parameter file in the wavelet peak detection; they were ignored before
 * Default to the Wavelet peak detection with the ALS baseline correction
 * Quantify ions with short XIC traces, on which the wavelet peak detection failed
+* Remove the parameter FragPipe, which had no effect
+* Add the parameter QualityFilterLog2Limit (default 2): the quality filter keeps the rows with -limit < log2 ((area / median area) / (apex / median apex)) < limit
+* Add the parameter CentrePSMs (default 3): the number of PSMs with the highest summed matched fragment intensity whose weighted scan time and ion mobility centre the XIC
+* Add IonMobilityWindow to XicExtraction: Fixed v sets the half width of the ion mobility window in 1/K0, which was 0.05; Estimate is not available in this tool
+* Breaking: parameter files of earlier releases stop the tool; they need CentrePSMs, QualityFilterLog2Limit and IonMobilityWindow in XicExtraction
 
 #### 0.0.13 - Wednesday, September 2, 2026
 * Add Gabor3D algorithm for peak detection

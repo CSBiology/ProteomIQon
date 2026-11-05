@@ -2,7 +2,6 @@
   "PerformLabeledQuantification": {
     "Case": "Unlabeled"
   },
-  "FragPipe": true,
   "XicExtraction": {
     "ScanTimeWindow": 2.0,
     "MzWindow_Da": {
@@ -41,7 +40,13 @@
         }
       ]
     },
-    "TopKPSMs": null
+    "TopKPSMs": null,
+    "IonMobilityWindow": {
+      "Case": "Fixed",
+      "Fields": [
+        0.05
+      ]
+    }
   },
   "BaseLineCorrection": {
     "Case": "Some",
@@ -52,5 +57,7 @@
         "P": 0.05
       }
     ]
-  }
+  },
+  "QualityFilterLog2Limit": 2.0,
+  "CentrePSMs": 3
 }

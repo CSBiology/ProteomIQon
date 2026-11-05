@@ -32,6 +32,7 @@ let defaultPreprocessingParams :Dto.QuantificationParams =
     let XicExtraction = 
         {
             TopKPSMs                     = None
+            IonMobilityWindow            = Domain.Window.Fixed 0.05
             ScanTimeWindow               = 2.
             MzWindow_Da                  = Domain.Window.Estimate
             XicProcessing                = Wavelet waveletParams
@@ -48,6 +49,8 @@ let defaultPreprocessingParams :Dto.QuantificationParams =
         PerformLabeledQuantification = Labeling.N15Labeling
         XicExtraction                = XicExtraction
         BaseLineCorrection           = Some BaseLineCorrection
+        QualityFilterLog2Limit       = 2.
+        CentrePSMs                   = 3
     }
 
 

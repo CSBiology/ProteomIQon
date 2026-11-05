@@ -39,6 +39,10 @@ module console1 =
         let p =
             Json.ReadAndDeserialize<Dto.QuantificationParams> p
             |> Dto.QuantificationParams.toDomain
+        if p.CentrePSMs < 1 then
+            failwith "CentrePSMs must be at least 1."
+        if not (p.QualityFilterLog2Limit > 0.) then
+            failwith "QualityFilterLog2Limit must be greater than 0."
         let dbConnection =
             if File.Exists d then
                 logger.Trace (sprintf "Database found at given location (%s)" d)

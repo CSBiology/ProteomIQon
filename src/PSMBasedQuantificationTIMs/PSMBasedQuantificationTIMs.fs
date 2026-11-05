@@ -443,6 +443,7 @@ module PSMBasedQuantificationTIMs =
 
     /// ionMobilityOf gives the ion mobility of the MS2 spectrum of a PSM by its PSMId.
     let estimateGaborTargetFromPsms
+        (centrePSMs: int)
         (ionMobilityOf: string -> float)
         scanTimeToMzCorrection
         theoMz
@@ -464,8 +465,7 @@ module PSMBasedQuantificationTIMs =
             let bestPsms =
                 usablePsms
                 |> Array.sortByDescending snd
-                |> fun sorted ->
-                    if sorted.Length > 3 then sorted.[..2] else sorted
+                |> Array.truncate centrePSMs
 
             let weights =
                 bestPsms |> Array.map snd
@@ -1832,7 +1832,11 @@ module PSMBasedQuantificationTIMs =
                 (fun id lowMz highMz -> getSpec inReader id |> Array.filter (fun x -> x.Mz < highMz && x.Mz > lowMz))
                 closestMs1
                 ms1AccuracyEstimate
-        let getXIC = initGetProcessedXIC processParams.BaseLineCorrection readSortedPeaksWithMem retTimeIdxed processParams.XicExtraction.ScanTimeWindow mzWindow Xic.ionMobilityHalfWindow        
+        let ionMobilityHalfWindow =
+            match processParams.XicExtraction.IonMobilityWindow with
+            | Domain.Window.Fixed v -> v
+            | Domain.Window.Estimate -> failwith "IonMobilityWindow Estimate is only available in AlignmentBasedQuantification; use Fixed."
+        let getXIC = initGetProcessedXIC processParams.BaseLineCorrection readSortedPeaksWithMem retTimeIdxed processParams.XicExtraction.ScanTimeWindow mzWindow ionMobilityHalfWindow
         ///
         let identifyPeaks = initIdentifyPeaks processParams.XicExtraction.XicProcessing
         logger.Trace "init lookup functions:finished"
@@ -1846,7 +1850,7 @@ module PSMBasedQuantificationTIMs =
                 retTimeIdxed
                 processParams.XicExtraction.ScanTimeWindow
                 mzWindow
-                Xic.ionMobilityHalfWindow
+                ionMobilityHalfWindow
                 processParams.BaseLineCorrection
         logger.Trace "init quantification functions"
 
@@ -1959,7 +1963,7 @@ module PSMBasedQuantificationTIMs =
                 let theoMz =
                     Mass.toMZ targetPeptide.Mass (float pepIon.Charge)
 
-                match estimateGaborTargetFromPsms ionMobilityOf scanTimeToMzCorrection theoMz psmsWithMatchedSums with
+                match estimateGaborTargetFromPsms processParams.CentrePSMs ionMobilityOf scanTimeToMzCorrection theoMz psmsWithMatchedSums with
                 | None ->
                     logger.Trace (sprintf "Gabor quant failed: No PSM target estimate, Sequence:%s, GlobalMod:%s, Charge:%s" (pepIon.Sequence |> String.filter (fun x -> x <> '*')) (pepIon.GlobalMod.ToString()) (pepIon.Charge.ToString()))
                     None
@@ -2146,7 +2150,7 @@ module PSMBasedQuantificationTIMs =
                     let theoMz =
                         Mass.toMZ unlabledPeptide.Mass (float pepIon.Charge)
 
-                    match estimateGaborTargetFromPsms ionMobilityOf scanTimeToMzCorrection theoMz psmsWithMatchedSums with
+                    match estimateGaborTargetFromPsms processParams.CentrePSMs ionMobilityOf scanTimeToMzCorrection theoMz psmsWithMatchedSums with
                     | None ->
                         logger.Trace (sprintf "Gabor quant failed: No PSM target estimate, Sequence:%s, GlobalMod:%s, Charge:%s" (pepIon.Sequence |> String.filter (fun x -> x <> '*')) (pepIon.GlobalMod.ToString()) (pepIon.Charge.ToString()))
                         None
@@ -2230,6 +2234,7 @@ module PSMBasedQuantificationTIMs =
                 ScanTimeWindow = processParams.XicExtraction.ScanTimeWindow
                 PeptideLookUp = peptideLookUp
                 CountMatchedMasses = countMatchedMasses
+                CentrePSMs = processParams.CentrePSMs
                 ScanTimeToMzCorrection = scanTimeToMzCorrection
                 IonMobilityOf = ionMobilityOf
                 GetXic = getXIC
@@ -2279,18 +2284,19 @@ module PSMBasedQuantificationTIMs =
                 )
             |> Array.choose id
                     
+        let limit = processParams.QualityFilterLog2Limit
         let filteredResults = 
             match processParams.PerformLabeledQuantification with 
             |Domain.Labeling.N15Labeling ->
                 quantResults
-                |> heavyQualityFilter -2. 2.
-                |> lightQualityFilter -2. 2.
+                |> heavyQualityFilter (-limit) limit
+                |> lightQualityFilter (-limit) limit
             |Domain.Labeling.N15LabelingOnly ->
                 quantResults
-                |> heavyQualityFilter -2. 2.
+                |> heavyQualityFilter (-limit) limit
             |Domain.Labeling.Unlabeled ->
                 quantResults
-                |> lightQualityFilter -2. 2.
+                |> lightQualityFilter (-limit) limit
             |Domain.Labeling.Labelshift ->
                 quantResults
         filteredResults 

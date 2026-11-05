@@ -58,9 +58,9 @@ module PSMQuantification =
         | withQValue -> withQValue |> Array.minBy (fun x -> x.QValue)
 
     ///
-    /// ionMobilityOf gives the ion mobility of the MS2 spectrum of a PSM by its PSMId. The top 3 PSMs are taken
-    /// among the PSMs whose spectrum has an ion mobility, among all when none has one.
-    let average (ionMobilityOf: string -> float) getXic scanTimeToMzCorrection theoMz (psms:(PSMStatisticsResult*float) []) =
+    /// ionMobilityOf gives the ion mobility of the MS2 spectrum of a PSM by its PSMId. The centrePSMs PSMs with the highest
+    /// summed matched fragment intensity are taken among the PSMs whose spectrum has an ion mobility, among all when none has one.
+    let average (centrePSMs: int) (ionMobilityOf: string -> float) getXic scanTimeToMzCorrection theoMz (psms:(PSMStatisticsResult*float) []) =
             //let meanPrecMz   = psms |> Seq.meanBy (fun (psm,m) -> psm.PrecursorMZ)
 
             let meanScanTime = psms |> Seq.meanBy (fun (psm,m) -> psm.ScanTime)
@@ -68,7 +68,7 @@ module PSMQuantification =
             let psms' =
                 let withIonMobility = psms |> Array.filter (fun (psm,m) -> Numerics.isFinite (ionMobilityOf psm.PSMId))
                 let tmp = Array.sortByDescending (fun (psm,m) -> m) (if Array.isEmpty withIonMobility then psms else withIonMobility)
-                if tmp.Length > 3 then tmp.[..2] else tmp 
+                Array.truncate centrePSMs tmp
             let weightedAvgScanTime =
                 let scanTimes = psms' |> Array.map (fun (psm,m) -> psm.ScanTime)
                 let weights = psms' |> Array.map snd
@@ -163,6 +163,8 @@ module PSMQuantification =
             PeptideLookUp                               : string -> int -> LookUpResult<AminoAcids.AminoAcid>
             /// The PSMs with the summed intensity of their fragment ions that match the peptide.
             CountMatchedMasses                          : LookUpResult<AminoAcids.AminoAcid> -> PSMStatisticsResult [] -> (PSMStatisticsResult * float) []
+            /// Number of PSMs, ranked by summed matched fragment intensity, that centre the XIC.
+            CentrePSMs                                  : int
             ScanTimeToMzCorrection                      : float -> float
             /// The ion mobility of the MS2 spectrum of a PSM by its PSMId, nan without ion mobility.
             IonMobilityOf                               : string -> float
@@ -189,7 +191,7 @@ module PSMQuantification =
         let psmsWithMatchedSums = f.CountMatchedMasses targetPeptide psms 
         let ms2s = psmsWithMatchedSums |> Array.map (fun (psm,m) -> psm.ScanTime,m)
         let theoMz = Mass.toMZ targetPeptide.Mass (float pepIon.Charge)
-        let averagePSM = average f.IonMobilityOf f.GetXic f.ScanTimeToMzCorrection theoMz psmsWithMatchedSums
+        let averagePSM = average f.CentrePSMs f.IonMobilityOf f.GetXic f.ScanTimeToMzCorrection theoMz psmsWithMatchedSums
         let avgMass = Mass.ofMZ (averagePSM.MeanPrecMz) (pepIon.Charge |> float)
         let peaks = f.IdentifyPeaks averagePSM.X_Xic averagePSM.Y_Xic
         if Array.isEmpty peaks then 
@@ -514,7 +516,7 @@ module PSMQuantification =
         let psmsWithMatchedSums = f.CountMatchedMasses unlabledPeptide psms 
         let ms2s = psmsWithMatchedSums |> Array.map (fun (psm,m) -> psm.ScanTime,m)
         let theoMz = Mass.toMZ unlabledPeptide.Mass (float pepIon.Charge)
-        let averagePSM = average f.IonMobilityOf f.GetXic f.ScanTimeToMzCorrection theoMz psmsWithMatchedSums
+        let averagePSM = average f.CentrePSMs f.IonMobilityOf f.GetXic f.ScanTimeToMzCorrection theoMz psmsWithMatchedSums
         let avgMass = Mass.ofMZ (averagePSM.MeanPrecMz) (pepIon.Charge |> float)      
         let peaks = f.IdentifyPeaks averagePSM.X_Xic averagePSM.Y_Xic               
         if Array.isEmpty peaks then 

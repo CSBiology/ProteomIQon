@@ -15,7 +15,7 @@
 * Overwrite existing output files instead of appending to them
 * Decoy transfers (DecoyFraction, default 0.2): a seeded fraction of the new ions is also quantified at a predicted scan time shifted by 4 to 6 min, through the same extraction, selection and fit, and written to <run>.aligndecoy for the absent-analyte false discovery rate of AlignmentBasedQuantStatistics; DecoyFraction 0 writes no decoys
 * Breaking: remove the argument -iii (Metrics), the tool does not read .alignmetric files
-* Breaking: remove the parameter PerformLocalWarp and add MinScanTimeWindow (default 1), ScanTimeWindowSdFactor (default 8) and Seed (default 1), so parameter files of earlier releases have to be rewritten
+* Breaking: remove the parameter PerformLocalWarp, add MinScanTimeWindow (default 1), ScanTimeWindowSdFactor (default 8) and Seed (default 1), and take a labeling in PerformLabeledQuantification as PSMBasedQuantification does instead of true or false, so parameter files of earlier releases have to be rewritten
 * Remove the dependency on Microsoft.ML and Microsoft.ML.FastTree
 * Use the Wavelet settings of the parameter file in the wavelet peak detection; they were ignored before
 * Stop with an error message on input paths that do not exist and on directories with different numbers of .mzlite, .align and .quant files; match the files of a directory by position in name order, or by file name with -mf, where a run without .align or .quant file is skipped with a warning; -i, -ii and -iv have to be all files or all directories

@@ -298,6 +298,7 @@ module PSMBasedQuantification =
                 DiagCharts = diagCharts
                 PlotDirectory = plotDirectory
                 ScanTimeWindow = processParams.XicExtraction.ScanTimeWindow
+                CentrePSMs = processParams.CentrePSMs
                 PeptideLookUp = peptideLookUp
                 CountMatchedMasses = countMatchedMasses
                 ScanTimeToMzCorrection = scanTimeToMzCorrection
@@ -340,18 +341,19 @@ module PSMBasedQuantification =
                 )
             |> Array.choose id
                     
+        let limit = processParams.QualityFilterLog2Limit
         let filteredResults = 
             match processParams.PerformLabeledQuantification with 
             |Domain.Labeling.N15Labeling ->
                 quantResults
-                |> heavyQualityFilter -2. 2.
-                |> lightQualityFilter -2. 2.
+                |> heavyQualityFilter (-limit) limit
+                |> lightQualityFilter (-limit) limit
             |Domain.Labeling.N15LabelingOnly ->
                 quantResults
-                |> heavyQualityFilter -2. 2.
+                |> heavyQualityFilter (-limit) limit
             |Domain.Labeling.Unlabeled ->
                 quantResults
-                |> lightQualityFilter -2. 2.
+                |> lightQualityFilter (-limit) limit
             |Domain.Labeling.Labelshift ->
                 quantResults
         filteredResults 

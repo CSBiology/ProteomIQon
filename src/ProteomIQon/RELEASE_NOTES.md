@@ -22,6 +22,7 @@
 * Set Alignment_QValue 0.05 in the default parameters of LabelFreeProteinQuantification and LabeledProteinQuantification
 * Set MinPepLength 6 in the default parameters of PeptideDB
 * Add Xic, MzCalibration, PeakQuantification and PSMQuantification: the XIC of an ion, the m/z correction of a run, the peak detection and the choice of the peak, and the quantification of the PSMs of an ion, shared by PSMBasedQuantification, PSMBasedQuantificationTIMs and AlignmentBasedQuantification
+* Breaking: change QuantificationParams, the parameters of PSMBasedQuantification and PSMBasedQuantificationTIMs, and the default parameters: remove FragPipe and add QualityFilterLog2Limit, CentrePSMs and IonMobilityWindow in XicExtraction
 
 #### 0.0.12 - Monday, September 28, 2026
 * Extend PeptideSpectrumMatchingResult with IonMobility, Hyperscore, Expectscore, MatchedIons and TotalIons. Breaking: .psm files written by earlier releases have 23 columns and have to be regenerated before PSMStatistics of this release reads them

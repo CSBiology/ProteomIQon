@@ -10,9 +10,6 @@ open MzIO.Processing.MzIOLinq
 /// Processing of the raw XIC of a precursor.
 module Xic =
 
-    /// Half width of the ion mobility window of an XIC (1/K0) when it is not estimated.
-    let ionMobilityHalfWindow = 0.05
-
     /// A zero point that follows a point more than 100 times higher is a drop-out; the mask is false there.
     let keepMask (y: float []) =
         Array.init y.Length (fun i ->

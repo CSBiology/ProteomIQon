@@ -784,10 +784,11 @@ module Dto =
     type QuantificationParams =
         {
             PerformLabeledQuantification : Labeling
-            FragPipe                     : bool
             XicExtraction                : XicExtraction
             //10 6 0.05
             BaseLineCorrection           : BaseLineCorrection option
+            QualityFilterLog2Limit       : float
+            CentrePSMs                   : int
         }
 
     module QuantificationParams =
@@ -797,6 +798,8 @@ module Dto =
                 PerformLabeledQuantification = dtoQuantificationParams.PerformLabeledQuantification
                 XicExtraction                = dtoQuantificationParams.XicExtraction
                 BaseLineCorrection           = dtoQuantificationParams.BaseLineCorrection
+                QualityFilterLog2Limit       = dtoQuantificationParams.QualityFilterLog2Limit
+                CentrePSMs                   = dtoQuantificationParams.CentrePSMs
             }
 
     ///
@@ -1262,13 +1265,11 @@ module Dto =
 
     type AlignmentBasedQuantificationV2Params =
         {
-            PerformLabeledQuantification : bool
+            PerformLabeledQuantification : Labeling
             XicExtraction                : XicExtraction
             BaseLineCorrection           : BaseLineCorrection option
             MinScanTimeWindow            : float
             ScanTimeWindowSdFactor       : float
-            UseIonMobility               : bool
-            IonMobilityWindow            : Window
             DecoyFraction                : float
             Seed                         : int
         }
@@ -1282,8 +1283,6 @@ module Dto =
                 BaseLineCorrection           = dtoQuantificationParams.BaseLineCorrection
                 MinScanTimeWindow            = dtoQuantificationParams.MinScanTimeWindow
                 ScanTimeWindowSdFactor       = dtoQuantificationParams.ScanTimeWindowSdFactor
-                UseIonMobility               = dtoQuantificationParams.UseIonMobility
-                IonMobilityWindow            = dtoQuantificationParams.IonMobilityWindow
                 DecoyFraction                = dtoQuantificationParams.DecoyFraction
                 Seed                         = dtoQuantificationParams.Seed
             }
