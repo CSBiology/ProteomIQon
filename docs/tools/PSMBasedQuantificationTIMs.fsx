@@ -30,7 +30,7 @@ PSMBasedQuantificationTIMs is the [PSMBasedQuantification]({{root}}tools/PSMBase
 
 An XIC point is the sum of the intensity within 0.05 of the identification's ion mobility (`IonMobilityWindow`).
 
-The points form a retention time [ion chromatogram](https://www.biofsharp.com/BioFSharp.Mz/03_01_quantification.html#Building-an-XIC-trace). As PSMBasedQuantification does, the tool locates the peak on the trace and [fits and integrates](https://www.biofsharp.com/BioFSharp.Mz/03_01_quantification.html#Fitting-and-integrating-the-main-peak) it. The output has the layout of PSMBasedQuantification.
+The points form a retention time [ion chromatogram](https://www.biofsharp.com/BioFSharp.Mz/03_01_quantification.html#Building-an-XIC-trace). As PSMBasedQuantification does, the tool detects the peaks on the trace and [fits and integrates](https://www.biofsharp.com/BioFSharp.Mz/03_01_quantification.html#Fitting-and-integrating-the-main-peak) the one that contains the identification's retention time. The output has the layout of PSMBasedQuantification.
 
 ## Inputs and outputs
 

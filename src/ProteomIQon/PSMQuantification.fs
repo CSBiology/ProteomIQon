@@ -199,7 +199,13 @@ module PSMQuantification =
             f.Logger.Trace (sprintf "Quant failed: No Peak detected, Sequence:%s, GlobalMod:%s, Charge:%s" (pepIon.Sequence |> String.filter (fun x -> x <> '*')) (pepIon.GlobalMod.ToString()) (pepIon.Charge.ToString()))
             None
         else
-        let peakToQuantify = BioFSharp.Mz.Quantification.HULQ.getPeakBy peaks averagePSM.WeightedAvgScanTime
+        let containingPeak = tryPeakContaining peaks averagePSM.WeightedAvgScanTime
+        if Option.isNone containingPeak then
+            if f.DiagCharts then saveErrorChart averagePSM.X_Xic averagePSM.Y_Xic pepIon "noPeakContainingScanTime" f.PlotDirectory
+            f.Logger.Trace (sprintf "Quant failed: No peak contains the scan time, Sequence:%s, GlobalMod:%s, Charge:%s" (pepIon.Sequence |> String.filter (fun x -> x <> '*')) (pepIon.GlobalMod.ToString()) (pepIon.Charge.ToString()))
+            None
+        else
+        let peakToQuantify = containingPeak.Value
         let quantP = BioFSharp.Mz.Quantification.HULQ.quantifyPeak peakToQuantify                        
         let searchRTMinusFittedRT = searchRTMinusFittedRtTarget averagePSM.WeightedAvgScanTime quantP
         if not (isValidFit quantP) then 
@@ -222,7 +228,13 @@ module PSMQuantification =
                     f.Logger.Trace (sprintf "Quant failed: No Peak detected, Sequence:%s, GlobalMod:%s, Charge:%s" (pepIon.Sequence |> String.filter (fun x -> x <> '*')) (pepIon.GlobalMod.ToString()) (pepIon.Charge.ToString()))
                     None
                 else
-                let peakToQuantifyHeavy = BioFSharp.Mz.Quantification.HULQ.getPeakBy inferredPeaksHeavy inferredScanTime
+                let containingPeakHeavy = tryPeakContaining inferredPeaksHeavy inferredScanTime
+                if Option.isNone containingPeakHeavy then
+                    if f.DiagCharts then saveErrorChart inferredXicHeavy.X_Xic inferredXicHeavy.Y_Xic pepIon "noInferredPeakContainingScanTime" f.PlotDirectory
+                    f.Logger.Trace (sprintf "Quant failed: No peak of the labeled partner contains the scan time, Sequence:%s, GlobalMod:%s, Charge:%s" (pepIon.Sequence |> String.filter (fun x -> x <> '*')) (pepIon.GlobalMod.ToString()) (pepIon.Charge.ToString()))
+                    None
+                else
+                let peakToQuantifyHeavy = containingPeakHeavy.Value
                 let quantPHeavy         = BioFSharp.Mz.Quantification.HULQ.quantifyPeak peakToQuantifyHeavy          
                 if not (isValidFit quantPHeavy) then 
                     if f.DiagCharts then saveErrorChart inferredXicHeavy.X_Xic inferredXicHeavy.Y_Xic pepIon "fittingInferredFailed" f.PlotDirectory    
@@ -368,7 +380,13 @@ module PSMQuantification =
                     f.Logger.Trace (sprintf "Quant failed: No Peak detected, Sequence:%s, GlobalMod:%s, Charge:%s" (pepIon.Sequence |> String.filter (fun x -> x <> '*')) (pepIon.GlobalMod.ToString()) (pepIon.Charge.ToString()))
                     None
                 else
-                let peakToQuantifyLight = BioFSharp.Mz.Quantification.HULQ.getPeakBy inferredPeaksLight inferredScanTime
+                let containingPeakLight = tryPeakContaining inferredPeaksLight inferredScanTime
+                if Option.isNone containingPeakLight then
+                    if f.DiagCharts then saveErrorChart inferredXicLight.X_Xic inferredXicLight.Y_Xic pepIon "noInferredPeakContainingScanTime" f.PlotDirectory
+                    f.Logger.Trace (sprintf "Quant failed: No peak of the labeled partner contains the scan time, Sequence:%s, GlobalMod:%s, Charge:%s" (pepIon.Sequence |> String.filter (fun x -> x <> '*')) (pepIon.GlobalMod.ToString()) (pepIon.Charge.ToString()))
+                    None
+                else
+                let peakToQuantifyLight = containingPeakLight.Value
                 let quantPLight         = BioFSharp.Mz.Quantification.HULQ.quantifyPeak peakToQuantifyLight          
                 if not (isValidFit quantPLight) then 
                     if f.DiagCharts then saveErrorChart inferredXicLight.X_Xic inferredXicLight.Y_Xic pepIon "fittingInferredFailed" f.PlotDirectory    
@@ -524,7 +542,13 @@ module PSMQuantification =
             f.Logger.Trace (sprintf "Quant failed: No Peak detected, Sequence:%s, GlobalMod:%s, Charge:%s" (pepIon.Sequence |> String.filter (fun x -> x <> '*')) (pepIon.GlobalMod.ToString()) (pepIon.Charge.ToString()))
             None
         else
-        let peakToQuantify = BioFSharp.Mz.Quantification.HULQ.getPeakBy peaks averagePSM.WeightedAvgScanTime
+        let containingPeak = tryPeakContaining peaks averagePSM.WeightedAvgScanTime
+        if Option.isNone containingPeak then
+            if f.DiagCharts then saveErrorChart averagePSM.X_Xic averagePSM.Y_Xic pepIon "noPeakContainingScanTime" f.PlotDirectory
+            f.Logger.Trace (sprintf "Quant failed: No peak contains the scan time, Sequence:%s, GlobalMod:%s, Charge:%s" (pepIon.Sequence |> String.filter (fun x -> x <> '*')) (pepIon.GlobalMod.ToString()) (pepIon.Charge.ToString()))
+            None
+        else
+        let peakToQuantify = containingPeak.Value
         let quantP = BioFSharp.Mz.Quantification.HULQ.quantifyPeak peakToQuantify
         let searchRTMinusFittedRT = searchRTMinusFittedRtTarget averagePSM.WeightedAvgScanTime quantP 
         if not (isValidFit quantP) then 

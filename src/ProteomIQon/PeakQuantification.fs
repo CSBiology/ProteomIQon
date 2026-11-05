@@ -97,6 +97,10 @@ module PeakQuantification =
         | Domain.XicProcessing.Gabor3D _ ->
             fun _ _ -> failwith "Gabor3D peak detection works on the ion mobility dimension, not on an XIC."
 
+    /// The peak that contains the scan time, None when no peak does.
+    let tryPeakContaining (peaks: FSharp.Stats.Signal.PeakDetection.IdentifiedPeak []) (scanTime: float) =
+        peaks |> Array.tryFind (fun p -> p.LeftEnd.XVal < scanTime && p.RightEnd.XVal > scanTime)
+
     /// A fit is valid when it has at least 3 parameters, all parameters and the area are finite.
     let isValidFit (q: HULQ.QuantifiedPeak) =
         q.EstimatedParams.Length >= 3 && (q.EstimatedParams |> Array.forall Numerics.isFinite) && Numerics.isFinite q.Area
