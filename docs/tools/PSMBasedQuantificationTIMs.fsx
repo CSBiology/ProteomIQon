@@ -10,6 +10,7 @@ index: 9
 (*** hide ***)
 
 (*** condition: prepare ***)
+#r "nuget: FSharp.Stats, 0.6.0"
 #r "nuget: Newtonsoft.Json, 13.0.4"
 #r "../../src/ProteomIQon/bin/Release/net10.0/ProteomIQon.dll"
 
