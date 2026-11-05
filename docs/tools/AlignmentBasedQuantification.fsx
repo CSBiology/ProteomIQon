@@ -79,6 +79,7 @@ XicExtraction is the same record PSMBasedQuantification uses.
 | MzWindow_Da | Window.Estimate | Keep Window.Estimate. The tool estimates the m/z tolerance from the run itself. |
 | XicProcessing | XicProcessing.Wavelet waveletParams | Peak detection method. The wavelet fields are described on the [PSMBasedQuantification]({{root}}tools/PSMBasedQuantification.html) page. |
 | TopKPSMs | None | Keep None. Transferred ions have no identifications to rank. |
+| IonMobilityWindow | Window.Fixed 0.05 | Ignored by this tool. |
 
 The default file is [AlignmentBasedQuantificationParams.json](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/AlignmentBasedQuantificationParams.json).
 
@@ -113,6 +114,7 @@ let alignmentBasedQuantificationParams : Dto.AlignmentBasedQuantificationParams 
                 MzWindow_Da    = Window.Estimate
                 XicProcessing  = XicProcessing.Wavelet waveletParams
                 TopKPSMs       = None
+                IonMobilityWindow = Window.Fixed 0.05
             }
         BaseLineCorrection = Some { MaxIterations = 10; Lambda = 6; P = 0.05 }
     }

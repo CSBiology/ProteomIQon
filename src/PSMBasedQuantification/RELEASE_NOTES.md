@@ -15,6 +15,10 @@
 * Pick the top PSMs of TopKPSMs by ModelScore instead of SequestScore
 * Quantify ions with short XIC traces, on which the wavelet peak detection failed
 * Lower the memory with the same results
+* Add the parameter QualityFilterLog2Limit (default 2): the quality filter keeps the rows with -limit < log2 ((area / median area) / (apex / median apex)) < limit
+* Add the parameter CentrePSMs (default 3): the number of PSMs with the highest summed matched fragment intensity whose weighted scan time centres the XIC
+* Add IonMobilityWindow to XicExtraction, as in PSMBasedQuantificationTIMs; this tool ignores it
+* Breaking: parameter files of earlier releases stop the tool; they need CentrePSMs and QualityFilterLog2Limit
 
 #### 0.0.12 - Wednesday, September 2, 2026
 * Fall back to a median mz correction when the smoothing spline cannot be fitted on sparse data

@@ -55,6 +55,9 @@ module console1 =
                 failwith "The parameters need XicExtraction.ScanTimeWindow, MinScanTimeWindow and ScanTimeWindowSdFactor > 0."
             if not (processParams.DecoyFraction >= 0. && processParams.DecoyFraction <= 1.) then
                 failwith "DecoyFraction must be between 0 and 1."
+            match processParams.XicExtraction.IonMobilityWindow with
+            | Domain.Window.Fixed v when not (v > 0.) -> failwith "IonMobilityWindow Fixed needs a value greater than 0."
+            | _ -> ()
             // warn before reading any run
             match processParams.XicExtraction.XicProcessing with
             | Domain.XicProcessing.Wavelet w when w.BorderPadMethod = FSharp.Stats.Signal.Padding.BorderPaddingMethod.Random ->

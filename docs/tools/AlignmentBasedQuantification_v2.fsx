@@ -86,7 +86,7 @@ sets the half width in Da and keeps the correction.
 
 ## Ion mobility
 
-Ion mobility is used when the spectra have it and `UseIonMobility` is true. Only peaks inside the ion mobility window set by `IonMobilityWindow` enter the XIC. Within the window, peaks are
+Ion mobility is used when the spectra and the `.align` file have it. Only peaks inside the ion mobility window set by `XicExtraction.IonMobilityWindow` enter the XIC. Within the window, peaks are
 summed per m/z over the mobility scans, as PSMBasedQuantificationTIMs does, so transferred and PSM based quantities are comparable.
 
 - `Fixed v`: ±v around `PredictedIonMobility`.
@@ -97,7 +97,7 @@ deviation of its centre.
 
 ## Labeled quantification
 
-With `PerformLabeledQuantification` the partner of the other label is extracted with the same windows. Its peak is taken at the fitted
+With `PerformLabeledQuantification` other than `Unlabeled` the partner of the other label is extracted with the same windows. Its peak is taken at the fitted
 scan time of the ion. A partner that cannot be quantified keeps its m/z and traces but gets no quantity, and the row is kept.
 
 An ion that the run did not quantify itself is not transferred when the PSM based row of its labeled partner has a fitted peak and a
@@ -150,13 +150,11 @@ each ion that was not quantified at Debug level.
 
 | Parameter | Default | Meaning |
 |-----------|---------|---------|
-| PerformLabeledQuantification | true | Also quantify the partner of the other label. Set it to false for label-free data. |
+| PerformLabeledQuantification | Labeling.N15Labeling | Also quantify the partner of the other label. `Unlabeled` quantifies only the ion itself, for label-free data. `N15Labeling`, `N15LabelingOnly` and `Labelshift` behave the same here. |
 | XicExtraction | see below | How the XIC is extracted and processed. |
 | BaseLineCorrection | Some { MaxIterations = 10; Lambda = 6; P = 0.05 } | Asymmetric least squares baseline of the XIC. None switches it off. |
 | MinScanTimeWindow | 1.0 | Smallest half width of the candidate window, in minutes. |
 | ScanTimeWindowSdFactor | 8.0 | Half width of the candidate window in units of `PredictedScanTimeSd`, if larger than `MinScanTimeWindow`. |
-| UseIonMobility | true | Use ion mobility when the spectra and the `.align` file have it. |
-| IonMobilityWindow | Window.Estimate | `Estimate` or `Window.Fixed v`, in 1/K0 (see Ion mobility). |
 | DecoyFraction | 0.2 | Share of the new ions that also get a decoy transfer. 0 writes no decoys. |
 | Seed | 1 | Seed of the cross-fitting folds and of the choice of the decoys. |
 
@@ -166,6 +164,7 @@ each ion that was not quantified at Debug level.
 | MzWindow_Da | Window.Estimate | `Estimate` measures the m/z window from the run. `Window.Fixed 0.01` sets ±0.01 Da. |
 | XicProcessing | XicProcessing.Wavelet | Peak detection. The wavelet fields are described on the [PSMBasedQuantification]({{root}}tools/PSMBasedQuantification.html) page. The default `BorderPadMethod` is `Zero`. `Random` is accepted with a warning, because it makes the detected peaks differ between reruns. |
 | TopKPSMs | None | Not used. |
+| IonMobilityWindow | Window.Estimate | `Estimate` or `Window.Fixed v`, in 1/K0 (see Ion mobility). |
 
 See [the default parameter file](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/AlignmentBasedQuantificationParams_v2.json).
 
@@ -192,20 +191,19 @@ let waveletParams : WaveletParameters =
 
 let alignmentBasedQuantificationParams : Dto.AlignmentBasedQuantificationV2Params =
     {
-        // false for label-free data
-        PerformLabeledQuantification = false
+        // Labeling.Unlabeled for label-free data
+        PerformLabeledQuantification = Labeling.N15Labeling
         XicExtraction =
             {
                 ScanTimeWindow = 2.
                 MzWindow_Da    = Window.Estimate
                 XicProcessing  = XicProcessing.Wavelet waveletParams
                 TopKPSMs       = None
+                IonMobilityWindow = Window.Estimate
             }
         BaseLineCorrection     = Some { MaxIterations = 10; Lambda = 6; P = 0.05 }
         MinScanTimeWindow      = 1.
         ScanTimeWindowSdFactor = 8.
-        UseIonMobility         = true
-        IonMobilityWindow      = Window.Estimate
         DecoyFraction          = 0.2
         Seed                   = 1
     }

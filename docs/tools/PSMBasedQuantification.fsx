@@ -59,12 +59,14 @@ With `-dc` the tool writes one chart per peptide ion into `run_plots`, plus `mzE
 | Parameter | Default | Meaning |
 |-----------|---------|---------|
 | `PerformLabeledQuantification` | `Labeling.N15Labeling` | `Unlabeled` quantifies only the identified ion. `N15Labeling` quantifies the partner ion too and keeps rows where both fits pass the quality filter. `N15LabelingOnly` applies the filter to the heavy channel alone. `Labelshift` quantifies both and skips the filter. |
-| `FragPipe` | `false` | Not read by this tool. |
 | `XicExtraction.ScanTimeWindow` | `2.0` | Half width of the scan time window around the identification that is extracted and searched for the peak, in the scan time unit of the run. |
 | `XicExtraction.MzWindow_Da` | `Window.Estimate` | Half width of the m/z window of the trace, in Da. `Estimate` uses four times the MS1 mass error the tool measures on the precursor m/z of the identifications. `Window.Fixed 0.07` sets it to 0.07 Da. |
 | `XicExtraction.XicProcessing` | `XicProcessing.Wavelet waveletParams` | Peak detection on the trace. The wavelet parameters are listed below. `SecondDerivative` is the other supported case. `Gabor3D` belongs to the TIMs tool and makes this tool fail. |
 | `XicExtraction.TopKPSMs` | `None` | `Some k` keeps only the k identifications with the highest `ModelScore` per peptide ion when placing the scan time. |
+| `XicExtraction.IonMobilityWindow` | `Window.Fixed 0.05` | Not used, the tool does not read ion mobility. |
 | `BaseLineCorrection` | `Some { MaxIterations = 10; Lambda = 6; P = 0.05 }` | Asymmetric least squares baseline subtraction on the trace before peak detection. `None` skips it. |
+| `QualityFilterLog2Limit` | `2.0` | The quality filter keeps rows with -limit < log2 ((area / median area) / (apex / median apex)) < limit. Rows with a NaN ratio are kept. |
+| `CentrePSMs` | `3` | Number of identifications per peptide ion, ranked by the summed intensity of their matched fragment ions, whose intensity weighted scan time centres the trace. It is applied after `TopKPSMs`, which ranks by `ModelScore`. At least 1. |
 
 The wavelet parameters:
 
@@ -107,15 +109,17 @@ let waveletParams : WaveletParameters =
 let quantificationParams : Dto.QuantificationParams =
     {
         PerformLabeledQuantification = Labeling.N15Labeling
-        FragPipe                     = false
         XicExtraction =
             {
                 ScanTimeWindow = 2.
                 MzWindow_Da    = Window.Estimate
                 XicProcessing  = XicProcessing.Wavelet waveletParams
                 TopKPSMs       = None
+                IonMobilityWindow = Window.Fixed 0.05
             }
         BaseLineCorrection = Some { MaxIterations = 10; Lambda = 6; P = 0.05 }
+        QualityFilterLog2Limit = 2.
+        CentrePSMs = 3
     }
 
 // Replace the temp folder with your project folder.

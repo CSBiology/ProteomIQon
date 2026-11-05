@@ -32,6 +32,7 @@ let defaultPreprocessingParams :Dto.AlignmentBasedQuantificationParams =
     let XicExtraction = 
         {
             TopKPSMs                     = None
+            IonMobilityWindow            = Domain.Window.Fixed 0.05
             ScanTimeWindow               = 2.
             MzWindow_Da                  = Domain.Window.Estimate
             XicProcessing                = Wavelet waveletParams

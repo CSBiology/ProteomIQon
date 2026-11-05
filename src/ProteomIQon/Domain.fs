@@ -201,6 +201,8 @@ module Domain =
             MzWindow_Da                  : Window 
             XicProcessing                : XicProcessing
             TopKPSMs                     : int option
+            /// Half width of the ion mobility window (1/K0). Fixed v: ±v around the ion's ion mobility. Estimate (AlignmentBasedQuantification only): from the predicted ion mobility sd. PSMBasedQuantification ignores it.
+            IonMobilityWindow            : Window
         }
        
     type BaseLineCorrection = 
@@ -222,6 +224,10 @@ module Domain =
             PerformLabeledQuantification : Labeling
             XicExtraction                : XicExtraction
             BaseLineCorrection           : BaseLineCorrection option
+            /// The filters keep rows with -limit < log2 ((area / median area) / (apex / median apex)) < limit.
+            QualityFilterLog2Limit       : float
+            /// Number of PSMs, ranked by summed matched fragment intensity, whose weighted scan time (and ion mobility) centres the XIC.
+            CentrePSMs                   : int
         }
 
     type LabelEfficiencyCalculationParams =
@@ -240,16 +246,13 @@ module Domain =
 
     type AlignmentBasedQuantificationV2Params =
         {
-            PerformLabeledQuantification : bool
+            PerformLabeledQuantification : Labeling
             XicExtraction                : XicExtraction
             BaseLineCorrection           : BaseLineCorrection option
             /// Lower bound of the half width of the scan time window (minutes).
             MinScanTimeWindow            : float
             /// The half width of the scan time window is this factor times PredictedScanTimeSd, capped at XicExtraction.ScanTimeWindow.
             ScanTimeWindowSdFactor       : float
-            /// Use the ion mobility of the .align file when the run has ion mobility.
-            UseIonMobility               : bool
-            IonMobilityWindow            : Window
             /// Fraction of the new ions that are also quantified as decoy transfers at a shifted scan time (0: none).
             DecoyFraction                : float
             Seed                         : int

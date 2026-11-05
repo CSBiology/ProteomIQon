@@ -396,11 +396,11 @@ module AlignmentBasedQuantification_v2 =
     /// Lower bound of the local scan time scale in the candidate distance RtZ (minutes).
     let minScanTimeScale = 0.03
     /// IonMobilityWindow Estimate: +-max(minIonMobilityWindow, ionMobilityWindowSdFactor * PredictedIonMobilitySd). The minimum is the
-    /// window of PSMBasedQuantificationTIMs; with +-0.02 the quantities of the ions the run quantified itself were 10 % lower.
-    let minIonMobilityWindow = ionMobilityHalfWindow
+    /// default window of PSMBasedQuantificationTIMs; with +-0.02 the quantities of the ions the run quantified itself were 10 % lower.
+    let minIonMobilityWindow = 0.05
     let ionMobilityWindowSdFactor = 4.
-    /// Ions without predicted but with a source ion mobility get a window of +-0.05 around it, as AlignmentBasedQuantification.
-    let sourceIonMobilityWindow = ionMobilityHalfWindow
+    /// Ions without predicted but with a source ion mobility get a window of +-0.05 around it.
+    let sourceIonMobilityWindow = 0.05
     /// Lower bound of the ion mobility scale in the candidate distance ImZ.
     let minIonMobilityScale = 0.001
     /// MzWindow_Da Estimate: +-mzWindowSdFactor * the standard deviation of the m/z offsets measured in the MS1 spectra after correction;
@@ -770,7 +770,8 @@ module AlignmentBasedQuantification_v2 =
             |> Option.map (fun s -> s.IonMobility.Length > 0)
             |> Option.defaultValue false
         let alignHasIonMobility = alignments |> Array.exists (fun a -> isFinite a.PredictedIonMobility || isFinite a.IonMobility)
-        let useIonMobility = processParams.UseIonMobility && spectraHaveIonMobility && alignHasIonMobility
+        let performLabeled = processParams.PerformLabeledQuantification <> Domain.Labeling.Unlabeled
+        let useIonMobility = spectraHaveIonMobility && alignHasIonMobility
         logger.Info (
             sprintf "%s: %i MS1 spectra, scan time %.2f - %.2f min; ion mobility in the spectra: %b, in the .align file: %b, used: %b (%.1f s)"
                 runName ms1.Length (if ms1.Length > 0 then fst ms1.[0] else nan) (if ms1.Length > 0 then fst ms1.[ms1.Length - 1] else nan)
@@ -893,7 +894,7 @@ module AlignmentBasedQuantification_v2 =
         // the run quantified through its own PSM based row with a fitted peak, with a value of the label of the ion, is not transferred:
         // the PSM based row has more evidence than a match through alignment
         let labeledPartnerQuantified (align: AlignmentResultV2) =
-            processParams.PerformLabeledQuantification
+            performLabeled
             && not (psm.OwnQuant.ContainsKey ((align.StringSequence, align.GlobalMod, align.Charge)))
             && (match psm.OwnQuant.TryGetValue ((align.StringSequence, (if align.GlobalMod = 0 then 1 else 0), align.Charge)) with
                 | true, qp ->
@@ -907,7 +908,7 @@ module AlignmentBasedQuantification_v2 =
                 if row < n && labeledPartnerQuantified align then
                     dropIon row LabeledPartnerQuantifiedStatus
                     None
-                elif not processParams.PerformLabeledQuantification && align.GlobalMod <> 0 then
+                elif not performLabeled && align.GlobalMod <> 0 then
                     dropIon row "label-free quantification of an ion with GlobalMod <> 0"
                     None
                 elif not (isFinite align.PredictedScanTime) then
@@ -921,9 +922,9 @@ module AlignmentBasedQuantification_v2 =
                 | Some target ->
                 // the alignment row of an overlap ion with a fitted PSM based peak is a training example and the truth of
                 // AlignmentBasedQuantStatistics_v2 only, which reads the quantification of the ion itself
-                let partnerSkipped = processParams.PerformLabeledQuantification && psm.PsmPeakIons.Contains ((align.StringSequence, align.GlobalMod, align.Charge))
+                let partnerSkipped = performLabeled && psm.PsmPeakIons.Contains ((align.StringSequence, align.GlobalMod, align.Charge))
                 let partner =
-                    if processParams.PerformLabeledQuantification && not partnerSkipped then
+                    if performLabeled && not partnerSkipped then
                         let p = lookUp align.StringSequence (if align.GlobalMod = 0 then 1 else 0)
                         if p.IsNone then logger.Debug (sprintf "Labeled partner not in the database: %s" (ionName align))
                         p
@@ -940,13 +941,13 @@ module AlignmentBasedQuantification_v2 =
                 let imCenter, imWindow =
                     if not useIonMobility then nan, nan
                     elif isFinite align.PredictedIonMobility then
-                        match processParams.IonMobilityWindow with
+                        match processParams.XicExtraction.IonMobilityWindow with
                         | Domain.Window.Fixed v -> align.PredictedIonMobility, v
                         | Domain.Window.Estimate ->
                             let sd = align.PredictedIonMobilitySd
                             align.PredictedIonMobility, (if isFinite sd then max minIonMobilityWindow (ionMobilityWindowSdFactor * sd) else sourceIonMobilityWindow)
                     elif isFinite align.IonMobility then
-                        match processParams.IonMobilityWindow with
+                        match processParams.XicExtraction.IonMobilityWindow with
                         | Domain.Window.Fixed v -> align.IonMobility, v
                         | Domain.Window.Estimate -> align.IonMobility, sourceIonMobilityWindow
                     else nan, nan
@@ -976,7 +977,7 @@ module AlignmentBasedQuantification_v2 =
                         }
                 }
         let prepared = alignments |> Array.mapi prepare |> Array.choose id
-        if processParams.PerformLabeledQuantification then
+        if performLabeled then
             logger.Info (sprintf "%s: labeled partner not quantified for %i of %i ions (overlap ions with a fitted PSM based peak)" runName (prepared |> Array.filter (fun ion -> ion.PartnerSkipped) |> Array.length) prepared.Length)
         let withIonMobility = prepared |> Array.filter (fun ion -> isFinite ion.Request.ImLow) |> Array.length
         logger.Info (
@@ -1249,7 +1250,7 @@ module AlignmentBasedQuantification_v2 =
                             | _ -> failed "peak fit failed"
                         | Some _, None -> emptySide ion.PartnerLockMz None, nan
                         | None, _ ->
-                            if processParams.PerformLabeledQuantification && not ion.PartnerSkipped && ion.Row < n then
+                            if performLabeled && not ion.PartnerSkipped && ion.Row < n then
                                 partnerFailures <- partnerFailures + 1
                             emptySide nan None, nan
                     features.[ion.Row] <- Some (featureRow "quantified")
@@ -1327,7 +1328,7 @@ module AlignmentBasedQuantification_v2 =
         logger.Info (
             sprintf "%s: %i of %i .align rows quantified%s; not quantified: %s (%.1f s)"
                 runName quantResults.Length alignments.Length
-                (if processParams.PerformLabeledQuantification then sprintf ", %i without quantified labeled partner" partnerFailures else "")
+                (if performLabeled then sprintf ", %i without quantified labeled partner" partnerFailures else "")
                 drops.Summary (elapsed ())
             )
 
