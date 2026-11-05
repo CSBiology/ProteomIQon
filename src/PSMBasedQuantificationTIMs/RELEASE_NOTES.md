@@ -23,6 +23,7 @@
 * Add the parameter CentrePSMs (default 3): the number of PSMs with the highest summed matched fragment intensity whose weighted scan time and ion mobility centre the XIC
 * Add IonMobilityWindow to XicExtraction: Fixed v sets the half width of the ion mobility window in 1/K0, which was 0.05; Estimate is not available in this tool
 * Breaking: parameter files of earlier releases stop the tool; they need CentrePSMs, QualityFilterLog2Limit and IonMobilityWindow in XicExtraction
+* Quantify an ion only when a peak contains the weighted scan time of its PSMs, and its labeled partner only when a peak of the partner trace contains the expected scan time
 
 #### 0.0.13 - Wednesday, September 2, 2026
 * Add Gabor3D algorithm for peak detection

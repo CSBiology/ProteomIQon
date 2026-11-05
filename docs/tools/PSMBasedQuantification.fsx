@@ -27,8 +27,8 @@ index: 8
 # PSMBasedQuantification
 
 PSMBasedQuantification turns the identifications from [PSMStatistics]({{root}}tools/PSMStatistics.html) into peptide ion intensities.
-For every identified peptide ion (sequence, modification state and charge) it takes the scan times of its MS/MS identifications, extracts an [ion chromatogram](https://www.biofsharp.com/BioFSharp.Mz/03_01_quantification.html#Building-an-XIC-trace) of the monoisotopic m/z in a window around them, detects the peaks in that trace and [fits the peak](https://www.biofsharp.com/BioFSharp.Mz/03_01_quantification.html#Fitting-and-integrating-the-main-peak) closest to the identification. The fitted area is the reported quantity.
-For metabolically labeled samples the tool computes the m/z of the partner ion (the heavy form of a light identification, or the other way round) and quantifies that trace as well, so every row can carry a light and a heavy value.
+For every identified peptide ion (sequence, modification state and charge) it takes the scan times of its MS/MS identifications, extracts an [ion chromatogram](https://www.biofsharp.com/BioFSharp.Mz/03_01_quantification.html#Building-an-XIC-trace) of the monoisotopic m/z in a window around them, detects the peaks in that trace and [fits the peak](https://www.biofsharp.com/BioFSharp.Mz/03_01_quantification.html#Fitting-and-integrating-the-main-peak) that contains the weighted scan time of its identifications (see `CentrePSMs`). The fitted area is the reported quantity. If no peak contains that scan time, the ion gets no row.
+For metabolically labeled samples the tool computes the m/z of the partner ion (the heavy form of a light identification, or the other way round) and quantifies that trace as well, so every row can carry a light and a heavy value. If no peak of the partner trace contains the fitted scan time of the ion, the partner columns stay empty.
 
 <img src="{{root}}img/LabeledQuant.png" width="1000" height="750" />
 

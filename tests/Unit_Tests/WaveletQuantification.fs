@@ -211,4 +211,19 @@ let all =
             let fI = getValue heavy.Model.Value heavy.EstimatedParams
             let expected = Correlation.Seq.pearson (grid |> Array.map fQ) (grid |> Array.map fI)
             Expect.equal (PeakQuantification.calcCorrelation xs light heavy) expected "same value"
+
+        testCase "tryPeakContaining takes the peak around the scan time and none when no peak contains it" <| fun _ ->
+            let peak left apex right =
+                let feature x = Signal.PeakDetection.createPeakFeature -1 x 1.
+                Signal.PeakDetection.createIdentifiedPeak (feature apex) None (feature left) None (feature right) false false [| left; apex; right |] [| 1.; 1.; 1. |]
+            let first, second = peak 1. 2. 3., peak 5. 6. 7.
+            let peaks = [| first; second |]
+            Expect.equal (PeakQuantification.tryPeakContaining peaks 2.5) (Some first) "inside the first peak"
+            Expect.equal (PeakQuantification.tryPeakContaining peaks 6.5) (Some second) "inside the second peak"
+            Expect.isNone (PeakQuantification.tryPeakContaining peaks 4.) "between the peaks, the nearest apex is not taken"
+            Expect.isNone (PeakQuantification.tryPeakContaining peaks 1.) "on the left border"
+            Expect.isNone (PeakQuantification.tryPeakContaining peaks 3.) "on the right border"
+            Expect.isNone (PeakQuantification.tryPeakContaining peaks 0.) "left of all peaks"
+            Expect.isNone (PeakQuantification.tryPeakContaining peaks 8.) "right of all peaks"
+            Expect.isNone (PeakQuantification.tryPeakContaining [||] 2.) "no peaks"
     ]
