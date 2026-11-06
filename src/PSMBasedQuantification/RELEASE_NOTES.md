@@ -19,7 +19,7 @@
 * Add the parameter CentrePSMs (default 3): the number of PSMs with the highest summed matched fragment intensity whose weighted scan time centres the XIC
 * Add IonMobilityWindow to XicExtraction, as in PSMBasedQuantificationTIMs; this tool ignores it
 * Breaking: parameter files of earlier releases stop the tool; they need CentrePSMs and QualityFilterLog2Limit
-* Quantify an ion only when a peak contains the weighted scan time of its PSMs, and its labeled partner only when a peak of the partner trace contains the expected scan time
+* Add the parameter RequirePeakAtScanTime (default true): an ion is quantified only when a peak contains the weighted scan time of its PSMs, and its labeled partner only when a peak of the partner trace contains the expected scan time; false takes the peak with the closest apex when no peak contains the scan time
 * Fit the m/z correction of a run in ppm over scan time and m/z; MzWindow_Da Estimate stays four standard deviations of the precursor m/z offsets
 
 #### 0.0.12 - Wednesday, September 2, 2026

@@ -101,6 +101,12 @@ module PeakQuantification =
     let tryPeakContaining (peaks: FSharp.Stats.Signal.PeakDetection.IdentifiedPeak []) (scanTime: float) =
         peaks |> Array.tryFind (fun p -> p.LeftEnd.XVal < scanTime && p.RightEnd.XVal > scanTime)
 
+    /// The peak to quantify at the scan time. With requirePeakAtScanTime only a peak that contains the scan time, none otherwise.
+    /// Without it the peak that contains the scan time, else the peak with the closest apex (HULQ.getPeakBy), none only for no peaks.
+    let selectPeak (requirePeakAtScanTime: bool) (peaks: FSharp.Stats.Signal.PeakDetection.IdentifiedPeak []) (scanTime: float) =
+        if requirePeakAtScanTime || Array.isEmpty peaks then tryPeakContaining peaks scanTime
+        else Some (HULQ.getPeakBy peaks scanTime)
+
     /// A fit is valid when it has at least 3 parameters, all parameters and the area are finite.
     let isValidFit (q: HULQ.QuantifiedPeak) =
         q.EstimatedParams.Length >= 3 && (q.EstimatedParams |> Array.forall Numerics.isFinite) && Numerics.isFinite q.Area

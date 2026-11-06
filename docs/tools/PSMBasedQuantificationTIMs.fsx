@@ -30,7 +30,7 @@ PSMBasedQuantificationTIMs is the [PSMBasedQuantification]({{root}}tools/PSMBase
 
 An XIC point is the sum of the intensity within 0.05 of the identification's ion mobility (`IonMobilityWindow`).
 
-The points form a retention time [ion chromatogram](https://www.biofsharp.com/BioFSharp.Mz/03_01_quantification.html#Building-an-XIC-trace). As PSMBasedQuantification does, the tool detects the peaks on the trace and [fits and integrates](https://www.biofsharp.com/BioFSharp.Mz/03_01_quantification.html#Fitting-and-integrating-the-main-peak) the one that contains the identification's retention time. The output has the layout of PSMBasedQuantification.
+The points form a retention time [ion chromatogram](https://www.biofsharp.com/BioFSharp.Mz/03_01_quantification.html#Building-an-XIC-trace). As PSMBasedQuantification does, the tool detects the peaks on the trace and [fits and integrates](https://www.biofsharp.com/BioFSharp.Mz/03_01_quantification.html#Fitting-and-integrating-the-main-peak) the peak that contains the weighted scan time of the identifications (see `CentrePSMs`). The output has the layout of PSMBasedQuantification.
 
 ## Inputs and outputs
 
@@ -69,6 +69,7 @@ The parameter record is the one of PSMBasedQuantification. The defaults below ar
 | `BaseLineCorrection` | `Some { MaxIterations = 10; Lambda = 6; P = 0.05 }` | Asymmetric least squares baseline subtraction before peak detection. `None` skips it. |
 | `QualityFilterLog2Limit` | `2.0` | The quality filter keeps rows with -limit < log2 ((area / median area) / (apex / median apex)) < limit. Rows with a non-finite or non-positive area, apex or ratio are dropped. |
 | `CentrePSMs` | `3` | Number of identifications per peptide ion with an ion mobility, ranked by the summed intensity of their matched fragment ions, whose intensity weighted scan time and ion mobility centre the trace. It is applied after `TopKPSMs`, which ranks by `ModelScore`. At least 1. |
+| `RequirePeakAtScanTime` | `true` | `true` quantifies only a peak that contains the weighted scan time of the identifications, so an ion without such a peak gets no row. `false` takes the peak with the closest apex when no peak contains it. |
 
 The wavelet parameters:
 
@@ -122,6 +123,7 @@ let quantificationTIMsParams : Dto.QuantificationParams =
         BaseLineCorrection = Some { MaxIterations = 10; Lambda = 6; P = 0.05 }
         QualityFilterLog2Limit = 2.
         CentrePSMs = 3
+        RequirePeakAtScanTime = true
     }
 
 // Replace the temp folder with your project folder.

@@ -27,8 +27,8 @@ index: 8
 # PSMBasedQuantification
 
 PSMBasedQuantification turns the identifications from [PSMStatistics]({{root}}tools/PSMStatistics.html) into peptide ion intensities.
-For every identified peptide ion (sequence, modification state and charge) it takes the scan times of its MS/MS identifications, extracts an [ion chromatogram](https://www.biofsharp.com/BioFSharp.Mz/03_01_quantification.html#Building-an-XIC-trace) of the monoisotopic m/z in a window around them, detects the peaks in that trace and [fits the peak](https://www.biofsharp.com/BioFSharp.Mz/03_01_quantification.html#Fitting-and-integrating-the-main-peak) that contains the weighted scan time of its identifications (see `CentrePSMs`). The fitted area is the reported quantity. If no peak contains that scan time, the ion gets no row.
-For metabolically labeled samples the tool computes the m/z of the partner ion (the heavy form of a light identification, or the other way round) and quantifies that trace as well, so every row can carry a light and a heavy value. If no peak of the partner trace contains the fitted scan time of the ion, the partner columns stay empty.
+For every identified peptide ion (sequence, modification state and charge) it takes the scan times of its MS/MS identifications, extracts an [ion chromatogram](https://www.biofsharp.com/BioFSharp.Mz/03_01_quantification.html#Building-an-XIC-trace) of the monoisotopic m/z in a window around them, detects the peaks in that trace and [fits the peak](https://www.biofsharp.com/BioFSharp.Mz/03_01_quantification.html#Fitting-and-integrating-the-main-peak) that contains the weighted scan time of its identifications (see `CentrePSMs` and `RequirePeakAtScanTime`). The fitted area is the reported quantity.
+For metabolically labeled samples the tool computes the m/z of the partner ion (the heavy form of a light identification, or the other way round) and quantifies that trace as well, so every row can carry a light and a heavy value.
 
 <img src="{{root}}img/LabeledQuant.png" width="1000" height="750" />
 
@@ -67,6 +67,7 @@ With `-dc` the tool writes one chart per peptide ion into `run_plots`, plus `mzE
 | `BaseLineCorrection` | `Some { MaxIterations = 10; Lambda = 6; P = 0.05 }` | Asymmetric least squares baseline subtraction on the trace before peak detection. `None` skips it. |
 | `QualityFilterLog2Limit` | `2.0` | The quality filter keeps rows with -limit < log2 ((area / median area) / (apex / median apex)) < limit. Rows with a NaN ratio are kept. |
 | `CentrePSMs` | `3` | Number of identifications per peptide ion, ranked by the summed intensity of their matched fragment ions, whose intensity weighted scan time centres the trace. It is applied after `TopKPSMs`, which ranks by `ModelScore`. At least 1. |
+| `RequirePeakAtScanTime` | `true` | `true` quantifies only a peak that contains the weighted scan time of the identifications, so an ion without such a peak gets no row. The labeled partner needs a peak of its own trace that contains the fitted scan time of the ion. Without one the partner columns stay empty. `false` takes the peak with the closest apex when no peak contains the scan time. |
 
 The wavelet parameters:
 
@@ -120,6 +121,7 @@ let quantificationParams : Dto.QuantificationParams =
         BaseLineCorrection = Some { MaxIterations = 10; Lambda = 6; P = 0.05 }
         QualityFilterLog2Limit = 2.
         CentrePSMs = 3
+        RequirePeakAtScanTime = true
     }
 
 // Replace the temp folder with your project folder.

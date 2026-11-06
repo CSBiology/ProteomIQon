@@ -226,4 +226,22 @@ let all =
             Expect.isNone (PeakQuantification.tryPeakContaining peaks 0.) "left of all peaks"
             Expect.isNone (PeakQuantification.tryPeakContaining peaks 8.) "right of all peaks"
             Expect.isNone (PeakQuantification.tryPeakContaining [||] 2.) "no peaks"
+
+        testCase "selectPeak requires a containing peak or falls back to the closest apex" <| fun _ ->
+            let peak left apex right =
+                let feature x = Signal.PeakDetection.createPeakFeature -1 x 1.
+                Signal.PeakDetection.createIdentifiedPeak (feature apex) None (feature left) None (feature right) false false [| left; apex; right |] [| 1.; 1.; 1. |]
+            let first, second = peak 1. 2. 3., peak 5. 6. 7.
+            let peaks = [| first; second |]
+            Expect.equal (PeakQuantification.selectPeak true peaks 2.5) (Some first) "required, inside the first peak"
+            Expect.equal (PeakQuantification.selectPeak false peaks 2.5) (Some first) "not required, inside the first peak"
+            Expect.equal (PeakQuantification.selectPeak false peaks 6.5) (Some second) "not required, inside the second peak"
+            Expect.isNone (PeakQuantification.selectPeak true peaks 4.5) "required, between the peaks"
+            Expect.equal (PeakQuantification.selectPeak false peaks 4.5) (Some second) "not required, between the peaks the closest apex is taken"
+            Expect.isNone (PeakQuantification.selectPeak true peaks 0.) "required, left of all peaks"
+            Expect.equal (PeakQuantification.selectPeak false peaks 0.) (Some first) "not required, left of all peaks"
+            Expect.isNone (PeakQuantification.selectPeak true peaks 8.) "required, right of all peaks"
+            Expect.equal (PeakQuantification.selectPeak false peaks 8.) (Some second) "not required, right of all peaks"
+            Expect.isNone (PeakQuantification.selectPeak true [||] 2.) "required, no peaks"
+            Expect.isNone (PeakQuantification.selectPeak false [||] 2.) "not required, no peaks"
     ]

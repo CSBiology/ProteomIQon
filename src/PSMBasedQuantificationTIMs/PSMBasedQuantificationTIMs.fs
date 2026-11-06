@@ -2129,6 +2129,7 @@ module PSMBasedQuantificationTIMs =
                 PeptideLookUp = peptideLookUp
                 CountMatchedMasses = countMatchedMasses
                 CentrePSMs = processParams.CentrePSMs
+                RequirePeakAtScanTime = processParams.RequirePeakAtScanTime
                 CorrectionAt = calibration.CorrectionAt
                 IonMobilityOf = ionMobilityOf
                 GetXic = getXIC
