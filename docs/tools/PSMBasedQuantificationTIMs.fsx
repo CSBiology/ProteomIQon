@@ -62,7 +62,7 @@ The parameter record is the one of PSMBasedQuantification. The defaults below ar
 |-----------|---------|---------|
 | `PerformLabeledQuantification` | `Labeling.Unlabeled` | Label free quantification of the identified ion. The three labeled cases work as in PSMBasedQuantification and quantify the partner ion too. |
 | `XicExtraction.ScanTimeWindow` | `2.0` | Half width of the retention time range around the identification that is extracted, in the scan time unit of the run. |
-| `XicExtraction.MzWindow_Da` | `Window.Estimate` | Half width of the m/z window, in Da. `Estimate` uses four times the MS1 mass error measured on the identifications. `Window.Fixed 0.07` sets it to 0.07 Da. |
+| `XicExtraction.MzWindow_Da` | `Window.Estimate` | Half width of the m/z window, in Da. The m/z correction and `Window.Estimate` work as in PSMBasedQuantification. `Window.Fixed 0.07` sets 0.07 Da. |
 | `XicExtraction.XicProcessing` | `XicProcessing.Wavelet waveletParams` | Peak detection on the retention time trace, summed over the ion mobility window. The wavelet parameters are listed below. `SecondDerivative` is the other supported case. `Gabor3D` is in development and does not work currently. |
 | `XicExtraction.TopKPSMs` | `None` | `Some k` keeps only the k identifications with the highest `ModelScore` per peptide ion when placing the peak. |
 | `XicExtraction.IonMobilityWindow` | `Window.Fixed 0.05` | Half width of the ion mobility window around the weighted ion mobility of the identifications that centre the trace (`CentrePSMs`), in 1/K0. `Window.Estimate` is not available here and stops the tool. |

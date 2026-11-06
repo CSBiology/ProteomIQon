@@ -20,6 +20,7 @@
 * Add IonMobilityWindow to XicExtraction, as in PSMBasedQuantificationTIMs; this tool ignores it
 * Breaking: parameter files of earlier releases stop the tool; they need CentrePSMs and QualityFilterLog2Limit
 * Quantify an ion only when a peak contains the weighted scan time of its PSMs, and its labeled partner only when a peak of the partner trace contains the expected scan time
+* Fit the m/z correction of a run in ppm over scan time and m/z; MzWindow_Da Estimate stays four standard deviations of the precursor m/z offsets
 
 #### 0.0.12 - Wednesday, September 2, 2026
 * Fall back to a median mz correction when the smoothing spline cannot be fitted on sparse data

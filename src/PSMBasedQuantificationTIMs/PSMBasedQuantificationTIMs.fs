@@ -115,48 +115,6 @@ module PSMBasedQuantificationTIMs =
             rtIndex, ms1SortedByScanTime, mobilities
 
     ///
-    let initSpline binningWindowWidth (scanTimeVsDiff: (float*float) []) = 
-        let getBinIdx width scantime = int ((scantime / width))    
-        let knotX,train,test = 
-            let knotX,train,test = 
-                scanTimeVsDiff
-                |> Array.groupBy (fun (s,d) -> getBinIdx binningWindowWidth (s))
-                |> Array.map (fun (binIdx,ions) -> 
-                    let dataS = ions |> Array.shuffleFisherYates
-                    let knotX = 
-                        dataS 
-                        |> Array.map fst
-                        |> Array.max
-                    let train,test =
-                        let nTest = 
-                            (float dataS.Length) * 0.9
-                            |> int
-                        dataS.[.. nTest], dataS.[nTest+1 ..] 
-                    float knotX, train, test
-                    )
-                |> Array.unzip3
-            knotX |> Array.sort, train |> Array.concat |> Array.sortBy fst, test |> Array.concat |> Array.sortBy fst
-        let trainer lambda = 
-            let train' = train 
-            let test' = test 
-            let fit = FSharp.Stats.Fitting.Spline.smoothingSpline train' (knotX) lambda 
-            let rSquared = 
-                let x,y,yHat = 
-                    test'
-                    |> Array.map (fun (x,y) -> 
-                        x, y, fit x
-                        )
-                    |> Array.unzip3
-                let rs = FSharp.Stats.Fitting.GoodnessOfFit.calculateDeterminationFromValue yHat y
-                rs
-            rSquared, fit     
-        let rSquared,model = 
-            [|0.01.. 0.05 .. 0.5|]
-            |> Array.map trainer
-            |> Array.maxBy fst          
-        rSquared, model
-
-    ///
     let getSpec (reader:MzIO.IO.IMzIODataReader) (ms1ID: string)  =
         Peaks.unzipIMzliteArray (reader.ReadSpectrumPeaks(ms1ID).Peaks)
         |> fun (mzData,intensityData) -> PeakArray.zip mzData intensityData
@@ -445,7 +403,7 @@ module PSMBasedQuantificationTIMs =
     let estimateGaborTargetFromPsms
         (centrePSMs: int)
         (ionMobilityOf: string -> float)
-        scanTimeToMzCorrection
+        (correctionAt: float -> float -> float)
         theoMz
         (psms: (PSMStatisticsResult * float)[])
         =
@@ -482,7 +440,7 @@ module PSMBasedQuantificationTIMs =
             with
             | Some expectedRt, Some expectedMobility ->
                 let expectedMz =
-                    scanTimeToMzCorrection expectedRt + theoMz
+                    correctionAt expectedRt theoMz + theoMz
 
                 if Double.IsFinite expectedMz then
                     Some
@@ -1736,78 +1694,13 @@ module PSMBasedQuantificationTIMs =
         if psmsWithIonMobility < qpsms.Length then
             logger.Warn (sprintf "%i PSMIds not found or not readable in the mzlite (wrong mzlite?), %i spectra without ion mobility of %i PSMs in %s, they do not count for the ion mobility of their ion." psmsNotInMzlite psmsWithoutIonMobility qpsms.Length instrumentOutput)
         
-        logger.Trace "Estimate precursor mz standard deviation and mz correction."
-        ///
-        let ms1AccuracyEstimate,scanTimeToMzCorrection = 
-            let scanTimeVsDelta = 
-                qpsms
-                |> Array.map (fun x -> 
-                    let precMz = x.PrecursorMZ
-                    let theMz  = Mass.toMZ x.TheoMass (float x.Charge)
-                    let diff = precMz - theMz 
-                    x.ScanTime,diff
-                    )
-            let borders =
-                scanTimeVsDelta
-                |> Seq.map snd
-                |> Array.ofSeq
-                |> FSharp.Stats.Signal.Outliers.tukey 3.
-            let lowerFence, upperFence =
-                match borders.TryToTuple with
-                | Some fences -> fences
-                | None -> nan, nan
-            let filteredValues =
-                scanTimeVsDelta
-                |> Array.ofSeq
-                |> Array.filter (fun (s,d) -> (d <= upperFence && d >= lowerFence) && d < 0.1)
-            let scanTimeToMzCorrection =
-                let runTime = scanTimeVsDelta |> Array.maxBy fst |> fst
-                if runTime > 20. && qpsms.Length > 500 then
-                    let binWidth =
-                        System.Math.Min(runTime / 2., 20.)
-                    let stabw = filteredValues |> Seq.stDevBy snd
-                    try
-                        let r,f = initSpline binWidth filteredValues
-                        f
-                    with ex ->
-                        // the smoothing spline needs enough filtered points per bin; sparse samples fall back to the median correction below
-                        logger.Trace (sprintf "Mz correction spline failed (%s), falling back to median correction." ex.Message)
-                        let m =
-                            filteredValues
-                            |> Seq.map snd
-                            |> Seq.median
-                        fun scanTime -> m
-                else 
-                    let m = 
-                        filteredValues 
-                        |> Seq.map snd 
-                        |> Seq.median 
-                    fun scanTime -> m
-            let stDev = 
-                filteredValues 
-                |> Seq.map snd 
-                |> Seq.stDev
-            if diagCharts then 
-                [
-                Chart.Point(scanTimeVsDelta)
-                |> Chart.withTraceInfo "Raw"
-                Chart.Line(scanTimeVsDelta |> Array.sortBy fst |> Array.map (fun (st,d) -> st, scanTimeToMzCorrection st))
-                ]
-                |> Chart.combine
-                |> Chart.saveHtml(Path.Combine[|plotDirectory; "mzErrorAndCorrection"|])
-            stDev, scanTimeToMzCorrection 
-        logger.Trace (sprintf "Estimate precursor mz standard deviation and mz correction.:finished, standard deviation: %f" ms1AccuracyEstimate) 
+        let calibration = calibratePsms logger diagCharts plotDirectory qpsms
 
         logger.Trace "init lookup functions"        
         ///
         
-        let mzWindow = 
-            match processParams.XicExtraction.MzWindow_Da with 
-            | Domain.Window.Fixed v -> v 
-            | Domain.Window.Estimate -> 
-                let mzW = ms1AccuracyEstimate*4.
-                logger.Trace (sprintf "optimal mz Window for XIC look up found by estimation :%f Da" mzW)  
-                mzW
+        let mzWindow = MzCalibration.mzWindow processParams.XicExtraction.MzWindow_Da calibration
+        logger.Trace (sprintf "XIC %s" (MzCalibration.describeWindow processParams.XicExtraction.MzWindow_Da mzWindow (calibration.HalfWindow = MzCalibration.fallbackMzWindow)))
 
         let readSpecPeaksWithMem = FSharpAux.Memoization.memoize inReader.ReadSpectrumPeaks
         ///
@@ -1825,13 +1718,13 @@ module PSMBasedQuantificationTIMs =
                 isotopePatterns
                 (fun id lowMz highMz -> Xic.getPeaksInMzRange (readSortedPeaksWithMem id) lowMz highMz)
                 closestMs1
-                ms1AccuracyEstimate
+                (calibration.HalfWindow / MzCalibration.mzWindowSdFactor)
         let compareGaborPredictedAndMeasuredIsotopicCluster =
             initComparePredictedAndMeasuredIsotopicCluster
                 isotopePatterns
                 (fun id lowMz highMz -> getSpec inReader id |> Array.filter (fun x -> x.Mz < highMz && x.Mz > lowMz))
                 closestMs1
-                ms1AccuracyEstimate
+                (calibration.HalfWindow / MzCalibration.mzWindowSdFactor)
         let ionMobilityHalfWindow =
             match processParams.XicExtraction.IonMobilityWindow with
             | Domain.Window.Fixed v -> v
@@ -1886,7 +1779,8 @@ module PSMBasedQuantificationTIMs =
                 emptyClusterComparison
 
         let quantMzAtScanTime (peptide: LookUpResult<AminoAcids.AminoAcid>) charge scanTime =
-            scanTimeToMzCorrection scanTime + Mass.toMZ peptide.Mass (float charge)
+            let theoMz = Mass.toMZ peptide.Mass (float charge)
+            calibration.CorrectionAt scanTime theoMz + theoMz
 
         let createGaborQuantSide
             charge
@@ -1963,7 +1857,7 @@ module PSMBasedQuantificationTIMs =
                 let theoMz =
                     Mass.toMZ targetPeptide.Mass (float pepIon.Charge)
 
-                match estimateGaborTargetFromPsms processParams.CentrePSMs ionMobilityOf scanTimeToMzCorrection theoMz psmsWithMatchedSums with
+                match estimateGaborTargetFromPsms processParams.CentrePSMs ionMobilityOf calibration.CorrectionAt theoMz psmsWithMatchedSums with
                 | None ->
                     logger.Trace (sprintf "Gabor quant failed: No PSM target estimate, Sequence:%s, GlobalMod:%s, Charge:%s" (pepIon.Sequence |> String.filter (fun x -> x <> '*')) (pepIon.GlobalMod.ToString()) (pepIon.Charge.ToString()))
                     None
@@ -2150,7 +2044,7 @@ module PSMBasedQuantificationTIMs =
                     let theoMz =
                         Mass.toMZ unlabledPeptide.Mass (float pepIon.Charge)
 
-                    match estimateGaborTargetFromPsms processParams.CentrePSMs ionMobilityOf scanTimeToMzCorrection theoMz psmsWithMatchedSums with
+                    match estimateGaborTargetFromPsms processParams.CentrePSMs ionMobilityOf calibration.CorrectionAt theoMz psmsWithMatchedSums with
                     | None ->
                         logger.Trace (sprintf "Gabor quant failed: No PSM target estimate, Sequence:%s, GlobalMod:%s, Charge:%s" (pepIon.Sequence |> String.filter (fun x -> x <> '*')) (pepIon.GlobalMod.ToString()) (pepIon.Charge.ToString()))
                         None
@@ -2235,7 +2129,7 @@ module PSMBasedQuantificationTIMs =
                 PeptideLookUp = peptideLookUp
                 CountMatchedMasses = countMatchedMasses
                 CentrePSMs = processParams.CentrePSMs
-                ScanTimeToMzCorrection = scanTimeToMzCorrection
+                CorrectionAt = calibration.CorrectionAt
                 IonMobilityOf = ionMobilityOf
                 GetXic = getXIC
                 IdentifyPeaks = identifyPeaks

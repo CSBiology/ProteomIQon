@@ -57,10 +57,33 @@ module PSMQuantification =
         | [||] -> psms.[0]
         | withQValue -> withQValue |> Array.minBy (fun x -> x.QValue)
 
+    /// The m/z calibration of a run from the precursor m/z of its PSMs. It is logged and, with diagCharts, saved as chart.
+    let calibratePsms (logger: NLog.Logger) (diagCharts: bool) (plotDirectory: string) (qpsms: PSMStatisticsResult []) =
+        logger.Trace "Estimate the m/z correction."
+        let calibration =
+            qpsms
+            |> Array.map (fun x ->
+                let observation : MzCalibration.Observation =
+                    {
+                        ModSequenceID = x.ModSequenceID
+                        Charge        = x.Charge
+                        GlobalMod     = x.GlobalMod
+                        ScanTime      = x.ScanTime
+                        TheoreticalMz = Mass.toMZ x.TheoMass (float x.Charge)
+                        MeasuredMz    = x.PrecursorMZ
+                    }
+                observation
+                )
+            |> MzCalibration.fit
+        if diagCharts then
+            MzCalibration.calibrationChart calibration |> Chart.saveHtml (Path.Combine [|plotDirectory; "mzErrorAndCorrection"|])
+        logger.Trace (sprintf "Estimate the m/z correction: finished, %s" (MzCalibration.describe calibration))
+        calibration
+
     ///
     /// ionMobilityOf gives the ion mobility of the MS2 spectrum of a PSM by its PSMId. The centrePSMs PSMs with the highest
     /// summed matched fragment intensity are taken among the PSMs whose spectrum has an ion mobility, among all when none has one.
-    let average (centrePSMs: int) (ionMobilityOf: string -> float) getXic scanTimeToMzCorrection theoMz (psms:(PSMStatisticsResult*float) []) =
+    let average (centrePSMs: int) (ionMobilityOf: string -> float) getXic (correctionAt: float -> float -> float) theoMz (psms:(PSMStatisticsResult*float) []) =
             //let meanPrecMz   = psms |> Seq.meanBy (fun (psm,m) -> psm.PrecursorMZ)
 
             let meanScanTime = psms |> Seq.meanBy (fun (psm,m) -> psm.ScanTime)
@@ -77,7 +100,7 @@ module PSMQuantification =
                 let ims = psms' |> Array.map (fun (psm,m) -> ionMobilityOf psm.PSMId)
                 let weights = psms' |> Array.map snd
                 weightedMean weights ims
-            let correctedMz = scanTimeToMzCorrection weightedAvgScanTime + theoMz
+            let correctedMz = correctionAt weightedAvgScanTime theoMz + theoMz
             let (retData,itzDataCorrected,ItzDataUncorrected) = getXic weightedAvgScanTime correctedMz weightedAvgIM
             createAveragePSM correctedMz meanScanTime weightedAvgScanTime weightedAvgIM meanScore retData itzDataCorrected ItzDataUncorrected
 
@@ -165,7 +188,8 @@ module PSMQuantification =
             CountMatchedMasses                          : LookUpResult<AminoAcids.AminoAcid> -> PSMStatisticsResult [] -> (PSMStatisticsResult * float) []
             /// Number of PSMs, ranked by summed matched fragment intensity, that centre the XIC.
             CentrePSMs                                  : int
-            ScanTimeToMzCorrection                      : float -> float
+            /// Scan time and theoretical m/z to the m/z offset (Da).
+            CorrectionAt                                : float -> float -> float
             /// The ion mobility of the MS2 spectrum of a PSM by its PSMId, nan without ion mobility.
             IonMobilityOf                               : string -> float
             /// Scan time, m/z and ion mobility to the scan times, corrected and uncorrected intensities of the XIC.
@@ -191,7 +215,7 @@ module PSMQuantification =
         let psmsWithMatchedSums = f.CountMatchedMasses targetPeptide psms 
         let ms2s = psmsWithMatchedSums |> Array.map (fun (psm,m) -> psm.ScanTime,m)
         let theoMz = Mass.toMZ targetPeptide.Mass (float pepIon.Charge)
-        let averagePSM = average f.CentrePSMs f.IonMobilityOf f.GetXic f.ScanTimeToMzCorrection theoMz psmsWithMatchedSums
+        let averagePSM = average f.CentrePSMs f.IonMobilityOf f.GetXic f.CorrectionAt theoMz psmsWithMatchedSums
         let avgMass = Mass.ofMZ (averagePSM.MeanPrecMz) (pepIon.Charge |> float)
         let peaks = f.IdentifyPeaks averagePSM.X_Xic averagePSM.Y_Xic
         if Array.isEmpty peaks then 
@@ -218,7 +242,7 @@ module PSMQuantification =
         if pepIon.GlobalMod = 0 then
             let mzHeavy = 
                 let mz = Mass.toMZ (labeledPeptide.Mass) (pepIon.Charge|> float)
-                let correctedMz = f.ScanTimeToMzCorrection inferredScanTime + mz
+                let correctedMz = f.CorrectionAt inferredScanTime mz + mz
                 correctedMz 
             let inferredQuant = 
                 let inferredXicHeavy = getInferredXic f.GetXic averagePSM.WeightedAvgScanTime mzHeavy averagePSM.WeightedAvgIM
@@ -370,7 +394,7 @@ module PSMQuantification =
         else
             let mzLight = 
                 let mz = Mass.toMZ (unlabledPeptide.Mass) (pepIon.Charge|> float)
-                let correctedMz = f.ScanTimeToMzCorrection inferredScanTime + mz
+                let correctedMz = f.CorrectionAt inferredScanTime mz + mz
                 correctedMz   
             let inferredQuant = 
                 let inferredXicLight = getInferredXic f.GetXic averagePSM.WeightedAvgScanTime mzLight averagePSM.WeightedAvgIM
@@ -534,7 +558,7 @@ module PSMQuantification =
         let psmsWithMatchedSums = f.CountMatchedMasses unlabledPeptide psms 
         let ms2s = psmsWithMatchedSums |> Array.map (fun (psm,m) -> psm.ScanTime,m)
         let theoMz = Mass.toMZ unlabledPeptide.Mass (float pepIon.Charge)
-        let averagePSM = average f.CentrePSMs f.IonMobilityOf f.GetXic f.ScanTimeToMzCorrection theoMz psmsWithMatchedSums
+        let averagePSM = average f.CentrePSMs f.IonMobilityOf f.GetXic f.CorrectionAt theoMz psmsWithMatchedSums
         let avgMass = Mass.ofMZ (averagePSM.MeanPrecMz) (pepIon.Charge |> float)      
         let peaks = f.IdentifyPeaks averagePSM.X_Xic averagePSM.Y_Xic               
         if Array.isEmpty peaks then 

@@ -3,7 +3,7 @@
 * Choose the peak among all detected peaks near the predicted scan time with a logistic model trained per run on the ions the run quantified itself (scan time distance in units of the local error scale, shape correlation with the source trace, relative height, width ratio, number of candidates, M+1 co-elution and ratio, m/z error); a fixed score when fewer than 200 ions can be used for training; cross-fitted over 5 seeded folds of peptides (PepSequenceID) so that the ions the run quantified itself are scored out-of-fold
 * Drop the dynamic time warping of the XIC onto the source trace
 * Drop the filters on the scan time difference (4 sd) and the quantity to apex ratio; ions that cannot be quantified are logged with their reason
-* Measure the m/z correction in the MS1 spectra and set the m/z window to four standard deviations of the measured m/z (was 0.05 Da); honour a fixed MzWindow_Da
+* Measure the m/z correction in the MS1 spectra in ppm over scan time and m/z, as PSMBasedQuantification does, and set the m/z window to four standard deviations of the residuals around it (was 0.05 Da); honour a fixed MzWindow_Da
 * Extract the XIC over the scan time window of the PSM based quantification and take candidates within max(MinScanTimeWindow, ScanTimeWindowSdFactor * PredictedScanTimeSd), capped at ScanTimeWindow
 * Extract the XICs faster and with less memory
 * Ion mobility: window of at least +-0.05 around the predicted ion mobility, sum per m/z over the mobility scans as PSMBasedQuantificationTIMs, ion mobility distance as candidate feature, ion mobility of the chosen peak in the IonMobility column

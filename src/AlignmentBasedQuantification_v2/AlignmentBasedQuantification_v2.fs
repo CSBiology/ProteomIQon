@@ -403,15 +403,11 @@ module AlignmentBasedQuantification_v2 =
     let sourceIonMobilityWindow = 0.05
     /// Lower bound of the ion mobility scale in the candidate distance ImZ.
     let minIonMobilityScale = 0.001
-    /// MzWindow_Da Estimate: +-mzWindowSdFactor * the standard deviation of the m/z offsets measured in the MS1 spectra after correction;
-    /// without the measurement, of the precursor m/z of the PSM based quantification.
-    let mzWindowSdFactor = 4.
-    /// Window used when the m/z standard deviation cannot be estimated.
-    let fallbackMzWindow = 0.05
     /// The m/z calibration is measured on every k-th ion the run quantified itself, k = max 1 (ions / maxCalibrationIons) (spread over
     /// the scan time, so up to 2 * maxCalibrationIons - 1 ions),
     /// with the peak closest to the theoretical m/z plus the initial correction within +-calibrationMzWindow, and needs at least
-    /// minCalibrationIons.
+    /// minCalibrationIons points in the fit. With fewer, the initial correction centres the XICs and the window is
+    /// MzCalibration.fallbackMzWindow.
     let maxCalibrationIons = 2000
     let minCalibrationIons = 50
     let calibrationMzWindow = 0.05
@@ -518,10 +514,21 @@ module AlignmentBasedQuantification_v2 =
             KLDiv_Corrected   = klDiv (normalised |> Array.map (fun x -> x.MeasuredIntensityCorrected)) predicted
         }
 
-    /// Offsets of the precursor m/z written by the PSM based quantification from the theoretical m/z.
-    let precursorMzOffsets (psmQuant: QuantificationResult []) =
+    /// The precursor m/z written by the PSM based quantification with the theoretical m/z.
+    let precursorObservations (psmQuant: QuantificationResult []) =
         psmQuant
-        |> Array.map (fun qp -> getTargetScanTime qp, qp.PrecursorMZ - Mass.toMZ qp.TheoMass (float qp.Charge))
+        |> Array.map (fun qp ->
+            let observation : MzCalibration.Observation =
+                {
+                    ModSequenceID = qp.ModSequenceID
+                    Charge        = qp.Charge
+                    GlobalMod     = qp.GlobalMod
+                    ScanTime      = getTargetScanTime qp
+                    TheoreticalMz = Mass.toMZ qp.TheoMass (float qp.Charge)
+                    MeasuredMz    = qp.PrecursorMZ
+                }
+            observation
+            )
 
     /// An ion of the .align file with its extraction windows.
     type PreparedIon =
@@ -682,7 +689,7 @@ module AlignmentBasedQuantification_v2 =
           OwnQuant: Dictionary<(string*int*int),QuantificationResult>
           PsmPeakIons: HashSet<(string*int*int)>
           PsmIons: HashSet<(string*int*int)>
-          PsmMzOffsets: (float*float) [] }
+          PsmMzObservations: MzCalibration.Observation [] }
 
     /// Reads the PSM based rows once and collects what the run needs from them. If every row is its own group in the output,
     /// the rows with a fitted peak are written to outTmpPath right away and the alignment rows are appended later, so the
@@ -708,7 +715,7 @@ module AlignmentBasedQuantification_v2 =
             let key = (qp.StringSequence, qp.GlobalMod, qp.Charge)
             if isFinite (getTargetScanTime qp) then psmPeakIons.Add key |> ignore else psmPeakIons.Remove key |> ignore
         let psmIons = HashSet<(string*int*int)>(psmQuant |> Seq.map (fun qp -> qp.StringSequence, qp.GlobalMod, qp.Charge), HashIdentity.Structural)
-        let psmMzOffsets = precursorMzOffsets psmQuant
+        let psmMzObservations = precursorObservations psmQuant
         let psmRows = psmQuant |> Array.filter (fun qp -> (tryTargetGetScanTime qp).IsSome)
         let keyOf (qp: QuantificationResult) = qp.StringSequence, qp.ModSequenceID, qp.Charge, qp.GlobalMod, qp.QuantificationSource
         let ownGroups =
@@ -724,7 +731,7 @@ module AlignmentBasedQuantification_v2 =
           OwnQuant = ownQuant
           PsmPeakIons = psmPeakIons
           PsmIons = psmIons
-          PsmMzOffsets = psmMzOffsets }
+          PsmMzObservations = psmMzObservations }
 
     /// Quantifies the ions of one .align file in one run and writes <run>.quant and <run>.alignfeatures.
     let quantifyPeptides diagCharts (processParams:Domain.AlignmentBasedQuantificationV2Params) (outputDir:string) (d:string) (instrumentOutput:string) (psmbasedQuant:string) (alignmentResults:string) =
@@ -779,8 +786,8 @@ module AlignmentBasedQuantification_v2 =
             )
 
         // m/z calibration measured in the MS1 spectra: offset of the peak closest to the theoretical m/z (within +-calibrationMzWindow)
-        // at the fitted scan time of the ions the run quantified itself. The precursor m/z of the .quant rows is only the start.
-        let initialCalibration = MzCalibration.fit psm.PsmMzOffsets
+        // at the fitted scan time of the ions the run quantified itself. The precursor m/z of the .quant rows only places the lock m/z.
+        let initialCalibration = MzCalibration.fit psm.PsmMzObservations
         let calibrationIons =
             let ions = psm.OwnQuant.Values |> Array.ofSeq |> Array.sortBy getTargetScanTime
             let step = max 1 (ions.Length / maxCalibrationIons)
@@ -798,49 +805,53 @@ module AlignmentBasedQuantification_v2 =
                     {
                         RtLow    = if ms1ScanTimes.Length > 0 then closestScanTime scanTime else nan
                         RtHigh   = if ms1ScanTimes.Length > 0 then closestScanTime scanTime else nan
-                        LockMz   = [|theoMz + initialCalibration.Correction scanTime|]
+                        LockMz   = [|theoMz + initialCalibration.CorrectionAt scanTime theoMz|]
                         MzWindow = calibrationMzWindow
                         ImLow    = imCenter - sourceIonMobilityWindow
                         ImHigh   = imCenter + sourceIonMobilityWindow
                     }
                     )
-            let points = ResizeArray<float*float>()
+            let observations = ResizeArray<MzCalibration.Observation>()
             sweep readSpectrum ms1 requests (fun r raw ->
                 if raw.Rt.Length > 0 && raw.Intensity.[0].[0] > 0. then
                     let qp = calibrationIons.[r]
-                    points.Add (getTargetScanTime qp, raw.ObservedMz.[0].[0] - Mass.toMZ qp.TheoMass (float qp.Charge))
+                    observations.Add
+                        {
+                            ModSequenceID = qp.ModSequenceID
+                            Charge        = qp.Charge
+                            GlobalMod     = qp.GlobalMod
+                            ScanTime      = getTargetScanTime qp
+                            TheoreticalMz = Mass.toMZ qp.TheoMass (float qp.Charge)
+                            MeasuredMz    = raw.ObservedMz.[0].[0]
+                        }
                 )
             |> ignore
-            let measured = MzCalibration.fit (points.ToArray())
-            if measured.Points.Length >= minCalibrationIons && isFinite measured.Sd && measured.Sd > 0. then
-                measured
+            MzCalibration.fit (observations.ToArray())
+        let measuredUsable = calibration.PointsFence2 >= minCalibrationIons
+        // the calibration that centres the XICs, and its window
+        let centre, halfWindow =
+            if measuredUsable then
+                calibration, MzCalibration.residualHalfWindow calibration
             else
-                logger.Warn (sprintf "%s: the m/z calibration was measured on %i ions only (at least %i are needed); the precursor m/z of the .quant file is used." runName measured.Points.Length minCalibrationIons)
-                initialCalibration
+                logger.Warn (sprintf "%s: the m/z calibration has %i points after the fences (at least %i are needed); the precursor m/z of the .quant file centres the XICs and the m/z window is +-%.3f Da." runName calibration.PointsFence2 minCalibrationIons MzCalibration.fallbackMzWindow)
+                initialCalibration, MzCalibration.fallbackMzWindow
         let mzWindow =
             match processParams.XicExtraction.MzWindow_Da with
             | Domain.Window.Fixed v -> v
-            | Domain.Window.Estimate ->
-                if isFinite calibration.Sd && calibration.Sd > 0. then
-                    mzWindowSdFactor * calibration.Sd
-                else
-                    logger.Warn (sprintf "%s: the m/z standard deviation cannot be estimated; m/z window +-%.3f Da." runName fallbackMzWindow)
-                    fallbackMzWindow
+            | Domain.Window.Estimate -> halfWindow
+        logger.Info (sprintf "%s: XIC %s" runName (MzCalibration.describeWindow processParams.XicExtraction.MzWindow_Da mzWindow (not measuredUsable)))
         let within =
-            let residuals = calibration.Points |> Array.map (fun (t, d) -> abs (d - calibration.Correction t))
-            if residuals.Length = 0 then nan else 100. * float (residuals |> Array.filter (fun r -> r <= mzWindow) |> Array.length) / float residuals.Length
+            if centre.Points.Length = 0 then nan
+            else
+                let inside = centre.Points |> Array.filter (fun p -> abs (p.OffsetPpm * p.Mz * 1e-6 - centre.CorrectionAt p.Time p.Mz) <= mzWindow)
+                100. * float inside.Length / float centre.Points.Length
         logger.Info (
-            sprintf "%s: m/z calibration on %i ions: offset median %.5f Da, sd %.5f Da (precursor m/z of the .quant file: offset median %.5f Da, sd %.5f Da); m/z window +-%.5f Da contains %.1f %% of the calibration ions (%.1f s)"
-                runName calibration.Points.Length (calibration.Points |> Array.map snd |> median) calibration.Sd
-                (initialCalibration.Points |> Array.map snd |> median) initialCalibration.Sd mzWindow within (elapsed ())
+            sprintf "%s: m/z calibration measured in the MS1 spectra: %s; precursor m/z of the .quant file: %s; the m/z window contains %.1f %% of the points of the correction in use (%.1f s)"
+                runName (MzCalibration.describe calibration) (MzCalibration.describe initialCalibration) within (elapsed ())
             )
         if diagCharts then
-            [
-                Chart.Point(calibration.Points) |> Chart.withTraceInfo "Observed m/z - theoretical m/z"
-                Chart.Line(calibration.Points |> Array.map (fun (t, _) -> t, calibration.Correction t)) |> Chart.withTraceInfo "Correction"
-            ]
-            |> Chart.combine
-            |> Chart.withTitle (sprintf "%s: m/z window +-%.5f Da" runName mzWindow)
+            MzCalibration.calibrationChart centre
+            |> Chart.withTitle (sprintf "%s: m/z correction, m/z window +-%.4f Da" runName mzWindow)
             |> Chart.saveHtml (Path.Combine [|outputDir; runName + "_mzCorrection"|])
 
         let identifyPeaks = initIdentifyPeaks processParams.XicExtraction.XicProcessing
@@ -929,7 +940,7 @@ module AlignmentBasedQuantification_v2 =
                         if p.IsNone then logger.Debug (sprintf "Labeled partner not in the database: %s" (ionName align))
                         p
                     else None
-                let correction = calibration.Correction align.PredictedScanTime
+                let correctionAt mz = centre.CorrectionAt align.PredictedScanTime mz
                 let targetIsotopes = isotopePeaksOf align align.GlobalMod target
                 let partnerIsotopes = partner |> Option.map (isotopePeaksOf align (if align.GlobalMod = 0 then 1 else 0)) |> Option.defaultValue [||]
                 let scanTimeWindow =
@@ -951,9 +962,12 @@ module AlignmentBasedQuantification_v2 =
                         | Domain.Window.Fixed v -> align.IonMobility, v
                         | Domain.Window.Estimate -> align.IonMobility, sourceIonMobilityWindow
                     else nan, nan
-                let lockMz = Mass.toMZ target.Mass (float align.Charge) + correction
-                let partnerLockMz = match partner with Some p -> Mass.toMZ p.Mass (float align.Charge) + correction | None -> nan
-                let lockMzOf monoLockMz (isotopes: IsotopePeak []) = isotopes |> Array.mapi (fun k p -> if k = 0 then monoLockMz else p.Mz + correction)
+                // every trace is centred and windowed at its own m/z
+                let targetMz = Mass.toMZ target.Mass (float align.Charge)
+                let lockMz = targetMz + correctionAt targetMz
+                let partnerMz = match partner with Some p -> Mass.toMZ p.Mass (float align.Charge) | None -> nan
+                let partnerLockMz = partnerMz + correctionAt partnerMz
+                let theoreticalMz = Array.append targetIsotopes partnerIsotopes |> Array.map (fun p -> p.Mz)
                 Some {
                     Row               = row
                     Align             = align
@@ -970,7 +984,7 @@ module AlignmentBasedQuantification_v2 =
                         {
                             RtLow    = align.PredictedScanTime - processParams.XicExtraction.ScanTimeWindow
                             RtHigh   = align.PredictedScanTime + processParams.XicExtraction.ScanTimeWindow
-                            LockMz   = Array.append (lockMzOf lockMz targetIsotopes) (lockMzOf partnerLockMz partnerIsotopes)
+                            LockMz   = theoreticalMz |> Array.map (fun mz -> mz + correctionAt mz)
                             MzWindow = mzWindow
                             ImLow    = imCenter - imWindow
                             ImHigh   = imCenter + imWindow
