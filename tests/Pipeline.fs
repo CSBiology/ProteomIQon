@@ -989,69 +989,10 @@ let pipelineTests =
         quantTIMsCase "PSMBasedQuantificationTIMsWaveletLabeled" "QuantificationTIMsWaveletLabeledParams.json" "/waveletLabeled" "minimalWaveletLabeledReference.quant" |> testSequenced
             
 
-        testCase "QuantBasedAlignment" <| fun _ ->
-            let relToDirectory = getRelativePath baseDir
-            let target = relToDirectory "../../../data/QuantBasedAlignment/in"
-            let sources = relToDirectory "../../../data/QuantBasedAlignment/in"
-            let outDirectory = relToDirectory "../../../data/QuantBasedAlignment/out"
-            let relQuantPath =
-                if System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.Linux) then
-                    toolDll "QuantBasedAlignment_linux-x64"
-                elif System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.Windows) then
-                    toolDll "QuantBasedAlignment_win-x64"
-                else    
-                    failwith "not supported OS to test QuantBasedAlignment"                
-            let quantExe = relQuantPath
-            // cleanup
-            try
-                File.Delete (relToDirectory "../../../data/QuantBasedAlignment/out/trunc1.align")
-                File.Delete (relToDirectory "../../../data/QuantBasedAlignment/out/trunc1.alignmetric")
-                File.Delete (relToDirectory "../../../data/QuantBasedAlignment/out/trunc1_log.txt")
-                File.Delete (relToDirectory "../../../data/QuantBasedAlignment/out/QuantBasedAlignment_log.txt")
-                File.Delete (relToDirectory "../../../data/QuantBasedAlignment/out/trunc1_Metrics.html")   
-                
-                File.Delete (relToDirectory "../../../data/QuantBasedAlignment/out/trunc2.align")
-                File.Delete (relToDirectory "../../../data/QuantBasedAlignment/out/trunc2.alignmetric")
-                File.Delete (relToDirectory "../../../data/QuantBasedAlignment/out/trunc2_log.txt")
-                File.Delete (relToDirectory "../../../data/QuantBasedAlignment/out/trunc2_Metrics.html")   
-
-                File.Delete (relToDirectory "../../../data/QuantBasedAlignment/out/trunc3.align")
-                File.Delete (relToDirectory "../../../data/QuantBasedAlignment/out/trunc3.alignmetric")
-                File.Delete (relToDirectory "../../../data/QuantBasedAlignment/out/trunc3_log.txt")
-                File.Delete (relToDirectory "../../../data/QuantBasedAlignment/out/trunc3_Metrics.html")   
-            with
-            | _ -> ()
-            // run tool
-            runDotNet (sprintf "%s -i %s -ii %s -o %s" quantExe target sources outDirectory) baseDir
-            let referenceAlign =
-                let quantPath = relToDirectory "../../../data/QuantBasedAlignment/out/trunc1_Reference.align"
-                FSharpAux.IO.SchemaReader.Csv.CsvReader<ProteomIQon.Dto.AlignmentResult>().ReadFile(quantPath,'\t',false,1)
-                |> Array.ofSeq
-            let testAlign =
-                let quantPath = relToDirectory "../../../data/QuantBasedAlignment/out/trunc1.align"
-                FSharpAux.IO.SchemaReader.Csv.CsvReader<ProteomIQon.Dto.AlignmentResult>().ReadFile(quantPath,'\t',false,1)
-                |> Array.ofSeq
-            let compare = 
-                    referenceAlign
-                    |> Array.filter (fun (reference: ProteomIQon.Dto.AlignmentResult) ->
-                            testAlign
-                            |> Array.exists (fun (test: ProteomIQon.Dto.AlignmentResult) ->
-                                test.StringSequence = reference.StringSequence
-                                test.GlobalMod = reference.GlobalMod
-                                test.Charge = reference.Charge
-                                test.PepSequenceID = reference.PepSequenceID
-                                test.ModSequenceID = reference.ModSequenceID
-                            )
-                    )  
-                    |> Array.length
-                    |> (=) referenceAlign.Length           
-            Expect.isTrue compare (sprintf "Quants are different in the following fields")
-
-
         testCase "QuantBasedAlignment_v2" <| fun _ ->
             let relToDirectory = getRelativePath baseDir
             let quantFiles = relToDirectory "../../../data/QuantBasedAlignment/in"
-            // its own folder, because the QuantBasedAlignment test writes files of the same names
+            // its own folder
             let outDirectory = relToDirectory "../../../data/QuantBasedAlignment_v2/out/test/"
             let alignExe = toolDll "QuantBasedAlignment_v2"
             runDotNet (sprintf "%s -i %s -ii %s -o %s" alignExe quantFiles quantFiles outDirectory) baseDir

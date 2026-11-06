@@ -49,8 +49,6 @@
     <ProjectReference Include="..\src\PSMStatistics\PSMStatistics.fsproj" ReferenceOutputAssembly="true" />
     <ProjectReference Include="..\src\MsFraggerToPSM\MsFraggerToPSM.fsproj" ReferenceOutputAssembly="false" />
     <ProjectReference Include="..\src\PSMBasedQuantification\PSMBasedQuantification.fsproj" ReferenceOutputAssembly="true" />
-    <ProjectReference Include="..\src\QuantBasedAlignment_win-x64\QuantBasedAlignment_win-x64.fsproj" ReferenceOutputAssembly="false" Condition="'$(OS)' == 'Windows_NT'" />
-    <ProjectReference Include="..\src\QuantBasedAlignment_linux-x64\QuantBasedAlignment_linux-x64.fsproj" ReferenceOutputAssembly="false" Condition="'$(OS)' != 'Windows_NT'" />
     <ProjectReference Include="..\src\QuantBasedAlignment_v2\QuantBasedAlignment_v2.fsproj" ReferenceOutputAssembly="false" />
     <ProjectReference Include="..\src\ProteinInference\ProteinInference.fsproj" ReferenceOutputAssembly="false" />
     <ProjectReference Include="..\src\LabelFreeProteinQuantification\LabelFreeProteinQuantification.fsproj" ReferenceOutputAssembly="false" />

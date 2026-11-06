@@ -1246,25 +1246,6 @@ module Dto =
            IonMobility                          : float
        }
 
-    type AlignmentBasedQuantificationParams =
-        {
-            PerformLabeledQuantification : bool
-            PerformLocalWarp             : bool
-            XicExtraction                : XicExtraction
-            //10 6 0.05
-            BaseLineCorrection           : BaseLineCorrection option
-        }
-
-    module AlignmentBasedQuantificationParams =
-
-        let toDomain (dtoQuantificationParams: AlignmentBasedQuantificationParams ): Domain.AlignmentBasedQuantificationParams =
-            {
-                PerformLabeledQuantification = dtoQuantificationParams.PerformLabeledQuantification
-                PerformLocalWarp             = dtoQuantificationParams.PerformLocalWarp
-                XicExtraction                = dtoQuantificationParams.XicExtraction
-                BaseLineCorrection           = dtoQuantificationParams.BaseLineCorrection
-            }
-
     type AlignmentBasedQuantificationV2Params =
         {
             PerformLabeledQuantification : Labeling
@@ -1526,24 +1507,6 @@ module Dto =
                 AggregatePeptideChargeStatesParams      = dtoTableSortParams.AggregatePeptideChargeStatesParams |> Option.map Common.LabelFreeQuantification.AggregationParams.toDomain 
                 AggregateModifiedPeptidesParams         = dtoTableSortParams.AggregateModifiedPeptidesParams    |> Option.map Common.LabelFreeQuantification.AggregationParams.toDomain
                 AggregateToProteinGroupsParams          = dtoTableSortParams.AggregateToProteinGroupsParams     |> Common.LabelFreeQuantification.AggregationParams.toDomain 
-            }
-
-    type AlignmentBasedQuantStatisticsParams =
-        {
-            PositiveQuantMzCutoff: float
-            NegativeQuantMzCutoff: float
-            PositiveQuantCutoff: float
-            NegativeQuantCutoff: float
-        }
-        
-    module AlignmentBasedQuantStatisticsParams =
-        
-        let inline toDomain (dtoAlignmentBasedQuantStatisticsParams) : Domain.AlignmentBasedQuantStatisticsParams =
-            {
-                PositiveQuantMzCutoff = dtoAlignmentBasedQuantStatisticsParams.PositiveQuantMzCutoff
-                NegativeQuantMzCutoff = dtoAlignmentBasedQuantStatisticsParams.NegativeQuantMzCutoff
-                PositiveQuantCutoff = dtoAlignmentBasedQuantStatisticsParams.PositiveQuantCutoff
-                NegativeQuantCutoff = dtoAlignmentBasedQuantStatisticsParams.NegativeQuantCutoff
             }
 
     /// Tree parameters that are null take the default of the trainer.
