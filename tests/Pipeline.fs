@@ -218,8 +218,7 @@ let selectAllProtein cn =
     ]
 
 /// The parameters with the second derivative peak detection instead of the wavelet. The wavelet settings of the test parameter files pad the XIC borders
-/// with unseeded random numbers (BorderPadMethod Random), so the quantification with the wavelet differs from run to run. The second derivative has no randomness, but initSpline shuffles the ions
-/// of the m/z correction once there are 500 PSMs or more; the 3 PSMs of the test data stay below that.
+/// with unseeded random numbers (BorderPadMethod Random), so the quantification with the wavelet differs from run to run. The second derivative has no randomness.
 let secondDerivativeParams (json: string) =
     Text.RegularExpressions.Regex.Replace(
         json,
@@ -686,7 +685,7 @@ let pipelineTests =
                             "ModSequenceID",
                                 test.ModSequenceID = reference.ModSequenceID
                             "PrecursorMZ",
-                                nanCasesForUnlabledData 0.99 1.01 test.PrecursorMZ reference.PrecursorMZ
+                                nanCasesForUnlabledData 0.999999 1.000001 test.PrecursorMZ reference.PrecursorMZ
                             "MeasuredMass",
                                 nanCasesForUnlabledData 0.99 1.01 test.MeasuredMass reference.MeasuredMass
                             "TheoMass"
@@ -696,7 +695,7 @@ let pipelineTests =
                             "ProteinNames",
                                 test.ProteinNames = reference.ProteinNames
                             "QuantMz_Light",
-                                nanCasesForUnlabledData 0.99 1.01 test.QuantMz_Light reference.QuantMz_Light
+                                nanCasesForUnlabledData 0.999999 1.000001 test.QuantMz_Light reference.QuantMz_Light
                             "Quant_Light",
                                 nanCasesForUnlabledData 0.99 1.01 test.Quant_Light reference.Quant_Light
                             "MeasuredApex_Light",
@@ -711,7 +710,7 @@ let pipelineTests =
                             "KLDiv_Observed_Theoretical_Light",
                                 nanCasesForUnlabledData 0.99 1.01 test.KLDiv_Observed_Theoretical_Light reference.KLDiv_Observed_Theoretical_Light
                             "QuantMz_Heavy",
-                                nanCasesForUnlabledData 0.99 1.01 test.QuantMz_Heavy reference.QuantMz_Heavy
+                                nanCasesForUnlabledData 0.999999 1.000001 test.QuantMz_Heavy reference.QuantMz_Heavy
                             "Quant_Heavy",
                                 nanCasesForUnlabledData 0.99 1.01 test.Quant_Heavy reference.Quant_Heavy
                             "MeasuredApex_Heavy",
@@ -874,7 +873,7 @@ let pipelineTests =
                                 "ModSequenceID",
                                     test.ModSequenceID = reference.ModSequenceID
                                 "PrecursorMZ",
-                                    nanCasesForUnlabledData 0.99 1.01 test.PrecursorMZ reference.PrecursorMZ
+                                    nanCasesForUnlabledData 0.999999 1.000001 test.PrecursorMZ reference.PrecursorMZ
                                 "MeasuredMass",
                                     nanCasesForUnlabledData 0.99 1.01 test.MeasuredMass reference.MeasuredMass
                                 "TheoMass"
@@ -890,7 +889,7 @@ let pipelineTests =
                                 "ProteinNames",
                                     test.ProteinNames = reference.ProteinNames
                                 "QuantMz_Light",
-                                    nanCasesForUnlabledData 0.99 1.01 test.QuantMz_Light reference.QuantMz_Light
+                                    nanCasesForUnlabledData 0.999999 1.000001 test.QuantMz_Light reference.QuantMz_Light
                                 "Quant_Light",
                                     nanCasesForUnlabledData 0.99 1.01 test.Quant_Light reference.Quant_Light
                                 "MeasuredApex_Light",
@@ -905,7 +904,7 @@ let pipelineTests =
                                 "KLDiv_Observed_Theoretical_Light",
                                     nanCasesForUnlabledData 0.99 1.01 test.KLDiv_Observed_Theoretical_Light reference.KLDiv_Observed_Theoretical_Light
                                 "QuantMz_Heavy",
-                                    nanCasesForUnlabledData 0.99 1.01 test.QuantMz_Heavy reference.QuantMz_Heavy
+                                    nanCasesForUnlabledData 0.999999 1.000001 test.QuantMz_Heavy reference.QuantMz_Heavy
                                 "Quant_Heavy",
                                     nanCasesForUnlabledData 0.99 1.01 test.Quant_Heavy reference.Quant_Heavy
                                 "MeasuredApex_Heavy",

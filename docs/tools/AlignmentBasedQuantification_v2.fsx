@@ -78,11 +78,14 @@ detection or the fit fails. The reason is in `Status` of `.alignfeatures`.
 ## m/z window
 
 The tool measures the offset between observed and theoretical m/z in the MS1 spectra of ions the run quantified itself. After removing
-outliers it corrects the rest with a running median over scan time. The XIC of every ion is centred on its theoretical m/z plus the
-correction at its `PredictedScanTime`.
+outliers it fits the offset in ppm as the sum of a function of scan time and a function of m/z. Every trace of an ion (monoisotopic,
+isotopes, labeled partner) is centred on its theoretical m/z plus the correction at the `PredictedScanTime` and that m/z.
 
-With `MzWindow_Da` set to `Estimate` the half width is 4 standard deviations of the offsets that remain after the correction. `Fixed`
-sets the half width in Da and keeps the correction.
+With `MzWindow_Da` set to `Estimate` the half width is 4 standard deviations of the offsets that remain after the correction, the same at
+every m/z. `Fixed` sets the half width in Da and keeps the correction.
+
+With fewer than 50 measured ions left, the correction is fitted on the precursor m/z of the `.quant` file instead, and `Estimate` uses a
+half width of 0.05 Da.
 
 ## Ion mobility
 
