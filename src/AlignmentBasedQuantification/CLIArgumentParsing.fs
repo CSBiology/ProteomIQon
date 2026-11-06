@@ -22,11 +22,11 @@ module CLIArgumentParsing =
             member s.Usage =
                 match s with
                 | InstrumentOutput _    -> "Specify the mass spectrometry output, either specify a file directory containing the .mzlite files to be analyzed or specify the file path of a single mzlite file."
-                | AlignedPeptides  _    -> "Specify the .align files of QuantBasedAlignment_v2, either a directory or the file path of a single .align file."
+                | AlignedPeptides  _    -> "Specify the .align files of QuantBasedAlignment, either a directory or the file path of a single .align file."
                 | QuantifiedPeptides  _ -> "Specify the quantified peptides (.quant) of the PSM based quantification, either a directory or the file path of a single .quant file."
                 | PeptideDataBase  _    -> "Specify the file path of the peptide data base."
                 | OutputDirectory  _    -> "Specify the output directory."
-                | ParamFile _           -> "Specify the AlignmentBasedQuantification_v2 parameter file."
+                | ParamFile _           -> "Specify the AlignmentBasedQuantification parameter file."
                 | MatchFiles            -> "If this flag is set the files specified by InstrumentOutput, AlignedPeptides and QuantifiedPeptides are matched according to their file name, otherwise they are matched by their position in the input lists."
                 | DiagnosticCharts      -> "Set to save diagnostic charts to the output directory."
                 | Parallelism_Level _   -> "Set the number of cores the programm can use. Parallelization occurs on file level. This flag is only of effect if a input directory (-i) is specified."

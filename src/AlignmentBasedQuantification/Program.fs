@@ -5,7 +5,7 @@ open System.IO
 open BioFSharp.Mz
 open Core.InputPaths
 open PeakSelection
-open AlignmentBasedQuantification_v2
+open AlignmentBasedQuantification
 open CLIArgumentParsing
 open Argu
 
@@ -40,7 +40,7 @@ module console1 =
         Directory.CreateDirectory(o) |> ignore
         Logging.generateConfig o
         extendLogging ()
-        let logger = Logging.createLogger "AlignmentBasedQuantification_v2"
+        let logger = Logging.createLogger "AlignmentBasedQuantification"
         logger.Info (sprintf "InputFilePath -i = %s" i)
         logger.Info (sprintf "AlignedPeptides -ii = %s" ii)
         logger.Info (sprintf "QuantifiedPeptides -iv = %s" iv)
@@ -49,8 +49,8 @@ module console1 =
         logger.Trace (sprintf "CLIArguments: %A" results)
         try
             let processParams =
-                Json.ReadAndDeserialize<Dto.AlignmentBasedQuantificationV2Params> p
-                |> Dto.AlignmentBasedQuantificationV2Params.toDomain
+                Json.ReadAndDeserialize<Dto.AlignmentBasedQuantificationParams> p
+                |> Dto.AlignmentBasedQuantificationParams.toDomain
             if not (processParams.XicExtraction.ScanTimeWindow > 0. && processParams.MinScanTimeWindow > 0. && processParams.ScanTimeWindowSdFactor > 0.) then
                 failwith "The parameters need XicExtraction.ScanTimeWindow, MinScanTimeWindow and ScanTimeWindowSdFactor > 0."
             if not (processParams.DecoyFraction >= 0. && processParams.DecoyFraction <= 1.) then
@@ -121,7 +121,7 @@ module console1 =
         with
         | ex ->
             let ex = match ex with | :? AggregateException as agg when agg.InnerExceptions.Count = 1 -> agg.InnerExceptions.[0] | _ -> ex
-            logger.Error (sprintf "AlignmentBasedQuantification_v2 failed: %s" ex.Message)
+            logger.Error (sprintf "AlignmentBasedQuantification failed: %s" ex.Message)
             logger.Trace (sprintf "%O" ex)
             NLog.LogManager.Flush()
             1

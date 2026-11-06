@@ -50,7 +50,7 @@ The tool refuses any instrument file whose name does not end in `.mzlite`. It re
 With one file per flag the pair is used as given. With lists, the n-th mzlite file is paired with the n-th qpsm file unless you pass `-mf`, which pairs files by their base name and skips mzlite files without a partner.
 
 For every run the tool writes `run.quant`, tab separated with a header and the columns described on the [PSMBasedQuantification]({{root}}tools/PSMBasedQuantification.html) page.
-[QuantBasedAlignment]({{root}}tools/QuantBasedAlignment_v2.html), [AlignmentBasedQuantification]({{root}}tools/AlignmentBasedQuantification_v2.html), [AlignmentBasedQuantStatistics]({{root}}tools/AlignmentBasedQuantStatistics_v2.html) and [JoinQuantPepIonsWithProteins]({{root}}tools/JoinQuantPepIonsWithProteins.html) read `.quant` files.
+[QuantBasedAlignment]({{root}}tools/QuantBasedAlignment.html), [AlignmentBasedQuantification]({{root}}tools/AlignmentBasedQuantification.html), [AlignmentBasedQuantStatistics]({{root}}tools/AlignmentBasedQuantStatistics.html) and [JoinQuantPepIonsWithProteins]({{root}}tools/JoinQuantPepIonsWithProteins.html) read `.quant` files.
 
 With `-dc` the tool writes charts into `run_plots`, and `-z` packs that directory into `run_plots.zip` and deletes it. Delete an existing `run.quant` in the output directory before a rerun, the tool appends to it. Logs go to `PSMBasedQuantification_log.txt` and `run_log.txt` in the output directory.
 

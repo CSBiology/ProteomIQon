@@ -3,10 +3,10 @@
   <PropertyGroup>
     <TargetFrameworks>net10.0</TargetFrameworks>
     <PackAsTool>true</PackAsTool>
-    <ToolCommandName>proteomiqon-alignmentbasedquantification-v2</ToolCommandName>
-    <RootNamespace>AlignmentBasedQuantification_v2</RootNamespace>
-    <AssemblyName>ProteomIQon.AlignmentBasedQuantification_v2</AssemblyName>
-    <Name>ProteomIQon.AlignmentBasedQuantification_v2</Name>
+    <ToolCommandName>proteomiqon-quantbasedalignment</ToolCommandName>
+    <RootNamespace>QuantBasedAlignment</RootNamespace>
+    <AssemblyName>ProteomIQon.QuantBasedAlignment</AssemblyName>
+    <Name>ProteomIQon.QuantBasedAlignment</Name>
     <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
@@ -16,8 +16,8 @@
   </PropertyGroup>
   <PropertyGroup>
     <Authors>David Zimmer, Caroline Ott, Heinrich Lukas Weil, Timo Muehlhaus</Authors>
-    <Description>ProteomIQon.AlignmentBasedQuantification_v2 - computational proteomics</Description>
-    <Summary>ProteomIQon.AlignmentBasedQuantification_v2 - computational proteomics</Summary>
+    <Description>ProteomIQon.QuantBasedAlignment - computational proteomics</Description>
+    <Summary>ProteomIQon.QuantBasedAlignment - computational proteomics</Summary>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageProjectUrl>https://csbiology.github.io/ProteomIQon/</PackageProjectUrl>
     <!--<PackageIconUrl>https://github.com/CSBiology/ProteomIQon</PackageIconUrl>-->
@@ -29,7 +29,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="CLIArgumentParsing.fs" />
-    <Compile Include="AlignmentBasedQuantification_v2.fs" />
+    <Compile Include="QuantBasedAlignment.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
   <ItemGroup>
@@ -38,15 +38,9 @@
   <ItemGroup>
     <PackageReference Include="Argu" Version="6.1.1" />
     <PackageReference Include="NLog" Version="4.7.11" />
-    <PackageReference Include="MzIO" Version="[0.1.8]" />
-    <PackageReference Include="MzIO.Processing" Version="[0.1.8]" />
-    <PackageReference Include="MzIO.SQL" Version="[0.1.10]" />
-    <PackageReference Include="MzIO.MzML" Version="[0.1.11]" />
     <PackageReference Include="BioFSharp" Version="2.0.0" />
-    <PackageReference Include="BioFSharp.Mz" Version="0.2.3" />
     <PackageReference Include="FSharpAux" Version="2.1.0" />
     <PackageReference Include="FSharpAux.IO" Version="2.1.0" />
-    <PackageReference Include="FSharp.Stats" Version="0.6.0" />
     <PackageReference Include="Plotly.NET" Version="6.0.0-preview.2" />
   </ItemGroup>
 </Project>

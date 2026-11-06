@@ -44,7 +44,7 @@ During the conversion the tool can restrict the spectra to a retention time wind
 `-f` rewrites every input file in place and removes the string `&quot` from it. Some mzML exports contain that string in places where the XML reader cannot handle it. Leave the flag off unless the conversion fails on such a file.
 
 The tool writes one `<run>.mzlite` per input `<run>.mzML` into the output directory. Only spectra with MS level 1 or 2 are copied, and spectra whose peak array is empty after peak picking are skipped. Scan times in the mzlite are stored in minutes, whatever unit the mzML used.
-The mzlite is read by [PeptideSpectrumMatching]({{root}}tools/PeptideSpectrumMatching.html), [PSMBasedQuantification]({{root}}tools/PSMBasedQuantification.html) and [AlignmentBasedQuantification]({{root}}tools/AlignmentBasedQuantification_v2.html).
+The mzlite is read by [PeptideSpectrumMatching]({{root}}tools/PeptideSpectrumMatching.html), [PSMBasedQuantification]({{root}}tools/PSMBasedQuantification.html) and [AlignmentBasedQuantification]({{root}}tools/AlignmentBasedQuantification.html).
 The output directory also receives `MzMLToMzLite_log.txt` and one `<run>_log.txt` per input.
 ## Parameters
 

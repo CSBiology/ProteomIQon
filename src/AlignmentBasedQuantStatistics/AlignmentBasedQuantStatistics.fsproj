@@ -3,10 +3,10 @@
   <PropertyGroup>
     <TargetFrameworks>net10.0</TargetFrameworks>
     <PackAsTool>true</PackAsTool>
-    <ToolCommandName>proteomiqon-alignmentbasedquantstatistics-v2</ToolCommandName>
-    <RootNamespace>AlignmentBasedQuantStatistics_v2</RootNamespace>
-    <AssemblyName>ProteomIQon.AlignmentBasedQuantStatistics_v2</AssemblyName>
-    <Name>ProteomIQon.AlignmentBasedQuantStatistics_v2</Name>
+    <ToolCommandName>proteomiqon-alignmentbasedquantstatistics</ToolCommandName>
+    <RootNamespace>AlignmentBasedQuantStatistics</RootNamespace>
+    <AssemblyName>ProteomIQon.AlignmentBasedQuantStatistics</AssemblyName>
+    <Name>ProteomIQon.AlignmentBasedQuantStatistics</Name>
     <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
@@ -16,8 +16,8 @@
   </PropertyGroup>
   <PropertyGroup>
     <Authors>David Zimmer, Caroline Ott, Heinrich Lukas Weil, Timo Muehlhaus</Authors>
-    <Description>ProteomIQon.AlignmentBasedQuantStatistics_v2 - computational proteomics</Description>
-    <Summary>ProteomIQon.AlignmentBasedQuantStatistics_v2 - computational proteomics</Summary>
+    <Description>ProteomIQon.AlignmentBasedQuantStatistics - computational proteomics</Description>
+    <Summary>ProteomIQon.AlignmentBasedQuantStatistics - computational proteomics</Summary>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageProjectUrl>https://csbiology.github.io/ProteomIQon/</PackageProjectUrl>
     <!--<PackageIconUrl>https://github.com/CSBiology/ProteomIQon</PackageIconUrl>-->
@@ -29,7 +29,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="CLIArgumentParsing.fs" />
-    <Compile Include="AlignmentBasedQuantStatistics_v2.fs" />
+    <Compile Include="AlignmentBasedQuantStatistics.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
   <ItemGroup>

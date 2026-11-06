@@ -26,14 +26,14 @@ index: 12
 
 # AlignmentBasedQuantification
 
-[QuantBasedAlignment]({{root}}tools/QuantBasedAlignment_v2.html) predicts where a peptide ion identified in another run should elute in
+[QuantBasedAlignment]({{root}}tools/QuantBasedAlignment.html) predicts where a peptide ion identified in another run should elute in
 this run. AlignmentBasedQuantification extracts the ion chromatogram (XIC) of every transferred ion around that prediction, decides which
 of the peaks in the XIC belongs to the ion, and fits that peak as [PSMBasedQuantification]({{root}}tools/PSMBasedQuantification.html) does.
 The decision is made by a model that each run learns from the ions it identified itself. The output is a `.quant` file with the run's own
 quantifications followed by the transferred ones, which
-[AlignmentBasedQuantStatistics]({{root}}tools/AlignmentBasedQuantStatistics_v2.html) then scores.
+[AlignmentBasedQuantStatistics]({{root}}tools/AlignmentBasedQuantStatistics.html) then scores.
 
-<img src="{{root}}img/AlignmentV2Pipeline.png" width="1000" />
+<img src="{{root}}img/AlignmentPipeline.png" width="1000" />
 
 ## How a peak is chosen
 
@@ -67,7 +67,7 @@ overlap ion is decided by the model trained on the other four folds. New ions ar
 training ions uses a fixed score instead: −0.5 · min(d², 50) + 4 · shape correlation + 2 · log10 relative height, with d the scan time
 distance.
 
-<img src="{{root}}img/AlignmentBasedQuantificationV2_Candidates.png" width="850" />
+<img src="{{root}}img/AlignmentBasedQuantification_Candidates.png" width="850" />
 
 In the figure four peaks lie in the candidate window. The highest is 0.6 min from the prediction. The model chooses the
 peak next to the prediction, whose shape matches the source trace. It is the peak of the run's own identification.
@@ -111,7 +111,7 @@ quantity of the ion's label. Its `Status` is `labeled partner quantified by its 
 | Flag | Meaning | Comes from |
 |------|---------|------------|
 | `-i` | `.mzlite` of the run, or a directory | [MzMLToMzLite]({{root}}tools/MzMLToMzLite.html) or [MzMLToMzLiteIonMobility]({{root}}tools/MzMLToMzLiteIonMobility.html) |
-| `-ii` | `.align` of the run, or a directory | [QuantBasedAlignment]({{root}}tools/QuantBasedAlignment_v2.html) |
+| `-ii` | `.align` of the run, or a directory | [QuantBasedAlignment]({{root}}tools/QuantBasedAlignment.html) |
 | `-iv` | `.quant` of the same run, or a directory | [PSMBasedQuantification]({{root}}tools/PSMBasedQuantification.html) or [PSMBasedQuantificationTIMs]({{root}}tools/PSMBasedQuantificationTIMs.html) |
 | `-d` | peptide database (SQLite) | [PeptideDB]({{root}}tools/PeptideDB.html) |
 | `-o` | output directory, created when missing | |
@@ -169,7 +169,7 @@ each ion that was not quantified at Debug level.
 | TopKPSMs | None | Not used. |
 | IonMobilityWindow | Window.Estimate | `Estimate` or `Window.Fixed v`, in 1/K0 (see Ion mobility). |
 
-See [the default parameter file](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/AlignmentBasedQuantificationParams_v2.json).
+See [the default parameter file](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/AlignmentBasedQuantificationParams.json).
 
 ## Writing a parameter file
 *)
@@ -192,7 +192,7 @@ let waveletParams : WaveletParameters =
         MinSNR                 = 0.01
     }
 
-let alignmentBasedQuantificationParams : Dto.AlignmentBasedQuantificationV2Params =
+let alignmentBasedQuantificationParams : Dto.AlignmentBasedQuantificationParams =
     {
         // Labeling.Unlabeled for label-free data
         PerformLabeledQuantification = Labeling.N15Labeling

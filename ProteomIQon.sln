@@ -106,11 +106,11 @@ Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "MsFraggerToPSM", "src\MsFra
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "PeptideSpectrumMatchingTIMs", "src\PeptideSpectrumMatchingTIMs\PeptideSpectrumMatchingTIMs.fsproj", "{6D344E73-F840-43D7-A2A3-DCC88920114F}"
 EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "QuantBasedAlignment_v2", "src\QuantBasedAlignment_v2\QuantBasedAlignment_v2.fsproj", "{39639211-8FA5-4A6E-ADE9-F810B49EEB4D}"
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "QuantBasedAlignment", "src\QuantBasedAlignment\QuantBasedAlignment.fsproj", "{39639211-8FA5-4A6E-ADE9-F810B49EEB4D}"
 EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "AlignmentBasedQuantStatistics_v2", "src\AlignmentBasedQuantStatistics_v2\AlignmentBasedQuantStatistics_v2.fsproj", "{DA0DC37E-85DE-421A-B95B-A71725B83076}"
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "AlignmentBasedQuantStatistics", "src\AlignmentBasedQuantStatistics\AlignmentBasedQuantStatistics.fsproj", "{DA0DC37E-85DE-421A-B95B-A71725B83076}"
 EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "AlignmentBasedQuantification_v2", "src\AlignmentBasedQuantification_v2\AlignmentBasedQuantification_v2.fsproj", "{8D5426D7-87EE-485B-BEC3-D921D66E80F5}"
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "AlignmentBasedQuantification", "src\AlignmentBasedQuantification\AlignmentBasedQuantification.fsproj", "{8D5426D7-87EE-485B-BEC3-D921D66E80F5}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

@@ -4,9 +4,9 @@
 * Add SpectrumIndex (the MS1 index and the MS2 headers from one pass over the spectrum descriptions, skipping with a warning the descriptions that cannot be read) and SortedSearch (binary searches and the closest scan time), and the m/z sort of the peaks of a spectrum in SortedPeaks, shared by the quantification and search tools
 * Use CrossValidation and no PEP cutoff (PepValueThreshold 1.0) in the default PSMStatistics parameters
 * Add Charts.useReferenceEqualityForJson, which makes saving Plotly.NET charts faster with the same output
-* Add a result type for the .align output of QuantBasedAlignment: the AlignmentResult columns followed by the local scan time error scale, the source run, the source model error and the predicted ion mobility with its error scale
-* Add the parameter record and default parameters of AlignmentBasedQuantification with the candidate window, ion mobility, decoy and seed parameters
-* Add the parameter record and default parameters of AlignmentBasedQuantStatistics with the label, feature, trainer, absent-analyte FDR and seed parameters
+* Add the local scan time error scale, the source run, the source model error and the predicted ion mobility with its error scale to AlignmentResult, the .align row of QuantBasedAlignment
+* Breaking: change the parameters of AlignmentBasedQuantification (AlignmentBasedQuantificationParams) and its default parameters: PerformLocalWarp is removed, PerformLabeledQuantification is a Labeling as in QuantificationParams, and MinScanTimeWindow, ScanTimeWindowSdFactor, DecoyFraction, Seed and IonMobilityWindow in XicExtraction are added
+* Breaking: replace the parameters of AlignmentBasedQuantStatistics (AlignmentBasedQuantStatisticsParams), PositiveQuantMzCutoff, NegativeQuantMzCutoff, PositiveQuantCutoff and NegativeQuantCutoff, by the label, feature, trainer, absent-analyte FDR and seed parameters, and change its default parameters
 * Remove PSMStatisticsResultFragpipe. MsFraggerToPSM writes and PSMBasedQuantificationTIMs reads PSMStatisticsResult
 * Write warnings to the log file of the tools
 * Add CrossValidation to the PSMStatistics EstimationParams

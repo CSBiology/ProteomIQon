@@ -51,8 +51,7 @@ module AlignmentFeatures =
             let my = Array.average y
             (Array.fold2 (fun acc a b -> acc + (a - mx) * (b - my)) 0. x y / float x.Length) / (sx * sy)
 
-    /// Square root of the minimal cumulative squared distance of a dynamic time warping without constraints,
-    /// as DTW'.distance with all options None.
+    /// Square root of the minimal cumulative squared distance of a dynamic time warping without constraints.
     let dtwDistance (x: float []) (y: float []) =
         let c = y.Length
         let mutable previous = Array.create (c + 1) infinity
@@ -220,7 +219,7 @@ module AlignmentFeatures =
         if peakParams.Length > 2 then peakParams.[1], peakParams.[2] else nan, nan
 
     /// Base and ratio features (baseNames @ ratioNames) of a transferred ion; LocalRtScale and RtResidLocal are nan here.
-    let compute (target: QuantificationResult) (align: AlignmentResultV2) =
+    let compute (target: QuantificationResult) (align: AlignmentResult) =
         let t = side target
         let rt, sd = scanTimeAndSd t.Params
         let qs = align.Quant_SourceFile
@@ -268,7 +267,7 @@ module AlignmentFeatures =
         |]
 
     /// |IonMobility - PredictedIonMobility| / PredictedIonMobilitySd, nan without ion mobility.
-    let ionMobilityResidual (target: QuantificationResult) (align: AlignmentResultV2) =
+    let ionMobilityResidual (target: QuantificationResult) (align: AlignmentResult) =
         let sd = align.PredictedIonMobilitySd
         if isFinite target.IonMobility && isFinite align.PredictedIonMobility && isFinite sd && sd > 0. then
             abs (target.IonMobility - align.PredictedIonMobility) / sd
@@ -469,7 +468,7 @@ module AlignmentScoring =
             |> Array.ofSeq
 
     /// Trains the gradient boosted trees of the parameters, single threaded and seeded.
-    let trainModel (mlContext: MLContext) (p: Domain.AlignmentBasedQuantStatisticsV2Params) (rows: float [] []) (labels: bool []) =
+    let trainModel (mlContext: MLContext) (p: Domain.AlignmentBasedQuantStatisticsParams) (rows: float [] []) (labels: bool []) =
         let nFeatures = rows.[0].Length
         let medians = trainingMedians rows nFeatures
         let data = mlContext.Data.LoadFromEnumerable(Array.map2 (fun row label -> { Label = label; Features = impute medians row }) rows labels, schema nFeatures)
@@ -501,12 +500,12 @@ module AlignmentScoring =
         medians, model
 
 
-module AlignmentBasedQuantStatistics_v2 =
+module AlignmentBasedQuantStatistics =
 
     open AlignmentFeatures
     open AlignmentScoring
 
-    type Params = Domain.AlignmentBasedQuantStatisticsV2Params
+    type Params = Domain.AlignmentBasedQuantStatisticsParams
 
     type IonKey =
         {
@@ -520,7 +519,7 @@ module AlignmentBasedQuantStatistics_v2 =
     let keyOfQuant (q: QuantificationResult) =
         { StringSequence = q.StringSequence; GlobalMod = q.GlobalMod; Charge = q.Charge; PepSequenceID = q.PepSequenceID; ModSequenceID = q.ModSequenceID }
 
-    let keyOfAlign (a: AlignmentResultV2) =
+    let keyOfAlign (a: AlignmentResult) =
         { StringSequence = a.StringSequence; GlobalMod = a.GlobalMod; Charge = a.Charge; PepSequenceID = a.PepSequenceID; ModSequenceID = a.ModSequenceID }
 
     let keyName (k: IonKey) = sprintf "%s, GlobalMod %i, charge %i" k.StringSequence k.GlobalMod k.Charge
@@ -540,7 +539,7 @@ module AlignmentBasedQuantStatistics_v2 =
             Key       : IonKey
             /// Row of AlignmentBasedQuantification (QuantificationSource Alignment).
             Row       : QuantificationResult
-            Align     : AlignmentResultV2
+            Align     : AlignmentResult
             /// None for new ions (no own PSM quantification in the run).
             Truth     : Truth option
             /// Fitted scan time of the own PSM peak, nan without a finite one.
@@ -584,7 +583,7 @@ module AlignmentBasedQuantStatistics_v2 =
         | _ ->
             if s = "" then Some nan else None
 
-    /// Reads the numeric columns of the .alignfeatures file of AlignmentBasedQuantification_v2, the distinct values of its
+    /// Reads the numeric columns of the .alignfeatures file of AlignmentBasedQuantification, the distinct values of its
     /// SelectionModel column and the keys of the ions whose Status is LabeledPartnerQuantifiedStatus.
     let readSidecar (logger: NLog.Logger) (path: string) =
         let lines = File.ReadAllLines path
@@ -663,9 +662,9 @@ module AlignmentBasedQuantStatistics_v2 =
                 logger.Debug (sprintf "PSM quantification has several rows, the last one is the truth: %s" (keyName key))
             own.[key] <- q
         let alignRows =
-            Csv.CsvReader<AlignmentResultV2>().ReadFile(alignPath,'\t',false,1)
+            Csv.CsvReader<AlignmentResult>().ReadFile(alignPath,'\t',false,1)
             |> Array.ofSeq
-        let align = Dictionary<IonKey,AlignmentResultV2>(HashIdentity.Structural)
+        let align = Dictionary<IonKey,AlignmentResult>(HashIdentity.Structural)
         for a in alignRows do
             align.[keyOfAlign a] <- a
         let alignmentRows =
@@ -709,7 +708,7 @@ module AlignmentBasedQuantStatistics_v2 =
         let notQuantified = notQuantified |> Array.filter (fun key -> partnerQuantified.Contains key |> not)
         for key in notQuantified do
             logger.Debug (sprintf ".align ion without alignment row of AlignmentBasedQuantification: %s" (keyName key))
-        // decoy transfers of AlignmentBasedQuantification_v2: .quant columns, the shifted PredictedScanTime and the .alignfeatures columns
+        // decoy transfers of AlignmentBasedQuantification: .quant columns, the shifted PredictedScanTime and the .alignfeatures columns
         let decoyPath = Path.Combine(Path.GetDirectoryName(Path.GetFullPath alignQuantPath), Path.GetFileNameWithoutExtension alignQuantPath + ".aligndecoy")
         let decoyFile = p.AbsentAnalyteFdr <> Domain.AbsentAnalyteFdr.Off && File.Exists decoyPath
         let decoys, unscoredDecoys =
@@ -845,7 +844,7 @@ module AlignmentBasedQuantStatistics_v2 =
     /// out-of-fold scores (.quanttestset), diagCharts the AlignmentScore histogram. Each run is a
     /// (PSM .quant, .align, aligned .quant) triple; c is the number of files read and written in parallel.
     let scoreRuns (diagCharts: bool) (testSet: bool) (outputDir: string) (c: int) (p: Params) (scoringRuns: (string * string * string) []) (learningRuns: (string * string * string) []) =
-        let logger = Logging.createLogger "AlignmentBasedQuantStatistics_v2"
+        let logger = Logging.createLogger "AlignmentBasedQuantStatistics"
         let runs =
             Array.append scoringRuns learningRuns
             |> Array.distinct
@@ -863,7 +862,7 @@ module AlignmentBasedQuantStatistics_v2 =
             else
                 let missing = runs.Values |> Seq.filter (fun run -> not run.DecoyFile) |> Seq.map (fun run -> run.Name) |> Array.ofSeq
                 logger.Warn (
-                    sprintf "AbsentAnalyteFdr %A needs the decoy transfers of AlignmentBasedQuantification_v2 (DecoyFraction > 0, <run>.aligndecoy next to the aligned .quant); %s. AlignmentQValue does not include the false discovery rate of absent analytes."
+                    sprintf "AbsentAnalyteFdr %A needs the decoy transfers of AlignmentBasedQuantification (DecoyFraction > 0, <run>.aligndecoy next to the aligned .quant); %s. AlignmentQValue does not include the false discovery rate of absent analytes."
                         p.AbsentAnalyteFdr (if missing.Length > 0 then "missing for " + String.concat ", " missing else "no decoy has a fitted peak")
                     )
                 false
