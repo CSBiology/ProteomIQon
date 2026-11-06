@@ -228,6 +228,8 @@ module Domain =
             QualityFilterLog2Limit       : float
             /// Number of PSMs, ranked by summed matched fragment intensity, whose weighted scan time (and ion mobility) centres the XIC.
             CentrePSMs                   : int
+            /// true: only a peak that contains the scan time is quantified, none otherwise. false: the peak that contains the scan time, else the peak whose apex is closest to it (HULQ.getPeakBy).
+            RequirePeakAtScanTime        : bool
         }
 
     type LabelEfficiencyCalculationParams =

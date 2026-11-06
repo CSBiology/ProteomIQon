@@ -51,6 +51,7 @@ let defaultPreprocessingParams :Dto.QuantificationParams =
         BaseLineCorrection           = Some BaseLineCorrection
         QualityFilterLog2Limit       = 2.
         CentrePSMs                   = 3
+        RequirePeakAtScanTime        = true
     }
 
 

@@ -192,6 +192,7 @@ module PSMBasedQuantification =
                 PlotDirectory = plotDirectory
                 ScanTimeWindow = processParams.XicExtraction.ScanTimeWindow
                 CentrePSMs = processParams.CentrePSMs
+                RequirePeakAtScanTime = processParams.RequirePeakAtScanTime
                 PeptideLookUp = peptideLookUp
                 CountMatchedMasses = countMatchedMasses
                 CorrectionAt = calibration.CorrectionAt

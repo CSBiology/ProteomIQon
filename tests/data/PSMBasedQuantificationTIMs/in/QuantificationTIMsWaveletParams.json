@@ -34,5 +34,6 @@
     ]
   },
   "QualityFilterLog2Limit": 2.0,
-  "CentrePSMs": 3
+  "CentrePSMs": 3,
+  "RequirePeakAtScanTime": true
 }

@@ -254,6 +254,49 @@ let emptyQpsmCase name (tool: string) (dataDirectory: string) (paramsFile: strin
         Expect.equal lines.Length 1 "the .quant has the header and no rows"
         Expect.equal (lines.[0].Split '\t') expectedHeader "the header is the one of QuantificationResult"
 
+/// Runs PSMBasedQuantification with and without RequirePeakAtScanTime on the minimal input: the ions quantified with the requirement are a strict subset of
+/// the ions quantified without it, and ILVGDIK (modification state 1, charge 2) only gets a row without it.
+let peakAtScanTimeCase name =
+    testCase name <| fun _ ->
+        let relToDirectory = getRelativePath baseDir
+        let inDirectory = relToDirectory "../../../data/PSMBasedQuantification/in/"
+        let work = Path.Combine(Path.GetTempPath(), sprintf "peakAtScanTime_%s" (Guid.NewGuid().ToString "N"))
+        Directory.CreateDirectory work |> ignore
+        try
+            // copies, as the tool locks the mzlite
+            let mzlite = Path.Combine(work, "minimal.mzlite")
+            File.Copy(Path.Combine(inDirectory, "minimal.mzlite"), mzlite)
+            let qpsm = Path.Combine(inDirectory, "minimal.qpsm")
+            let db = Path.Combine(inDirectory, "Minimal.db")
+            let paramsText = File.ReadAllText (Path.Combine(inDirectory, "QuantificationParams.json"))
+            let pattern = Text.RegularExpressions.Regex "\"RequirePeakAtScanTime\"\s*:\s*true"
+            Expect.isTrue (pattern.IsMatch paramsText) "the params file sets RequirePeakAtScanTime to true"
+            let ions (require: bool) =
+                let editedText = pattern.Replace(paramsText, sprintf "\"RequirePeakAtScanTime\": %b" require)
+                if not require then Expect.notEqual editedText paramsText "the params text changed for false"
+                let quantParams = Path.Combine(work, sprintf "params_%b.json" require)
+                File.WriteAllText(quantParams, editedText)
+                let outDirectory = Path.Combine(work, sprintf "out_%b" require)
+                runDotNet (sprintf "%s -i %s -ii %s -o %s -p %s -d %s" (toolDll "PSMBasedQuantification") mzlite qpsm outDirectory quantParams db) baseDir
+                let lines = File.ReadAllLines (Path.Combine(outDirectory, "minimal.quant")) |> Array.filter (fun line -> line <> "")
+                let header = lines.[0].Split '\t'
+                let column name = Array.findIndex ((=) name) header
+                let sequenceColumn, modColumn, chargeColumn = column "StringSequence", column "GlobalMod", column "Charge"
+                lines.[1..]
+                |> Array.map (fun line ->
+                    let fields = line.Split '\t'
+                    fields.[sequenceColumn], int fields.[modColumn], int fields.[chargeColumn])
+                |> Set.ofArray
+            let required = ions true
+            let notRequired = ions false
+            Expect.isNonEmpty required "the minimal input has rows"
+            Expect.isTrue (Set.isProperSuperset notRequired required) "without the peak requirement the ions are a strict superset"
+            Expect.contains notRequired ("ILVGDIK", 1, 2) "ILVGDIK only gets a row without the peak requirement"
+        finally
+            GC.Collect()
+            GC.WaitForPendingFinalizers()
+            try Directory.Delete(work, true) with _ -> ()
+
 /// Runs a quantification tool on a peptide data base without the isotope patterns and on a copy that PSMStatistics' store filled with the patterns of the
 /// ions of the .qpsm: the logs of the tools show that the first computed every pattern and the second read them, and the .quant files have to be byte identical.
 /// The wavelet pads randomly, so with deterministic = false the .quant files only have to hold the same ions.
@@ -792,6 +835,7 @@ let pipelineTests =
         isotopePatternEquivalenceCase "PSMBasedQuantificationTIMsIsotopePatterns" "PSMBasedQuantificationTIMs" "PSMBasedQuantificationTIMs" "QuantificationTIMsParams.json" id true |> testSequenced
         isotopePatternEquivalenceCase "PSMBasedQuantificationTIMsLabelledIsotopePatterns" "PSMBasedQuantificationTIMs" "PSMBasedQuantificationTIMs" "QuantificationTIMsParams.json" (fun json -> json.Replace("Unlabeled", "N15Labeling")) true |> testSequenced
         isotopePatternEquivalenceCase "PSMBasedQuantificationTIMsWaveletIsotopePatterns" "PSMBasedQuantificationTIMs" "PSMBasedQuantificationTIMs" "QuantificationTIMsWaveletParams.json" id false |> testSequenced
+        peakAtScanTimeCase "PSMBasedQuantificationPeakAtScanTime" |> testSequenced
         emptyQpsmCase "PSMBasedQuantificationEmptyQpsmLabelled" "PSMBasedQuantification" "PSMBasedQuantification" "QuantificationParams.json" id |> testSequenced
         emptyQpsmCase "PSMBasedQuantificationEmptyQpsmLabelFree" "PSMBasedQuantification" "PSMBasedQuantification" "QuantificationParams.json" (fun json -> json.Replace("N15Labeling", "Unlabeled")) |> testSequenced
         emptyQpsmCase "PSMBasedQuantificationTIMsEmptyQpsmLabelFree" "PSMBasedQuantificationTIMs" "PSMBasedQuantificationTIMs" "QuantificationTIMsParams.json" id |> testSequenced

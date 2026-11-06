@@ -789,6 +789,7 @@ module Dto =
             BaseLineCorrection           : BaseLineCorrection option
             QualityFilterLog2Limit       : float
             CentrePSMs                   : int
+            RequirePeakAtScanTime        : bool
         }
 
     module QuantificationParams =
@@ -800,6 +801,7 @@ module Dto =
                 BaseLineCorrection           = dtoQuantificationParams.BaseLineCorrection
                 QualityFilterLog2Limit       = dtoQuantificationParams.QualityFilterLog2Limit
                 CentrePSMs                   = dtoQuantificationParams.CentrePSMs
+                RequirePeakAtScanTime        = dtoQuantificationParams.RequirePeakAtScanTime
             }
 
     ///

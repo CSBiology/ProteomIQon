@@ -188,6 +188,8 @@ module PSMQuantification =
             CountMatchedMasses                          : LookUpResult<AminoAcids.AminoAcid> -> PSMStatisticsResult [] -> (PSMStatisticsResult * float) []
             /// Number of PSMs, ranked by summed matched fragment intensity, that centre the XIC.
             CentrePSMs                                  : int
+            /// true: quantify only a peak that contains the scan time. false: fall back to the peak with the closest apex.
+            RequirePeakAtScanTime                       : bool
             /// Scan time and theoretical m/z to the m/z offset (Da).
             CorrectionAt                                : float -> float -> float
             /// The ion mobility of the MS2 spectrum of a PSM by its PSMId, nan without ion mobility.
@@ -223,13 +225,13 @@ module PSMQuantification =
             f.Logger.Trace (sprintf "Quant failed: No Peak detected, Sequence:%s, GlobalMod:%s, Charge:%s" (pepIon.Sequence |> String.filter (fun x -> x <> '*')) (pepIon.GlobalMod.ToString()) (pepIon.Charge.ToString()))
             None
         else
-        let containingPeak = tryPeakContaining peaks averagePSM.WeightedAvgScanTime
-        if Option.isNone containingPeak then
+        let selectedPeak = selectPeak f.RequirePeakAtScanTime peaks averagePSM.WeightedAvgScanTime
+        if Option.isNone selectedPeak then
             if f.DiagCharts then saveErrorChart averagePSM.X_Xic averagePSM.Y_Xic pepIon "noPeakContainingScanTime" f.PlotDirectory
             f.Logger.Trace (sprintf "Quant failed: No peak contains the scan time, Sequence:%s, GlobalMod:%s, Charge:%s" (pepIon.Sequence |> String.filter (fun x -> x <> '*')) (pepIon.GlobalMod.ToString()) (pepIon.Charge.ToString()))
             None
         else
-        let peakToQuantify = containingPeak.Value
+        let peakToQuantify = selectedPeak.Value
         let quantP = BioFSharp.Mz.Quantification.HULQ.quantifyPeak peakToQuantify                        
         let searchRTMinusFittedRT = searchRTMinusFittedRtTarget averagePSM.WeightedAvgScanTime quantP
         if not (isValidFit quantP) then 
@@ -252,13 +254,13 @@ module PSMQuantification =
                     f.Logger.Trace (sprintf "Quant failed: No Peak detected, Sequence:%s, GlobalMod:%s, Charge:%s" (pepIon.Sequence |> String.filter (fun x -> x <> '*')) (pepIon.GlobalMod.ToString()) (pepIon.Charge.ToString()))
                     None
                 else
-                let containingPeakHeavy = tryPeakContaining inferredPeaksHeavy inferredScanTime
-                if Option.isNone containingPeakHeavy then
+                let selectedPeakHeavy = selectPeak f.RequirePeakAtScanTime inferredPeaksHeavy inferredScanTime
+                if Option.isNone selectedPeakHeavy then
                     if f.DiagCharts then saveErrorChart inferredXicHeavy.X_Xic inferredXicHeavy.Y_Xic pepIon "noInferredPeakContainingScanTime" f.PlotDirectory
                     f.Logger.Trace (sprintf "Quant failed: No peak of the labeled partner contains the scan time, Sequence:%s, GlobalMod:%s, Charge:%s" (pepIon.Sequence |> String.filter (fun x -> x <> '*')) (pepIon.GlobalMod.ToString()) (pepIon.Charge.ToString()))
                     None
                 else
-                let peakToQuantifyHeavy = containingPeakHeavy.Value
+                let peakToQuantifyHeavy = selectedPeakHeavy.Value
                 let quantPHeavy         = BioFSharp.Mz.Quantification.HULQ.quantifyPeak peakToQuantifyHeavy          
                 if not (isValidFit quantPHeavy) then 
                     if f.DiagCharts then saveErrorChart inferredXicHeavy.X_Xic inferredXicHeavy.Y_Xic pepIon "fittingInferredFailed" f.PlotDirectory    
@@ -404,13 +406,13 @@ module PSMQuantification =
                     f.Logger.Trace (sprintf "Quant failed: No Peak detected, Sequence:%s, GlobalMod:%s, Charge:%s" (pepIon.Sequence |> String.filter (fun x -> x <> '*')) (pepIon.GlobalMod.ToString()) (pepIon.Charge.ToString()))
                     None
                 else
-                let containingPeakLight = tryPeakContaining inferredPeaksLight inferredScanTime
-                if Option.isNone containingPeakLight then
+                let selectedPeakLight = selectPeak f.RequirePeakAtScanTime inferredPeaksLight inferredScanTime
+                if Option.isNone selectedPeakLight then
                     if f.DiagCharts then saveErrorChart inferredXicLight.X_Xic inferredXicLight.Y_Xic pepIon "noInferredPeakContainingScanTime" f.PlotDirectory
                     f.Logger.Trace (sprintf "Quant failed: No peak of the labeled partner contains the scan time, Sequence:%s, GlobalMod:%s, Charge:%s" (pepIon.Sequence |> String.filter (fun x -> x <> '*')) (pepIon.GlobalMod.ToString()) (pepIon.Charge.ToString()))
                     None
                 else
-                let peakToQuantifyLight = containingPeakLight.Value
+                let peakToQuantifyLight = selectedPeakLight.Value
                 let quantPLight         = BioFSharp.Mz.Quantification.HULQ.quantifyPeak peakToQuantifyLight          
                 if not (isValidFit quantPLight) then 
                     if f.DiagCharts then saveErrorChart inferredXicLight.X_Xic inferredXicLight.Y_Xic pepIon "fittingInferredFailed" f.PlotDirectory    
@@ -566,13 +568,13 @@ module PSMQuantification =
             f.Logger.Trace (sprintf "Quant failed: No Peak detected, Sequence:%s, GlobalMod:%s, Charge:%s" (pepIon.Sequence |> String.filter (fun x -> x <> '*')) (pepIon.GlobalMod.ToString()) (pepIon.Charge.ToString()))
             None
         else
-        let containingPeak = tryPeakContaining peaks averagePSM.WeightedAvgScanTime
-        if Option.isNone containingPeak then
+        let selectedPeak = selectPeak f.RequirePeakAtScanTime peaks averagePSM.WeightedAvgScanTime
+        if Option.isNone selectedPeak then
             if f.DiagCharts then saveErrorChart averagePSM.X_Xic averagePSM.Y_Xic pepIon "noPeakContainingScanTime" f.PlotDirectory
             f.Logger.Trace (sprintf "Quant failed: No peak contains the scan time, Sequence:%s, GlobalMod:%s, Charge:%s" (pepIon.Sequence |> String.filter (fun x -> x <> '*')) (pepIon.GlobalMod.ToString()) (pepIon.Charge.ToString()))
             None
         else
-        let peakToQuantify = containingPeak.Value
+        let peakToQuantify = selectedPeak.Value
         let quantP = BioFSharp.Mz.Quantification.HULQ.quantifyPeak peakToQuantify
         let searchRTMinusFittedRT = searchRTMinusFittedRtTarget averagePSM.WeightedAvgScanTime quantP 
         if not (isValidFit quantP) then 
