@@ -238,14 +238,6 @@ module Domain =
             UpperBound: float
         }
 
-    type AlignmentBasedQuantificationParams = 
-        {
-            PerformLabeledQuantification : bool
-            PerformLocalWarp             : bool
-            XicExtraction                : XicExtraction
-            BaseLineCorrection           : BaseLineCorrection option
-        }
-
     type AlignmentBasedQuantificationV2Params =
         {
             PerformLabeledQuantification : Labeling
@@ -441,14 +433,6 @@ module Domain =
             AggregateModifiedPeptidesParams      : LabelFreeQuantification.AggregationParams option
             AggregateToProteinGroupsParams       : LabelFreeQuantification.AggregationParams
         } 
-
-    type AlignmentBasedQuantStatisticsParams =
-        {
-            PositiveQuantMzCutoff: float
-            NegativeQuantMzCutoff: float
-            PositiveQuantCutoff: float
-            NegativeQuantCutoff: float
-        }
 
     /// Gradient boosted trees of ML.NET that AlignmentBasedQuantStatistics_v2 trains.
     [<RequireQualifiedAccess>]

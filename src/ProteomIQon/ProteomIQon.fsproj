@@ -46,7 +46,6 @@
     <Compile Include="PeakQuantification.fs" />
     <Compile Include="PSMQuantification.fs" />
     <None Include="Scripts\createTIMsMzMLtoMzLiteParams.fsx" />
-    <None Include="Scripts\createAlignmentBasedQuantStatisticsParams.fsx" />
     <None Include="Scripts\createLabeledQuantificationParams.fsx" />
     <None Include="Scripts\createLabeledQuantificationParams_CorrFilter_ChargeAgg.fsx" />
     <None Include="Scripts\createLabeledQuantificationParams_CorrFilter_ChargeAgg_ModAgg.fsx" />
@@ -62,7 +61,6 @@
     <None Include="Scripts\createTableSortParams.fsx" />
     <None Include="Scripts\createSWATHAnalysisParams.fsx" />
     <None Include="Scripts\createConsensusSpectralLibraryParams.fsx" />
-    <None Include="Scripts\createAlignmentBasedQuantificationParams.fsx" />
     <None Include="Scripts\createPSMBasedQuantificationParams.fsx" />
     <None Include="Scripts\createPreprocessingParamsThermo.fsx" />
     <None Include="Scripts\createSpectralLibraryParams.fsx" />

@@ -20,9 +20,7 @@ Installing a tool
 -----------------
 
 Every tool is a .NET tool on [nuget.org](https://www.nuget.org/profiles/CSBiology), package `ProteomIQon.<ToolName>`,
-command `proteomiqon-<toolname>`. The one exception is QuantBasedAlignment, which ships as
-`ProteomIQon.QuantBasedAlignment_win_x64` and `ProteomIQon.QuantBasedAlignment_linux_x64`. The package
-`ProteomIQon.QuantBasedAlignment` is the library both wrap and installs no command.
+command `proteomiqon-<toolname>`.
 
 ```text
 dotnet tool install --global ProteomIQon.PeptideDB
