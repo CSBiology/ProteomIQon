@@ -1077,45 +1077,8 @@ module Dto =
         Placeholder : bool 
         }
 
-    ///
-    type AlignmentResult = 
-        {
-            [<FieldAttribute(0)>]
-            StringSequence               : string
-            [<FieldAttribute(1)>]
-            GlobalMod                    : int
-            [<FieldAttribute(2)>]
-            Charge                       : int
-            [<FieldAttribute(3)>]
-            PepSequenceID                : int
-            [<FieldAttribute(4)>]
-            ModSequenceID                : int
-            [<FieldAttribute(5)>]
-            Mz                           : float
-            [<FieldAttribute(6)>]
-            ProteinNames                 : string
-            [<FieldAttribute(7)>]
-            PredictedScanTime            : float
-            [<FieldAttribute(8)>]
-            ScanTime_SourceFile          : float
-            [<FieldAttribute(9)>]
-            ApexIntensity_SourceFile     : float
-            [<FieldAttribute(10)>]
-            Quant_SourceFile             : float
-            [<FieldAttribute(11)>][<TraceConverter>]
-            RtTrace_SourceFile           : float []
-            [<FieldAttribute(12)>][<TraceConverter>]
-            IntensityTrace_SourceFile    : float []
-            [<FieldAttribute(13)>][<TraceConverter>]
-            IsotopicPatternMz_SourceFile                    : float []
-            [<FieldAttribute(14)>][<TraceConverter>]
-            IsotopicPatternIntensity_Observed_SourceFile    : float []
-            [<FieldAttribute(15)>]
-            IonMobility                  : float
-        }
-
-    /// Output of QuantBasedAlignment_v2. Columns 0-15 are the columns of AlignmentResult, so readers of AlignmentResult can read it.
-    type AlignmentResultV2 =
+    /// Output of QuantBasedAlignment.
+    type AlignmentResult =
         {
             [<FieldAttribute(0)>]
             StringSequence               : string
@@ -1167,33 +1130,11 @@ module Dto =
             PredictedIonMobilitySd       : float
         }
 
-    /// Status of an ion in the .alignfeatures file of AlignmentBasedQuantification_v2 that is not transferred because its labeled partner
-    /// was quantified through the PSM based row of the run. AlignmentBasedQuantStatistics_v2 does not count these ions as missing.
+    /// Status of an ion in the .alignfeatures file of AlignmentBasedQuantification that is not transferred because its labeled partner
+    /// was quantified through the PSM based row of the run. AlignmentBasedQuantStatistics does not count these ions as missing.
     [<Literal>]
     let LabeledPartnerQuantifiedStatus = "labeled partner quantified by its PSM based row"
 
-    /////
-    //type AlignmentModelMetrics<'Metrics> = 
-    //    {
-    //    Metrics                             : 'Metrics
-    //    Sequence                            : string []
-    //    GlobalMod                           : int []
-    //    Charge                              : int []
-    //    PepSequenceID                       : int []
-    //    ModSequenceID                       : int []
-    //    X_Intensities                       : float []
-    //    X_Stabw                             : float []        
-    //    X_Test                              : float []
-    //    X_IsotopicPatternMz                 : float [][]
-    //    X_IsotopicPatternIntensity_Observed : float [][]    
-    //    Y_Test                              : float []
-    //    YHat_Test                           : float []
-    //    YHat_Refined_Test                   : float []
-    //    Y_IsotopicPatternMz                 : float [][]
-    //    Y_IsotopicPatternIntensity_Observed : float [][]       
-    //    DtwDistanceBefore                   : float []
-    //    DtwDistanceAfter                    : float []
-    //    }
 
     ///
     type AlignmentMetricsDTO = 
@@ -1246,7 +1187,7 @@ module Dto =
            IonMobility                          : float
        }
 
-    type AlignmentBasedQuantificationV2Params =
+    type AlignmentBasedQuantificationParams =
         {
             PerformLabeledQuantification : Labeling
             XicExtraction                : XicExtraction
@@ -1257,9 +1198,9 @@ module Dto =
             Seed                         : int
         }
 
-    module AlignmentBasedQuantificationV2Params =
+    module AlignmentBasedQuantificationParams =
 
-        let toDomain (dtoQuantificationParams: AlignmentBasedQuantificationV2Params ): Domain.AlignmentBasedQuantificationV2Params =
+        let toDomain (dtoQuantificationParams: AlignmentBasedQuantificationParams ): Domain.AlignmentBasedQuantificationParams =
             {
                 PerformLabeledQuantification = dtoQuantificationParams.PerformLabeledQuantification
                 XicExtraction                = dtoQuantificationParams.XicExtraction
@@ -1510,7 +1451,7 @@ module Dto =
             }
 
     /// Tree parameters that are null take the default of the trainer.
-    type AlignmentBasedQuantStatisticsV2Params =
+    type AlignmentBasedQuantStatisticsParams =
         {
             PositiveRtSdFactor          : float
             NegativeRtSdFactor          : float
@@ -1529,7 +1470,7 @@ module Dto =
             Seed                        : int
         }
 
-    module AlignmentBasedQuantStatisticsV2Params =
+    module AlignmentBasedQuantStatisticsParams =
 
         /// Tree parameters (leaves, trees, minimum examples per leaf, learning rate) of a trainer.
         let treeDefaults (trainer: Domain.AlignmentScoreTrainer) =
@@ -1537,7 +1478,7 @@ module Dto =
             | Domain.AlignmentScoreTrainer.LightGbm -> 31, 100, 20, 0.1
             | Domain.AlignmentScoreTrainer.FastTree -> 20, 100, 10, 0.2
 
-        let toDomain (dtoParams: AlignmentBasedQuantStatisticsV2Params) : Domain.AlignmentBasedQuantStatisticsV2Params =
+        let toDomain (dtoParams: AlignmentBasedQuantStatisticsParams) : Domain.AlignmentBasedQuantStatisticsParams =
             let trainer =
                 match dtoParams.Trainer with
                 | "FastTree" -> Domain.AlignmentScoreTrainer.FastTree

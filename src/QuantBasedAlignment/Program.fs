@@ -3,7 +3,7 @@ namespace ProteomIQon
 open System
 open System.IO
 open Core.InputPaths
-open QuantBasedAlignment_v2
+open QuantBasedAlignment
 open CLIArgumentParsing
 open Argu
 
@@ -35,7 +35,7 @@ module console1 =
         Directory.CreateDirectory(o) |> ignore
         Logging.generateConfig o
         extendLogging ()
-        let logger = Logging.createLogger "QuantBasedAlignment_v2"
+        let logger = Logging.createLogger "QuantBasedAlignment"
         logger.Info (sprintf "TargetFiles -i = %A" i)
         logger.Info (sprintf "SourceFiles -ii = %A" ii)
         logger.Info (sprintf "OutputFilePath -o = %s" o)
@@ -70,7 +70,7 @@ module console1 =
         with
         | ex ->
             let ex = match ex with | :? AggregateException as agg when agg.InnerExceptions.Count = 1 -> agg.InnerExceptions.[0] | _ -> ex
-            logger.Error (sprintf "QuantBasedAlignment_v2 failed: %s" ex.Message)
+            logger.Error (sprintf "QuantBasedAlignment failed: %s" ex.Message)
             logger.Trace (sprintf "%O" ex)
             NLog.LogManager.Flush()
             1

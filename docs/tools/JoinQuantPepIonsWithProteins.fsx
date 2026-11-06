@@ -20,7 +20,7 @@ A .quant file knows the intensity of every peptide ion, and a .prot file knows w
 
 | Flag | Meaning | Comes from |
 |------|---------|------------|
-| `-i` | one or more `.quant` files, or a directory that is searched for `*.quant` | [PSMBasedQuantification]({{root}}tools/PSMBasedQuantification.html), [PSMBasedQuantificationTIMs]({{root}}tools/PSMBasedQuantificationTIMs.html) or [AlignmentBasedQuantification]({{root}}tools/AlignmentBasedQuantification_v2.html), optionally scored by [AlignmentBasedQuantStatistics]({{root}}tools/AlignmentBasedQuantStatistics_v2.html) |
+| `-i` | one or more `.quant` files, or a directory that is searched for `*.quant` | [PSMBasedQuantification]({{root}}tools/PSMBasedQuantification.html), [PSMBasedQuantificationTIMs]({{root}}tools/PSMBasedQuantificationTIMs.html) or [AlignmentBasedQuantification]({{root}}tools/AlignmentBasedQuantification.html), optionally scored by [AlignmentBasedQuantStatistics]({{root}}tools/AlignmentBasedQuantStatistics.html) |
 | `-ii` | one or more `.prot` files, or a directory that is searched for `*.prot` | [ProteinInference]({{root}}tools/ProteinInference.html) or [AddDeducedPeptides]({{root}}tools/AddDeducedPeptides.html) |
 | `-o` | the output directory, created when missing | |
 | `-mf` | switch: pair files by base name instead of by position | |

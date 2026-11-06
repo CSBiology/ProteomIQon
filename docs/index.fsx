@@ -52,9 +52,9 @@ PSMBasedQuantification or PSMBasedQuantificationTIMs and JoinQuantPepIonsWithPro
 
 | Step | Tool | Reads | Writes |
 |------|------|-------|--------|
-| Map scan times between runs | [QuantBasedAlignment]({{root}}tools/QuantBasedAlignment_v2.html) | .quant of all runs | .align, .alignmetric |
-| Quantify transferred peptide ions | [AlignmentBasedQuantification]({{root}}tools/AlignmentBasedQuantification_v2.html) | .mzlite, .align, .quant, .db | .quant, .alignfeatures, .aligndecoy |
-| Score the transfers | [AlignmentBasedQuantStatistics]({{root}}tools/AlignmentBasedQuantStatistics_v2.html) | PSM based and aligned .quant, .align, .alignfeatures, .aligndecoy | .quant |
+| Map scan times between runs | [QuantBasedAlignment]({{root}}tools/QuantBasedAlignment.html) | .quant of all runs | .align, .alignmetric |
+| Quantify transferred peptide ions | [AlignmentBasedQuantification]({{root}}tools/AlignmentBasedQuantification.html) | .mzlite, .align, .quant, .db | .quant, .alignfeatures, .aligndecoy |
+| Score the transfers | [AlignmentBasedQuantStatistics]({{root}}tools/AlignmentBasedQuantStatistics.html) | PSM based and aligned .quant, .align, .alignfeatures, .aligndecoy | .quant |
 | Reassign protein groups | [AddDeducedPeptides]({{root}}tools/AddDeducedPeptides.html) | .quant, .prot | .prot |
 
 Five more tools cover other inputs. For 15N labeled samples, [RatioLFQ]({{root}}tools/RatioLFQ.html) turns the

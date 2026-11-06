@@ -37,7 +37,7 @@ The search tools compare measured spectra against these peptides, so the digesti
 | `-o` | the output directory, created when missing | |
 | `-p` | the parameter file in JSON | this page |
 
-The tool writes `<Name>.db` into the output directory, where Name comes from the parameter file. The database is read by [PeptideSpectrumMatching]({{root}}tools/PeptideSpectrumMatching.html), [PSMStatistics]({{root}}tools/PSMStatistics.html), [MsFraggerToPSM]({{root}}tools/MsFraggerToPSM.html), [PSMBasedQuantification]({{root}}tools/PSMBasedQuantification.html), [PSMBasedQuantificationTIMs]({{root}}tools/PSMBasedQuantificationTIMs.html), [AlignmentBasedQuantification]({{root}}tools/AlignmentBasedQuantification_v2.html) and [ProteinInference]({{root}}tools/ProteinInference.html).
+The tool writes `<Name>.db` into the output directory, where Name comes from the parameter file. The database is read by [PeptideSpectrumMatching]({{root}}tools/PeptideSpectrumMatching.html), [PSMStatistics]({{root}}tools/PSMStatistics.html), [MsFraggerToPSM]({{root}}tools/MsFraggerToPSM.html), [PSMBasedQuantification]({{root}}tools/PSMBasedQuantification.html), [PSMBasedQuantificationTIMs]({{root}}tools/PSMBasedQuantificationTIMs.html), [AlignmentBasedQuantification]({{root}}tools/AlignmentBasedQuantification.html) and [ProteinInference]({{root}}tools/ProteinInference.html).
 When a `<Name>.db` already exists in the output directory and the parameters stored inside it equal the parameter file, the tool reuses that database and only makes sure its index is present.
 The output directory also receives `PeptideDB_log.txt` and `PeptideDB_<Name>_log.txt`.
 

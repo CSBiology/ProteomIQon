@@ -21,10 +21,10 @@ of every source ion in the target, together with an error estimate for each pred
 
 The tool is the first of three that transfer quantifications between runs. It reads the `.quant` files of
 [PSMBasedQuantification]({{root}}tools/PSMBasedQuantification.html) or [PSMBasedQuantificationTIMs]({{root}}tools/PSMBasedQuantificationTIMs.html).
-[AlignmentBasedQuantification]({{root}}tools/AlignmentBasedQuantification_v2.html) then looks for the peak of each transferred ion, and
-[AlignmentBasedQuantStatistics]({{root}}tools/AlignmentBasedQuantStatistics_v2.html) scores the result.
+[AlignmentBasedQuantification]({{root}}tools/AlignmentBasedQuantification.html) then looks for the peak of each transferred ion, and
+[AlignmentBasedQuantStatistics]({{root}}tools/AlignmentBasedQuantStatistics.html) scores the result.
 
-<img src="{{root}}img/AlignmentV2Pipeline.png" width="1000" />
+<img src="{{root}}img/AlignmentPipeline.png" width="1000" />
 
 ## How the scan time model works
 
@@ -49,7 +49,7 @@ Only source ions that pass the filter of step 1 are transferred.
 Ions the target quantified itself, called overlap ions, are transferred too, because the two following tools learn from them. They get the prediction of the fold
 that did not contain them, so their errors are comparable to those of new ions.
 
-<img src="{{root}}img/QuantBasedAlignmentV2_RtShift.png" width="850" />
+<img src="{{root}}img/QuantBasedAlignment_RtShift.png" width="850" />
 
 The figure shows the scan time shift of a pair of runs. Grey points are shared ions, orange points are the shared ions that the tool trimmed.
 The blue line is the running median and the band is ± `PredictedScanTimeSd`.

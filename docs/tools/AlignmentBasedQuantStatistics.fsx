@@ -25,8 +25,8 @@ index: 13
 
 # AlignmentBasedQuantStatistics
 
-A peptide ion transferred by [QuantBasedAlignment]({{root}}tools/QuantBasedAlignment_v2.html) and quantified by
-[AlignmentBasedQuantification]({{root}}tools/AlignmentBasedQuantification_v2.html) has no identification in the run, so nothing yet says
+A peptide ion transferred by [QuantBasedAlignment]({{root}}tools/QuantBasedAlignment.html) and quantified by
+[AlignmentBasedQuantification]({{root}}tools/AlignmentBasedQuantification.html) has no identification in the run, so nothing yet says
 whether the quantified peak is the ion. AlignmentBasedQuantStatistics gives every such ion two values:
 
 - `AlignmentScore`: the probability that the quantified peak is the ion's peak, given that the analyte is present in the run.
@@ -40,7 +40,7 @@ New ions are the transferred ions without a PSM based quantification in the run.
 [LabeledProteinQuantification]({{root}}tools/LabeledProteinQuantification.html) filter on the q-value only if their `Alignment_QValue` parameter
 is set. They then drop transferred rows with a q-value at or above it. All their default files set it to `Some 0.05`, and `None` keeps every transferred row.
 
-<img src="{{root}}img/AlignmentV2Pipeline.png" width="1000" />
+<img src="{{root}}img/AlignmentPipeline.png" width="1000" />
 
 ## Training data and label
 
@@ -114,8 +114,8 @@ Storey does, with λ = 0.5. `Conservative` sets π to 1.
 | Flag | Meaning | Comes from |
 |------|---------|------------|
 | `-i` | PSM based `.quant` of the runs to score | [PSMBasedQuantification]({{root}}tools/PSMBasedQuantification.html) or [PSMBasedQuantificationTIMs]({{root}}tools/PSMBasedQuantificationTIMs.html) |
-| `-ii` | `.align` of the runs to score | [QuantBasedAlignment]({{root}}tools/QuantBasedAlignment_v2.html) |
-| `-iii` | aligned `.quant` of the runs to score | [AlignmentBasedQuantification]({{root}}tools/AlignmentBasedQuantification_v2.html) |
+| `-ii` | `.align` of the runs to score | [QuantBasedAlignment]({{root}}tools/QuantBasedAlignment.html) |
+| `-iii` | aligned `.quant` of the runs to score | [AlignmentBasedQuantification]({{root}}tools/AlignmentBasedQuantification.html) |
 | `-l` | PSM based `.quant` of the runs to learn from | as `-i` |
 | `-ll` | `.align` of the runs to learn from | as `-ii` |
 | `-lll` | aligned `.quant` of the runs to learn from | as `-iii` |
@@ -150,14 +150,14 @@ check and the calibration per score bin and per source intensity quartile, and t
 | AbsentAnalyteFdr | Estimated | `Off`, `Estimated` or `Conservative`: whether and how the absent-analyte rate enters the q-value (see Absent analytes). |
 | Seed | 1 | Seed of the folds and of the trainer. |
 
-See [the default parameter file](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/AlignmentBasedQuantStatisticsParams_v2.json).
+See [the default parameter file](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/AlignmentBasedQuantStatisticsParams.json).
 
 ## Writing a parameter file
 *)
 
 open ProteomIQon
 
-let alignmentBasedQuantStatisticsParams : Dto.AlignmentBasedQuantStatisticsV2Params =
+let alignmentBasedQuantStatisticsParams : Dto.AlignmentBasedQuantStatisticsParams =
     {
         PositiveRtSdFactor         = 1.
         NegativeRtSdFactor         = 3.

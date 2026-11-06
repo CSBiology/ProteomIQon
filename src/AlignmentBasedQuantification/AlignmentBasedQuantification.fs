@@ -387,7 +387,7 @@ module PeakSelection =
         }
 
 
-module AlignmentBasedQuantification_v2 =
+module AlignmentBasedQuantification =
 
     open Numerics
     open XicSweep
@@ -429,7 +429,7 @@ module AlignmentBasedQuantification_v2 =
     let decoyMargin = 1.5
 
     /// Assigns every peptide (PepSequenceID, so all modified forms of a sequence) to one of nFolds folds by a seeded permutation
-    /// of the sorted ids, as QuantBasedAlignment_v2.
+    /// of the sorted ids, as QuantBasedAlignment.
     let assignFolds (seed:int) (nFolds:int) (peptides: seq<int>) =
         let sorted =
             peptides
@@ -534,7 +534,7 @@ module AlignmentBasedQuantification_v2 =
     type PreparedIon =
         {
             Row               : int
-            Align             : AlignmentResultV2
+            Align             : AlignmentResult
             Target            : SearchDB.LookUpResult<AminoAcids.AminoAcid>
             Partner           : SearchDB.LookUpResult<AminoAcids.AminoAcid> option
             TargetIsotopes    : IsotopePeak []
@@ -677,7 +677,7 @@ module AlignmentBasedQuantification_v2 =
             if counts.Count = 0 then "none"
             else counts |> Seq.map (fun kv -> sprintf "%s: %i" kv.Key kv.Value) |> String.concat ", "
 
-    let private ionName (align: AlignmentResultV2) = sprintf "%s, GlobalMod %i, charge %i" align.StringSequence align.GlobalMod align.Charge
+    let private ionName (align: AlignmentResult) = sprintf "%s, GlobalMod %i, charge %i" align.StringSequence align.GlobalMod align.Charge
 
     /// What the run needs from the PSM based quantification. The rows keep their traces only in PsmRowsHeld, when they could not be written early.
     type private PsmBasedRun =
@@ -709,7 +709,7 @@ module AlignmentBasedQuantification_v2 =
             let sd = getTargetStabw qp
             if isFinite scanTime && isFinite sd && sd > 0. then
                 ownQuant.[(qp.StringSequence, qp.GlobalMod, qp.Charge)] <- withoutTraces qp
-        // ions whose PSM based row has a fitted scan time: Stats_v2 keeps this row, the alignment row is a training example and the truth
+        // ions whose PSM based row has a fitted scan time: AlignmentBasedQuantStatistics keeps this row, the alignment row is a training example and the truth
         let psmPeakIons = HashSet<(string*int*int)>(HashIdentity.Structural)
         for qp in psmQuant do
             let key = (qp.StringSequence, qp.GlobalMod, qp.Charge)
@@ -734,7 +734,7 @@ module AlignmentBasedQuantification_v2 =
           PsmMzObservations = psmMzObservations }
 
     /// Quantifies the ions of one .align file in one run and writes <run>.quant and <run>.alignfeatures.
-    let quantifyPeptides diagCharts (processParams:Domain.AlignmentBasedQuantificationV2Params) (outputDir:string) (d:string) (instrumentOutput:string) (psmbasedQuant:string) (alignmentResults:string) =
+    let quantifyPeptides diagCharts (processParams:Domain.AlignmentBasedQuantificationParams) (outputDir:string) (d:string) (instrumentOutput:string) (psmbasedQuant:string) (alignmentResults:string) =
         let runName = Path.GetFileNameWithoutExtension instrumentOutput
         let logger = Logging.createLogger (Path.GetFileNameWithoutExtension alignmentResults)
         let stopwatch = Diagnostics.Stopwatch.StartNew()
@@ -747,7 +747,7 @@ module AlignmentBasedQuantification_v2 =
 
         // inputs
         let alignments =
-            Csv.CsvReader<AlignmentResultV2>().ReadFile(alignmentResults,'\t',false,1)
+            Csv.CsvReader<AlignmentResult>().ReadFile(alignmentResults,'\t',false,1)
             |> Array.ofSeq
         let outTmpPath = outFilePath + ".tmp"
         if File.Exists outTmpPath then File.Delete outTmpPath
@@ -757,7 +757,7 @@ module AlignmentBasedQuantification_v2 =
         logger.Info (sprintf "%s: %i .align rows, %i PSM based rows (%i ions with a fitted peak)" runName alignments.Length psm.PsmCount psm.OwnQuant.Count)
 
         // the peptide data base is read from disk: only the ions of the .align file are looked up, and a copy in memory
-        // (as v1) costs the size of the data base per run (5.5 GB for the TIMs data base)
+        // would cost the size of the data base per run (5.5 GB for the TIMs data base)
         use peptideDB = SearchDB.getDBConnection d
         let dBParams = SearchDB.getSDBParamsByCn peptideDB
         let peptideLookUp = SearchDB.getThreadSafePeptideLookUpFromFileBySequenceAndGMod peptideDB dBParams
@@ -857,7 +857,7 @@ module AlignmentBasedQuantification_v2 =
         let identifyPeaks = initIdentifyPeaks processParams.XicExtraction.XicProcessing
         // rows 0 .. n - 1 are the .align rows, row n + r is the decoy transfer of row r
         let n = alignments.Length
-        let decoyAlign : AlignmentResultV2 option [] = Array.create n None
+        let decoyAlign : AlignmentResult option [] = Array.create n None
         let alignOf (row: int) = if row < n then alignments.[row] else decoyAlign.[row - n].Value
         let nameOf (row: int) = if row < n then ionName alignments.[row] else ionName (alignOf row) + " (decoy)"
         let drops = ReasonCounter()
@@ -891,7 +891,7 @@ module AlignmentBasedQuantification_v2 =
                 lookUps.[(sequence, gMod)] <- found
                 found
         let isotopes = Dictionary<(string*int*int), IsotopePeak []>(HashIdentity.Structural)
-        let isotopePeaksOf (align: AlignmentResultV2) gMod (peptide: SearchDB.LookUpResult<AminoAcids.AminoAcid>) =
+        let isotopePeaksOf (align: AlignmentResult) gMod (peptide: SearchDB.LookUpResult<AminoAcids.AminoAcid>) =
             let key = (align.StringSequence, gMod, align.Charge)
             isotopeCalls.Value <- isotopeCalls.Value + 1
             match isotopes.TryGetValue key with
@@ -904,7 +904,7 @@ module AlignmentBasedQuantification_v2 =
         // an ion without a fitted quantification of its own in the run (no PSM based row, or one without a fitted peak) whose labeled partner
         // the run quantified through its own PSM based row with a fitted peak, with a value of the label of the ion, is not transferred:
         // the PSM based row has more evidence than a match through alignment
-        let labeledPartnerQuantified (align: AlignmentResultV2) =
+        let labeledPartnerQuantified (align: AlignmentResult) =
             performLabeled
             && not (psm.OwnQuant.ContainsKey ((align.StringSequence, align.GlobalMod, align.Charge)))
             && (match psm.OwnQuant.TryGetValue ((align.StringSequence, (if align.GlobalMod = 0 then 1 else 0), align.Charge)) with
@@ -914,7 +914,7 @@ module AlignmentBasedQuantification_v2 =
                 | _ -> false)
 
         // windows per ion
-        let prepare (row: int) (align: AlignmentResultV2) =
+        let prepare (row: int) (align: AlignmentResult) =
             guarded row "window preparation" <| fun () ->
                 if row < n && labeledPartnerQuantified align then
                     dropIon row LabeledPartnerQuantifiedStatus
@@ -932,7 +932,7 @@ module AlignmentBasedQuantification_v2 =
                     None
                 | Some target ->
                 // the alignment row of an overlap ion with a fitted PSM based peak is a training example and the truth of
-                // AlignmentBasedQuantStatistics_v2 only, which reads the quantification of the ion itself
+                // AlignmentBasedQuantStatistics only, which reads the quantification of the ion itself
                 let partnerSkipped = performLabeled && psm.PsmPeakIons.Contains ((align.StringSequence, align.GlobalMod, align.Charge))
                 let partner =
                     if performLabeled && not partnerSkipped then
@@ -1346,7 +1346,7 @@ module AlignmentBasedQuantification_v2 =
                 drops.Summary (elapsed ())
             )
 
-        // output as v1: the PSM based rows with a fitted peak, then the alignment rows; of several rows of an ion and source
+        // output: the PSM based rows with a fitted peak, then the alignment rows; of several rows of an ion and source
         // the one with the smallest |Difference_SearchRT_FittedRT|
         let outputRows =
             Array.append psm.PsmRowsHeld quantResults

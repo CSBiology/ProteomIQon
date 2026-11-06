@@ -238,7 +238,7 @@ module Domain =
             UpperBound: float
         }
 
-    type AlignmentBasedQuantificationV2Params =
+    type AlignmentBasedQuantificationParams =
         {
             PerformLabeledQuantification : Labeling
             XicExtraction                : XicExtraction
@@ -434,13 +434,13 @@ module Domain =
             AggregateToProteinGroupsParams       : LabelFreeQuantification.AggregationParams
         } 
 
-    /// Gradient boosted trees of ML.NET that AlignmentBasedQuantStatistics_v2 trains.
+    /// Gradient boosted trees of ML.NET that AlignmentBasedQuantStatistics trains.
     [<RequireQualifiedAccess>]
     type AlignmentScoreTrainer =
         | FastTree
         | LightGbm
 
-    /// How AlignmentBasedQuantStatistics_v2 adds the false discovery rate of new ions whose analyte is absent from the run.
+    /// How AlignmentBasedQuantStatistics adds the false discovery rate of new ions whose analyte is absent from the run.
     [<RequireQualifiedAccess>]
     type AbsentAnalyteFdr =
         /// Not added.
@@ -450,7 +450,7 @@ module Domain =
         /// Decoy based, with an absent fraction of 1.
         | Conservative
 
-    type AlignmentBasedQuantStatisticsV2Params =
+    type AlignmentBasedQuantStatisticsParams =
         {
             /// An overlap ion is positive if its peak is at most this many sd (of the own PSM peak) away from the own PSM peak ...
             PositiveRtSdFactor          : float

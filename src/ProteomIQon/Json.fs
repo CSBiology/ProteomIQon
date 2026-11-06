@@ -19,4 +19,3 @@ module Json =
   let ReadAndDeserialize<'a> path =
     System.IO.File.ReadAllText path
     |> JsonConvert.DeserializeObject<'a> 
-

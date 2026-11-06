@@ -49,14 +49,14 @@
     <ProjectReference Include="..\src\PSMStatistics\PSMStatistics.fsproj" ReferenceOutputAssembly="true" />
     <ProjectReference Include="..\src\MsFraggerToPSM\MsFraggerToPSM.fsproj" ReferenceOutputAssembly="false" />
     <ProjectReference Include="..\src\PSMBasedQuantification\PSMBasedQuantification.fsproj" ReferenceOutputAssembly="true" />
-    <ProjectReference Include="..\src\QuantBasedAlignment_v2\QuantBasedAlignment_v2.fsproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\src\QuantBasedAlignment\QuantBasedAlignment.fsproj" ReferenceOutputAssembly="false" />
     <ProjectReference Include="..\src\ProteinInference\ProteinInference.fsproj" ReferenceOutputAssembly="false" />
     <ProjectReference Include="..\src\LabelFreeProteinQuantification\LabelFreeProteinQuantification.fsproj" ReferenceOutputAssembly="false" />
     <ProjectReference Include="..\src\LabeledProteinQuantification\LabeledProteinQuantification.fsproj" ReferenceOutputAssembly="false" />
     <ProjectReference Include="..\src\AddDeducedPeptides\AddDeducedPeptides.fsproj" ReferenceOutputAssembly="false" />
     <ProjectReference Include="..\src\PSMBasedQuantificationTIMs\PSMBasedQuantificationTIMs.fsproj" ReferenceOutputAssembly="true" />
-    <ProjectReference Include="..\src\AlignmentBasedQuantification_v2\AlignmentBasedQuantification_v2.fsproj" ReferenceOutputAssembly="true" />
-    <ProjectReference Include="..\src\AlignmentBasedQuantStatistics_v2\AlignmentBasedQuantStatistics_v2.fsproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\src\AlignmentBasedQuantification\AlignmentBasedQuantification.fsproj" ReferenceOutputAssembly="true" />
+    <ProjectReference Include="..\src\AlignmentBasedQuantStatistics\AlignmentBasedQuantStatistics.fsproj" ReferenceOutputAssembly="false" />
     <ProjectReference Include="..\src\MzMLToMzLiteIonMobility\MzMLToMzLiteIonMobility.fsproj" ReferenceOutputAssembly="false" />
   </ItemGroup>
 </Project>

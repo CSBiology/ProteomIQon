@@ -429,7 +429,7 @@ let parseFloat (s: string) = Double.Parse(s, Globalization.CultureInfo.Invariant
 /// 01 to 03, with the MS1 spectra 2 min around it, their peaks within m/z 448.5 to 500, and the peptide data base rows of their ions.
 let alignmentRuns = [| "UPS1_01"; "UPS1_02"; "UPS1_03" |]
 
-/// Runs QuantBasedAlignment_v2, AlignmentBasedQuantification_v2 and AlignmentBasedQuantStatistics_v2 on the runs of a test data folder
+/// Runs QuantBasedAlignment, AlignmentBasedQuantification and AlignmentBasedQuantStatistics on the runs of a test data folder
 /// (mzlite, quant, peptide data base and the ABQ params file in its in folder) twice and returns the output files of both runs (path
 /// relative to the run folder -> bytes); the output folders are deleted.
 let runAlignmentChain (dataFolder: string) (dbFile: string) (abqParamsFile: string) (statsParamsFile: string) =
@@ -449,9 +449,9 @@ let runAlignmentChain (dataFolder: string) (dbFile: string) (abqParamsFile: stri
         let db = Path.Combine(outDirectory, dbFile)
         File.Copy(Path.Combine(inDirectory, dbFile), db)
         let align, abq, stats = Path.Combine(outDirectory, "align"), Path.Combine(outDirectory, "abq"), Path.Combine(outDirectory, "stats")
-        runDotNet (sprintf "%s -i %s -ii %s -o %s" (toolDll "QuantBasedAlignment_v2") quant quant align) baseDir
-        runDotNet (sprintf "%s -i %s -ii %s -iv %s -d %s -o %s -p %s -mf" (toolDll "AlignmentBasedQuantification_v2") mzlite align quant db abq abqParams) baseDir
-        runDotNet (sprintf "%s -i %s -ii %s -iii %s -l %s -ll %s -lll %s -o %s -p %s -mf" (toolDll "AlignmentBasedQuantStatistics_v2") quant align abq quant align abq stats statsParams) baseDir
+        runDotNet (sprintf "%s -i %s -ii %s -o %s" (toolDll "QuantBasedAlignment") quant quant align) baseDir
+        runDotNet (sprintf "%s -i %s -ii %s -iv %s -d %s -o %s -p %s -mf" (toolDll "AlignmentBasedQuantification") mzlite align quant db abq abqParams) baseDir
+        runDotNet (sprintf "%s -i %s -ii %s -iii %s -l %s -ll %s -lll %s -o %s -p %s -mf" (toolDll "AlignmentBasedQuantStatistics") quant align abq quant align abq stats statsParams) baseDir
         let files =
             [ for folder in [ align; abq; stats ] do
                 for file in Directory.GetFiles folder do
@@ -463,7 +463,7 @@ let runAlignmentChain (dataFolder: string) (dbFile: string) (abqParamsFile: stri
 
 /// The chain on the three UPS1 runs. Shared by the tests of both tools, which run at the same time.
 let alignmentChainOutputs =
-    lazy (runAlignmentChain "AlignmentBasedQuantification_v2" "UPS1.db" "AlignmentBasedQuantificationParams.json" "../../../data/AlignmentBasedQuantStatistics_v2/in/AlignmentBasedQuantStatisticsParams.json")
+    lazy (runAlignmentChain "AlignmentBasedQuantification" "UPS1.db" "AlignmentBasedQuantificationParams.json" "../../../data/AlignmentBasedQuantStatistics/in/AlignmentBasedQuantStatisticsParams.json")
 
 /// The three labeled runs of the alignment test: a 4 minute, 50 m/z slice (fitted scan time 31 to 35 min, light and heavy m/z 500 to 550)
 /// of the 14N/15N Chlamydomonas TripleTOF runs 3501, 3509 and 3517 of a dilution series, with the MS1 spectra 2 min around it, their peaks
@@ -484,7 +484,7 @@ let ionKey (row: Map<string, string>) = row.["StringSequence"], row.["GlobalMod"
 
 /// The (sequence, global modification, charge) ions of the PSM based .quant of a UPS1 run of the alignment tests.
 let alignmentInputIons (run: string) =
-    let header, rows = readTable (getRelativePath baseDir (sprintf "../../../data/AlignmentBasedQuantification_v2/in/quant/%s.quant" run))
+    let header, rows = readTable (getRelativePath baseDir (sprintf "../../../data/AlignmentBasedQuantification/in/quant/%s.quant" run))
     rows |> Array.map (fun cells -> cells.[header.["StringSequence"]], cells.[header.["GlobalMod"]], cells.[header.["Charge"]]) |> Set.ofArray
 
 [<Tests>]
@@ -989,17 +989,17 @@ let pipelineTests =
         quantTIMsCase "PSMBasedQuantificationTIMsWaveletLabeled" "QuantificationTIMsWaveletLabeledParams.json" "/waveletLabeled" "minimalWaveletLabeledReference.quant" |> testSequenced
             
 
-        testCase "QuantBasedAlignment_v2" <| fun _ ->
+        testCase "QuantBasedAlignment" <| fun _ ->
             let relToDirectory = getRelativePath baseDir
             let quantFiles = relToDirectory "../../../data/QuantBasedAlignment/in"
             // its own folder
-            let outDirectory = relToDirectory "../../../data/QuantBasedAlignment_v2/out/test/"
-            let alignExe = toolDll "QuantBasedAlignment_v2"
+            let outDirectory = relToDirectory "../../../data/QuantBasedAlignment/out/test/"
+            let alignExe = toolDll "QuantBasedAlignment"
             runDotNet (sprintf "%s -i %s -ii %s -o %s" alignExe quantFiles quantFiles outDirectory) baseDir
             let compare =
                 tsvFilesEqual 1e-6
-                    (relToDirectory "../../../data/QuantBasedAlignment_v2/out/trunc1_Reference.align")
-                    (relToDirectory "../../../data/QuantBasedAlignment_v2/out/test/trunc1.align")
+                    (relToDirectory "../../../data/QuantBasedAlignment/out/trunc1_Reference.align")
+                    (relToDirectory "../../../data/QuantBasedAlignment/out/test/trunc1.align")
             Directory.Delete(outDirectory, true)
             Expect.isTrue compare "Alignments are different"
 
@@ -1030,7 +1030,7 @@ let pipelineTests =
                 Expect.equal (peaks |> Array.map (fun p -> p.Intensity)) s.Intensity (sprintf "%s: intensities" s.ID)
                 Expect.equal (peaks |> Array.map (fun p -> p.IonMobility)) (s.IonMobility |> Array.map Some) (sprintf "%s: ion mobilities" s.ID)
 
-        testCase "AlignmentBasedQuantification_v2" <| fun _ ->
+        testCase "AlignmentBasedQuantification" <| fun _ ->
             // label-free runs without ion mobility and with fewer than 200 clean overlap ions each, so the fixed score chooses the candidates
             let first, second = alignmentChainOutputs.Force()
             for run in alignmentRuns do
@@ -1044,12 +1044,12 @@ let pipelineTests =
                 let features = alignmentOutputRows first (sprintf "abq/%s.alignfeatures" run)
                 let decoys = alignmentOutputRows first (sprintf "abq/%s.aligndecoy" run)
                 let predicted = align |> Array.map (fun row -> ionKey row, parseFloat row.["PredictedScanTime"]) |> Map.ofArray
-                // QuantBasedAlignment_v2
+                // QuantBasedAlignment
                 Expect.isGreaterThan align.Length 100 (sprintf "%s: ions are transferred" run)
                 for row in align do
                     Expect.isTrue (otherIons.Contains (ionKey row)) (sprintf "%s: %A comes from another run" run (ionKey row))
                     Expect.isTrue (Double.IsFinite (parseFloat row.["PredictedScanTime"]) && parseFloat row.["PredictedScanTimeSd"] > 0.) (sprintf "%s: %A has a predicted scan time" run (ionKey row))
-                // AlignmentBasedQuantification_v2: the PSM based rows, then the transferred ones
+                // AlignmentBasedQuantification: the PSM based rows, then the transferred ones
                 let psmRows = quant |> Array.takeWhile (fun row -> row.["QuantificationSource"] = "PSM")
                 let alignmentRows = quant.[psmRows.Length ..]
                 Expect.equal (psmRows |> Array.map ionKey |> Set.ofArray) ownIons (sprintf "%s: every ion of the PSM based .quant is kept" run)
@@ -1072,7 +1072,7 @@ let pipelineTests =
                     let shift = abs (parseFloat row.["PredictedScanTime"] - predicted.[ionKey row])
                     Expect.isTrue (shift >= 4. - 1e-9 && shift <= 6. + 1e-9) (sprintf "%s: the decoy %A is shifted by %f min" run (ionKey row) shift)
 
-        testCase "AlignmentBasedQuantStatistics_v2" <| fun _ ->
+        testCase "AlignmentBasedQuantStatistics" <| fun _ ->
             // FastTree on the overlap ions of the three runs with the decoys as extra negatives; fewer than 200 decoys per run, so the
             // absent-analyte rate of every run is estimated from the decoys of all runs
             let first, second = alignmentChainOutputs.Force()
@@ -1091,7 +1091,7 @@ let pipelineTests =
                 let alignmentRows = scored |> Array.filter (fun row -> row.["QuantificationSource"] = "Alignment")
                 Expect.equal (psmRows.Length + alignmentRows.Length) scored.Length (sprintf "%s: every row is PSM based or transferred" run)
                 Expect.equal (psmRows |> Array.map ionKey |> Set.ofArray) ownIons (sprintf "%s: every ion of the PSM based .quant is kept" run)
-                // every PSM based row has a fitted peak, so only the new ions are scored, each with its row of AlignmentBasedQuantification_v2
+                // every PSM based row has a fitted peak, so only the new ions are scored, each with its row of AlignmentBasedQuantification
                 let newRows = aligned |> Array.filter (fun row -> row.["QuantificationSource"] = "Alignment" && not (ownIons.Contains (ionKey row)))
                 Expect.equal (alignmentRows |> Array.map ionKey |> Set.ofArray) (newRows |> Array.map ionKey |> Set.ofArray) (sprintf "%s: the new ions are scored" run)
                 Expect.equal alignmentRows.Length newRows.Length (sprintf "%s: one row per new ion" run)
@@ -1108,7 +1108,7 @@ let pipelineTests =
                 passing <- passing + (scores |> Array.filter (fun (_, q) -> q <= 0.05) |> Array.length)
             Expect.isGreaterThan passing 0 "new ions pass q <= 0.05"
 
-        testCase "AlignmentBasedQuantification_v2 and AlignmentBasedQuantStatistics_v2 labeled" <| fun _ ->
+        testCase "AlignmentBasedQuantification and AlignmentBasedQuantStatistics labeled" <| fun _ ->
             // 14N/15N runs: ions whose labeled partner the run quantified through its PSM based row are not transferred
             let first, second = labeledAlignmentChainOutputs.Force()
             let mutable passing = 0

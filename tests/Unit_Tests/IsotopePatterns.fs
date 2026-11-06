@@ -206,7 +206,7 @@ let tests =
                 Expect.isTrue equal "the stored patterns are the computed ones"
                 Expect.equal (scalar db "SELECT COUNT(*) FROM IsotopePattern p JOIN ModSequence m ON m.ID = p.ModSequenceID WHERE m.GlobalMod <> 0") 0L "no pattern of GlobalMod 1")
 
-        testCase "AlignmentBasedQuantification_v2 isotope peaks equal with stored and computed patterns" <| fun _ ->
+        testCase "AlignmentBasedQuantification isotope peaks equal with stored and computed patterns" <| fun _ ->
             withCopy labelledDb (fun db ->
                 let logger, _ = memoryLogger ()
                 let ions = readIons labelledQpsm
@@ -218,8 +218,8 @@ let tests =
                 let all = requests true ions
                 for (sequence, gMod, charge) in all do
                     let peptide = lookUp sequence gMod
-                    let computed = AlignmentBasedQuantification_v2.isotopePeaks (fun peptide charge -> IsotopePatterns.compute charge peptide.BioSequence) charge peptide
-                    let stored = AlignmentBasedQuantification_v2.isotopePeaks (fun peptide charge -> patterns.Get (peptide, charge)) charge peptide
+                    let computed = AlignmentBasedQuantification.isotopePeaks (fun peptide charge -> IsotopePatterns.compute charge peptide.BioSequence) charge peptide
+                    let stored = AlignmentBasedQuantification.isotopePeaks (fun peptide charge -> patterns.Get (peptide, charge)) charge peptide
                     Expect.equal stored computed (sprintf "%s %i %i" sequence gMod charge)
                 Expect.equal (patterns.Read, patterns.Computed) (all.Length, 0) "all patterns are read from the data base")
 

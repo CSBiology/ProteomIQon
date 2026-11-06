@@ -14,8 +14,8 @@ index: 14
 
 # AddDeducedPeptides
 
-After [alignment]({{root}}tools/QuantBasedAlignment_v2.html) and
-[AlignmentBasedQuantification]({{root}}tools/AlignmentBasedQuantification_v2.html) a run's .quant file holds peptides that were never identified
+After [alignment]({{root}}tools/QuantBasedAlignment.html) and
+[AlignmentBasedQuantification]({{root}}tools/AlignmentBasedQuantification.html) a run's .quant file holds peptides that were never identified
 in that run, so the run's .prot file from [ProteinInference]({{root}}tools/ProteinInference.html) does not list them. AddDeducedPeptides
 takes the protein groups of the combined inference and assigns them to every peptide present in each aligned .quant file, so that
 [JoinQuantPepIonsWithProteins]({{root}}tools/JoinQuantPepIonsWithProteins.html) can join the transferred quantifications to proteins.
@@ -24,7 +24,7 @@ takes the protein groups of the combined inference and assigns them to every pep
 
 | Flag | Meaning | Comes from |
 |------|---------|------------|
-| `-i` | one or more aligned `.quant` files, or a directory that is searched for `*.quant` | [AlignmentBasedQuantification]({{root}}tools/AlignmentBasedQuantification_v2.html) |
+| `-i` | one or more aligned `.quant` files, or a directory that is searched for `*.quant` | [AlignmentBasedQuantification]({{root}}tools/AlignmentBasedQuantification.html) |
 | `-ii` | one or more `.prot` files, or a directory that is searched for `*.prot` | [ProteinInference]({{root}}tools/ProteinInference.html) |
 | `-o` | the output directory, created when missing | |
 

@@ -3,7 +3,7 @@ namespace ProteomIQon
 open System
 open System.IO
 open Core.InputPaths
-open AlignmentBasedQuantStatistics_v2
+open AlignmentBasedQuantStatistics
 open CLIArgumentParsing
 open Argu
 
@@ -62,7 +62,7 @@ module console1 =
         Directory.CreateDirectory(outputDir) |> ignore
         Logging.generateConfig outputDir
         extendLogging ()
-        let logger = Logging.createLogger "AlignmentBasedQuantStatistics_v2"
+        let logger = Logging.createLogger "AlignmentBasedQuantStatistics"
         logger.Info (sprintf "QuantFilePath -i = %A" i)
         logger.Info (sprintf "AlignFilePath -ii = %A" ii)
         logger.Info (sprintf "AlignedQuantFilePath -iii = %A" iii)
@@ -74,8 +74,8 @@ module console1 =
         logger.Trace (sprintf "CLIArguments: %A" results)
         try
             let p =
-                Json.ReadAndDeserialize<Dto.AlignmentBasedQuantStatisticsV2Params> paramPath
-                |> Dto.AlignmentBasedQuantStatisticsV2Params.toDomain
+                Json.ReadAndDeserialize<Dto.AlignmentBasedQuantStatisticsParams> paramPath
+                |> Dto.AlignmentBasedQuantStatisticsParams.toDomain
             logger.Info (sprintf "Parameters: %A" p)
             if not (p.PositiveRtSdFactor > 0. && p.NegativeRtSdFactor >= p.PositiveRtSdFactor && p.MaxAbsLog2QuantRatio > 0.) then
                 failwith "The parameters need 0 < PositiveRtSdFactor <= NegativeRtSdFactor and MaxAbsLog2QuantRatio > 0."
@@ -108,7 +108,7 @@ module console1 =
         with
         | ex ->
             let ex = match ex with | :? AggregateException as agg when agg.InnerExceptions.Count = 1 -> agg.InnerExceptions.[0] | _ -> ex
-            logger.Error (sprintf "AlignmentBasedQuantStatistics_v2 failed: %s" ex.Message)
+            logger.Error (sprintf "AlignmentBasedQuantStatistics failed: %s" ex.Message)
             logger.Trace (sprintf "%O" ex)
             NLog.LogManager.Flush()
             1

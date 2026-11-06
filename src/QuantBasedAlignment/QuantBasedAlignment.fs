@@ -217,7 +217,7 @@ module RobustShift =
         if isFinite local then max scale.Floor local else scale.Floor
 
 
-module QuantBasedAlignment_v2 =
+module QuantBasedAlignment =
 
     open RobustShift
 
@@ -451,7 +451,7 @@ module QuantBasedAlignment_v2 =
 
     /// Transfers an ion of the source of the pair. Ions the model was trained on get their out-of-fold prediction and
     /// a local error scale without their own error, so that they show the same error as ions the target lacks.
-    let createAlignmentResult (pair:PairModel) (ion:PeptideIon) : AlignmentResultV2 =
+    let createAlignmentResult (pair:PairModel) (ion:PeptideIon) : AlignmentResult =
         let quantifiedPeptide = pair.Source.Ions.[ion]
         let ownError (absError: Dictionary<PeptideIon,float>) = match absError.TryGetValue ion with | true, e -> e | _ -> nan
         let sourceScanTime = getTargetScanTime quantifiedPeptide
