@@ -773,6 +773,8 @@ let pipelineTests =
                                 test.AlignmentQValue = 0.
                             "QuantificationSource",
                                 test.QuantificationSource = reference.QuantificationSource
+                            "IonMobilityCentre",
+                                nanCasesForUnlabledData 0.999999 1.000001 test.IonMobilityCentre reference.IonMobilityCentre
                         |]
                     ) referenceQuant testQuant
                     |> Array.collect (
@@ -970,6 +972,8 @@ let pipelineTests =
                                     test.QuantificationSource = reference.QuantificationSource
                                 "IonMobility",
                                     nanCasesForUnlabledData 0.99 1.01 test.IonMobility reference.IonMobility
+                                "IonMobilityCentre",
+                                    nanCasesForUnlabledData 0.999999 1.000001 test.IonMobilityCentre reference.IonMobilityCentre
                             |]
                         ) referenceQuantTIMs testQuantTIMs
                         |> Array.collect (

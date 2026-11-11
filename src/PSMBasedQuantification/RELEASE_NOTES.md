@@ -21,6 +21,7 @@
 * Breaking: parameter files of earlier releases stop the tool; they need CentrePSMs and QualityFilterLog2Limit
 * Add the parameter RequirePeakAtScanTime (default true): an ion is quantified only when a peak contains the weighted scan time of its PSMs, and its labeled partner only when a peak of the partner trace contains the expected scan time; false takes the peak with the closest apex when no peak contains the scan time
 * Fit the m/z correction of a run in ppm over scan time and m/z; MzWindow_Da Estimate stays four standard deviations of the precursor m/z offsets
+* Add the column IonMobilityCentre as the last column of the .quant; it is NaN, as the tool reads no ion mobility
 
 #### 0.0.12 - Wednesday, September 2, 2026
 * Fall back to a median mz correction when the smoothing spline cannot be fitted on sparse data

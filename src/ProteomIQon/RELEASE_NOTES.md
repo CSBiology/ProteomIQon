@@ -21,10 +21,11 @@
 * Correct the default parameters QuantificationParams_NoBaseline, which could not be read, and make them equal to QuantificationParams except for the baseline correction
 * Set Alignment_QValue 0.05 in the default parameters of LabelFreeProteinQuantification and LabeledProteinQuantification
 * Set MinPepLength 6 in the default parameters of PeptideDB
-* Add Xic, MzCalibration, PeakQuantification and PSMQuantification: the XIC of an ion (on spectra with ion mobility the sum of all peaks inside the m/z window and the ion mobility window), the m/z correction of a run, the peak detection and the choice of the peak, and the quantification of the PSMs of an ion, shared by PSMBasedQuantification, PSMBasedQuantificationTIMs and AlignmentBasedQuantification
+* Add Xic, MzCalibration, PeakQuantification and PSMQuantification: the XIC of an ion (on spectra with ion mobility the sum of all peaks inside the m/z window and the ion mobility window, for a fixed window around the ion mobility centre of the ion), the m/z correction of a run, the peak detection and the choice of the peak, and the quantification of the PSMs of an ion, shared by PSMBasedQuantification, PSMBasedQuantificationTIMs and AlignmentBasedQuantification
 * Breaking: change QuantificationParams, the parameters of PSMBasedQuantification and PSMBasedQuantificationTIMs, and the default parameters: remove FragPipe and add QualityFilterLog2Limit, CentrePSMs, RequirePeakAtScanTime and IonMobilityWindow in XicExtraction
 * Remove DTW', the dynamic time warping of the alignment tools
 * Add PeakShape, the apex and the standard deviation of a fitted peak from its Gaussian or exponentially modified Gaussian parameters, used by the alignment tools
+* Add the column IonMobilityCentre as the last column of the .quant row (QuantificationResult): the ion mobility the XIC of the row is summed around, NaN without an ion mobility window. Breaking: QuantBasedAlignment, AlignmentBasedQuantification and AlignmentBasedQuantStatistics do not read .quant files without it
 
 #### 0.0.12 - Monday, September 28, 2026
 * Extend PeptideSpectrumMatchingResult with IonMobility, Hyperscore, Expectscore, MatchedIons and TotalIons. Breaking: .psm files written by earlier releases have 23 columns and have to be regenerated before PSMStatistics of this release reads them

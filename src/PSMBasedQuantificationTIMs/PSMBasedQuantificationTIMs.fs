@@ -234,6 +234,25 @@ module PSMBasedQuantificationTIMs =
         let rt, intensity = Xic.rtProfile readSortedPeaks idx rtQuery meanPrecMz mzWindow_Da meanIM imWindow
         Xic.processXic baseLineCorrection rt intensity
 
+    /// The XIC of an ion located at its PSMs: scan time, m/z and expected ion mobility (the one of the PSMs) to the ion mobility
+    /// centre of the ion (None if there is no signal to take it from) and the XIC summed within +-halfWidth around it.
+    /// The raw XIC is extracted once over +-halfWidth around the expected ion mobility and the pairs of the mobility profile are
+    /// recorded. The centre is Xic.tryMobilityCentre of the raw XIC; with a centre the quantified XIC is the profile summed around
+    /// it (Xic.summedTrace), without one it is the raw XIC at the expected ion mobility; both go through Xic.processXic. The profile
+    /// belongs to the returned function and is emptied for every ion, so it serves the ions of a file, which are quantified one after
+    /// the other. An expected ion mobility that is not finite gives the XIC at it (initGetProcessedXIC).
+    let initGetTargetXic (baseLineCorrection: Domain.BaseLineCorrection option) readSortedPeaks idx scanTimeWindow mzWindow_Da (halfWidth: float) =
+        let profile = Xic.MobilityProfile()
+        fun (scanTime: float) (mz: float) (expectedMobility: float) ->
+            if not (Numerics.isFinite expectedMobility) then
+                None, initGetProcessedXIC baseLineCorrection readSortedPeaks idx scanTimeWindow mzWindow_Da halfWidth scanTime mz expectedMobility
+            else
+                let rtQuery = Query.createRangeQuery scanTime scanTimeWindow
+                let rt, intensity = Xic.rtProfileWithMobilityProfile readSortedPeaks idx rtQuery mz mzWindow_Da expectedMobility halfWidth profile
+                match Xic.tryMobilityCentre profile rt intensity scanTime expectedMobility halfWidth with
+                | Some centre -> Some centre, Xic.processXic baseLineCorrection rt (fst (Xic.summedTrace profile centre halfWidth))
+                | None -> None, Xic.processXic baseLineCorrection rt intensity
+
 
     [<Literal>]
     let rtBinWidth = 0.01
@@ -1724,6 +1743,16 @@ module PSMBasedQuantificationTIMs =
             | Domain.Window.Fixed v -> v
             | Domain.Window.Estimate -> failwith "IonMobilityWindow Estimate is only available in AlignmentBasedQuantification; use Fixed."
         let getXIC = initGetProcessedXIC processParams.BaseLineCorrection readSortedPeaksWithMem retTimeIdxed processParams.XicExtraction.ScanTimeWindow mzWindow ionMobilityHalfWindow
+        // the XIC is summed over +-IonMobilityWindow around the ion mobility centre of the ion, taken from the signal around the ion mobility of the PSMs
+        logger.Trace (sprintf "Ion mobility: XIC summed over +-%.4f around the ion mobility centre of the ion" ionMobilityHalfWindow)
+        // for the log, the ions with a finite expected ion mobility are counted
+        let centreTally = Xic.MobilityCentreTally()
+        let getTargetXic =
+            let tryGetTargetXic = initGetTargetXic processParams.BaseLineCorrection readSortedPeaksWithMem retTimeIdxed processParams.XicExtraction.ScanTimeWindow mzWindow ionMobilityHalfWindow
+            fun scanTime mz expectedMobility ->
+                let centre, xic = tryGetTargetXic scanTime mz expectedMobility
+                if Numerics.isFinite expectedMobility then centreTally.Add(expectedMobility, centre)
+                defaultArg centre expectedMobility, xic
         // the isotope pattern is read from the XIC points of its peaks inside the ion mobility window of the XIC
         let comparePredictedAndMeasuredIsotopicCluster =
             initComparePredictedAndMeasuredIsotopicClusterIonMobility
@@ -1943,6 +1972,7 @@ module PSMBasedQuantificationTIMs =
                                 AlignmentScore                              = nan
                                 AlignmentQValue                             = 0.
                                 IonMobility                                 = targetQuant.WeightedIonMobility
+                                IonMobilityCentre                           = nan
                             }
                             |> Some
                         else
@@ -2015,6 +2045,7 @@ module PSMBasedQuantificationTIMs =
                                 AlignmentScore                              = nan
                                 AlignmentQValue                             = 0.
                                 IonMobility                                 = targetQuant.WeightedIonMobility
+                                IonMobilityCentre                           = nan
                             }
                             |> Some
             with
@@ -2116,6 +2147,7 @@ module PSMBasedQuantificationTIMs =
                                 AlignmentScore                              = nan
                                 AlignmentQValue                             = 0.
                                 IonMobility                                 = targetQuant.WeightedIonMobility
+                                IonMobilityCentre                           = nan
                             }
                             |> Some
             with
@@ -2134,7 +2166,8 @@ module PSMBasedQuantificationTIMs =
                 RequirePeakAtScanTime = processParams.RequirePeakAtScanTime
                 CorrectionAt = calibration.CorrectionAt
                 IonMobilityOf = ionMobilityOf
-                GetXic = getXIC
+                GetTargetXic = getTargetXic
+                GetXicAtMobility = getXIC
                 IdentifyPeaks = identifyPeaks
                 ComparePredictedAndMeasuredIsotopicCluster = comparePredictedAndMeasuredIsotopicCluster
             }
@@ -2219,5 +2252,6 @@ module PSMBasedQuantificationTIMs =
         inReader.Dispose()
         if peakCache.Reads > 0 then logger.Trace (sprintf "%i MS1 spectra were read for %i MS1s of the file (cache of %i spectra)" peakCache.Reads ms1SortedByScanTime.Length peakCache.Capacity)
         logger.Trace (sprintf "Isotope patterns: %i read from the peptide data base, %i computed" isotopePatterns.Read isotopePatterns.Computed)
+        logger.Trace (sprintf "Ion mobility: %s" (centreTally.Summary ionMobilityHalfWindow))
         logger.Trace "executing quantification:finished"
         

@@ -20,6 +20,7 @@
     <Compile Include="Unit_Tests\MzCalibration.fs"/>
     <Compile Include="Unit_Tests\AlignmentScoreCalibration.fs"/>
     <Compile Include="Unit_Tests\PeakShape.fs"/>
+    <Compile Include="Unit_Tests\IonMobilityCentre.fs"/>
     <Compile Include="Main.fs" />
   </ItemGroup>
 

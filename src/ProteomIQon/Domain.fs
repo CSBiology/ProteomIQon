@@ -201,7 +201,7 @@ module Domain =
             MzWindow_Da                  : Window 
             XicProcessing                : XicProcessing
             TopKPSMs                     : int option
-            /// Half width of the ion mobility window (1/K0). Fixed v: ±v around the ion's ion mobility. Estimate (AlignmentBasedQuantification only): from the predicted ion mobility sd. PSMBasedQuantification ignores it.
+            /// Half width of the ion mobility window (1/K0). Fixed v: ±v around the ion mobility centre of the ion. Estimate (AlignmentBasedQuantification only): from the predicted ion mobility sd. PSMBasedQuantification ignores it.
             IonMobilityWindow            : Window
         }
        
@@ -226,7 +226,7 @@ module Domain =
             BaseLineCorrection           : BaseLineCorrection option
             /// The filters keep rows with -limit < log2 ((area / median area) / (apex / median apex)) < limit.
             QualityFilterLog2Limit       : float
-            /// Number of PSMs, ranked by summed matched fragment intensity, whose weighted scan time (and ion mobility) centres the XIC.
+            /// Number of PSMs, ranked by summed matched fragment intensity, whose weighted scan time (and ion mobility) locates the XIC.
             CentrePSMs                   : int
             /// true: only a peak that contains the scan time is quantified, none otherwise. false: the peak that contains the scan time, else the peak whose apex is closest to it (HULQ.getPeakBy).
             RequirePeakAtScanTime        : bool
