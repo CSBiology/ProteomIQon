@@ -128,6 +128,27 @@ module PeakQuantification =
             FSharp.Stats.Correlation.Seq.pearson (xValues |> Array.map fQ) (xValues |> Array.map fI)
         | _ -> nan
 
+    /// Normalises the measured and the predicted intensities of the matched isotope peaks to a sum of 1 and calculates the KL divergences.
+    let normalizeClusterComparison (recordedVsPredictedPattern: PeakComparison []) =
+        let recordedVsPredictedPatternNorm =
+            let sumMeasured = recordedVsPredictedPattern |> Array.sumBy (fun x -> x.MeasuredIntensity)
+            let sumMeasuredCorr = recordedVsPredictedPattern |> Array.sumBy (fun x -> x.MeasuredIntensityCorrected)
+            let sumMeasuredPred = recordedVsPredictedPattern |> Array.sumBy (fun x -> x.PredictedRelFrequency)
+            recordedVsPredictedPattern
+            |>Array.map (fun isoP ->
+                {isoP with
+                    MeasuredIntensity = isoP.MeasuredIntensity / sumMeasured;
+                    MeasuredIntensityCorrected = isoP.MeasuredIntensityCorrected / sumMeasuredCorr;
+                    PredictedRelFrequency = isoP.PredictedRelFrequency / sumMeasuredPred }
+                )
+        let klUnCorr = klDiv (recordedVsPredictedPatternNorm |> Array.map (fun x -> x.MeasuredIntensity)) (recordedVsPredictedPatternNorm |> Array.map (fun x -> x.PredictedRelFrequency))
+        let klCorr   = klDiv (recordedVsPredictedPatternNorm |> Array.map (fun x -> x.MeasuredIntensityCorrected)) (recordedVsPredictedPatternNorm |> Array.map (fun x -> x.PredictedRelFrequency))
+        {
+            PeakComparisons     = recordedVsPredictedPatternNorm
+            KLDiv_UnCorrected   = klUnCorr
+            KLDiv_Corrected     = klCorr
+        }
+
     ///
     /// getMs1Peaks gives the peaks of a MS1 spectrum (by ID) with lowMz < m/z < highMz in file order.
     let initComparePredictedAndMeasuredIsotopicCluster (isotopePatterns: IsotopePatterns.IsotopePatternLookUp) (getMs1Peaks: string -> float -> float -> Peak[]) (getClosestMs1: float -> string) ms1AccuracyEstimate (x_Xic:float[]) (y_Xic:float[]) y_Xic_uncorrected ch (peptide: LookUpResult<AminoAcids.AminoAcid>) tarRt tarMz =    
@@ -154,22 +175,65 @@ module PeakQuantification =
                 {Mz=mz;MeasuredIntensity=measuredIntensity;MeasuredIntensityCorrected=measuredIntensity - baseLineCorrectionF;PredictedRelFrequency= predictedRelFrequency}
                 )
             |> Array.filter (fun (isoP:PeakComparison) -> isoP.MeasuredIntensityCorrected > 0.)
-        let recordedVsPredictedPatternNorm = 
-            let sumMeasured = recordedVsPredictedPattern |> Array.sumBy (fun x -> x.MeasuredIntensity)
-            let sumMeasuredCorr = recordedVsPredictedPattern |> Array.sumBy (fun x -> x.MeasuredIntensityCorrected)
-            let sumMeasuredPred = recordedVsPredictedPattern |> Array.sumBy (fun x -> x.PredictedRelFrequency)
-            recordedVsPredictedPattern
-            |>Array.map (fun isoP -> 
-                {isoP with 
-                    MeasuredIntensity = isoP.MeasuredIntensity / sumMeasured; 
-                    MeasuredIntensityCorrected = isoP.MeasuredIntensityCorrected / sumMeasuredCorr; 
-                    PredictedRelFrequency = isoP.PredictedRelFrequency / sumMeasuredPred }
-                )
-        let klUnCorr = klDiv (recordedVsPredictedPatternNorm |> Array.map (fun x -> x.MeasuredIntensity)) (recordedVsPredictedPatternNorm |> Array.map (fun x -> x.PredictedRelFrequency))
-        let klCorr   = klDiv (recordedVsPredictedPatternNorm |> Array.map (fun x -> x.MeasuredIntensityCorrected)) (recordedVsPredictedPatternNorm |> Array.map (fun x -> x.PredictedRelFrequency))
-        {
-            PeakComparisons     = recordedVsPredictedPatternNorm
-            KLDiv_UnCorrected   = klUnCorr
-            KLDiv_Corrected     = klCorr
-        }
-       
+        normalizeClusterComparison recordedVsPredictedPattern
+
+    /// Isotope peaks are read within (isotopeRangeLow, isotopeRangeHigh] m/z of the monoisotopic m/z.
+    let isotopeRangeLow = -0.6
+    let isotopeRangeHigh = 1.1
+
+    /// Merges the predicted isotope peaks (m/z, relative frequency) of which one lies within 2 x tolerance of the one before it
+    /// (sorted by m/z), so that the extraction windows (+- tolerance) of two groups do not overlap: summed frequency, frequency weighted m/z.
+    let mergeCloseIsotopePeaks (tolerance: float) (pattern: (float * float) []) =
+        let sorted = pattern |> Array.sortBy fst
+        let groups = ResizeArray<ResizeArray<float * float>>()
+        for (mz, freq) in sorted do
+            if groups.Count > 0 && mz - fst (Seq.last groups.[groups.Count - 1]) <= 2. * tolerance then
+                groups.[groups.Count - 1].Add (mz, freq)
+            else
+                groups.Add (ResizeArray [ (mz, freq) ])
+        groups
+        |> Seq.map (fun g ->
+            let freq = g |> Seq.sumBy snd
+            let mz = if freq > 0. then (g |> Seq.sumBy (fun (m, f) -> m * f)) / freq else g |> Seq.averageBy fst
+            mz, freq)
+        |> Array.ofSeq
+
+    /// The comparison of a predicted isotope pattern (m/z, relative frequency) with the measured one on spectra with ion mobility.
+    /// The measured intensity of a predicted peak is the XIC point of the quantification at its m/z: extractPoint spectrumID m/z tolerance
+    /// imLow imHigh on the MS1 spectrum closest to the scan time, with the ion mobility window ionMobility +- ionMobilityHalfWindow.
+    /// ionMobilityHalfWindow nan means no ion mobility window, ionMobility nan with a window means no peak is inside it. Predicted
+    /// peaks with tarMz + isotopeRangeLow < m/z <= tarMz + isotopeRangeHigh are used,
+    /// those within 2 x tolerance of each other are merged (mergeCloseIsotopePeaks), predicted peaks without signal are left out.
+    let comparePredictedAndMeasuredIsotopicClusterAt
+        (extractPoint: string -> float -> float -> float -> float -> float * float * float)
+        (getClosestMs1: float -> string)
+        (tolerance: float)
+        (ionMobilityHalfWindow: float)
+        (x_Xic: float[]) (y_Xic: float[]) y_Xic_uncorrected
+        (predictedPattern: (float * float) [])
+        tarRt
+        (tarMz: float)
+        (ionMobility: float) =
+        let baseLineCorrectionF = getBaseLineCorrectionOffsetAt tarRt x_Xic y_Xic y_Xic_uncorrected
+        let closestMS1 = getClosestMs1 tarRt
+        let imLow, imHigh =
+            if System.Double.IsNaN ionMobilityHalfWindow then nan, nan
+            else ionMobility - ionMobilityHalfWindow, ionMobility + ionMobilityHalfWindow
+        let noSignal = not (System.Double.IsNaN ionMobilityHalfWindow) && System.Double.IsNaN ionMobility
+        let recordedVsPredictedPattern =
+            if noSignal then [||] else
+            predictedPattern
+            |> Array.filter (fun (mz, _) -> mz > tarMz + isotopeRangeLow && mz <= tarMz + isotopeRangeHigh)
+            |> mergeCloseIsotopePeaks tolerance
+            |> Array.choose (fun (mz, relFreq) ->
+                let intensity, measuredMz, _ = extractPoint closestMS1 mz tolerance imLow imHigh
+                if intensity > 0. then
+                    Some {Mz = measuredMz; MeasuredIntensity = intensity; MeasuredIntensityCorrected = intensity - baseLineCorrectionF; PredictedRelFrequency = relFreq}
+                else None)
+            |> Array.filter (fun (isoP:PeakComparison) -> isoP.MeasuredIntensityCorrected > 0.)
+        normalizeClusterComparison recordedVsPredictedPattern
+
+    /// The isotope pattern comparison of PSMBasedQuantificationTIMs: the predicted pattern of the peptide is compared with the XIC points
+    /// of its isotope peaks inside the ion mobility window (comparePredictedAndMeasuredIsotopicClusterAt). The tolerance is the m/z half-window of the XIC.
+    let initComparePredictedAndMeasuredIsotopicClusterIonMobility (isotopePatterns: IsotopePatterns.IsotopePatternLookUp) (extractPoint: string -> float -> float -> float -> float -> float * float * float) (getClosestMs1: float -> string) (mzHalfWindow: float) ionMobilityHalfWindow (x_Xic:float[]) (y_Xic:float[]) y_Xic_uncorrected ch (peptide: LookUpResult<AminoAcids.AminoAcid>) tarRt (tarMz: float) (ionMobility: float) =
+        comparePredictedAndMeasuredIsotopicClusterAt extractPoint getClosestMs1 mzHalfWindow ionMobilityHalfWindow x_Xic y_Xic y_Xic_uncorrected (isotopePatterns.Get (peptide, ch)) tarRt tarMz ionMobility

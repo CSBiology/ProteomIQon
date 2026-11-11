@@ -25,7 +25,7 @@
 * Breaking: parameter files of earlier releases stop the tool; they need CentrePSMs, QualityFilterLog2Limit and IonMobilityWindow in XicExtraction
 * Add the parameter RequirePeakAtScanTime (default true): an ion is quantified only when a peak contains the weighted scan time of its PSMs, and its labeled partner only when a peak of the partner trace contains the expected scan time; false takes the peak with the closest apex when no peak contains the scan time
 * Fit the m/z correction of a run in ppm over scan time and m/z; MzWindow_Da Estimate stays four standard deviations of the precursor m/z offsets
-* Sum all peaks inside the m/z window and the ion mobility window to an XIC point
+* Sum all peaks inside the m/z window and the ion mobility window to an XIC point, and read the measured isotope pattern with the same windows
 
 #### 0.0.13 - Wednesday, September 2, 2026
 * Add Gabor3D algorithm for peak detection

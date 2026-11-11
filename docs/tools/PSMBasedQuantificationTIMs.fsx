@@ -30,7 +30,7 @@ PSMBasedQuantificationTIMs is the [PSMBasedQuantification]({{root}}tools/PSMBase
 
 An XIC point is the sum of the intensity of all peaks inside the m/z window and within 0.05 of the identification's ion mobility (`IonMobilityWindow`).
 
-The points form a retention time [ion chromatogram](https://www.biofsharp.com/BioFSharp.Mz/03_01_quantification.html#Building-an-XIC-trace). As PSMBasedQuantification does, the tool detects the peaks on the trace and [fits and integrates](https://www.biofsharp.com/BioFSharp.Mz/03_01_quantification.html#Fitting-and-integrating-the-main-peak) the peak that contains the weighted scan time of the identifications (see `CentrePSMs`). The output has the layout of PSMBasedQuantification.
+The points form a retention time [ion chromatogram](https://www.biofsharp.com/BioFSharp.Mz/03_01_quantification.html#Building-an-XIC-trace). As PSMBasedQuantification does, the tool detects the peaks on the trace and [fits and integrates](https://www.biofsharp.com/BioFSharp.Mz/03_01_quantification.html#Fitting-and-integrating-the-main-peak) the peak that contains the weighted scan time of the identifications (see `CentrePSMs`). The measured isotope pattern of a row (the `KLDiv` and `IsotopicPattern` columns) is read with the same windows, on the spectrum closest to the fitted scan time. The output has the layout of PSMBasedQuantification.
 
 ## Inputs and outputs
 

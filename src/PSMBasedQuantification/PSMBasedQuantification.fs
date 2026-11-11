@@ -199,7 +199,7 @@ module PSMBasedQuantification =
                 IonMobilityOf = (fun _ -> nan)
                 GetXic = getXICWithIM
                 IdentifyPeaks = identifyPeaks
-                ComparePredictedAndMeasuredIsotopicCluster = comparePredictedAndMeasuredIsotopicCluster
+                ComparePredictedAndMeasuredIsotopicCluster = (fun x y yUncorrected charge peptide scanTime mz _ -> comparePredictedAndMeasuredIsotopicCluster x y yUncorrected charge peptide scanTime mz)
             }
         logger.Trace "init quantification functions:finished"
         
