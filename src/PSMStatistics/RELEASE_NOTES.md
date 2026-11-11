@@ -10,6 +10,7 @@
 * Write only the header instead of failing when no PSM passes the thresholds
 * Add the parameter RetentionTimeFeature (default true): predict the scan time of a peptide from its sequence with a model trained on the confident peptides of the file in folds of peptide groups, and add the deviation of the scan time from the prediction in robust standard deviations and its absolute value (RtDeviation, AbsRtDeviation) as model features; the feature is not used, with a warning, when the file has fewer than 500 confident unique peptides or the out-of-fold R2 is below 0.3
 * With Threshold Fixed, write the SequestScore as ModelScore, which was NaN
+* Score the PSMs faster with the same results
 
 #### 0.0.11 - Monday, September 28, 2026
 * Use Hyperscore and Expectscore as features and seed the training with the expectation value when the input carries them

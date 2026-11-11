@@ -559,10 +559,15 @@ module PSMStatistics =
                 with
                 | ex -> logger.Warn (sprintf "%sMetrics on the test split not available: %s" prefix ex.Message)
                 let predF = ctx.Model.CreatePredictionEngine<PSMToLearn,PSMPrediction>(model)
-                let predict psm = 
-                    psm 
-                    |> predF.Predict
-                predict 
+                let cache = System.Collections.Generic.Dictionary<PSMToLearn,PSMPrediction>(HashIdentity.Reference)
+                let predict (psm: PSMToLearn) =
+                    match cache.TryGetValue psm with
+                    | true, prediction -> prediction
+                    | _ ->
+                        let prediction = predF.Predict psm
+                        cache.[psm] <- prediction
+                        prediction
+                predict
             logger.Trace "Prepare training pipeline:finished"
             logger.Trace "Converting psms to PSMToLearn format."
             let psmsToLearn =
