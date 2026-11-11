@@ -123,6 +123,93 @@ module PSMQuantification =
         Y_Xic_uncorrected   = uncorrectedItzData
         }
 
+    /// Returns the median of positive, finite values or None if no usable value exists.
+    let private tryMedianFinitePositive (values: float[]) =
+        let usableValues =
+            values
+            |> Array.filter (fun value ->
+                Numerics.isFinite value && value > 0.0
+            )
+
+        if Array.isEmpty usableValues then
+            None
+        else
+            Some (Array.median usableValues)
+
+    /// Keeps the rows whose quality ratio, log2 of the area over its median divided by the apex over its median, lies inside the borders.
+    /// Rows with a non-finite or non-positive area or apex are dropped. The medians use the finite, positive values.
+    /// No rows are kept for empty input or when no finite, positive median exists.
+    let qualityFilter (quantOf: QuantificationResult -> float) (apexOf: QuantificationResult -> float) lowerBorder upperBorder (quantResults: QuantificationResult[]) =
+        if Array.isEmpty quantResults then
+            [||]
+        else
+            let medianApexIntensity =
+                quantResults
+                |> Array.map apexOf
+                |> tryMedianFinitePositive
+
+            let medianQuantIntensity =
+                quantResults
+                |> Array.map quantOf
+                |> tryMedianFinitePositive
+
+            match medianApexIntensity, medianQuantIntensity with
+            | Some apexMedian, Some quantMedian ->
+                quantResults
+                |> Array.filter (fun result ->
+                    let apex = apexOf result
+                    let quant = quantOf result
+
+                    if
+                        not (Numerics.isFinite apex)
+                        || not (Numerics.isFinite quant)
+                        || apex <= 0.0
+                        || quant <= 0.0
+                    then
+                        false
+                    else
+                        let apexNorm = apex / apexMedian
+                        let quantNorm = quant / quantMedian
+                        let ratio = quantNorm / apexNorm
+
+                        if not (Numerics.isFinite ratio) || ratio <= 0.0 then
+                            false
+                        else
+                            let qualR = FSharp.Stats.Ops.log2 ratio
+
+                            Numerics.isFinite qualR
+                            && qualR > lowerBorder
+                            && qualR < upperBorder
+                )
+
+            | _ ->
+                [||]
+
+    /// The quality filter on the light area and apex.
+    let lightQualityFilter lowerBorder upperBorder (quantResults: QuantificationResult[]) =
+        qualityFilter (fun result -> result.Quant_Light) (fun result -> result.MeasuredApex_Light) lowerBorder upperBorder quantResults
+
+    /// The quality filter on the heavy area and apex.
+    let heavyQualityFilter lowerBorder upperBorder (quantResults: QuantificationResult[]) =
+        qualityFilter (fun result -> result.Quant_Heavy) (fun result -> result.MeasuredApex_Heavy) lowerBorder upperBorder quantResults
+
+    /// The quality filter with the borders -limit and limit on the sides that are quantified with the labeling. N15Labeling: the heavy
+    /// filter, then the light filter on the rows it keeps. N15LabelingOnly: the heavy filter. Unlabeled: the light filter. Labelshift keeps all rows.
+    let labelingQualityFilter (labeling: Domain.Labeling) limit (quantResults: QuantificationResult[]) =
+        match labeling with
+        | Domain.Labeling.N15Labeling ->
+            quantResults
+            |> heavyQualityFilter (-limit) limit
+            |> lightQualityFilter (-limit) limit
+        | Domain.Labeling.N15LabelingOnly ->
+            quantResults
+            |> heavyQualityFilter (-limit) limit
+        | Domain.Labeling.Unlabeled ->
+            quantResults
+            |> lightQualityFilter (-limit) limit
+        | Domain.Labeling.Labelshift ->
+            quantResults
+
     ///
     let saveChart sequence globalMod ch (xXic:float[]) (yXic:float[]) ms2s avgScanTime (xToQuantify:float[]) (ypToQuantify:float[]) (fitY:float[])
             (xXicInferred:float[]) (yXicinferred:float[]) (xInferred:float[]) (inferredFit:float[]) (*(xEnvelopeSum:float[]) (yEnvelopeSum:float[])*) (peaks:FSharp.Stats.Signal.PeakDetection.IdentifiedPeak []) (pattern:PeakComparison []) plotDirectory =

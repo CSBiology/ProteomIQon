@@ -33,50 +33,6 @@ module PSMBasedQuantification =
 
 
     ///
-    let lightQualityFilter lowerBorder upperBorder (quantResults:QuantificationResult[]) =
-        let medianApexIntensities = 
-            quantResults
-            |> Array.map (fun x -> x.MeasuredApex_Light)
-            |> Array.filter (fun x -> nan.Equals x |> not)
-            |> Array.median
-        let medianQuantIntensities = 
-            quantResults
-            |> Array.map (fun x -> x.Quant_Light)
-            |> Array.filter (fun x -> nan.Equals x |> not)
-            |> Array.median
-        quantResults
-        |> Array.filter (fun x -> 
-            let qualR = 
-                let apexNorm = x.MeasuredApex_Light / medianApexIntensities
-                let quantNorm =  x.Quant_Light / medianQuantIntensities
-                quantNorm / apexNorm
-                |> FSharp.Stats.Ops.log2
-            (qualR > lowerBorder && qualR < upperBorder) || (nan.Equals(qualR) )
-            ) 
-
-    ///
-    let heavyQualityFilter lowerBorder upperBorder (quantResults:QuantificationResult[]) =
-        let medianApexIntensities = 
-            quantResults
-            |> Array.map (fun x -> x.MeasuredApex_Heavy)
-            |> Array.filter (fun x -> nan.Equals x |> not)
-            |> Array.median
-        let medianQuantIntensities = 
-            quantResults
-            |> Array.map (fun x -> x.Quant_Heavy)
-            |> Array.filter (fun x -> nan.Equals x |> not)
-            |> Array.median
-        quantResults
-        |> Array.filter (fun x -> 
-            let qualR = 
-                let apexNorm = x.MeasuredApex_Heavy / medianApexIntensities
-                let quantNorm =  x.Quant_Heavy / medianQuantIntensities
-                quantNorm / apexNorm
-                |> FSharp.Stats.Ops.log2
-            (qualR > lowerBorder && qualR < upperBorder) || (nan.Equals(qualR) )
-            )
-    
-    ///
     let initGetProcessedXIC (baseLineCorrection:Domain.BaseLineCorrection option) readSortedPeaks idx scanTimeWindow mzWindow_Da meanScanTime meanPrecMz =
         let rtQuery = Query.createRangeQuery meanScanTime scanTimeWindow
         let rt, intensity = Xic.rtProfile readSortedPeaks idx rtQuery meanPrecMz mzWindow_Da nan nan
@@ -237,21 +193,7 @@ module PSMBasedQuantification =
                 )
             |> Array.choose id
                     
-        let limit = processParams.QualityFilterLog2Limit
-        let filteredResults = 
-            match processParams.PerformLabeledQuantification with 
-            |Domain.Labeling.N15Labeling ->
-                quantResults
-                |> heavyQualityFilter (-limit) limit
-                |> lightQualityFilter (-limit) limit
-            |Domain.Labeling.N15LabelingOnly ->
-                quantResults
-                |> heavyQualityFilter (-limit) limit
-            |Domain.Labeling.Unlabeled ->
-                quantResults
-                |> lightQualityFilter (-limit) limit
-            |Domain.Labeling.Labelshift ->
-                quantResults
+        let filteredResults = labelingQualityFilter processParams.PerformLabeledQuantification processParams.QualityFilterLog2Limit quantResults
         filteredResults 
         |> SeqIO'.csv "\t" true false
         |> FSharpAux.IO.SeqIO.Seq.writeOrAppend (outFilePath)

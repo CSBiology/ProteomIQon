@@ -65,9 +65,9 @@ With `-dc` the tool writes one chart per peptide ion into `run_plots`, plus `mzE
 | `XicExtraction.TopKPSMs` | `None` | `Some k` keeps only the k identifications with the highest `ModelScore` per peptide ion when placing the scan time. |
 | `XicExtraction.IonMobilityWindow` | `Window.Fixed 0.05` | Not used, the tool does not read ion mobility. |
 | `BaseLineCorrection` | `Some { MaxIterations = 10; Lambda = 6; P = 0.05 }` | Asymmetric least squares baseline subtraction on the trace before peak detection. `None` skips it. |
-| `QualityFilterLog2Limit` | `2.0` | The quality filter keeps rows with -limit < log2 ((area / median area) / (apex / median apex)) < limit. Rows with a NaN ratio are kept. |
+| `QualityFilterLog2Limit` | `2.0` | The quality filter keeps rows with -limit < log2 ((area / median area) / (apex / median apex)) < limit. Rows with a non-finite or non-positive area, apex or ratio are dropped. |
 | `CentrePSMs` | `3` | Number of identifications per peptide ion, ranked by the summed intensity of their matched fragment ions, whose intensity weighted scan time centres the trace. It is applied after `TopKPSMs`, which ranks by `ModelScore`. At least 1. |
-| `RequirePeakAtScanTime` | `true` | `true` quantifies only a peak that contains the weighted scan time of the identifications, so an ion without such a peak gets no row. The labeled partner needs a peak of its own trace that contains the fitted scan time of the ion. Without one the partner columns stay empty. `false` takes the peak with the closest apex when no peak contains the scan time. |
+| `RequirePeakAtScanTime` | `true` | `true` quantifies only a peak that contains the weighted scan time of the identifications, so an ion without such a peak gets no row. The labeled partner needs a peak of its own trace that contains the fitted scan time of the ion. Without one it is not quantified, and the quality filter then drops the row with `N15Labeling`, and with `N15LabelingOnly` when the missing partner is heavy. `false` takes the peak with the closest apex when no peak contains the scan time. |
 
 The wavelet parameters:
 
