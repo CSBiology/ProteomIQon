@@ -62,10 +62,10 @@ The parameter record is the one of PSMBasedQuantification. The defaults below ar
 |-----------|---------|---------|
 | `PerformLabeledQuantification` | `Labeling.Unlabeled` | Label free quantification of the identified ion. The three labeled cases work as in PSMBasedQuantification and quantify the partner ion too. |
 | `XicExtraction.ScanTimeWindow` | `2.0` | Half width of the retention time range around the identification that is extracted, in the scan time unit of the run. |
-| `XicExtraction.MzWindow_Da` | `Window.Estimate` | Half width of the m/z window, in Da. Every peak inside it counts in an XIC point. The m/z correction and `Window.Estimate` work as in PSMBasedQuantification. `Window.Fixed 0.07` sets 0.07 Da. |
+| `XicExtraction.MzWindow_Da` | `Window.Fixed 0.008` | Half width of the m/z window, in Da. Every peak inside it counts in an XIC point. The m/z correction and `Window.Estimate` work as in PSMBasedQuantification. |
 | `XicExtraction.XicProcessing` | `XicProcessing.Wavelet waveletParams` | Peak detection on the retention time trace, summed over the ion mobility window. The wavelet parameters are listed below. `SecondDerivative` is the other supported case. `Gabor3D` is in development and does not work currently. |
 | `XicExtraction.TopKPSMs` | `None` | `Some k` keeps only the k identifications with the highest `ModelScore` per peptide ion when placing the peak. |
-| `XicExtraction.IonMobilityWindow` | `Window.Fixed 0.05` | Half width v of the ion mobility window around the ion mobility centre of the ion, in 1/K0. `Window.Estimate` is not available here and stops the tool with an error that asks for `Fixed`. |
+| `XicExtraction.IonMobilityWindow` | `Window.Fixed 0.025` | Half width v of the ion mobility window around the ion mobility centre of the ion, in 1/K0. `Window.Estimate` is not available here and stops the tool with an error that asks for `Fixed`. |
 | `BaseLineCorrection` | `Some { MaxIterations = 10; Lambda = 6; P = 0.05 }` | Asymmetric least squares baseline subtraction before peak detection. `None` skips it. |
 | `QualityFilterLog2Limit` | `2.0` | The quality filter keeps rows with -limit < log2 ((area / median area) / (apex / median apex)) < limit. Rows with a non-finite or non-positive area, apex or ratio are dropped. |
 | `CentrePSMs` | `3` | Number of identifications per peptide ion with an ion mobility, ranked by the summed intensity of their matched fragment ions, whose intensity weighted scan time and ion mobility locate the trace. It is applied after `TopKPSMs`, which ranks by `ModelScore`. At least 1. |
@@ -86,7 +86,7 @@ The wavelet parameters:
 | `NoiseQuantile` | `0.01` | Quantile of the wavelet correlation used as noise level. |
 | `MinSNR` | `0.01` | A peak needs a correlation above `MinSNR` times the noise level. |
 
-The default file is [QuantificationTIMsParams.json](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/QuantificationTIMsParams.json).
+The default file is [QuantificationTIMsParams.json](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/QuantificationTIMsParams.json). Use the same `Fixed` values here and in [AlignmentBasedQuantification]({{root}}tools/AlignmentBasedQuantification.html) for one data set. Suitable values depend on the instrument and the method.
 
 ## Writing a parameter file
 *)
@@ -115,10 +115,10 @@ let quantificationTIMsParams : Dto.QuantificationParams =
         XicExtraction =
             {
                 ScanTimeWindow = 2.
-                MzWindow_Da    = Window.Estimate
+                MzWindow_Da    = Window.Fixed 0.008
                 XicProcessing  = XicProcessing.Wavelet waveletParams
                 TopKPSMs       = None
-                IonMobilityWindow = Window.Fixed 0.05
+                IonMobilityWindow = Window.Fixed 0.025
             }
         BaseLineCorrection = Some { MaxIterations = 10; Lambda = 6; P = 0.05 }
         QualityFilterLog2Limit = 2.

@@ -5,7 +5,10 @@
   "XicExtraction": {
     "ScanTimeWindow": 2.0,
     "MzWindow_Da": {
-      "Case": "Estimate"
+      "Case": "Fixed",
+      "Fields": [
+        0.008
+      ]
     },
     "XicProcessing": {
       "Case": "Wavelet",
@@ -44,7 +47,7 @@
     "IonMobilityWindow": {
       "Case": "Fixed",
       "Fields": [
-        0.05
+        0.025
       ]
     }
   },

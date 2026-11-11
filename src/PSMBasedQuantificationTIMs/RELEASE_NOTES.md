@@ -28,6 +28,7 @@
 * Sum all peaks inside the m/z window and the ion mobility window to an XIC point, and read the measured isotope pattern with the same windows
 * Sum the traces of an ion within +-IonMobilityWindow around its ion mobility centre, the intensity weighted ion mobility of the signal within the window around the ion mobility of the MS/MS spectra at the weighted scan time of the identifications
 * Add the column IonMobilityCentre as the last column of the .quant: the ion mobility the XIC of the row is summed around
+* Default to MzWindow_Da Fixed 0.008 and IonMobilityWindow Fixed 0.025
 
 #### 0.0.13 - Wednesday, September 2, 2026
 * Add Gabor3D algorithm for peak detection

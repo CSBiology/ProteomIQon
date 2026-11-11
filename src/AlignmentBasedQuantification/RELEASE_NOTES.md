@@ -29,6 +29,7 @@
 * Update BioFSharp.Mz to 0.2.3
 * Take the scan time of a fitted peak at the apex of its fitted shape and its width as the standard deviation of that shape, also for peaks with an exponential tail
 * Breaking: the .quant files need the column IonMobilityCentre, so files of earlier PSMBasedQuantification and PSMBasedQuantificationTIMs releases have to be quantified again
+* Add default parameters for timsTOF runs (AlignmentBasedQuantificationTIMsParams.json) with MzWindow_Da Fixed 0.008 and IonMobilityWindow Fixed 0.025
 
 #### 0.0.4 - Wednesday, September 2, 2026
 * Fall back to a median mz correction when the smoothing spline cannot be fitted on sparse data

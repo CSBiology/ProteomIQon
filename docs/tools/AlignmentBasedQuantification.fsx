@@ -175,7 +175,7 @@ each ion that was not quantified at Debug level.
 | TopKPSMs | None | Not used. |
 | IonMobilityWindow | Window.Estimate | `Estimate` or `Window.Fixed v`, in 1/K0 (see Ion mobility). |
 
-See [the default parameter file](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/AlignmentBasedQuantificationParams.json).
+See [the default parameter file](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/AlignmentBasedQuantificationParams.json). For timsTOF runs [AlignmentBasedQuantificationTIMsParams.json](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/AlignmentBasedQuantificationTIMsParams.json) is the same file with `MzWindow_Da` `Window.Fixed 0.008` and `IonMobilityWindow` `Window.Fixed 0.025`, the defaults of [PSMBasedQuantificationTIMs]({{root}}tools/PSMBasedQuantificationTIMs.html). Suitable values depend on the instrument and the method.
 
 ## Writing a parameter file
 *)
