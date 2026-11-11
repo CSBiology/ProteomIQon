@@ -150,7 +150,7 @@ let all =
             let quantified, _ = fittedPeak 5.
             Expect.isTrue (PeakQuantification.isValidFit quantified) "fitted peak"
 
-        testCase "extractPoint equals the peak extraction of PSMBasedQuantificationTIMs" <| fun _ ->
+        testCase "closestPoint equals the peak extraction of PSMBasedQuantificationTIMs" <| fun _ ->
             let rnd = Random 3
             for _ in 1 .. 300 do
                 let n = rnd.Next(0, 60)
@@ -162,32 +162,85 @@ let all =
                 let lock = 500.2 + rnd.NextDouble() * 0.0003
                 let halfWindow = 0.05 + rnd.NextDouble() * 0.05
                 let imLow, imHigh = 0.9, 1.1
-                let intensity, mz, _ = Xic.extractPoint peaks lock halfWindow imLow imHigh
+                let intensity, mz, _ = Xic.closestPoint peaks lock halfWindow imLow imHigh
                 let expectedIntensity, expectedMz = oldExtract peaks lock halfWindow imLow imHigh
                 Expect.equal intensity expectedIntensity "intensity"
                 Expect.isTrue (mz = expectedMz || (Double.IsNaN mz && Double.IsNaN expectedMz)) "m/z"
 
-        testCase "extractPoint takes the edges of the window, the lower m/z of two equidistant peaks and spectra without ion mobility" <| fun _ ->
+        testCase "closestPoint takes the edges of the window, the lower m/z of two equidistant peaks and spectra without ion mobility" <| fun _ ->
             let spectrum mzs ims =
                 let mzs = Array.ofList mzs
                 SortedPeaks.sortPeakArraysByMz mzs (Array.init mzs.Length (fun i -> float (i + 1) * 10.)) (Array.ofList ims)
             // a peak exactly at lockMz +- halfWindow is inside the window
             let edge = spectrum [ 500.25; 500.75 ] [ 1.; 1. ]
-            let intensity, mz, _ = Xic.extractPoint edge 500.5 0.25 0.5 1.5
+            let intensity, mz, _ = Xic.closestPoint edge 500.5 0.25 0.5 1.5
             Expect.equal (intensity, mz) (10., 500.25) "lower edge, and the closer of the two edge peaks by file order of equal distance"
             let upper = spectrum [ 500.75 ] [ 1. ]
-            let intensity, mz, _ = Xic.extractPoint upper 500.5 0.25 0.5 1.5
+            let intensity, mz, _ = Xic.closestPoint upper 500.5 0.25 0.5 1.5
             Expect.equal (intensity, mz) (10., 500.75) "upper edge"
             // two peaks with the same distance to the lock m/z: the lower m/z
             let tie = spectrum [ 500.75; 500.25 ] [ 1.; 1. ]
-            let intensity, mz, _ = Xic.extractPoint tie 500.5 0.5 0.5 1.5
+            let intensity, mz, _ = Xic.closestPoint tie 500.5 0.5 0.5 1.5
             Expect.equal mz 500.25 "lower m/z"
             Expect.equal intensity 20. "its intensity"
             // no ion mobility: the closest peak, no window on the ion mobility
             let noIm = spectrum [ 500.1; 500.45; 500.9 ] []
-            let intensity, mz, im = Xic.extractPoint noIm 500.5 0.5 0.5 1.5
+            let intensity, mz, im = Xic.closestPoint noIm 500.5 0.5 0.5 1.5
             Expect.equal (intensity, mz) (20., 500.45) "closest peak"
             Expect.isTrue (Double.IsNaN im) "no ion mobility"
+
+        testCase "extractPoint sums the peaks of the m/z window inside the ion mobility window" <| fun _ ->
+            // m/z, intensity, ion mobility
+            let rows =
+                [ 500.40, 5., 1.00   // outside the m/z window
+                  500.48, 10., 1.00
+                  500.48, 20., 1.10
+                  500.49, 30., 1.00
+                  500.50, 40., 0.90
+                  500.50, 60., 1.00  // closest m/z, two mobility scans
+                  500.50, 1000., 1.50 // outside the mobility window
+                  500.52, 50., 1.20
+                  500.55, 7., 1.00   // exactly at the edge: inside
+                  500.60, 9., 1.00 ] // outside the m/z window
+            let peaks =
+                SortedPeaks.sortPeakArraysByMz
+                    (rows |> List.map (fun (m, _, _) -> m) |> Array.ofList)
+                    (rows |> List.map (fun (_, i, _) -> i) |> Array.ofList)
+                    (rows |> List.map (fun (_, _, im) -> im) |> Array.ofList)
+            let intensity, mz, im = Xic.extractPoint peaks 500.5 0.05 0.95 1.15
+            // inside the mobility window (0.95, 1.15): 10, 20, 30, 60, 50 (1.20 is outside), 7 at 500.55
+            let expected = [ 500.48, 10., 1.00; 500.48, 20., 1.10; 500.49, 30., 1.00; 500.50, 60., 1.00; 500.55, 7., 1.00 ]
+            let total = expected |> List.sumBy (fun (_, i, _) -> i)
+            Expect.equal intensity total "summed intensity"
+            Expect.floatClose Accuracy.high mz (expected |> List.sumBy (fun (m, i, _) -> m * i) |> fun x -> x / total) "intensity weighted m/z"
+            Expect.floatClose Accuracy.high im (expected |> List.sumBy (fun (_, i, v) -> v * i) |> fun x -> x / total) "intensity weighted ion mobility"
+            // the closest group alone holds only a part of the signal
+            let closest, closestMz, _ = Xic.closestPoint peaks 500.5 0.05 0.95 1.15
+            Expect.equal (closest, closestMz) (60., 500.5) "closestPoint keeps the closest m/z"
+            // no ion mobility window: all peaks of the m/z window
+            let all, _, _ = Xic.extractPoint peaks 500.5 0.05 nan nan
+            Expect.equal all (10. + 20. + 30. + 40. + 60. + 1000. + 50. + 7.) "no mobility window"
+            // nothing inside
+            let none, noneMz, noneIm = Xic.extractPoint peaks 500.5 0.05 2.0 3.0
+            Expect.equal none 0. "no peak inside the mobility window"
+            Expect.isTrue (Double.IsNaN noneMz && Double.IsNaN noneIm) "m/z and mobility are nan"
+            let empty, emptyMz, _ = Xic.extractPoint peaks 700. 0.05 0.95 1.15
+            Expect.equal empty 0. "no peak in the m/z window"
+            Expect.isTrue (Double.IsNaN emptyMz) "m/z is nan"
+
+        testCase "extractPoint without ion mobility keeps the closest peak" <| fun _ ->
+            let spectrum mzs =
+                let mzs = Array.ofList mzs
+                SortedPeaks.sortPeakArraysByMz mzs (Array.init mzs.Length (fun i -> float (i + 1) * 10.)) [||]
+            let peaks = spectrum [ 500.1; 500.45; 500.52; 500.9 ]
+            let intensity, mz, im = Xic.extractPoint peaks 500.5 0.1 nan nan
+            Expect.equal (intensity, mz) (30., 500.52) "closest peak, no sum"
+            Expect.isTrue (Double.IsNaN im) "no ion mobility"
+            let sameI, sameMz, _ = Xic.closestPoint peaks 500.5 0.1 0.5 1.5
+            Expect.equal (intensity, mz) (sameI, sameMz) "same as closestPoint with an ion mobility window"
+            let none, noneMz, _ = Xic.extractPoint peaks 600. 0.1 nan nan
+            Expect.equal none 0. "no peak"
+            Expect.isTrue (Double.IsNaN noneMz) "m/z is nan"
 
         testCase "the wavelet peak detection of a short trace, whose kernel reaches past the padded trace, finds the peak" <| fun _ ->
             for n, spacing in [ 10, 0.1; 14, 0.07; 20, 0.05; 25, 0.04; 30, 0.03 ] do

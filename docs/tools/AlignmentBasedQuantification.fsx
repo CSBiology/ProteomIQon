@@ -89,8 +89,11 @@ half width of 0.05 Da.
 
 ## Ion mobility
 
-Ion mobility is used when the spectra and the `.align` file have it. Only peaks inside the ion mobility window set by `XicExtraction.IonMobilityWindow` enter the XIC. Within the window, peaks are
-summed per m/z over the mobility scans, as PSMBasedQuantificationTIMs does, so transferred and PSM based quantities are comparable.
+Ion mobility is used when the spectra and the `.align` file have it. An XIC point is then the sum of the intensity of all peaks inside
+the m/z window and inside the ion mobility window, as in PSMBasedQuantificationTIMs. Both widths are part of the quantity, so transferred
+and PSM based quantities are comparable when both tools use the same widths.
+
+The window is set by `XicExtraction.IonMobilityWindow`.
 
 - `Fixed v`: ±v around `PredictedIonMobility`.
 - `Estimate`: ±max(0.05, 4 · `PredictedIonMobilitySd`) 1/K0 around `PredictedIonMobility`.

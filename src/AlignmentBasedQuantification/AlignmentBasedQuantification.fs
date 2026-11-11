@@ -57,8 +57,8 @@ module XicSweep =
 
     /// Walks once through the MS1 spectra (sorted by scan time), reads only spectra inside at least one window
     /// and hands every XIC to onComplete as soon as its window is passed. Only the current spectrum and the XICs
-    /// of open windows are held in memory. Returns the number of spectra read.
-    let sweep (readSpectrum: string -> SortedPeaks.MzSortedPeaks) (ms1: (float*string) []) (requests: XicRequest []) (onComplete: int -> RawXic -> unit) =
+    /// of open windows are held in memory. point extracts one XIC point (as Xic.extractPoint). Returns the number of spectra read.
+    let sweep (point: SortedPeaks.MzSortedPeaks -> float -> float -> float -> float -> float * float * float) (readSpectrum: string -> SortedPeaks.MzSortedPeaks) (ms1: (float*string) []) (requests: XicRequest []) (onComplete: int -> RawXic -> unit) =
         let n = requests.Length
         let order =
             Array.init n id
@@ -83,7 +83,7 @@ module XicSweep =
                     let request = requests.[r]
                     acc.Rt.Add rt
                     for t in 0 .. request.LockMz.Length - 1 do
-                        let intensity, observedMz, ionMobility = extractPoint spectrum request.LockMz.[t] request.MzWindow request.ImLow request.ImHigh
+                        let intensity, observedMz, ionMobility = point spectrum request.LockMz.[t] request.MzWindow request.ImLow request.ImHigh
                         acc.Intensity.[t].Add intensity
                         acc.ObservedMz.[t].Add observedMz
                         acc.IonMobility.[t].Add ionMobility
@@ -785,7 +785,7 @@ module AlignmentBasedQuantification =
                 spectraHaveIonMobility alignHasIonMobility useIonMobility (elapsed ())
             )
 
-        // m/z calibration measured in the MS1 spectra: offset of the peak closest to the theoretical m/z (within +-calibrationMzWindow)
+        // m/z calibration measured in the MS1 spectra: offset of the peak (with ion mobility the m/z group) closest to the theoretical m/z (within +-calibrationMzWindow)
         // at the fitted scan time of the ions the run quantified itself. The precursor m/z of the .quant rows only places the lock m/z.
         let initialCalibration = MzCalibration.fit psm.PsmMzObservations
         let calibrationIons =
@@ -812,7 +812,7 @@ module AlignmentBasedQuantification =
                     }
                     )
             let observations = ResizeArray<MzCalibration.Observation>()
-            sweep readSpectrum ms1 requests (fun r raw ->
+            sweep Xic.closestPoint readSpectrum ms1 requests (fun r raw ->
                 if raw.Rt.Length > 0 && raw.Intensity.[0].[0] > 0. then
                     let qp = calibrationIons.[r]
                     observations.Add
@@ -1103,7 +1103,7 @@ module AlignmentBasedQuantification =
         let ownIdx = [| for i in 0 .. toExtract.Length - 1 do if (ownOfIon toExtract.[i]).IsSome then yield i |]
         let newIdx = [| for i in 0 .. toExtract.Length - 1 do if (ownOfIon toExtract.[i]).IsNone then yield i |]
         let sweepOver (indices: int []) (callback: int -> RawXic -> unit) =
-            sweep readSpectrum ms1 (indices |> Array.map (fun i -> toExtract.[i].Request)) (fun j raw -> callback indices.[j] raw)
+            sweep extractPoint readSpectrum ms1 (indices |> Array.map (fun i -> toExtract.[i].Request)) (fun j raw -> callback indices.[j] raw)
         let ownSpectraRead = sweepOver ownIdx analyse
         let mutable analysedOwn = ownIdx |> Array.choose (fun i -> analysed.[i])
         let baseFeatures = [| RtZ; RtZ2; ShapeCorr; LogRelHeight; AbsLog2FwhmRatio; Log2NCandidates; IsoCorr; IsoRatioLog2; AbsPpmMono |]

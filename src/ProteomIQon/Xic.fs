@@ -35,11 +35,12 @@ module Xic =
         let intensity' = pick intensity
         pick rt, subtractBaseline baseline intensity', intensity'
 
-    /// One XIC point: the peak closest to lockMz within +-halfWindow; intensity 0 if there is none.
+    /// The peak closest to lockMz within +-halfWindow; intensity 0 if there is none. It is the XIC point of a spectrum without ion
+    /// mobility and the measurement of the m/z calibration of AlignmentBasedQuantification.
     /// With ion mobility the peaks inside the ion mobility window (no window if imLow is nan) are first summed per m/z,
-    /// because one m/z is spread over the mobility scans.
+    /// because one m/z is spread over the mobility scans, and the sum closest to lockMz is taken.
     /// Returns intensity, observed m/z and the intensity weighted ion mobility of the chosen m/z (nan without ion mobility).
-    let extractPoint (spectrum: SortedPeaks.MzSortedPeaks) (lockMz: float) (halfWindow: float) (imLow: float) (imHigh: float) =
+    let closestPoint (spectrum: SortedPeaks.MzSortedPeaks) (lockMz: float) (halfWindow: float) (imLow: float) (imHigh: float) =
         let mz = spectrum.Mz
         let intensity = spectrum.Intensity
         let high = lockMz + halfWindow
@@ -78,6 +79,40 @@ module Xic =
                         bestMz <- groupMz
                         bestIonMobility <- if sum > 0. then sumIm / sum else nan
         bestIntensity, bestMz, bestIonMobility
+
+    /// One XIC point. Without ion mobility it is the peak closest to lockMz within +-halfWindow (Xic.closestPoint). With ion
+    /// mobility it is the sum of all peaks within +-halfWindow of lockMz inside the ion mobility window (no window if imLow is
+    /// nan), because the signal of an ion is spread over neighbouring m/z values and mobility scans.
+    /// Returns intensity, intensity weighted m/z and intensity weighted ion mobility of these peaks; intensity 0 and nan for both
+    /// if no peak is inside (nan without ion mobility).
+    let extractPoint (spectrum: SortedPeaks.MzSortedPeaks) (lockMz: float) (halfWindow: float) (imLow: float) (imHigh: float) =
+        if spectrum.IonMobility.Length = 0 then
+            closestPoint spectrum lockMz halfWindow imLow imHigh
+        else
+            let mz = spectrum.Mz
+            let intensity = spectrum.Intensity
+            let im = spectrum.IonMobility
+            let high = lockMz + halfWindow
+            let filterIonMobility = not (Double.IsNaN imLow)
+            let mutable i = SortedSearch.lowerBound mz (lockMz - halfWindow)
+            let mutable n = 0
+            let mutable sum = 0.
+            let mutable sumMz = 0.
+            let mutable sumIm = 0.
+            let mutable sumImWeight = 0.
+            while i < mz.Length && mz.[i] <= high do
+                if not filterIonMobility || (im.[i] > imLow && im.[i] < imHigh) then
+                    n <- n + 1
+                    sum <- sum + intensity.[i]
+                    sumMz <- sumMz + intensity.[i] * mz.[i]
+                    if not (Double.IsNaN im.[i]) then
+                        sumIm <- sumIm + intensity.[i] * im.[i]
+                        sumImWeight <- sumImWeight + intensity.[i]
+                i <- i + 1
+            if n > 0 && sum > 0. then
+                sum, sumMz / sum, (if sumImWeight > 0. then sumIm / sumImWeight else nan)
+            else
+                sum, nan, nan
 
     /// Reads the peaks of a spectrum sorted by m/z. The ion mobilities are empty when the spectrum has none.
     let readSortedPeaks (reader: MzIO.MzSQL.MzSQL) (spectrumID: string) =
@@ -145,7 +180,7 @@ module Xic =
         results
 
     /// The XIC of an ion: the scan times of the MS1 spectra inside rtRange and the intensity of each (Xic.extractPoint at lockMz
-    /// +- mzHalfWindow). With an ion mobility window (imCenter +- imHalfWindow) the peaks inside it are summed per m/z; imHalfWindow
+    /// +- mzHalfWindow). With an ion mobility window (imCenter +- imHalfWindow) only the peaks inside it count; imHalfWindow
     /// nan means no ion mobility window, imCenter nan with a window means no peak is inside it.
     let rtProfile (readSortedPeaks: string -> SortedPeaks.MzSortedPeaks) (rtIndex: IMzIOArray<RtIndexEntry>) (rtRange: RangeQuery) (lockMz: float) (mzHalfWindow: float) (imCenter: float) (imHalfWindow: float) =
         RtIndexEntry.Search(rtIndex, rtRange)
