@@ -27,6 +27,7 @@
 * Read the isotope patterns from the table IsotopePattern of the peptide data base where PSMStatistics stored them and compute them otherwise
 * Quantify ions with short XIC traces, on which the wavelet peak detection failed
 * Update BioFSharp.Mz to 0.2.3
+* Take the scan time of a fitted peak at the apex of its fitted shape and its width as the standard deviation of that shape, also for peaks with an exponential tail
 
 #### 0.0.4 - Wednesday, September 2, 2026
 * Fall back to a median mz correction when the smoothing spline cannot be fitted on sparse data

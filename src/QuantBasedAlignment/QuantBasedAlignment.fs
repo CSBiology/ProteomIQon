@@ -259,37 +259,44 @@ module QuantBasedAlignment =
     /// The local error scale of an ion mobility is taken from the shared ions within +-0.05 1/K0, and is at least 0.001.
     let initIonMobilityScale = initErrorScale 0.05 10 0.001
 
+    /// A row of a .quant file that passes the filter with the scan time of the peak apex of its target label.
+    type QuantIon =
+        {
+            Row       : QuantificationResult
+            Apex      : float
+        }
+
     ///
     type QuantFile =
         {
             FileName  : string
             /// The ions that pass the filter; of several rows of an ion the last one is kept.
-            Ions      : Dictionary<PeptideIon,QuantificationResult>
+            Ions      : Dictionary<PeptideIon,QuantIon>
             /// The keys of Ions in file order.
             IonOrder  : PeptideIon []
         }
 
-    /// Why an ion is not used, None if it is.
-    let dropReason (qp:QuantificationResult) =
+    /// The scan time of the peak apex of the target label of an ion that is used, else the reason why it is not used.
+    let apexOrDropReason (qp:QuantificationResult) =
         if qp.GlobalMod <> 0 && qp.GlobalMod <> 1 then
-            Some "GlobalMod is neither 0 nor 1"
+            Error "GlobalMod is neither 0 nor 1"
         else
             let peakParams = if qp.GlobalMod = 0 then qp.Params_Light else qp.Params_Heavy
             if Array.isEmpty peakParams then
-                Some "no fitted peak"
+                Error "no fitted peak"
             elif peakParams.Length < 3 then
-                Some "fit without scan time and sd"
+                Error "fit without scan time and sd"
             else
-                let scanTime = peakParams.[1]
-                let sd = peakParams.[2]
-                let difference = getTargetScanTimeDifference qp
+                let scanTime = PeakShape.apex peakParams
+                let sd = PeakShape.width peakParams
+                let difference = getTargetApexDifferenceAt scanTime qp
                 if not (isFinite scanTime && isFinite sd && sd > 0. && isFinite difference) then
-                    Some "non-finite fitted scan time, sd or search to fitted scan time difference"
+                    Error "non-finite fitted scan time, sd or search to fitted scan time difference"
                 // the fit is a good estimate of the scan time
                 elif abs difference / sd >= 2. then
-                    Some "search scan time 2 or more sd away from the fitted scan time"
+                    Error "search scan time 2 or more sd away from the fitted scan time"
                 else
-                    None
+                    Ok scanTime
 
     /// Reads a .quant file and keeps the ions whose fitted scan time can be trusted, as QuantBasedAlignment does.
     let readQuantFile (quantFilePath:string) =
@@ -298,23 +305,23 @@ module QuantBasedAlignment =
         let rows =
             Csv.CsvReader<QuantificationResult>().ReadFile(quantFilePath,'\t',false,1)
             |> Array.ofSeq
-        let ions = Dictionary<PeptideIon,QuantificationResult>(HashIdentity.Structural)
+        let ions = Dictionary<PeptideIon,QuantIon>(HashIdentity.Structural)
         let ionOrder = ResizeArray<PeptideIon>()
         let dropCounts = SortedDictionary<string,int>()
         let mutable duplicates = 0
         for qp in rows do
-            match dropReason qp with
-            | Some reason ->
+            match apexOrDropReason qp with
+            | Error reason ->
                 logger.Debug (sprintf "Ion not used, %s: %s, GlobalMod %i, charge %i" reason qp.StringSequence qp.GlobalMod qp.Charge)
                 dropCounts.[reason] <- (match dropCounts.TryGetValue reason with | true, c -> c + 1 | _ -> 1)
-            | None ->
+            | Ok apex ->
                 let ion = toPeptideIon qp
                 if ions.ContainsKey ion then
                     logger.Debug (sprintf "Ion has several rows, the last one is used: %s, GlobalMod %i, charge %i" qp.StringSequence qp.GlobalMod qp.Charge)
                     duplicates <- duplicates + 1
                 else
                     ionOrder.Add ion
-                ions.[ion] <- qp
+                ions.[ion] <- { Row = qp; Apex = apex }
         let drops =
             dropCounts
             |> Seq.map (fun kv -> sprintf "%s: %i" kv.Key kv.Value)
@@ -388,9 +395,9 @@ module QuantBasedAlignment =
             logger.Warn (sprintf "%s: %i shared ions, at least %i are needed; the source is not used." pairName shared.Length minSharedIons)
             None
         else
-        let fold  = shared |> Array.map (fun ion -> foldOf.[target.Ions.[ion].PepSequenceID])
-        let x     = shared |> Array.map (fun ion -> getTargetScanTime source.Ions.[ion])
-        let shift = shared |> Array.mapi (fun i ion -> getTargetScanTime target.Ions.[ion] - x.[i])
+        let fold  = shared |> Array.map (fun ion -> foldOf.[target.Ions.[ion].Row.PepSequenceID])
+        let x     = shared |> Array.map (fun ion -> source.Ions.[ion].Apex)
+        let shift = shared |> Array.mapi (fun i ion -> target.Ions.[ion].Apex - x.[i])
         let scanTime = fit scanTimeSettings x shift fold
         let outOfFold = Dictionary<PeptideIon,float>(HashIdentity.Structural)
         shared |> Array.iteri (fun i ion -> if isFinite scanTime.OutOfFold.[i] then outOfFold.[ion] <- x.[i] + scanTime.OutOfFold.[i])
@@ -404,7 +411,7 @@ module QuantBasedAlignment =
             let withIonMobility =
                 [|
                     for i in 0 .. shared.Length - 1 do
-                        if isFinite source.Ions.[shared.[i]].IonMobility && isFinite target.Ions.[shared.[i]].IonMobility then yield i
+                        if isFinite source.Ions.[shared.[i]].Row.IonMobility && isFinite target.Ions.[shared.[i]].Row.IonMobility then yield i
                 |]
             if withIonMobility.Length = 0 then
                 logger.Trace (sprintf "%s: no ion mobility." pairName)
@@ -414,8 +421,8 @@ module QuantBasedAlignment =
                 None
             else
                 let ionsIM  = withIonMobility |> Array.map (fun i -> shared.[i])
-                let xIM     = ionsIM |> Array.map (fun ion -> source.Ions.[ion].IonMobility)
-                let shiftIM = ionsIM |> Array.mapi (fun i ion -> target.Ions.[ion].IonMobility - xIM.[i])
+                let xIM     = ionsIM |> Array.map (fun ion -> source.Ions.[ion].Row.IonMobility)
+                let shiftIM = ionsIM |> Array.mapi (fun i ion -> target.Ions.[ion].Row.IonMobility - xIM.[i])
                 let foldIM  = withIonMobility |> Array.map (fun i -> fold.[i])
                 let fitIM = fit ionMobilitySettings xIM shiftIM foldIM
                 let outOfFoldIM = Dictionary<PeptideIon,float>(HashIdentity.Structural)
@@ -452,9 +459,9 @@ module QuantBasedAlignment =
     /// Transfers an ion of the source of the pair. Ions the model was trained on get their out-of-fold prediction and
     /// a local error scale without their own error, so that they show the same error as ions the target lacks.
     let createAlignmentResult (pair:PairModel) (ion:PeptideIon) : AlignmentResult =
-        let quantifiedPeptide = pair.Source.Ions.[ion]
+        let quantifiedPeptide = pair.Source.Ions.[ion].Row
         let ownError (absError: Dictionary<PeptideIon,float>) = match absError.TryGetValue ion with | true, e -> e | _ -> nan
-        let sourceScanTime = getTargetScanTime quantifiedPeptide
+        let sourceScanTime = pair.Source.Ions.[ion].Apex
         let predictedScanTime =
             match pair.OutOfFold.TryGetValue ion with
             | true, v -> v
@@ -503,8 +510,8 @@ module QuantBasedAlignment =
         |> Array.mapi (fun i ion -> i, ion)
         |> Array.filter (fun (i, ion) -> pair.Fold.[i] = 0 && pair.OutOfFold.ContainsKey ion)
         |> Array.map (fun (i, ion) ->
-            let sourcePep = pair.Source.Ions.[ion]
-            let targetPep = target.Ions.[ion]
+            let sourcePep = pair.Source.Ions.[ion].Row
+            let targetPep = target.Ions.[ion].Row
             let predicted = pair.OutOfFold.[ion]
             {
                 Sequence                             = ion.Sequence
@@ -514,13 +521,13 @@ module QuantBasedAlignment =
                 ModSequenceID                        = sourcePep.ModSequenceID
                 X_FileName                           = pair.Source.FileName
                 X_Intensities                        = getTargetIntensity sourcePep
-                X_Stabw                              = getTargetStabw sourcePep
+                X_Stabw                              = getTargetPeakWidth sourcePep
                 X_Test                               = pair.X.[i]
                 X_IsotopicPatternMz                  = getIsotopicPatternMz sourcePep
                 X_IsotopicPatternIntensity_Observed  = getIsotopicPatternIntensity_Observed sourcePep
                 X_RtTrace                            = getTargetRtTrace sourcePep
                 X_IntensityTrace                     = getTargetIntensityTrace sourcePep
-                Y_Test                               = getTargetScanTime targetPep
+                Y_Test                               = target.Ions.[ion].Apex
                 YHat_Test                            = predicted
                 YHat_Refined_Test                    = predicted
                 Y_Intensity                          = getTargetIntensity targetPep
@@ -620,7 +627,7 @@ module QuantBasedAlignment =
             |> dict
         let foldOf =
             quantFiles.Values
-            |> Seq.collect (fun quantFile -> quantFile.IonOrder |> Seq.map (fun ion -> quantFile.Ions.[ion].PepSequenceID))
+            |> Seq.collect (fun quantFile -> quantFile.IonOrder |> Seq.map (fun ion -> quantFile.Ions.[ion].Row.PepSequenceID))
             |> assignFolds seed scanTimeSettings.NFolds
         targetFiles
         |> FSharpAux.PSeq.withDegreeOfParallelism c

@@ -11,6 +11,7 @@
 * Log the ions that are not used with their reason
 * Overwrite existing output files instead of appending to them
 * Replace the packages ProteomIQon.QuantBasedAlignment_win_x64 and ProteomIQon.QuantBasedAlignment_linux_x64 by the tool package ProteomIQon.QuantBasedAlignment, until now a library, which has no MKL dependency and runs on all platforms
+* Take the scan time of a fitted peak at the apex of its fitted shape and its width as the standard deviation of that shape, also for peaks with an exponential tail
 
 #### 0.0.4 - Wednesday, September 2, 2026
 * Update to .NET 10

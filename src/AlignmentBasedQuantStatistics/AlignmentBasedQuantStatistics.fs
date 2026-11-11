@@ -214,14 +214,14 @@ module AlignmentFeatures =
                 RtTrace = q.RtTrace_Heavy; IntensityTrace = q.IntensityTrace_Corrected_Heavy
             }
 
-    /// Fitted scan time and sd of the HULQ peak parameters.
-    let scanTimeAndSd (peakParams: float []) =
-        if peakParams.Length > 2 then peakParams.[1], peakParams.[2] else nan, nan
+    /// Apex and standard deviation of the fitted peak model of the HULQ peak parameters.
+    let apexAndWidth (peakParams: float []) =
+        if peakParams.Length > 2 then PeakShape.apex peakParams, PeakShape.width peakParams else nan, nan
 
     /// Base and ratio features (baseNames @ ratioNames) of a transferred ion; LocalRtScale and RtResidLocal are nan here.
     let compute (target: QuantificationResult) (align: AlignmentResult) =
         let t = side target
-        let rt, sd = scanTimeAndSd t.Params
+        let rt, sd = apexAndWidth t.Params
         let qs = align.Quant_SourceFile
         let aps = align.ApexIntensity_SourceFile
         let rtS = align.RtTrace_SourceFile
@@ -721,12 +721,12 @@ module AlignmentBasedQuantStatistics =
 
     /// Truth of an overlap ion from its alignment row and its own PSM row.
     let truth (p: Params) (row: QuantificationResult) (own: QuantificationResult) =
-        let rtOwn, sdOwn = scanTimeAndSd (side own).Params
+        let rtOwn, sdOwn = apexAndWidth (side own).Params
         let quantOwn = (side own).Quant
         if not (isFinite rtOwn && isFinite sdOwn && sdOwn > 0. && isFinite quantOwn && quantOwn > 0.) then
             NoTruth
         else
-            let rt, _ = scanTimeAndSd (side row).Params
+            let rt, _ = apexAndWidth (side row).Params
             let z = abs (rt - rtOwn) / sdOwn
             let absLog2Ratio = abs (log ((side row).Quant / quantOwn) / log 2.)
             // nan compares false: alignment rows without fitted peak or quant are negative
@@ -776,7 +776,7 @@ module AlignmentBasedQuantStatistics =
                     None
                 | true, a ->
                     seen.Add key |> ignore
-                    let ownScanTime = match own.TryGetValue key with | true, o -> fst (scanTimeAndSd (side o).Params) | _ -> nan
+                    let ownScanTime = match own.TryGetValue key with | true, o -> fst (apexAndWidth (side o).Params) | _ -> nan
                     Some {
                         Key         = key
                         Row         = row

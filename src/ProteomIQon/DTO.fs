@@ -967,6 +967,37 @@ module Dto =
             with
             | _ -> nan
 
+        /// The fitted parameters of the target label (HULQ output), empty if there are none.
+        let private getTargetParams (qp:QuantificationResult) =
+            try
+            if qp.GlobalMod = 0 then
+                qp.Params_Light
+            else
+                qp.Params_Heavy
+            with
+            | _ -> [||]
+
+        /// Scan time of the apex of the fitted peak model of the target label (PeakShape.apex).
+        let getTargetPeakApex (qp:QuantificationResult) =
+            match getTargetParams qp with
+            | null -> nan
+            | peakParams -> PeakShape.apex peakParams
+
+        /// Standard deviation of the fitted peak model of the target label (PeakShape.width).
+        let getTargetPeakWidth (qp:QuantificationResult) =
+            match getTargetParams qp with
+            | null -> nan
+            | peakParams -> PeakShape.width peakParams
+
+        /// Search (or predicted) scan time minus the given apex of the fitted peak model of the target label (the apex of getTargetPeakApex):
+        /// the difference of the row, which refers to the first fitted parameter, corrected by the distance of that parameter to the apex.
+        let getTargetApexDifferenceAt (apex:float) (qp:QuantificationResult) =
+            getTargetScanTimeDifference qp - (apex - getTargetScanTime qp)
+
+        /// Search (or predicted) scan time minus the apex of the fitted peak model of the target label (getTargetApexDifferenceAt).
+        let getTargetApexDifference (qp:QuantificationResult) =
+            getTargetApexDifferenceAt (getTargetPeakApex qp) qp
+
         /// Retrieves the scan time based on the fitted parameter values (HULQ output).
         let tryTargetGetScanTime (qp:QuantificationResult) = 
             try
