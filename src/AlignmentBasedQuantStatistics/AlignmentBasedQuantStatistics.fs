@@ -286,7 +286,7 @@ module AlignmentFeatures =
             if hi - lo >= 5 then median absError.[lo .. hi - 1] else nan
 
 
-/// Gradient boosted trees with per-fold Platt calibration, and q-values from the posterior error probabilities.
+/// Gradient boosted trees with per-fold calibration, and q-values from the posterior error probabilities.
 module AlignmentScoring =
 
     open AlignmentFeatures
@@ -366,6 +366,93 @@ module AlignmentScoring =
 
     let platt (a: float, b: float) (score: float) = 1. / (1. + exp (-(a * score + b)))
 
+    /// Bin size of the isotonic fit: n / 20 rows, at least 100 and at most 2000.
+    let isotonicBinSize (n: int) = max 100 (min 2000 (n / 20))
+
+    /// Weighted pool-adjacent-violators: merges neighbouring (x, y, weight) blocks while y decreases. A pooled block has the
+    /// weighted mean x and y and the summed weight. The result is in the order of the input.
+    let poolAdjacentViolators (xs: float []) (ys: float []) (weights: float []) =
+        let blocks = ResizeArray<float * float * float>()
+        for i = 0 to xs.Length - 1 do
+            blocks.Add((xs.[i], ys.[i], weights.[i]))
+            let mutable merging = true
+            while merging && blocks.Count >= 2 do
+                let (x1, y1, w1) = blocks.[blocks.Count - 2]
+                let (x2, y2, w2) = blocks.[blocks.Count - 1]
+                if y1 > y2 then
+                    let w = w1 + w2
+                    blocks.RemoveRange(blocks.Count - 2, 2)
+                    blocks.Add(((x1 * w1 + x2 * w2) / w, (y1 * w1 + y2 * w2) / w, w))
+                else
+                    merging <- false
+        blocks.ToArray() |> Array.map (fun (x, y, _) -> x, y)
+
+    /// Knots (x, y) of the isotonic calibration, x strictly ascending and y non-decreasing, and the slope and intercept (a, b) of the
+    /// logistic curve fitted on the same rows, which continues the calibration below the first knot.
+    type IsotonicKnots =
+        {
+            X    : float []
+            Y    : float []
+            Tail : float * float
+        }
+
+    /// Isotonic regression of the labels on the scores. The rows sorted by (score, index) are cut into bins of isotonicBinSize rows,
+    /// a last bin of fewer than half that size joins the bin before. A bin has the mean score as x, (positives + 1) / (rows + 2)
+    /// as y and its row count as weight; neighbouring bins with the same x are merged (summed weight, weighted mean y), and
+    /// pool-adjacent-violators over the bins gives the knots. The tail is fitPlatt on the same rows and labels.
+    let fitIsotonic (scores: float []) (labels: bool []) =
+        let n = scores.Length
+        if n = 0 then failwith "The isotonic calibration needs at least one row."
+        let binSize = isotonicBinSize n
+        let order = Array.init n id |> Array.sortWith (fun i j -> match compare scores.[i] scores.[j] with 0 -> compare i j | c -> c)
+        let starts = [| 0 .. binSize .. n - 1 |]
+        let starts = if starts.Length > 1 && n - starts.[starts.Length - 1] < binSize / 2 then starts.[.. starts.Length - 2] else starts
+        let bins =
+            starts
+            |> Array.mapi (fun k lo ->
+                let hi = if k + 1 < starts.Length then starts.[k + 1] else n
+                let rows = order.[lo .. hi - 1]
+                let positives = rows |> Array.filter (fun i -> labels.[i]) |> Array.length
+                rows |> Array.averageBy (fun i -> scores.[i]), (float positives + 1.) / (float rows.Length + 2.), float rows.Length
+                )
+        let merged = ResizeArray<float * float * float>()
+        for (x, y, w) in bins do
+            if merged.Count > 0 && (let (x0, _, _) = merged.[merged.Count - 1] in x0 = x) then
+                let (_, y0, w0) = merged.[merged.Count - 1]
+                merged.[merged.Count - 1] <- (x, (y0 * w0 + y * w) / (w0 + w), w0 + w)
+            else
+                merged.Add((x, y, w))
+        let bins = merged.ToArray()
+        let knots = poolAdjacentViolators (bins |> Array.map (fun (x, _, _) -> x)) (bins |> Array.map (fun (_, y, _) -> y)) (bins |> Array.map (fun (_, _, w) -> w))
+        { X = knots |> Array.map fst; Y = knots |> Array.map snd; Tail = fitPlatt scores labels }
+
+    /// Linear interpolation between neighbouring knots and the last y above the last knot. Below the first knot the logistic tail
+    /// scaled to meet the first knot, or the first y if the tail has no positive slope or is not finite there.
+    /// nan for a score that is not finite.
+    let predictIsotonic (knots: IsotonicKnots) (score: float) =
+        let n = knots.X.Length
+        if not (Double.IsFinite score) then nan
+        elif score < knots.X.[0] then
+            let a, b = knots.Tail
+            let p = knots.Y.[0] * platt (a, b) score / platt (a, b) knots.X.[0]
+            if a > 0. && Double.IsFinite p then p else knots.Y.[0]
+        elif score = knots.X.[0] then knots.Y.[0]
+        elif score >= knots.X.[n - 1] then knots.Y.[n - 1]
+        else
+            let hi = SortedSearch.upperBound knots.X score
+            let lo = hi - 1
+            knots.Y.[lo] + (score - knots.X.[lo]) / (knots.X.[hi] - knots.X.[lo]) * (knots.Y.[hi] - knots.Y.[lo])
+
+    /// Map of the raw tree score to a probability.
+    type Calibrator =
+        | PlattScaling of a: float * b: float
+        | IsotonicRegression of IsotonicKnots
+
+    let calibrate (calibrator: Calibrator) (score: float) =
+        match calibrator with
+        | PlattScaling (a, b) -> platt (a, b) score
+        | IsotonicRegression knots -> predictIsotonic knots score
+
     /// q-values: running mean of the posterior error probabilities 1 - p over the ions sorted by p (descending),
     /// made monotone; tied p share the q-value of the last of them.
     let qValues (p: float []) =
@@ -444,12 +531,12 @@ module AlignmentScoring =
         sorted |> Array.iteri (fun i peptide -> foldOf.[peptide] <- i % nFolds)
         foldOf
 
-    /// Tree model of one fold with the Platt calibration fitted on the held-out ions of the fold.
+    /// Tree model of one fold with the calibration fitted on the held-out ions of the fold.
     type FoldModel =
         {
             Medians     : float []
             Model       : ITransformer
-            Calibration : float * float
+            Calibration : Calibrator
         }
 
     let private schema (nFeatures: int) =
@@ -786,6 +873,9 @@ module AlignmentBasedQuantStatistics =
     let absentLambda = 0.5
     let minRunDecoys = 200
 
+    /// Calibration rows an isotonic fit needs.
+    let minIsotonicRows = 200
+
     let featureVector (fs: FeatureSet) (ion: Ion) =
         [|
             yield! ion.Values.[0 .. baseNames.Length - 1]
@@ -897,12 +987,40 @@ module AlignmentBasedQuantStatistics =
         let trainingDecoys = learning |> Array.collect decoysOf
         let mlContext = MLContext(seed = p.Seed)
         let stopwatch = Diagnostics.Stopwatch.StartNew()
-        let calibrationOf (heldOut: ((string * Ion) * float) []) =
-            let calibrationSet = heldOut |> Array.filter (fun ((_, ion), _) -> ion.Truth.Value <> Ambiguous)
-            fitPlatt (calibrationSet |> Array.map snd) (calibrationSet |> Array.map (fun ((_, ion), _) -> ion.Truth.Value = Positive))
-        // Platt needs both classes: on one class it fits p near 0 or 1 for every score, and without ions it keeps (1, 0)
-        let bothClasses (heldOut: ((string * Ion) * float) []) =
-            heldOut |> Array.exists (fun ((_, ion), _) -> ion.Truth.Value = Positive) && heldOut |> Array.exists (fun ((_, ion), _) -> ion.Truth.Value = Negative)
+        // calibration set: the held-out ions that are positive or negative; the isotonic fit needs at least minIsotonicRows of them,
+        // with a positive and a negative one
+        let calibrationSet (heldOut: ((string * Ion) * float) []) =
+            heldOut |> Array.filter (fun ((_, ion), _) -> ion.Truth.Value <> Ambiguous)
+        let allowsIsotonic (heldOut: ((string * Ion) * float) []) =
+            let rows = calibrationSet heldOut
+            rows.Length >= minIsotonicRows
+            && rows |> Array.exists (fun ((_, ion), _) -> ion.Truth.Value = Positive)
+            && rows |> Array.exists (fun ((_, ion), _) -> ion.Truth.Value = Negative)
+        let isotonicOf (heldOut: ((string * Ion) * float) []) =
+            let rows = calibrationSet heldOut
+            IsotonicRegression (fitIsotonic (rows |> Array.map snd) (rows |> Array.map (fun ((_, ion), _) -> ion.Truth.Value = Positive)))
+        let plattOf (heldOut: ((string * Ion) * float) []) =
+            let rows = calibrationSet heldOut
+            PlattScaling (fitPlatt (rows |> Array.map snd) (rows |> Array.map (fun ((_, ion), _) -> ion.Truth.Value = Positive)))
+        // number of rows the calibration is fitted on
+        let rowCount (heldOut: ((string * Ion) * float) []) = (calibrationSet heldOut).Length
+        let describe (calibrator: Calibrator) (rows: int) =
+            match calibrator with
+            | PlattScaling (a, b) -> sprintf "Platt a %.4f b %.4f" a b
+            | IsotonicRegression knots ->
+                let a, b = knots.Tail
+                sprintf "isotonic on %i rows, bin size %i, %i knots, probabilities %.4f to %.4f, tail a %.4f b %.4f" rows (isotonicBinSize rows) knots.X.Length knots.Y.[0] knots.Y.[knots.Y.Length - 1] a b
+        // the calibration of a fold on its own held-out ions, None if they do not allow an isotonic fit
+        let ownCalibrationOf (heldOut: ((string * Ion) * float) []) =
+            if allowsIsotonic heldOut then Some (isotonicOf heldOut) else None
+        // the calibration on pooled held-out ions: isotonic if they allow it, else Platt
+        let pooledCalibrationOf (what: string) (heldOut: ((string * Ion) * float) []) =
+            if allowsIsotonic heldOut then
+                isotonicOf heldOut
+            else
+                let calibrator = plattOf heldOut
+                logger.Warn (sprintf "%s: %i calibration rows are fewer than %i or of one kind only; %s is used instead of the isotonic calibration" what (rowCount heldOut) minIsotonicRows (describe calibrator (rowCount heldOut)))
+                calibrator
         let fitted, heldOut, ownCalibration =
             [| 0 .. p.NumberOfFolds - 1 |]
             |> Array.map (fun f ->
@@ -917,31 +1035,32 @@ module AlignmentBasedQuantStatistics =
                     trainModel mlContext p
                         (Array.append (train |> Array.map (snd >> featureVector fs)) (decoys |> Array.map (featureVector fs)))
                         (Array.append labels (Array.create decoys.Length false))
-                let fold0 = { Medians = medians; Model = model; Calibration = (1., 0.) }
+                let fold0 = { Medians = medians; Model = model; Calibration = PlattScaling (1., 0.) }
                 let heldOutScores = rawScores mlContext fold0 (heldOut |> Array.map (snd >> featureVector fs))
                 let scored = Array.zip heldOut heldOutScores
-                if bothClasses scored then
-                    let calibration = calibrationOf scored
-                    logger.Info (sprintf "Fold %i: %i training ions (%i positive), %i decoys, %i held out, Platt a %.4f b %.4f" f train.Length (labels |> Array.filter id |> Array.length) decoys.Length heldOut.Length (fst calibration) (snd calibration))
+                match ownCalibrationOf scored with
+                | Some calibration ->
+                    logger.Info (sprintf "Fold %i: %i training ions (%i positive), %i decoys, %i held out, %s" f train.Length (labels |> Array.filter id |> Array.length) decoys.Length heldOut.Length (describe calibration (rowCount scored)))
                     { fold0 with Calibration = calibration }, scored, true
-                else
+                | None ->
                     logger.Info (sprintf "Fold %i: %i training ions (%i positive), %i decoys, %i held out" f train.Length (labels |> Array.filter id |> Array.length) decoys.Length heldOut.Length)
                     fold0, scored, false
                 )
             |> Array.unzip3
-        // a fold whose held-out ions are not of both classes is calibrated on the held-out ions of all folds, as the out-of-fold
-        // check pools the scores of several fold models; they have both classes, since every fold's training ions have
+        // a fold whose held-out ions do not allow an isotonic fit is calibrated on the held-out ions of all folds (Platt if those do
+        // not allow it either)
         let folds =
             if Array.forall id ownCalibration then
                 fitted
             else
-                let pooled = calibrationOf (Array.concat heldOut)
+                let pooledRows = Array.concat heldOut
+                let pooled = pooledCalibrationOf "All folds" pooledRows
                 fitted
                 |> Array.mapi (fun f fold ->
                     if ownCalibration.[f] then
                         fold
                     else
-                        logger.Warn (sprintf "Fold %i: the held-out ions are not of both classes; Platt on the held-out ions of all folds a %.4f b %.4f" f (fst pooled) (snd pooled))
+                        logger.Warn (sprintf "Fold %i: the held-out ions are fewer than %i or of one kind only; %s on the held-out ions of all folds" f minIsotonicRows (describe pooled (rowCount pooledRows)))
                         { fold with Calibration = pooled }
                     )
         // out-of-fold probabilities of the check: the scores of a fold are calibrated on the held-out scores of the other
@@ -949,9 +1068,10 @@ module AlignmentBasedQuantStatistics =
         let oof =
             heldOut
             |> Array.mapi (fun f items ->
-                let crossCalibration = calibrationOf (heldOut |> Array.indexed |> Array.filter (fun (g, _) -> g <> f) |> Array.collect snd)
-                logger.Info (sprintf "Fold %i: Platt on the held-out ions of the other folds a %.4f b %.4f" f (fst crossCalibration) (snd crossCalibration))
-                items |> Array.map (fun ((run, ion), s) -> { Ion = ion; Run = run; Fold = f; Score = s; P = platt crossCalibration s })
+                let others = heldOut |> Array.indexed |> Array.filter (fun (g, _) -> g <> f) |> Array.collect snd
+                let crossCalibration = pooledCalibrationOf (sprintf "Fold %i, held-out ions of the other folds" f) others
+                logger.Info (sprintf "Fold %i: %s on the held-out ions of the other folds" f (describe crossCalibration (rowCount others)))
+                items |> Array.map (fun ((run, ion), s) -> { Ion = ion; Run = run; Fold = f; Score = s; P = calibrate crossCalibration s })
                 )
             |> Array.concat
         logger.Info (sprintf "Trained %i folds in %.1f s" p.NumberOfFolds stopwatch.Elapsed.TotalSeconds)
@@ -971,7 +1091,7 @@ module AlignmentBasedQuantStatistics =
         // alignment row replaces the PSM row. The other overlap ions without truth keep their PSM row and their alignment
         // row is not written, so that the output has one row per ion.
         let score (rows: float [] []) =
-            let perFold = folds |> Array.map (fun fold -> rawScores mlContext fold rows |> Array.map (platt fold.Calibration))
+            let perFold = folds |> Array.map (fun fold -> rawScores mlContext fold rows |> Array.map (calibrate fold.Calibration))
             Array.init rows.Length (fun r -> perFold |> Array.averageBy (fun scores -> scores.[r]))
         // a decoy is scored by the model of its fold, which was trained without it; the decoys without fitted peak have p = 0
         let decoyScores (run: Run) =
@@ -982,7 +1102,7 @@ module AlignmentBasedQuantStatistics =
             |> Array.groupBy (fun (_, ion) -> foldOf.[ion.Key.PepSequenceID])
             |> Array.iter (fun (f, items) ->
                 let scores = rawScores mlContext folds.[f] (items |> Array.map (snd >> featureVector fs))
-                Array.iter2 (fun (i, _) s -> p.[i] <- platt folds.[f].Calibration s) items scores
+                Array.iter2 (fun (i, _) s -> p.[i] <- calibrate folds.[f].Calibration s) items scores
                 )
             p
         let runDecoyScores = scoring |> Array.map decoyScores
