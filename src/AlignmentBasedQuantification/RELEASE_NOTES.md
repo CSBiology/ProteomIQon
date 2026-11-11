@@ -28,6 +28,7 @@
 * Quantify ions with short XIC traces, on which the wavelet peak detection failed
 * Update BioFSharp.Mz to 0.2.3
 * Take the scan time of a fitted peak at the apex of its fitted shape and its width as the standard deviation of that shape, also for peaks with an exponential tail
+* Add the parameter RequirePeakAtScanTime (default true): the labeled partner of a transferred ion is quantified only when a peak contains the fitted scan time of the ion, otherwise its quantity columns stay empty; false takes the peak that contains it or else the peak with the closest apex
 * Breaking: the .quant files need the column IonMobilityCentre, so files of earlier PSMBasedQuantification and PSMBasedQuantificationTIMs releases have to be quantified again
 * Add default parameters for timsTOF runs (AlignmentBasedQuantificationTIMsParams.json) with MzWindow_Da Fixed 0.008 and IonMobilityWindow Fixed 0.025
 

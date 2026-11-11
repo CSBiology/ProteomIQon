@@ -1230,6 +1230,7 @@ module Dto =
             ScanTimeWindowSdFactor       : float
             DecoyFraction                : float
             Seed                         : int
+            RequirePeakAtScanTime        : bool
         }
 
     module AlignmentBasedQuantificationParams =
@@ -1243,6 +1244,7 @@ module Dto =
                 ScanTimeWindowSdFactor       = dtoQuantificationParams.ScanTimeWindowSdFactor
                 DecoyFraction                = dtoQuantificationParams.DecoyFraction
                 Seed                         = dtoQuantificationParams.Seed
+                RequirePeakAtScanTime        = dtoQuantificationParams.RequirePeakAtScanTime
             }
 
     ///

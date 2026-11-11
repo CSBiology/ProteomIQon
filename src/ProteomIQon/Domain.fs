@@ -250,6 +250,8 @@ module Domain =
             /// Fraction of the new ions that are also quantified as decoy transfers at a shifted scan time (0: none).
             DecoyFraction                : float
             Seed                         : int
+            /// true: the labeled partner is quantified only when a peak contains the scan time of the ion, otherwise it stays empty. false: the peak that contains the scan time, else the peak whose apex is closest to it (HULQ.getPeakBy). The ion's own peak is chosen among the candidates by the selection model in both cases.
+            RequirePeakAtScanTime        : bool
         }
 
     type FDRMethod =

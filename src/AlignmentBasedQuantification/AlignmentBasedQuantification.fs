@@ -509,7 +509,7 @@ module AlignmentBasedQuantification =
             |> Array.ofSeq
         Array.append [|get 0; get 1|] others
 
-    /// Measured against predicted isotope pattern at the XIC point closest to the scan time, as AlignmentBasedQuantification:
+    /// Measured against predicted isotope pattern at the XIC point closest to the scan time;
     /// the baseline offset of the monoisotopic trace at that point is subtracted from every isotope peak.
     let compareIsotopicCluster (traces: TraceSet) (isotopes: IsotopePeak []) (scanTime: float) =
         if traces.Rt.Length = 0 || not (isFinite scanTime) then
@@ -1293,9 +1293,11 @@ module AlignmentBasedQuantification =
                             if peaks.Length = 0 then
                                 failed "no peak detected"
                             else
-                            // as AlignmentBasedQuantification: the partner peak at the fitted scan time of the ion
+                            // the partner peak at the fitted scan time of the ion
                             let anchor = if abs (align.PredictedScanTime - fittedScanTime) <= processParams.XicExtraction.ScanTimeWindow then fittedScanTime else align.PredictedScanTime
-                            let partnerPeak = HULQ.getPeakBy peaks anchor
+                            match selectPeak processParams.RequirePeakAtScanTime peaks anchor with
+                            | None -> failed "no peak contains the scan time"
+                            | Some partnerPeak ->
                             match (try Some (HULQ.quantifyPeak partnerPeak) with _ -> None) with
                             | Some qp when isValidFit qp ->
                                 {
