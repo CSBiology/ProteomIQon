@@ -119,115 +119,6 @@ module PSMBasedQuantificationTIMs =
         Peaks.unzipIMzliteArray (reader.ReadSpectrumPeaks(ms1ID).Peaks)
         |> fun (mzData,intensityData) -> PeakArray.zip mzData intensityData
 
-    /// Returns the median of positive, finite values or None if no usable value exists.
-    let private tryMedianFinitePositive (values: float[]) =
-        let usableValues =
-            values
-            |> Array.filter (fun value ->
-                Double.IsFinite value && value > 0.0
-            )
-
-        if Array.isEmpty usableValues then
-            None
-        else
-            Some (Array.median usableValues)
-
-    /// Filters light quantification results without calling Array.median on empty data
-    /// and without dividing by zero, NaN, or infinity.
-    let lightQualityFilter lowerBorder upperBorder (quantResults: QuantificationResult[]) =
-        if Array.isEmpty quantResults then
-            [||]
-        else
-            let medianApexIntensity =
-                quantResults
-                |> Array.map (fun result -> result.MeasuredApex_Light)
-                |> tryMedianFinitePositive
-
-            let medianQuantIntensity =
-                quantResults
-                |> Array.map (fun result -> result.Quant_Light)
-                |> tryMedianFinitePositive
-
-            match medianApexIntensity, medianQuantIntensity with
-            | Some apexMedian, Some quantMedian ->
-                quantResults
-                |> Array.filter (fun result ->
-                    let apex = result.MeasuredApex_Light
-                    let quant = result.Quant_Light
-
-                    if
-                        not (Double.IsFinite apex)
-                        || not (Double.IsFinite quant)
-                        || apex <= 0.0
-                        || quant <= 0.0
-                    then
-                        false
-                    else
-                        let apexNorm = apex / apexMedian
-                        let quantNorm = quant / quantMedian
-                        let ratio = quantNorm / apexNorm
-
-                        if not (Double.IsFinite ratio) || ratio <= 0.0 then
-                            false
-                        else
-                            let qualR = FSharp.Stats.Ops.log2 ratio
-
-                            Double.IsFinite qualR
-                            && qualR > lowerBorder
-                            && qualR < upperBorder
-                )
-
-            | _ ->
-                [||]
-
-    /// Filters heavy quantification results without calling Array.median on empty data
-    /// and without dividing by zero, NaN, or infinity.
-    let heavyQualityFilter lowerBorder upperBorder (quantResults: QuantificationResult[]) =
-        if Array.isEmpty quantResults then
-            [||]
-        else
-            let medianApexIntensity =
-                quantResults
-                |> Array.map (fun result -> result.MeasuredApex_Heavy)
-                |> tryMedianFinitePositive
-
-            let medianQuantIntensity =
-                quantResults
-                |> Array.map (fun result -> result.Quant_Heavy)
-                |> tryMedianFinitePositive
-
-            match medianApexIntensity, medianQuantIntensity with
-            | Some apexMedian, Some quantMedian ->
-                quantResults
-                |> Array.filter (fun result ->
-                    let apex = result.MeasuredApex_Heavy
-                    let quant = result.Quant_Heavy
-
-                    if
-                        not (Double.IsFinite apex)
-                        || not (Double.IsFinite quant)
-                        || apex <= 0.0
-                        || quant <= 0.0
-                    then
-                        false
-                    else
-                        let apexNorm = apex / apexMedian
-                        let quantNorm = quant / quantMedian
-                        let ratio = quantNorm / apexNorm
-
-                        if not (Double.IsFinite ratio) || ratio <= 0.0 then
-                            false
-                        else
-                            let qualR = FSharp.Stats.Ops.log2 ratio
-
-                            Double.IsFinite qualR
-                            && qualR > lowerBorder
-                            && qualR < upperBorder
-                )
-
-            | _ ->
-                [||]
-    
     ///
     let initGetProcessedXIC (baseLineCorrection:Domain.BaseLineCorrection option) readSortedPeaks idx scanTimeWindow mzWindow_Da imWindow meanScanTime meanPrecMz meanIM =
         let rtQuery = Query.createRangeQuery meanScanTime scanTimeWindow
@@ -2214,21 +2105,7 @@ module PSMBasedQuantificationTIMs =
                 )
             |> Array.choose id
                     
-        let limit = processParams.QualityFilterLog2Limit
-        let filteredResults = 
-            match processParams.PerformLabeledQuantification with 
-            |Domain.Labeling.N15Labeling ->
-                quantResults
-                |> heavyQualityFilter (-limit) limit
-                |> lightQualityFilter (-limit) limit
-            |Domain.Labeling.N15LabelingOnly ->
-                quantResults
-                |> heavyQualityFilter (-limit) limit
-            |Domain.Labeling.Unlabeled ->
-                quantResults
-                |> lightQualityFilter (-limit) limit
-            |Domain.Labeling.Labelshift ->
-                quantResults
+        let filteredResults = labelingQualityFilter processParams.PerformLabeledQuantification processParams.QualityFilterLog2Limit quantResults
         filteredResults 
         |> SeqIO'.csv "\t" true false
         |> FSharpAux.IO.SeqIO.Seq.writeOrAppend (outFilePath)
