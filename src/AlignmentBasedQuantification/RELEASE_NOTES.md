@@ -7,7 +7,7 @@
 * Measure the m/z correction in the MS1 spectra in ppm over scan time and m/z, as PSMBasedQuantification does, and set the m/z window to four standard deviations of the residuals around it (was 0.05 Da); honour a fixed MzWindow_Da
 * Extract the XIC over the scan time window of the PSM based quantification and take candidates within max(MinScanTimeWindow, ScanTimeWindowSdFactor * PredictedScanTimeSd), capped at ScanTimeWindow
 * Extract the XICs faster and with less memory
-* Ion mobility: window of at least +-0.05 around the predicted ion mobility, sum per m/z over the mobility scans as PSMBasedQuantificationTIMs, ion mobility distance as candidate feature, ion mobility of the chosen peak in the IonMobility column
+* Ion mobility: window of at least +-0.05 around the predicted ion mobility, an XIC point is the sum of all peaks inside the m/z window and the ion mobility window as in PSMBasedQuantificationTIMs, ion mobility distance as candidate feature, ion mobility of the chosen peak in the IonMobility column
 * Compare the isotope pattern on isotope traces extracted with the same windows
 * Compute the ALS baseline and predict the isotope patterns as the other quantification tools
 * Default to wavelet BorderPadMethod Zero, which gives identical results between runs; warn on Random

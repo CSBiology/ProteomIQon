@@ -21,7 +21,7 @@
 * Correct the default parameters QuantificationParams_NoBaseline, which could not be read, and make them equal to QuantificationParams except for the baseline correction
 * Set Alignment_QValue 0.05 in the default parameters of LabelFreeProteinQuantification and LabeledProteinQuantification
 * Set MinPepLength 6 in the default parameters of PeptideDB
-* Add Xic, MzCalibration, PeakQuantification and PSMQuantification: the XIC of an ion, the m/z correction of a run, the peak detection and the choice of the peak, and the quantification of the PSMs of an ion, shared by PSMBasedQuantification, PSMBasedQuantificationTIMs and AlignmentBasedQuantification
+* Add Xic, MzCalibration, PeakQuantification and PSMQuantification: the XIC of an ion (on spectra with ion mobility the sum of all peaks inside the m/z window and the ion mobility window), the m/z correction of a run, the peak detection and the choice of the peak, and the quantification of the PSMs of an ion, shared by PSMBasedQuantification, PSMBasedQuantificationTIMs and AlignmentBasedQuantification
 * Breaking: change QuantificationParams, the parameters of PSMBasedQuantification and PSMBasedQuantificationTIMs, and the default parameters: remove FragPipe and add QualityFilterLog2Limit, CentrePSMs, RequirePeakAtScanTime and IonMobilityWindow in XicExtraction
 * Remove DTW', the dynamic time warping of the alignment tools
 * Add PeakShape, the apex and the standard deviation of a fitted peak from its Gaussian or exponentially modified Gaussian parameters, used by the alignment tools

@@ -28,7 +28,7 @@ index: 9
 
 PSMBasedQuantificationTIMs is the [PSMBasedQuantification]({{root}}tools/PSMBasedQuantification.html) variant for timsTOF runs. On these instruments a peptide ion is a peak in two dimensions, retention time and ion mobility, so the tool extracts the signal around every identification in both dimensions.
 
-An XIC point is the sum of the intensity within 0.05 of the identification's ion mobility (`IonMobilityWindow`).
+An XIC point is the sum of the intensity of all peaks inside the m/z window and within 0.05 of the identification's ion mobility (`IonMobilityWindow`).
 
 The points form a retention time [ion chromatogram](https://www.biofsharp.com/BioFSharp.Mz/03_01_quantification.html#Building-an-XIC-trace). As PSMBasedQuantification does, the tool detects the peaks on the trace and [fits and integrates](https://www.biofsharp.com/BioFSharp.Mz/03_01_quantification.html#Fitting-and-integrating-the-main-peak) the peak that contains the weighted scan time of the identifications (see `CentrePSMs`). The output has the layout of PSMBasedQuantification.
 
@@ -62,7 +62,7 @@ The parameter record is the one of PSMBasedQuantification. The defaults below ar
 |-----------|---------|---------|
 | `PerformLabeledQuantification` | `Labeling.Unlabeled` | Label free quantification of the identified ion. The three labeled cases work as in PSMBasedQuantification and quantify the partner ion too. |
 | `XicExtraction.ScanTimeWindow` | `2.0` | Half width of the retention time range around the identification that is extracted, in the scan time unit of the run. |
-| `XicExtraction.MzWindow_Da` | `Window.Estimate` | Half width of the m/z window, in Da. The m/z correction and `Window.Estimate` work as in PSMBasedQuantification. `Window.Fixed 0.07` sets 0.07 Da. |
+| `XicExtraction.MzWindow_Da` | `Window.Estimate` | Half width of the m/z window, in Da. Every peak inside it counts in an XIC point. The m/z correction and `Window.Estimate` work as in PSMBasedQuantification. `Window.Fixed 0.07` sets 0.07 Da. |
 | `XicExtraction.XicProcessing` | `XicProcessing.Wavelet waveletParams` | Peak detection on the retention time trace, summed over the ion mobility window. The wavelet parameters are listed below. `SecondDerivative` is the other supported case. `Gabor3D` is in development and does not work currently. |
 | `XicExtraction.TopKPSMs` | `None` | `Some k` keeps only the k identifications with the highest `ModelScore` per peptide ion when placing the peak. |
 | `XicExtraction.IonMobilityWindow` | `Window.Fixed 0.05` | Half width of the ion mobility window around the weighted ion mobility of the identifications that centre the trace (`CentrePSMs`), in 1/K0. `Window.Estimate` is not available here and stops the tool. |
