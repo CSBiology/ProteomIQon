@@ -487,6 +487,60 @@ let alignmentInputIons (run: string) =
     let header, rows = readTable (getRelativePath baseDir (sprintf "../../../data/AlignmentBasedQuantification/in/quant/%s.quant" run))
     rows |> Array.map (fun cells -> cells.[header.["StringSequence"]], cells.[header.["GlobalMod"]], cells.[header.["Charge"]]) |> Set.ofArray
 
+/// Runs AlignmentBasedQuantification on the labeled alignment runs with and without RequirePeakAtScanTime: the rows and the own side of every row are
+/// the same, the partner side is the same where both runs quantify it, and the run with the requirement quantifies the partner of fewer rows.
+let partnerPeakAtScanTimeCase name =
+    testCase name <| fun _ ->
+        let relToDirectory = getRelativePath baseDir
+        let inDirectory = relToDirectory "../../../data/AlignmentLabeled/in"
+        let work = Path.Combine(Path.GetTempPath(), sprintf "partnerPeakAtScanTime_%s" (Guid.NewGuid().ToString "N"))
+        let mzlite = Path.Combine(work, "mzlite")
+        Directory.CreateDirectory mzlite |> ignore
+        try
+            // copies, as the tool locks the mzlite and the peptide data base
+            for file in Directory.GetFiles(Path.Combine(inDirectory, "mzlite")) do
+                File.Copy(file, Path.Combine(mzlite, Path.GetFileName file))
+            let db = Path.Combine(work, "Chlamy.db")
+            File.Copy(Path.Combine(inDirectory, "Chlamy.db"), db)
+            let quant = Path.Combine(inDirectory, "quant")
+            let align = Path.Combine(work, "align")
+            runDotNet (sprintf "%s -i %s -ii %s -o %s" (toolDll "QuantBasedAlignment") quant quant align) baseDir
+            let paramsText = File.ReadAllText (Path.Combine(inDirectory, "AlignmentBasedQuantificationParams.json"))
+            let pattern = Text.RegularExpressions.Regex "\"RequirePeakAtScanTime\"\s*:\s*true"
+            Expect.isTrue (pattern.IsMatch paramsText) "the params file sets RequirePeakAtScanTime to true"
+            let rows (require: bool) =
+                let abqParams = Path.Combine(work, sprintf "params_%b.json" require)
+                File.WriteAllText(abqParams, pattern.Replace(paramsText, sprintf "\"RequirePeakAtScanTime\": %b" require))
+                let abq = Path.Combine(work, sprintf "abq_%b" require)
+                runDotNet (sprintf "%s -i %s -ii %s -iv %s -d %s -o %s -p %s -mf" (toolDll "AlignmentBasedQuantification") mzlite align quant db abq abqParams) baseDir
+                labeledAlignmentRuns
+                |> Array.collect (fun run ->
+                    let header, cells = readTable (Path.Combine(abq, sprintf "%s.quant" run))
+                    cells |> Array.map (fun row -> run, header |> Map.map (fun _ index -> row.[index])))
+                |> Array.map (fun (run, row) -> (run, ionKey row, row.["QuantificationSource"]), row)
+                |> fun keyed ->
+                    Expect.equal (keyed |> Array.map fst |> Array.distinct |> Array.length) keyed.Length "the rows have distinct keys"
+                    Map.ofArray keyed
+            let required = rows true
+            let notRequired = rows false
+            Expect.equal (required |> Map.toList |> List.map fst) (notRequired |> Map.toList |> List.map fst) "the same rows"
+            let partnerColumns (row: Map<string, string>) =
+                let label = if row.["GlobalMod"] = "0" then "Heavy" else "Light"
+                row |> Map.filter (fun name _ -> name.EndsWith ("_" + label) || name = "Correlation_Light_Heavy")
+            let hasPartner (row: Map<string, string>) = Double.IsFinite (parseFloat row.[if row.["GlobalMod"] = "0" then "Quant_Heavy" else "Quant_Light"])
+            let mutable dropped = 0
+            for KeyValue (key, requiredRow) in required do
+                let notRequiredRow = notRequired.[key]
+                let withoutPartner (row: Map<string, string>) = row |> Map.filter (fun name _ -> not ((partnerColumns row).ContainsKey name))
+                Expect.equal (withoutPartner requiredRow) (withoutPartner notRequiredRow) (sprintf "%A: the own side is the same" key)
+                if hasPartner requiredRow then
+                    Expect.equal (partnerColumns requiredRow) (partnerColumns notRequiredRow) (sprintf "%A: the partner is the same" key)
+                elif hasPartner notRequiredRow then
+                    dropped <- dropped + 1
+            Expect.isGreaterThan dropped 0 "the requirement leaves the partner of some rows empty"
+        finally
+            try deleteDirectory work with _ -> ()
+
 [<Tests>]
 let pipelineTests =
     testList "Pipeline" [
@@ -1173,6 +1227,8 @@ let pipelineTests =
                     Expect.isTrue (score >= 0. && score <= 1. && qValue >= 0. && qValue <= 1.) (sprintf "%s: %A has a score %f and q-value %f in [0, 1]" run (ionKey row) score qValue)
                 passing <- passing + (scored |> Array.filter (fun row -> parseFloat row.["AlignmentQValue"] <= 0.05) |> Array.length)
             Expect.isGreaterThan passing 0 "new ions pass q <= 0.05"
+
+        partnerPeakAtScanTimeCase "AlignmentBasedQuantificationPartnerPeakAtScanTime" |> testSequenced
 
         testCase "ProteinInference" <| fun _ ->
             let relToDirectory = getRelativePath baseDir

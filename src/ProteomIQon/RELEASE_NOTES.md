@@ -5,7 +5,7 @@
 * Use CrossValidation and no PEP cutoff (PepValueThreshold 1.0) in the default PSMStatistics parameters
 * Add Charts.useReferenceEqualityForJson, which makes saving Plotly.NET charts faster with the same output
 * Add the local scan time error scale, the source run, the source model error and the predicted ion mobility with its error scale to AlignmentResult, the .align row of QuantBasedAlignment
-* Breaking: change the parameters of AlignmentBasedQuantification (AlignmentBasedQuantificationParams) and its default parameters: PerformLocalWarp is removed, PerformLabeledQuantification is a Labeling as in QuantificationParams, and MinScanTimeWindow, ScanTimeWindowSdFactor, DecoyFraction, Seed and IonMobilityWindow in XicExtraction are added
+* Breaking: change the parameters of AlignmentBasedQuantification (AlignmentBasedQuantificationParams) and its default parameters: PerformLocalWarp is removed, PerformLabeledQuantification is a Labeling as in QuantificationParams, and MinScanTimeWindow, ScanTimeWindowSdFactor, DecoyFraction, Seed, RequirePeakAtScanTime and IonMobilityWindow in XicExtraction are added
 * Breaking: replace the parameters of AlignmentBasedQuantStatistics (AlignmentBasedQuantStatisticsParams), PositiveQuantMzCutoff, NegativeQuantMzCutoff, PositiveQuantCutoff and NegativeQuantCutoff, by the label, feature, trainer, absent-analyte FDR and seed parameters, and change its default parameters
 * Remove PSMStatisticsResultFragpipe. MsFraggerToPSM writes and PSMBasedQuantificationTIMs reads PSMStatisticsResult
 * Write warnings to the log file of the tools

@@ -106,8 +106,10 @@ mobility the traces were summed around: the centre with `Fixed`, the expected io
 
 ## Labeled quantification
 
-With `PerformLabeledQuantification` other than `Unlabeled` the partner of the other label is extracted with the same windows. Its peak is taken at the fitted
-scan time of the ion. A partner that cannot be quantified keeps its m/z and traces but gets no quantity, and the row is kept.
+With `PerformLabeledQuantification` other than `Unlabeled` the partner of the other label is extracted with the same windows. Its peak
+is the peak that contains the fitted scan time of the ion. With `RequirePeakAtScanTime` set to `false`, the peak with the closest apex is
+taken when none contains it. A partner that cannot be quantified keeps its m/z and traces but gets no quantity, and the row is kept. The ion's own peak is
+always the candidate chosen by the selection model.
 
 An ion that the run did not quantify itself is not transferred when the PSM based row of its labeled partner has a fitted peak and a
 quantity of the ion's label. Its `Status` is `labeled partner quantified by its PSM based row`.
@@ -166,6 +168,7 @@ each ion that was not quantified at Debug level.
 | ScanTimeWindowSdFactor | 8.0 | Half width of the candidate window in units of `PredictedScanTimeSd`, if larger than `MinScanTimeWindow`. |
 | DecoyFraction | 0.2 | Share of the new ions that also get a decoy transfer. 0 writes no decoys. |
 | Seed | 1 | Seed of the cross-fitting folds and of the choice of the decoys. |
+| RequirePeakAtScanTime | true | Whether the labeled partner needs a peak that contains the fitted scan time of the ion (see Labeled quantification). |
 
 | XicExtraction field | Default | Meaning |
 |---------------------|---------|---------|
@@ -215,6 +218,7 @@ let alignmentBasedQuantificationParams : Dto.AlignmentBasedQuantificationParams 
         ScanTimeWindowSdFactor = 8.
         DecoyFraction          = 0.2
         Seed                   = 1
+        RequirePeakAtScanTime  = true
     }
 
 // Replace the temp folder with your project folder.
