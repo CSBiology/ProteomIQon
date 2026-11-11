@@ -21,6 +21,7 @@
     <Compile Include="Unit_Tests\AlignmentScoreCalibration.fs"/>
     <Compile Include="Unit_Tests\PeakShape.fs"/>
     <Compile Include="Unit_Tests\IonMobilityCentre.fs"/>
+    <Compile Include="Unit_Tests\QuantBasedAlignment.fs"/>
     <Compile Include="Main.fs" />
   </ItemGroup>
 
@@ -52,7 +53,7 @@
     <ProjectReference Include="..\src\PSMStatistics\PSMStatistics.fsproj" ReferenceOutputAssembly="true" />
     <ProjectReference Include="..\src\MsFraggerToPSM\MsFraggerToPSM.fsproj" ReferenceOutputAssembly="false" />
     <ProjectReference Include="..\src\PSMBasedQuantification\PSMBasedQuantification.fsproj" ReferenceOutputAssembly="true" />
-    <ProjectReference Include="..\src\QuantBasedAlignment\QuantBasedAlignment.fsproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\src\QuantBasedAlignment\QuantBasedAlignment.fsproj" ReferenceOutputAssembly="true" />
     <ProjectReference Include="..\src\ProteinInference\ProteinInference.fsproj" ReferenceOutputAssembly="false" />
     <ProjectReference Include="..\src\LabelFreeProteinQuantification\LabelFreeProteinQuantification.fsproj" ReferenceOutputAssembly="false" />
     <ProjectReference Include="..\src\LabeledProteinQuantification\LabeledProteinQuantification.fsproj" ReferenceOutputAssembly="false" />

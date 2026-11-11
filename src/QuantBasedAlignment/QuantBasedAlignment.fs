@@ -355,7 +355,7 @@ module QuantBasedAlignment =
     type IonMobilityModel =
         {
             Fit       : Fit
-            /// Source ion mobility of the ions the model was trained on.
+            /// Ion mobility centre of the source rows of the ions the model was trained on.
             X         : float []
             /// Shift of the ions the model was trained on.
             Shift     : float []
@@ -411,7 +411,7 @@ module QuantBasedAlignment =
             let withIonMobility =
                 [|
                     for i in 0 .. shared.Length - 1 do
-                        if isFinite source.Ions.[shared.[i]].Row.IonMobility && isFinite target.Ions.[shared.[i]].Row.IonMobility then yield i
+                        if isFinite source.Ions.[shared.[i]].Row.IonMobilityCentre && isFinite target.Ions.[shared.[i]].Row.IonMobilityCentre then yield i
                 |]
             if withIonMobility.Length = 0 then
                 logger.Trace (sprintf "%s: no ion mobility." pairName)
@@ -421,8 +421,8 @@ module QuantBasedAlignment =
                 None
             else
                 let ionsIM  = withIonMobility |> Array.map (fun i -> shared.[i])
-                let xIM     = ionsIM |> Array.map (fun ion -> source.Ions.[ion].Row.IonMobility)
-                let shiftIM = ionsIM |> Array.mapi (fun i ion -> target.Ions.[ion].Row.IonMobility - xIM.[i])
+                let xIM     = ionsIM |> Array.map (fun ion -> source.Ions.[ion].Row.IonMobilityCentre)
+                let shiftIM = ionsIM |> Array.mapi (fun i ion -> target.Ions.[ion].Row.IonMobilityCentre - xIM.[i])
                 let foldIM  = withIonMobility |> Array.map (fun i -> fold.[i])
                 let fitIM = fit ionMobilitySettings xIM shiftIM foldIM
                 let outOfFoldIM = Dictionary<PeptideIon,float>(HashIdentity.Structural)
@@ -468,8 +468,8 @@ module QuantBasedAlignment =
             | _ -> sourceScanTime + predict pair.ScanTime.Curve sourceScanTime
         let predictedIonMobility, predictedIonMobilitySd =
             match pair.IonMobility with
-            | Some model when isFinite quantifiedPeptide.IonMobility ->
-                let sourceIonMobility = quantifiedPeptide.IonMobility
+            | Some model when isFinite quantifiedPeptide.IonMobilityCentre ->
+                let sourceIonMobility = quantifiedPeptide.IonMobilityCentre
                 let predicted =
                     match model.OutOfFold.TryGetValue ion with
                     | true, v -> v
@@ -496,7 +496,7 @@ module QuantBasedAlignment =
             IntensityTrace_SourceFile                       = getTargetIntensityTrace quantifiedPeptide
             IsotopicPatternMz_SourceFile                    = getIsotopicPatternMz quantifiedPeptide
             IsotopicPatternIntensity_Observed_SourceFile    = getIsotopicPatternIntensity_Observed quantifiedPeptide
-            IonMobility                                     = quantifiedPeptide.IonMobility
+            IonMobility                                     = quantifiedPeptide.IonMobilityCentre
             PredictedScanTimeSd                             = localScaleWithout pair.Scale (ownError pair.AbsError) sourceScanTime
             SourceFileName                                  = pair.Source.FileName
             SourceModelError                                = pair.ModelError
@@ -536,7 +536,7 @@ module QuantBasedAlignment =
                 Y_RtTrace                            = getTargetRtTrace targetPep
                 Y_IntensityTrace                     = getTargetIntensityTrace targetPep
                 DtwDistanceBefore                    = nan
-                IonMobility                          = sourcePep.IonMobility
+                IonMobility                          = sourcePep.IonMobilityCentre
             }
             )
 

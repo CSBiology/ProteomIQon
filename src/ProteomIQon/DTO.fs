@@ -1144,7 +1144,7 @@ module Dto =
             IsotopicPatternMz_SourceFile                    : float []
             [<FieldAttribute(14)>][<TraceConverter>]
             IsotopicPatternIntensity_Observed_SourceFile    : float []
-            /// Ion mobility of the source ion.
+            /// Ion mobility centre of the source ion: the IonMobilityCentre of its row in the source run.
             [<FieldAttribute(15)>]
             IonMobility                  : float
             /// Local robust error scale of the scan time prediction (minutes).
