@@ -56,7 +56,7 @@ The blue line is the running median and the band is ± `PredictedScanTimeSd`.
 
 ## Ion mobility
 
-When both runs of a pair have a finite `IonMobility` on the shared ions, the tool fits the same model to the ion mobility shift over the source
+The tool aligns the `IonMobilityCentre` of the `.quant` rows. When both runs of a pair have finite values on the shared ions, it fits the same model to the ion mobility shift over the source
 ion mobility. Its trimming floor is 0.005 1/K0, its error scale uses the shared ions within ±0.05 1/K0 and is at least 0.001.
 The results go into `PredictedIonMobility` and `PredictedIonMobilitySd`. Without ion mobility both columns hold `nan`. There is no switch.
 
@@ -74,7 +74,7 @@ The results go into `PredictedIonMobility` and `PredictedIonMobilitySd`. Without
 There is no parameter file. A target is never its own source, so the same directory can be passed to `-i` and `-ii`.
 The tool stops when an input path does not exist, when the paths of `-i` or those of `-ii` hold no `.quant` file at all, and when two input files from different directories have the same name.
 
-For every target the tool writes `<run>.align`, tab separated, one row per transferred ion. The first 16 columns hold the ion, its m/z, `PredictedScanTime`, and the scan time, intensities, traces and `IonMobility` of the ion in its source run.
+For every target the tool writes `<run>.align`, tab separated, one row per transferred ion. The first 16 columns hold the ion, its m/z, `PredictedScanTime`, and the scan time, intensities, traces and `IonMobility` of the ion in its source run, where `IonMobility` is the ion mobility centre of the ion in that run.
 Five columns follow.
 
 | Column | Meaning |
