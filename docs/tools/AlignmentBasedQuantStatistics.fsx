@@ -81,18 +81,22 @@ intensity. They are off by default: a model that prefers a ratio near 1 penalise
 1. The overlap ions of all learning runs are pooled and split into 5 folds by peptide sequence, so the forms of a peptide stay together.
 2. Per fold, a gradient boosted tree model (ML.NET FastTree) is trained on the right and wrong ions of the other four folds. Unless
    `AbsentAnalyteFdr` is `Off`, the decoys of the learning runs join this training as wrong examples, in the fold of their peptide.
-3. Per fold, a Platt calibration (a logistic fit of the label on the raw score) is fitted on the right and wrong overlap ions of the held-out
-   fold. It turns scores into probabilities.
+3. Per fold, an isotonic calibration (the share of right ions as a non-decreasing function of the raw score) is fitted on the right and
+   wrong overlap ions of the held-out fold. It turns scores into probabilities. Below the lowest fitted score the probability follows a logistic
+   fit of the label on the raw score. A fold with fewer than 200 such ions, or with one label only, is calibrated on the held-out ions of all folds.
+   If those are too few or of one label as well, the logistic fit alone is used.
 4. The `AlignmentScore` p of a new ion is the mean of the calibrated probabilities of the 5 fold models.
 5. The posterior error probability of a new ion is 1 − p. Per run, the new ions are sorted by p in descending order. The `AlignmentQValue` of
    an ion is the mean posterior error probability of all new ions with at least its p, made monotone.
 6. Unless `AbsentAnalyteFdr` is `Off`, the absent-analyte rate at the ion's score (see Absent analytes) is added to the q-value, which is made
    monotone again.
 
-The tree model rarely gives probabilities above 0.99, so a cutoff of q ≤ 0.01 can keep few or no transferred ions.
+The highest probability the isotonic calibration can give grows with the number of right and wrong overlap ions it is fitted on: about
+0.99 up to 2,000 ions, 0.999 from 20,000. With few overlap ions a cutoff of q ≤ 0.01 can therefore keep few or no transferred ions.
 
-The log reports an out-of-fold check. Each overlap ion is scored by the fold model that did not see it and calibrated on the other folds.
-The true share of wrong peaks is given at q ≤ 0.01, 0.05 and 0.1, once with the ambiguous ions counted as wrong and once without them.
+The log reports an out-of-fold check. Each overlap ion is scored by the fold model that did not see it and calibrated on the held-out
+ions of the other folds (by the logistic fit alone if those are too few or of one label). The true share of wrong peaks is given at
+q ≤ 0.01, 0.05 and 0.1, once with the ambiguous ions counted as wrong and once without them.
 
 ## Absent analytes
 
