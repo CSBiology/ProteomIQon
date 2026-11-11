@@ -6,7 +6,7 @@ namespace ProteomIQon
 module BaselineAls =
 
     /// Asymmetric least squares baseline with the arithmetic of FSharp.Stats.Signal.Baseline.baselineAls'
-    /// (Givens QR of FSharp.Stats.Algebra.LinearAlgebraManaged.leastSquares, maxIterations + 1 solves), on the
+    /// (Givens QR of FSharp.Stats.Algebra.LinearAlgebraManaged.leastSquares, at most maxIterations + 1 solves, stopping as soon as the weights repeat), on the
     /// nonzero entries of the pentadiagonal system only instead of n x n matrices.
     let baselineAls (maxIterations: int) (lambdaExponent: int) (p: float) (y: float []) =
         let n = y.Length
@@ -164,8 +164,11 @@ module BaselineAls =
                     elif j = i then diag <- value
                 z.[i] <- s / diag
             z
-        let mutable w = Array.create n 1.
-        for _ in 1 .. maxIterations do
-            let z = solve w
-            w <- Array.map2 (fun yi zi -> if yi > zi then p else 1. - p) y z
-        solve w
+        // the weights are a function of the baseline only: once they repeat, every further solve returns the same baseline
+        let rec iterate i (w: float []) =
+            if i >= maxIterations then solve w
+            else
+                let z = solve w
+                let w' = Array.map2 (fun yi zi -> if yi > zi then p else 1. - p) y z
+                if w' = w then z else iterate (i + 1) w'
+        iterate 0 (Array.create n 1.)

@@ -112,6 +112,23 @@ let all =
             Expect.equal copy y "without baseline correction: unchanged"
             Expect.isFalse (obj.ReferenceEquals(copy, y)) "a copy"
 
+        testCase "baselineAls equals the FSharp.Stats baseline bit for bit" <| fun _ ->
+            let rnd = Random 23
+            let bits (a: float []) = a |> Array.map BitConverter.DoubleToInt64Bits
+            let peakLike n =
+                let center = rnd.NextDouble() * float n
+                let width = 1. + rnd.NextDouble() * float n / 5.
+                Array.init n (fun i ->
+                    let x = float i
+                    1e5 * exp (-((x - center) ** 2.) / (2. * width * width)) + 50. * rnd.NextDouble())
+            for n in [ 3; 4; 5; 7; 10; 20; 60; 150; 500 ] do
+                for _ in 1 .. 20 do
+                    for y in [ randomXic rnd n; peakLike n ] do
+                        let expected =
+                            FSharp.Stats.Signal.Baseline.baselineAls' 10 6 0.05 y |> Array.ofSeq
+                        let actual = BaselineAls.baselineAls 10 6 0.05 y
+                        Expect.equal (bits actual) (bits expected) (sprintf "%i points: same baseline" n)
+
         testCase "processXic returns the points without drop-outs, corrected and raw" <| fun _ ->
             let rt = [| 1.; 2.; 3.; 4.; 5.; 6. |]
             let y = [| 0.; 500.; 0.; 0.; 20.; 0. |]
