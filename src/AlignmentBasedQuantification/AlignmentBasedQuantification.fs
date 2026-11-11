@@ -21,6 +21,15 @@ module XicSweep =
 
     open Numerics
 
+    /// How the points of the XIC of a request are taken.
+    type XicPoint =
+        /// The peak closest to the lock m/z (Xic.closestPoint).
+        | ClosestPeak
+        /// The sum of the peaks inside the m/z and ion mobility window (Xic.extractPoint).
+        | Sum
+        /// The same sum; the mobility profile of every trace is recorded with it (Xic.extractPointWithProfile).
+        | SumWithProfiles
+
     /// The XIC traces of one ion: one trace per lock m/z, all with the same scan time and ion mobility window.
     type XicRequest =
         {
@@ -31,6 +40,7 @@ module XicSweep =
             /// nan without ion mobility window.
             ImLow       : float
             ImHigh      : float
+            Point       : XicPoint
         }
 
     /// One point per MS1 spectrum in the scan time window; arrays per trace are indexed [trace][point].
@@ -42,11 +52,17 @@ module XicSweep =
             IonMobility : float [] []
         }
 
-    type private Accumulator(nTraces: int) =
+    type private Accumulator(request: XicRequest) =
+        let nTraces = request.LockMz.Length
         member val Rt          = ResizeArray<float>()
         member val Intensity   = Array.init nTraces (fun _ -> ResizeArray<float>())
         member val ObservedMz  = Array.init nTraces (fun _ -> ResizeArray<float>())
         member val IonMobility = Array.init nTraces (fun _ -> ResizeArray<float>())
+        /// One mobility profile per trace if the request records them.
+        member val Profiles    =
+            match request.Point with
+            | SumWithProfiles -> Some (Array.init nTraces (fun _ -> Xic.MobilityProfile()))
+            | _ -> None
         member this.ToXic() =
             {
                 Rt          = this.Rt.ToArray()
@@ -57,8 +73,9 @@ module XicSweep =
 
     /// Walks once through the MS1 spectra (sorted by scan time), reads only spectra inside at least one window
     /// and hands every XIC to onComplete as soon as its window is passed. Only the current spectrum and the XICs
-    /// of open windows are held in memory. point extracts one XIC point (as Xic.extractPoint). Returns the number of spectra read.
-    let sweep (point: SortedPeaks.MzSortedPeaks -> float -> float -> float -> float -> float * float * float) (readSpectrum: string -> SortedPeaks.MzSortedPeaks) (ms1: (float*string) []) (requests: XicRequest []) (onComplete: int -> RawXic -> unit) =
+    /// of open windows are held in memory. Every request takes its points by the rule in its Point field. onComplete gets the profiles of the traces of
+    /// a request that records them, None otherwise. Returns the number of spectra read.
+    let sweep (readSpectrum: string -> SortedPeaks.MzSortedPeaks) (ms1: (float*string) []) (requests: XicRequest []) (onComplete: int -> RawXic -> Xic.MobilityProfile [] option -> unit) =
         let n = requests.Length
         let order =
             Array.init n id
@@ -66,13 +83,13 @@ module XicSweep =
             |> Array.sortBy (fun r -> requests.[r].RtLow)
         let accumulators = Dictionary<int,Accumulator>()
         let complete r =
-            onComplete r (accumulators.[r].ToXic())
+            onComplete r (accumulators.[r].ToXic()) accumulators.[r].Profiles
             accumulators.Remove r |> ignore
         let mutable next = 0
         let mutable spectraRead = 0
         for (rt, spectrumID) in ms1 do
             while next < order.Length && requests.[order.[next]].RtLow <= rt do
-                accumulators.[order.[next]] <- Accumulator(requests.[order.[next]].LockMz.Length)
+                accumulators.[order.[next]] <- Accumulator(requests.[order.[next]])
                 next <- next + 1
             let finished = accumulators.Keys |> Seq.filter (fun r -> requests.[r].RtHigh < rt) |> Array.ofSeq
             finished |> Array.sort |> Array.iter complete
@@ -83,16 +100,37 @@ module XicSweep =
                     let request = requests.[r]
                     acc.Rt.Add rt
                     for t in 0 .. request.LockMz.Length - 1 do
-                        let intensity, observedMz, ionMobility = point spectrum request.LockMz.[t] request.MzWindow request.ImLow request.ImHigh
+                        let intensity, observedMz, ionMobility =
+                            match request.Point with
+                            | ClosestPeak -> Xic.closestPoint spectrum request.LockMz.[t] request.MzWindow request.ImLow request.ImHigh
+                            | Sum -> Xic.extractPoint spectrum request.LockMz.[t] request.MzWindow request.ImLow request.ImHigh
+                            | SumWithProfiles -> Xic.extractPointWithProfile acc.Profiles.Value.[t] spectrum request.LockMz.[t] request.MzWindow request.ImLow request.ImHigh
                         acc.Intensity.[t].Add intensity
                         acc.ObservedMz.[t].Add observedMz
                         acc.IonMobility.[t].Add ionMobility
         // windows after the last spectrum and the ones still open
         while next < order.Length do
-            accumulators.[order.[next]] <- Accumulator(requests.[order.[next]].LockMz.Length)
+            accumulators.[order.[next]] <- Accumulator(requests.[order.[next]])
             next <- next + 1
         accumulators.Keys |> Array.ofSeq |> Array.sort |> Array.iter complete
         spectraRead
+
+    /// The raw XIC of an ion summed around the ion mobility centre of the ion, and that centre. The centre is Xic.tryMobilityCentre of
+    /// the monoisotopic target trace at the scan time, around the expected ion mobility. With a centre every trace is the sum of the
+    /// pairs of its profile within halfWidth around it (Xic.summedTrace: intensity and ion mobility of a point); the observed m/z of a
+    /// point stays that of the point of the sweep, except where the summed intensity is 0, where it is nan because the m/z of the
+    /// sweep comes from signal outside the summed window. Without a centre the XIC is returned unchanged.
+    let sumAroundMobilityCentre (expected: float) (halfWidth: float) (scanTime: float) (raw: RawXic) (profiles: Xic.MobilityProfile []) =
+        match Xic.tryMobilityCentre profiles.[0] raw.Rt raw.Intensity.[0] scanTime expected halfWidth with
+        | None -> raw, None
+        | Some centre ->
+            let traces = profiles |> Array.map (fun profile -> Xic.summedTrace profile centre halfWidth)
+            let intensity = traces |> Array.map fst
+            { raw with
+                Intensity   = intensity
+                ObservedMz  = Array.map2 (fun (mz: float []) (y: float []) -> Array.map2 (fun m v -> if v > 0. then m else nan) mz y) raw.ObservedMz intensity
+                IonMobility = traces |> Array.map snd },
+            Some centre
 
 
 /// Processing of the raw XIC and candidate peaks with their selection features.
@@ -526,6 +564,8 @@ module AlignmentBasedQuantification =
             PartnerSkipped    : bool
             ScanTimeWindow    : float
             IonMobilityWindow : float
+            /// The predicted, else the source, ion mobility of the ion; nan without ion mobility window.
+            ExpectedIonMobility : float
             Request           : XicRequest
         }
 
@@ -537,6 +577,9 @@ module AlignmentBasedQuantification =
             Target     : TraceSet
             Partner    : TraceSet option
             Candidates : Candidate []
+            /// The ion mobility the traces were summed around: the centre from the signal for a fixed window, else the expected ion
+            /// mobility of the ion; nan without ion mobility window.
+            IonMobilityCentre : float
         }
 
     /// Selection features of an ion, written to <run>.alignfeatures.
@@ -594,7 +637,7 @@ module AlignmentBasedQuantification =
             Traces       = traces
         }
 
-    let createRow (ion: PreparedIon) (measuredMz: float) (target: QuantSide) (partner: QuantSide) (correlation: float) (ionMobility: float) : QuantificationResult =
+    let createRow (ion: PreparedIon) (measuredMz: float) (target: QuantSide) (partner: QuantSide) (correlation: float) (ionMobility: float) (ionMobilityCentre: float) : QuantificationResult =
         let align = ion.Align
         let light, heavy = if align.GlobalMod = 0 then target, partner else partner, target
         let measuredMass = Mass.ofMZ (if isFinite measuredMz then measuredMz else ion.LockMz) (float align.Charge)
@@ -646,6 +689,7 @@ module AlignmentBasedQuantification =
             AlignmentScore                              = nan
             AlignmentQValue                             = nan
             IonMobility                                 = ionMobility
+            IonMobilityCentre                           = ionMobilityCentre
         }
 
     /// Counts per reason, for the run summary.
@@ -789,10 +833,11 @@ module AlignmentBasedQuantification =
                         MzWindow = calibrationMzWindow
                         ImLow    = imCenter - sourceIonMobilityWindow
                         ImHigh   = imCenter + sourceIonMobilityWindow
+                        Point    = ClosestPeak
                     }
                     )
             let observations = ResizeArray<MzCalibration.Observation>()
-            sweep Xic.closestPoint readSpectrum ms1 requests (fun r raw ->
+            sweep readSpectrum ms1 requests (fun r raw _ ->
                 if raw.Rt.Length > 0 && raw.Intensity.[0].[0] > 0. then
                     let qp = calibrationIons.[r]
                     observations.Add
@@ -960,6 +1005,7 @@ module AlignmentBasedQuantification =
                     PartnerSkipped    = partnerSkipped
                     ScanTimeWindow    = scanTimeWindow
                     IonMobilityWindow = imWindow
+                    ExpectedIonMobility = imCenter
                     Request           =
                         {
                             RtLow    = align.PredictedScanTime - processParams.XicExtraction.ScanTimeWindow
@@ -968,6 +1014,11 @@ module AlignmentBasedQuantification =
                             MzWindow = mzWindow
                             ImLow    = imCenter - imWindow
                             ImHigh   = imCenter + imWindow
+                            // a fixed window is summed around the ion mobility centre of the ion, which needs the profiles of the traces
+                            Point =
+                                match processParams.XicExtraction.IonMobilityWindow with
+                                | Domain.Window.Fixed _ when isFinite imCenter -> SumWithProfiles
+                                | _ -> Sum
                         }
                 }
         let prepared = alignments |> Array.mapi prepare |> Array.choose id
@@ -1036,7 +1087,7 @@ module AlignmentBasedQuantification =
         // otherwise their traces are held until the model is trained.
         let toExtract = Array.append prepared decoys
         let analysed : AnalysedIon option [] = Array.create toExtract.Length None
-        let analyse (i: int) (raw: RawXic) =
+        let analyse (i: int) (raw: RawXic) (ionMobilityCentre: float) =
             let ion = toExtract.[i]
             analysed.[i] <-
                 guarded ion.Row "peak detection" <| fun () ->
@@ -1073,7 +1124,7 @@ module AlignmentBasedQuantification =
                                 dropIon ion.Row "no peak detected in the candidate window"
                                 None
                             else
-                                Some { Ion = ion; Context = { context with SourceRt = [||]; SourceIntensity = [||] }; Target = targetTraces; Partner = partnerTraces; Candidates = candidates }
+                                Some { Ion = ion; Context = { context with SourceRt = [||]; SourceIntensity = [||] }; Target = targetTraces; Partner = partnerTraces; Candidates = candidates; IonMobilityCentre = ionMobilityCentre }
         let ownOfIon (ion: PreparedIon) =
             match psm.OwnQuant.TryGetValue ((ion.Align.StringSequence, ion.Align.GlobalMod, ion.Align.Charge)) with
             | true, qp -> Some qp
@@ -1082,8 +1133,23 @@ module AlignmentBasedQuantification =
         let isCorrect (qp: QuantificationResult) (c: Candidate) = abs (c.Center - getTargetPeakApex qp) <= getTargetPeakWidth qp
         let ownIdx = [| for i in 0 .. toExtract.Length - 1 do if (ownOfIon toExtract.[i]).IsSome then yield i |]
         let newIdx = [| for i in 0 .. toExtract.Length - 1 do if (ownOfIon toExtract.[i]).IsNone then yield i |]
-        let sweepOver (indices: int []) (callback: int -> RawXic -> unit) =
-            sweep extractPoint readSpectrum ms1 (indices |> Array.map (fun i -> toExtract.[i].Request)) (fun j raw -> callback indices.[j] raw)
+        // The XIC of an ion with a fixed ion mobility window is summed around the centre of its signal before anything else reads it.
+        // For the log, the ions whose centre comes from the signal and the ions that keep the expected ion mobility are counted;
+        // decoys are left out. Returns the XIC and the ion mobility it is summed around: the centre from the signal, else the
+        // expected ion mobility.
+        let centreTally = Xic.MobilityCentreTally()
+        let sumAroundCentre (i: int) (raw: RawXic) (profiles: Xic.MobilityProfile [] option) =
+            let ion = toExtract.[i]
+            match profiles with
+            | None -> raw, ion.ExpectedIonMobility
+            | Some profiles ->
+                let summed, centre = sumAroundMobilityCentre ion.ExpectedIonMobility ion.IonMobilityWindow ion.Align.PredictedScanTime raw profiles
+                if ion.Row < n then centreTally.Add(ion.ExpectedIonMobility, centre)
+                summed, defaultArg centre ion.ExpectedIonMobility
+        let sweepOver (indices: int []) (callback: int -> RawXic -> float -> unit) =
+            sweep readSpectrum ms1 (indices |> Array.map (fun i -> toExtract.[i].Request)) (fun j raw profiles ->
+                let summed, centre = sumAroundCentre indices.[j] raw profiles
+                callback indices.[j] summed centre)
         let ownSpectraRead = sweepOver ownIdx analyse
         let mutable analysedOwn = ownIdx |> Array.choose (fun i -> analysed.[i])
         let baseFeatures = [| RtZ; RtZ2; ShapeCorr; LogRelHeight; AbsLog2FwhmRatio; Log2NCandidates; IsoCorr; IsoRatioLog2; AbsPpmMono |]
@@ -1249,7 +1315,7 @@ module AlignmentBasedQuantification =
                                 partnerFailures <- partnerFailures + 1
                             emptySide nan None, nan
                     features.[ion.Row] <- Some (featureRow "quantified")
-                    Some (createRow ion measuredMz targetSide partnerSide correlation ionMobility)
+                    Some (createRow ion measuredMz targetSide partnerSide correlation ionMobility a.IonMobilityCentre)
                 | _ ->
                     features.[ion.Row] <- Some (featureRow "peak fit failed")
                     dropIon ion.Row "peak fit failed"
@@ -1267,8 +1333,8 @@ module AlignmentBasedQuantification =
         let mutable newDecoys = 0
         if eager then
             model <- trainModel featureSet
-        let analyseAndFit (i: int) (raw: RawXic) =
-            analyse i raw
+        let analyseAndFit (i: int) (raw: RawXic) (ionMobilityCentre: float) =
+            analyse i raw ionMobilityCentre
             match analysed.[i] with
             | Some a ->
                 if a.Ion.Row < n then
@@ -1326,6 +1392,10 @@ module AlignmentBasedQuantification =
                 (if performLabeled then sprintf ", %i without quantified labeled partner" partnerFailures else "")
                 drops.Summary (elapsed ())
             )
+        match processParams.XicExtraction.IonMobilityWindow with
+        | Domain.Window.Fixed halfWidth when centreTally.Count > 0 ->
+            logger.Info (sprintf "%s: ion mobility: %s" runName (centreTally.Summary halfWidth))
+        | _ -> ()
 
         // output: the PSM based rows with a fitted peak, then the alignment rows; of several rows of an ion and source
         // the one with the smallest |Difference_SearchRT_FittedRT|
@@ -1394,7 +1464,7 @@ module AlignmentBasedQuantification =
                     let row =
                         match decoyResults.TryGetValue ion.Row with
                         | true, q -> q
-                        | _ -> createRow ion nan (emptySide ion.LockMz None) (emptySide ion.PartnerLockMz None) nan nan
+                        | _ -> createRow ion nan (emptySide ion.LockMz None) (emptySide ion.PartnerLockMz None) nan nan nan
                     row, ion.Align.PredictedScanTime, featuresOf ion.Row
                     )
             let quantLines = decoyRows |> Array.map (fun (q, _, _) -> q) |> SeqIO'.csv "\t" true false |> Array.ofSeq

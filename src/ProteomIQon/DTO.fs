@@ -924,6 +924,9 @@ module Dto =
         AlignmentQValue                             : float
         [<FieldAttribute(45)>]
         IonMobility                                 : float
+        /// The ion mobility the XIC of the row is summed around; NaN for a row without an XIC summed in an ion mobility window.
+        [<FieldAttribute(46)>]
+        IonMobilityCentre                           : float
         }
 
     module QuantificationResult = 

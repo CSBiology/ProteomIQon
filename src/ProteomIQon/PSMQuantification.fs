@@ -28,6 +28,8 @@ module PSMQuantification =
         MeanScanTime : float
         WeightedAvgScanTime:float
         WeightedAvgIM:float
+        /// The ion mobility the XIC is summed around, and where the partner XIC and the isotope pattern are read.
+        IonMobilityCentre:float
         MeanScore   : float
         X_Xic         : float []
         Y_Xic         : float []
@@ -35,11 +37,12 @@ module PSMQuantification =
         }
 
     ///
-    let createAveragePSM meanPrecMz meanScanTime weightedAvgScanTime weightedAvgIM meanScore xXic yXic yXic_uncorrected = {
+    let createAveragePSM meanPrecMz meanScanTime weightedAvgScanTime weightedAvgIM ionMobilityCentre meanScore xXic yXic yXic_uncorrected = {
         MeanPrecMz    = meanPrecMz
         MeanScanTime  = meanScanTime
         WeightedAvgScanTime= weightedAvgScanTime
         WeightedAvgIM = weightedAvgIM
+        IonMobilityCentre = ionMobilityCentre
         MeanScore = meanScore
         X_Xic         = xXic
         Y_Xic         = yXic
@@ -83,7 +86,8 @@ module PSMQuantification =
     ///
     /// ionMobilityOf gives the ion mobility of the MS2 spectrum of a PSM by its PSMId. The centrePSMs PSMs with the highest
     /// summed matched fragment intensity are taken among the PSMs whose spectrum has an ion mobility, among all when none has one.
-    let average (centrePSMs: int) (ionMobilityOf: string -> float) getXic (correctionAt: float -> float -> float) theoMz (psms:(PSMStatisticsResult*float) []) =
+    /// getTargetXic gives the ion mobility centre and the XIC of the ion for the scan time, m/z and expected ion mobility (the one of the PSMs).
+    let average (centrePSMs: int) (ionMobilityOf: string -> float) (getTargetXic: float -> float -> float -> float * (float [] * float [] * float [])) (correctionAt: float -> float -> float) theoMz (psms:(PSMStatisticsResult*float) []) =
             //let meanPrecMz   = psms |> Seq.meanBy (fun (psm,m) -> psm.PrecursorMZ)
 
             let meanScanTime = psms |> Seq.meanBy (fun (psm,m) -> psm.ScanTime)
@@ -101,9 +105,8 @@ module PSMQuantification =
                 let weights = psms' |> Array.map snd
                 weightedMean weights ims
             let correctedMz = correctionAt weightedAvgScanTime theoMz + theoMz
-            let (retData,itzDataCorrected,ItzDataUncorrected) = getXic weightedAvgScanTime correctedMz weightedAvgIM
-            createAveragePSM correctedMz meanScanTime weightedAvgScanTime weightedAvgIM meanScore retData itzDataCorrected ItzDataUncorrected
-
+            let centre, (retData,itzDataCorrected,ItzDataUncorrected) = getTargetXic weightedAvgScanTime correctedMz weightedAvgIM
+            createAveragePSM correctedMz meanScanTime weightedAvgScanTime weightedAvgIM centre meanScore retData itzDataCorrected ItzDataUncorrected
 
     type InferredXic = {
         X_Xic                       :float[]
@@ -186,7 +189,7 @@ module PSMQuantification =
             PeptideLookUp                               : string -> int -> LookUpResult<AminoAcids.AminoAcid>
             /// The PSMs with the summed intensity of their fragment ions that match the peptide.
             CountMatchedMasses                          : LookUpResult<AminoAcids.AminoAcid> -> PSMStatisticsResult [] -> (PSMStatisticsResult * float) []
-            /// Number of PSMs, ranked by summed matched fragment intensity, that centre the XIC.
+            /// Number of PSMs, ranked by summed matched fragment intensity, that locate the XIC.
             CentrePSMs                                  : int
             /// true: quantify only a peak that contains the scan time. false: fall back to the peak with the closest apex.
             RequirePeakAtScanTime                       : bool
@@ -194,8 +197,10 @@ module PSMQuantification =
             CorrectionAt                                : float -> float -> float
             /// The ion mobility of the MS2 spectrum of a PSM by its PSMId, nan without ion mobility.
             IonMobilityOf                               : string -> float
-            /// Scan time, m/z and ion mobility to the scan times, corrected and uncorrected intensities of the XIC.
-            GetXic                                      : float -> float -> float -> float [] * float [] * float []
+            /// Scan time, m/z and expected ion mobility of the PSMs of an ion to the ion mobility centre and the XIC of the ion: scan times, corrected and uncorrected intensities.
+            GetTargetXic                                : float -> float -> float -> float * (float [] * float [] * float [])
+            /// Scan time, m/z and ion mobility to the XIC at that ion mobility: scan times, corrected and uncorrected intensities.
+            GetXicAtMobility                            : float -> float -> float -> float [] * float [] * float []
             IdentifyPeaks                               : float [] -> float [] -> FSharp.Stats.Signal.PeakDetection.IdentifiedPeak []
             /// X, Y and uncorrected Y of the XIC, charge, peptide, scan time, m/z and ion mobility of the ion to the isotope pattern comparison; nan ion mobility without ion mobility.
             ComparePredictedAndMeasuredIsotopicCluster  : float [] -> float [] -> float [] -> int -> LookUpResult<AminoAcids.AminoAcid> -> float -> float -> float -> ClusterComparison
@@ -218,7 +223,7 @@ module PSMQuantification =
         let psmsWithMatchedSums = f.CountMatchedMasses targetPeptide psms 
         let ms2s = psmsWithMatchedSums |> Array.map (fun (psm,m) -> psm.ScanTime,m)
         let theoMz = Mass.toMZ targetPeptide.Mass (float pepIon.Charge)
-        let averagePSM = average f.CentrePSMs f.IonMobilityOf f.GetXic f.CorrectionAt theoMz psmsWithMatchedSums
+        let averagePSM = average f.CentrePSMs f.IonMobilityOf f.GetTargetXic f.CorrectionAt theoMz psmsWithMatchedSums
         let avgMass = Mass.ofMZ (averagePSM.MeanPrecMz) (pepIon.Charge |> float)
         let peaks = f.IdentifyPeaks averagePSM.X_Xic averagePSM.Y_Xic
         if Array.isEmpty peaks then 
@@ -241,14 +246,14 @@ module PSMQuantification =
             None
         else
         let inferredScanTime = chooseScanTime f.ScanTimeWindow searchRTMinusFittedRT averagePSM.WeightedAvgScanTime quantP 
-        let clusterComparisonTarget = f.ComparePredictedAndMeasuredIsotopicCluster averagePSM.X_Xic averagePSM.Y_Xic averagePSM.Y_Xic_uncorrected pepIon.Charge targetPeptide quantP.EstimatedParams.[1] averagePSM.MeanPrecMz averagePSM.WeightedAvgIM
+        let clusterComparisonTarget = f.ComparePredictedAndMeasuredIsotopicCluster averagePSM.X_Xic averagePSM.Y_Xic averagePSM.Y_Xic_uncorrected pepIon.Charge targetPeptide quantP.EstimatedParams.[1] averagePSM.MeanPrecMz averagePSM.IonMobilityCentre
         if pepIon.GlobalMod = 0 then
             let mzHeavy = 
                 let mz = Mass.toMZ (labeledPeptide.Mass) (pepIon.Charge|> float)
                 let correctedMz = f.CorrectionAt inferredScanTime mz + mz
                 correctedMz 
             let inferredQuant = 
-                let inferredXicHeavy = getInferredXic f.GetXic averagePSM.WeightedAvgScanTime mzHeavy averagePSM.WeightedAvgIM
+                let inferredXicHeavy = getInferredXic f.GetXicAtMobility averagePSM.WeightedAvgScanTime mzHeavy averagePSM.IonMobilityCentre
                 let inferredPeaksHeavy = identifyPartnerPeaks inferredXicHeavy.X_Xic inferredXicHeavy.Y_Xic
                 if Array.isEmpty inferredPeaksHeavy then 
                     if f.DiagCharts then saveErrorChart inferredXicHeavy.X_Xic inferredXicHeavy.Y_Xic pepIon "noInferredPeaks" f.PlotDirectory
@@ -269,7 +274,7 @@ module PSMQuantification =
                     None
                 else
                 let searchRTMinusFittedRTHeavy = searchRTMinusFittedRtTarget inferredScanTime quantPHeavy
-                let clusterComparisonHeavy = f.ComparePredictedAndMeasuredIsotopicCluster inferredXicHeavy.X_Xic inferredXicHeavy.Y_Xic inferredXicHeavy.Y_Xic_uncorrected pepIon.Charge labeledPeptide quantP.EstimatedParams.[1] mzHeavy averagePSM.WeightedAvgIM
+                let clusterComparisonHeavy = f.ComparePredictedAndMeasuredIsotopicCluster inferredXicHeavy.X_Xic inferredXicHeavy.Y_Xic inferredXicHeavy.Y_Xic_uncorrected pepIon.Charge labeledPeptide quantP.EstimatedParams.[1] mzHeavy averagePSM.IonMobilityCentre
                 let corrLightHeavy  = calcCorrelation averagePSM.X_Xic quantP quantPHeavy
                 {
                 Model                       = quantPHeavy.Model
@@ -339,6 +344,7 @@ module PSMQuantification =
                 AlignmentScore                              = nan
                 AlignmentQValue                             = 0.
                 IonMobility                                 = averagePSM.WeightedAvgIM
+                IonMobilityCentre                           = averagePSM.IonMobilityCentre
                 }
                 |> Option.Some
             | None -> 
@@ -392,6 +398,7 @@ module PSMQuantification =
                 AlignmentScore                              = nan
                 AlignmentQValue                             = 0.
                 IonMobility                                 = averagePSM.WeightedAvgIM
+                IonMobilityCentre                           = averagePSM.IonMobilityCentre
                 }
                 |> Option.Some
         else
@@ -400,7 +407,7 @@ module PSMQuantification =
                 let correctedMz = f.CorrectionAt inferredScanTime mz + mz
                 correctedMz   
             let inferredQuant = 
-                let inferredXicLight = getInferredXic f.GetXic averagePSM.WeightedAvgScanTime mzLight averagePSM.WeightedAvgIM
+                let inferredXicLight = getInferredXic f.GetXicAtMobility averagePSM.WeightedAvgScanTime mzLight averagePSM.IonMobilityCentre
                 let inferredPeaksLight = identifyPartnerPeaks inferredXicLight.X_Xic inferredXicLight.Y_Xic
                 if Array.isEmpty inferredPeaksLight then 
                     if f.DiagCharts then saveErrorChart inferredXicLight.X_Xic inferredXicLight.Y_Xic pepIon "noInferredPeaks" f.PlotDirectory
@@ -421,7 +428,7 @@ module PSMQuantification =
                     None
                 else
                 let searchRTMinusFittedRTLight = searchRTMinusFittedRtTarget inferredScanTime quantPLight
-                let clusterComparisonLight = f.ComparePredictedAndMeasuredIsotopicCluster inferredXicLight.X_Xic inferredXicLight.Y_Xic inferredXicLight.Y_Xic_uncorrected pepIon.Charge unlabledPeptide quantP.EstimatedParams.[1] mzLight averagePSM.WeightedAvgIM
+                let clusterComparisonLight = f.ComparePredictedAndMeasuredIsotopicCluster inferredXicLight.X_Xic inferredXicLight.Y_Xic inferredXicLight.Y_Xic_uncorrected pepIon.Charge unlabledPeptide quantP.EstimatedParams.[1] mzLight averagePSM.IonMobilityCentre
                 let corrLightHeavy  = calcCorrelation averagePSM.X_Xic quantP quantPLight
                 {
                 Model                       = quantPLight.Model
@@ -491,6 +498,7 @@ module PSMQuantification =
                 AlignmentScore                              = nan
                 AlignmentQValue                             = 0.
                 IonMobility                                 = averagePSM.WeightedAvgIM
+                IonMobilityCentre                           = averagePSM.IonMobilityCentre
                 }
                 |> Option.Some
             | None ->
@@ -544,6 +552,7 @@ module PSMQuantification =
                 AlignmentScore                              = nan
                 AlignmentQValue                             = 0.
                 IonMobility                                 = averagePSM.WeightedAvgIM
+                IonMobilityCentre                           = averagePSM.IonMobilityCentre
                 }
                 |> Option.Some
         with
@@ -561,7 +570,7 @@ module PSMQuantification =
         let psmsWithMatchedSums = f.CountMatchedMasses unlabledPeptide psms 
         let ms2s = psmsWithMatchedSums |> Array.map (fun (psm,m) -> psm.ScanTime,m)
         let theoMz = Mass.toMZ unlabledPeptide.Mass (float pepIon.Charge)
-        let averagePSM = average f.CentrePSMs f.IonMobilityOf f.GetXic f.CorrectionAt theoMz psmsWithMatchedSums
+        let averagePSM = average f.CentrePSMs f.IonMobilityOf f.GetTargetXic f.CorrectionAt theoMz psmsWithMatchedSums
         let avgMass = Mass.ofMZ (averagePSM.MeanPrecMz) (pepIon.Charge |> float)      
         let peaks = f.IdentifyPeaks averagePSM.X_Xic averagePSM.Y_Xic               
         if Array.isEmpty peaks then 
@@ -583,7 +592,7 @@ module PSMQuantification =
             f.Logger.Trace (sprintf "Quant failed: Peak fitting failed, Sequence:%s, GlobalMod:%s, Charge:%s" (pepIon.Sequence |> String.filter (fun x -> x <> '*')) (pepIon.GlobalMod.ToString()) (pepIon.Charge.ToString()))
             None
         else
-        let clusterComparisonTarget = f.ComparePredictedAndMeasuredIsotopicCluster averagePSM.X_Xic averagePSM.Y_Xic averagePSM.Y_Xic_uncorrected pepIon.Charge unlabledPeptide quantP.EstimatedParams.[1] averagePSM.MeanPrecMz averagePSM.WeightedAvgIM
+        let clusterComparisonTarget = f.ComparePredictedAndMeasuredIsotopicCluster averagePSM.X_Xic averagePSM.Y_Xic averagePSM.Y_Xic_uncorrected pepIon.Charge unlabledPeptide quantP.EstimatedParams.[1] averagePSM.MeanPrecMz averagePSM.IonMobilityCentre
         if f.DiagCharts then 
             saveChart pepIon.Sequence pepIon.GlobalMod pepIon.Charge averagePSM.X_Xic averagePSM.Y_Xic ms2s averagePSM.WeightedAvgScanTime
                                 peakToQuantify.XData peakToQuantify.YData quantP.YPredicted  [||] [||] [||] [||] peaks clusterComparisonTarget.PeakComparisons f.PlotDirectory
@@ -634,6 +643,7 @@ module PSMQuantification =
         AlignmentScore                              = nan
         AlignmentQValue                             = 0.
         IonMobility                                 = averagePSM.WeightedAvgIM
+        IonMobilityCentre                           = averagePSM.IonMobilityCentre
         }
         |> Option.Some
         with

@@ -93,13 +93,16 @@ Ion mobility is used when the spectra and the `.align` file have it. An XIC poin
 the m/z window and inside the ion mobility window, as in PSMBasedQuantificationTIMs. Both widths are part of the quantity, so transferred
 and PSM based quantities are comparable when both tools use the same widths.
 
-The window is set by `XicExtraction.IonMobilityWindow`.
+The traces of an ion, of its isotopes and of its labeled partner share one window, set by `XicExtraction.IonMobilityWindow`. The
+expected ion mobility of the ion is `PredictedIonMobility`, or its ion mobility in the source run when the `.align` row has no prediction.
 
-- `Fixed v`: ±v around `PredictedIonMobility`.
-- `Estimate`: ±max(0.05, 4 · `PredictedIonMobilitySd`) 1/K0 around `PredictedIonMobility`.
+- `Fixed v`: ±v around the ion mobility centre of the ion. The centre is the intensity weighted ion mobility of the signal within v of
+  the expected ion mobility, around the `PredictedScanTime`. Without such signal it is the expected ion mobility.
+- `Estimate`: ±max(0.05, 4 · `PredictedIonMobilitySd`) 1/K0 around the expected ion mobility, ±0.05 without prediction.
 
-In a transferred row, `IonMobility` is the intensity weighted ion mobility of the chosen peak, measured within one fitted standard
-deviation of its apex.
+In a transferred row, `IonMobility` is the intensity
+weighted ion mobility of the chosen peak, measured within one fitted standard deviation of its apex. `IonMobilityCentre` is the ion
+mobility the traces were summed around: the centre with `Fixed`, the expected ion mobility with `Estimate`, `NaN` without ion mobility.
 
 ## Labeled quantification
 

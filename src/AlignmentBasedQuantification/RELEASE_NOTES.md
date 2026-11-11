@@ -7,7 +7,7 @@
 * Measure the m/z correction in the MS1 spectra in ppm over scan time and m/z, as PSMBasedQuantification does, and set the m/z window to four standard deviations of the residuals around it (was 0.05 Da); honour a fixed MzWindow_Da
 * Extract the XIC over the scan time window of the PSM based quantification and take candidates within max(MinScanTimeWindow, ScanTimeWindowSdFactor * PredictedScanTimeSd), capped at ScanTimeWindow
 * Extract the XICs faster and with less memory
-* Ion mobility: window of at least +-0.05 around the predicted ion mobility, an XIC point is the sum of all peaks inside the m/z window and the ion mobility window as in PSMBasedQuantificationTIMs, ion mobility distance as candidate feature, ion mobility of the chosen peak in the IonMobility column
+* Ion mobility: an XIC point is the sum of all peaks inside the m/z window and the ion mobility window, as in PSMBasedQuantificationTIMs; IonMobilityWindow Estimate gives a window of at least +-0.05 around the predicted ion mobility, Fixed v sums the traces of an ion within +-v around its ion mobility centre, the intensity weighted ion mobility of the signal within v of the predicted ion mobility at the predicted scan time; ion mobility distance as candidate feature, ion mobility of the chosen peak in the IonMobility column, the ion mobility the traces are summed around in the IonMobilityCentre column
 * Compare the isotope pattern on isotope traces extracted with the same windows
 * Compute the ALS baseline and predict the isotope patterns as the other quantification tools
 * Default to wavelet BorderPadMethod Zero, which gives identical results between runs; warn on Random
@@ -28,6 +28,7 @@
 * Quantify ions with short XIC traces, on which the wavelet peak detection failed
 * Update BioFSharp.Mz to 0.2.3
 * Take the scan time of a fitted peak at the apex of its fitted shape and its width as the standard deviation of that shape, also for peaks with an exponential tail
+* Breaking: the .quant files need the column IonMobilityCentre, so files of earlier PSMBasedQuantification and PSMBasedQuantificationTIMs releases have to be quantified again
 
 #### 0.0.4 - Wednesday, September 2, 2026
 * Fall back to a median mz correction when the smoothing spline cannot be fitted on sparse data

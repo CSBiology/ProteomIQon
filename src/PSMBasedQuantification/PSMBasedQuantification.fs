@@ -197,7 +197,9 @@ module PSMBasedQuantification =
                 CountMatchedMasses = countMatchedMasses
                 CorrectionAt = calibration.CorrectionAt
                 IonMobilityOf = (fun _ -> nan)
-                GetXic = getXICWithIM
+                // the tool reads no ion mobility: the centre is nan
+                GetTargetXic = (fun scanTime mz _ -> nan, getXIC scanTime mz)
+                GetXicAtMobility = getXICWithIM
                 IdentifyPeaks = identifyPeaks
                 ComparePredictedAndMeasuredIsotopicCluster = (fun x y yUncorrected charge peptide scanTime mz _ -> comparePredictedAndMeasuredIsotopicCluster x y yUncorrected charge peptide scanTime mz)
             }

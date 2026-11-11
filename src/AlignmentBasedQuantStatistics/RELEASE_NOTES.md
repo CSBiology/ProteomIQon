@@ -15,6 +15,7 @@
 * With -dc, save the chart AlignmentScoreHistogram with the out-of-fold AlignmentScore of the overlap ions by label, of the new ions and of the decoys; the charts ProbabilityHistogram and QValueDistribution of each run are gone
 * Breaking: the parameter file has the parameters PositiveRtSdFactor (default 1), NegativeRtSdFactor (3), MaxAbsLog2QuantRatio (1), UseIntensityRatioFeatures (false), UseIonMobility (true), NumberOfFolds (5), Trainer, NumberOfLeaves, NumberOfTrees, MinimumExampleCountPerLeaf, LearningRate, AbsentAnalyteFdr and Seed (1) in place of PositiveQuantMzCutoff, NegativeQuantMzCutoff, PositiveQuantCutoff and NegativeQuantCutoff
 * Take the scan time of a fitted peak at the apex of its fitted shape and its width as the standard deviation of that shape, also for peaks with an exponential tail
+* Breaking: the .quant files need the column IonMobilityCentre, so files of earlier PSMBasedQuantification and PSMBasedQuantificationTIMs releases have to be quantified again
 
 #### 0.0.5 - Wednesday, September 2, 2026
 * Update to .NET 10
