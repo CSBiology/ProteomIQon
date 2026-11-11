@@ -26,6 +26,7 @@
 * Remove DTW', the dynamic time warping of the alignment tools
 * Add PeakShape, the apex and the standard deviation of a fitted peak from its Gaussian or exponentially modified Gaussian parameters, used by the alignment tools
 * Add the column IonMobilityCentre as the last column of the .quant row (QuantificationResult): the ion mobility the XIC of the row is summed around, NaN without an ion mobility window. Breaking: QuantBasedAlignment, AlignmentBasedQuantification and AlignmentBasedQuantStatistics do not read .quant files without it
+* Set MzWindow_Da Fixed 0.008 and IonMobilityWindow Fixed 0.025 in the default parameters QuantificationTIMsParams and add AlignmentBasedQuantificationTIMsParams, the default parameters of AlignmentBasedQuantification with the same two values
 
 #### 0.0.12 - Monday, September 28, 2026
 * Extend PeptideSpectrumMatchingResult with IonMobility, Hyperscore, Expectscore, MatchedIons and TotalIons. Breaking: .psm files written by earlier releases have 23 columns and have to be regenerated before PSMStatistics of this release reads them
