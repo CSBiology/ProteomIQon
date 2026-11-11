@@ -1713,12 +1713,6 @@ module PSMBasedQuantificationTIMs =
             Xic.PeakCache(readSortedPeaks, cacheSize)
         let readSortedPeaksWithMem = peakCache.Get
         let closestMs1 = SpectrumIndex.initClosestMs1 ms1SortedByScanTime
-        let comparePredictedAndMeasuredIsotopicCluster =
-            initComparePredictedAndMeasuredIsotopicCluster
-                isotopePatterns
-                (fun id lowMz highMz -> Xic.getPeaksInMzRange (readSortedPeaksWithMem id) lowMz highMz)
-                closestMs1
-                (calibration.HalfWindow / MzCalibration.mzWindowSdFactor)
         let compareGaborPredictedAndMeasuredIsotopicCluster =
             initComparePredictedAndMeasuredIsotopicCluster
                 isotopePatterns
@@ -1730,6 +1724,14 @@ module PSMBasedQuantificationTIMs =
             | Domain.Window.Fixed v -> v
             | Domain.Window.Estimate -> failwith "IonMobilityWindow Estimate is only available in AlignmentBasedQuantification; use Fixed."
         let getXIC = initGetProcessedXIC processParams.BaseLineCorrection readSortedPeaksWithMem retTimeIdxed processParams.XicExtraction.ScanTimeWindow mzWindow ionMobilityHalfWindow
+        // the isotope pattern is read from the XIC points of its peaks inside the ion mobility window of the XIC
+        let comparePredictedAndMeasuredIsotopicCluster =
+            initComparePredictedAndMeasuredIsotopicClusterIonMobility
+                isotopePatterns
+                (fun id lockMz halfWindow imLow imHigh -> Xic.extractPoint (readSortedPeaksWithMem id) lockMz halfWindow imLow imHigh)
+                closestMs1
+                mzWindow
+                ionMobilityHalfWindow
         ///
         let identifyPeaks = initIdentifyPeaks processParams.XicExtraction.XicProcessing
         logger.Trace "init lookup functions:finished"

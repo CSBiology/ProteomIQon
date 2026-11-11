@@ -197,7 +197,8 @@ module PSMQuantification =
             /// Scan time, m/z and ion mobility to the scan times, corrected and uncorrected intensities of the XIC.
             GetXic                                      : float -> float -> float -> float [] * float [] * float []
             IdentifyPeaks                               : float [] -> float [] -> FSharp.Stats.Signal.PeakDetection.IdentifiedPeak []
-            ComparePredictedAndMeasuredIsotopicCluster  : float [] -> float [] -> float [] -> int -> LookUpResult<AminoAcids.AminoAcid> -> float -> float -> ClusterComparison
+            /// X, Y and uncorrected Y of the XIC, charge, peptide, scan time, m/z and ion mobility of the ion to the isotope pattern comparison; nan ion mobility without ion mobility.
+            ComparePredictedAndMeasuredIsotopicCluster  : float [] -> float [] -> float [] -> int -> LookUpResult<AminoAcids.AminoAcid> -> float -> float -> float -> ClusterComparison
         }
 
     /// Quantifies the light and heavy ion of a peptide ion from its PSMs; None when it fails.
@@ -240,7 +241,7 @@ module PSMQuantification =
             None
         else
         let inferredScanTime = chooseScanTime f.ScanTimeWindow searchRTMinusFittedRT averagePSM.WeightedAvgScanTime quantP 
-        let clusterComparisonTarget = f.ComparePredictedAndMeasuredIsotopicCluster averagePSM.X_Xic averagePSM.Y_Xic averagePSM.Y_Xic_uncorrected pepIon.Charge targetPeptide quantP.EstimatedParams.[1] averagePSM.MeanPrecMz            
+        let clusterComparisonTarget = f.ComparePredictedAndMeasuredIsotopicCluster averagePSM.X_Xic averagePSM.Y_Xic averagePSM.Y_Xic_uncorrected pepIon.Charge targetPeptide quantP.EstimatedParams.[1] averagePSM.MeanPrecMz averagePSM.WeightedAvgIM
         if pepIon.GlobalMod = 0 then
             let mzHeavy = 
                 let mz = Mass.toMZ (labeledPeptide.Mass) (pepIon.Charge|> float)
@@ -268,7 +269,7 @@ module PSMQuantification =
                     None
                 else
                 let searchRTMinusFittedRTHeavy = searchRTMinusFittedRtTarget inferredScanTime quantPHeavy
-                let clusterComparisonHeavy = f.ComparePredictedAndMeasuredIsotopicCluster inferredXicHeavy.X_Xic inferredXicHeavy.Y_Xic inferredXicHeavy.Y_Xic_uncorrected pepIon.Charge labeledPeptide quantP.EstimatedParams.[1] mzHeavy
+                let clusterComparisonHeavy = f.ComparePredictedAndMeasuredIsotopicCluster inferredXicHeavy.X_Xic inferredXicHeavy.Y_Xic inferredXicHeavy.Y_Xic_uncorrected pepIon.Charge labeledPeptide quantP.EstimatedParams.[1] mzHeavy averagePSM.WeightedAvgIM
                 let corrLightHeavy  = calcCorrelation averagePSM.X_Xic quantP quantPHeavy
                 {
                 Model                       = quantPHeavy.Model
@@ -420,7 +421,7 @@ module PSMQuantification =
                     None
                 else
                 let searchRTMinusFittedRTLight = searchRTMinusFittedRtTarget inferredScanTime quantPLight
-                let clusterComparisonLight = f.ComparePredictedAndMeasuredIsotopicCluster inferredXicLight.X_Xic inferredXicLight.Y_Xic inferredXicLight.Y_Xic_uncorrected pepIon.Charge unlabledPeptide quantP.EstimatedParams.[1] mzLight
+                let clusterComparisonLight = f.ComparePredictedAndMeasuredIsotopicCluster inferredXicLight.X_Xic inferredXicLight.Y_Xic inferredXicLight.Y_Xic_uncorrected pepIon.Charge unlabledPeptide quantP.EstimatedParams.[1] mzLight averagePSM.WeightedAvgIM
                 let corrLightHeavy  = calcCorrelation averagePSM.X_Xic quantP quantPLight
                 {
                 Model                       = quantPLight.Model
@@ -582,7 +583,7 @@ module PSMQuantification =
             f.Logger.Trace (sprintf "Quant failed: Peak fitting failed, Sequence:%s, GlobalMod:%s, Charge:%s" (pepIon.Sequence |> String.filter (fun x -> x <> '*')) (pepIon.GlobalMod.ToString()) (pepIon.Charge.ToString()))
             None
         else
-        let clusterComparisonTarget = f.ComparePredictedAndMeasuredIsotopicCluster averagePSM.X_Xic averagePSM.Y_Xic averagePSM.Y_Xic_uncorrected pepIon.Charge unlabledPeptide quantP.EstimatedParams.[1] averagePSM.MeanPrecMz
+        let clusterComparisonTarget = f.ComparePredictedAndMeasuredIsotopicCluster averagePSM.X_Xic averagePSM.Y_Xic averagePSM.Y_Xic_uncorrected pepIon.Charge unlabledPeptide quantP.EstimatedParams.[1] averagePSM.MeanPrecMz averagePSM.WeightedAvgIM
         if f.DiagCharts then 
             saveChart pepIon.Sequence pepIon.GlobalMod pepIon.Charge averagePSM.X_Xic averagePSM.Y_Xic ms2s averagePSM.WeightedAvgScanTime
                                 peakToQuantify.XData peakToQuantify.YData quantP.YPredicted  [||] [||] [||] [||] peaks clusterComparisonTarget.PeakComparisons f.PlotDirectory

@@ -411,9 +411,6 @@ module AlignmentBasedQuantification =
     let maxCalibrationIons = 2000
     let minCalibrationIons = 50
     let calibrationMzWindow = 0.05
-    /// Isotope traces are extracted for the isotope peaks within this m/z distance of the monoisotopic peak.
-    let isotopeRangeLow = -0.6
-    let isotopeRangeHigh = 1.1
     /// The selection model is trained when at least this many clean overlap ions have a candidate; else the fixed score is used.
     let minTrainingIons = 200
     let logisticLambda = 1.
@@ -495,24 +492,7 @@ module AlignmentBasedQuantification =
                 )
         if measured.Length = 0 then
             { PeakComparisons = [||]; KLDiv_UnCorrected = nan; KLDiv_Corrected = nan }
-        else
-        let sumMeasured = measured |> Array.sumBy (fun x -> x.MeasuredIntensity)
-        let sumCorrected = measured |> Array.sumBy (fun x -> x.MeasuredIntensityCorrected)
-        let sumPredicted = measured |> Array.sumBy (fun x -> x.PredictedRelFrequency)
-        let normalised =
-            measured
-            |> Array.map (fun x ->
-                {x with
-                    MeasuredIntensity = x.MeasuredIntensity / sumMeasured
-                    MeasuredIntensityCorrected = x.MeasuredIntensityCorrected / sumCorrected
-                    PredictedRelFrequency = x.PredictedRelFrequency / sumPredicted }
-                )
-        let predicted = normalised |> Array.map (fun x -> x.PredictedRelFrequency)
-        {
-            PeakComparisons   = normalised
-            KLDiv_UnCorrected = klDiv (normalised |> Array.map (fun x -> x.MeasuredIntensity)) predicted
-            KLDiv_Corrected   = klDiv (normalised |> Array.map (fun x -> x.MeasuredIntensityCorrected)) predicted
-        }
+        else normalizeClusterComparison measured
 
     /// The precursor m/z written by the PSM based quantification with the theoretical m/z.
     let precursorObservations (psmQuant: QuantificationResult []) =
