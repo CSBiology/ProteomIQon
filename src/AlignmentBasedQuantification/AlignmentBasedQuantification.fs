@@ -705,15 +705,15 @@ module AlignmentBasedQuantification =
                 RtTrace_Heavy = [||]; IntensityTrace_Observed_Heavy = [||]; IntensityTrace_Corrected_Heavy = [||] }
         let ownQuant = Dictionary<(string*int*int),QuantificationResult>(HashIdentity.Structural)
         for qp in psmQuant do
-            let scanTime = getTargetScanTime qp
-            let sd = getTargetStabw qp
+            let scanTime = getTargetPeakApex qp
+            let sd = getTargetPeakWidth qp
             if isFinite scanTime && isFinite sd && sd > 0. then
                 ownQuant.[(qp.StringSequence, qp.GlobalMod, qp.Charge)] <- withoutTraces qp
         // ions whose PSM based row has a fitted scan time: AlignmentBasedQuantStatistics keeps this row, the alignment row is a training example and the truth
         let psmPeakIons = HashSet<(string*int*int)>(HashIdentity.Structural)
         for qp in psmQuant do
             let key = (qp.StringSequence, qp.GlobalMod, qp.Charge)
-            if isFinite (getTargetScanTime qp) then psmPeakIons.Add key |> ignore else psmPeakIons.Remove key |> ignore
+            if isFinite (getTargetPeakApex qp) then psmPeakIons.Add key |> ignore else psmPeakIons.Remove key |> ignore
         let psmIons = HashSet<(string*int*int)>(psmQuant |> Seq.map (fun qp -> qp.StringSequence, qp.GlobalMod, qp.Charge), HashIdentity.Structural)
         let psmMzObservations = precursorObservations psmQuant
         let psmRows = psmQuant |> Array.filter (fun qp -> (tryTargetGetScanTime qp).IsSome)
@@ -789,7 +789,7 @@ module AlignmentBasedQuantification =
         // at the fitted scan time of the ions the run quantified itself. The precursor m/z of the .quant rows only places the lock m/z.
         let initialCalibration = MzCalibration.fit psm.PsmMzObservations
         let calibrationIons =
-            let ions = psm.OwnQuant.Values |> Array.ofSeq |> Array.sortBy getTargetScanTime
+            let ions = psm.OwnQuant.Values |> Array.ofSeq |> Array.sortBy getTargetPeakApex
             let step = max 1 (ions.Length / maxCalibrationIons)
             ions |> Array.indexed |> Array.filter (fun (i, _) -> i % step = 0) |> Array.map snd
         let calibration =
@@ -799,7 +799,7 @@ module AlignmentBasedQuantification =
             let requests =
                 calibrationIons
                 |> Array.map (fun qp ->
-                    let scanTime = getTargetScanTime qp
+                    let scanTime = getTargetPeakApex qp
                     let theoMz = Mass.toMZ qp.TheoMass (float qp.Charge)
                     let imCenter = if useIonMobility then qp.IonMobility else nan
                     {
@@ -820,7 +820,7 @@ module AlignmentBasedQuantification =
                             ModSequenceID = qp.ModSequenceID
                             Charge        = qp.Charge
                             GlobalMod     = qp.GlobalMod
-                            ScanTime      = getTargetScanTime qp
+                            ScanTime      = getTargetPeakApex qp
                             TheoreticalMz = Mass.toMZ qp.TheoMass (float qp.Charge)
                             MeasuredMz    = raw.ObservedMz.[0].[0]
                         }
@@ -1007,7 +1007,7 @@ module AlignmentBasedQuantification =
         // selection model and are written to <run>.aligndecoy only.
         let decoys =
             let pool = prepared |> Array.filter (fun ion -> not (psm.PsmIons.Contains ((ion.Align.StringSequence, ion.Align.GlobalMod, ion.Align.Charge))))
-            let ownScanTimes = psm.OwnQuant.Values |> Seq.map getTargetScanTime |> Array.ofSeq |> Array.sort
+            let ownScanTimes = psm.OwnQuant.Values |> Seq.map getTargetPeakApex |> Array.ofSeq |> Array.sort
             if processParams.DecoyFraction <= 0. || pool.Length = 0 then
                 [||]
             elif ownScanTimes.Length = 0 then
@@ -1099,7 +1099,7 @@ module AlignmentBasedQuantification =
             | true, qp -> Some qp
             | _ -> None
         let ownOf (a: AnalysedIon) = ownOfIon a.Ion
-        let isCorrect (qp: QuantificationResult) (c: Candidate) = abs (c.Center - getTargetScanTime qp) <= getTargetStabw qp
+        let isCorrect (qp: QuantificationResult) (c: Candidate) = abs (c.Center - getTargetPeakApex qp) <= getTargetPeakWidth qp
         let ownIdx = [| for i in 0 .. toExtract.Length - 1 do if (ownOfIon toExtract.[i]).IsSome then yield i |]
         let newIdx = [| for i in 0 .. toExtract.Length - 1 do if (ownOfIon toExtract.[i]).IsNone then yield i |]
         let sweepOver (indices: int []) (callback: int -> RawXic -> unit) =
@@ -1119,7 +1119,7 @@ module AlignmentBasedQuantification =
             analysedOwn
             |> Array.choose (fun a ->
                 match ownOf a with
-                | Some qp when abs (getTargetScanTimeDifference qp) / getTargetStabw qp < 2. -> Some (a, qp)
+                | Some qp when abs (getTargetApexDifference qp) / getTargetPeakWidth qp < 2. -> Some (a, qp)
                 | _ -> None
                 )
         // the new ions are fitted as soon as they are analysed if the second pass cannot change the model; with too few training ions there is none
@@ -1207,7 +1207,8 @@ module AlignmentBasedQuantification =
                 let quantP = try Some (HULQ.quantifyPeak chosen.Peak) with _ -> None
                 match quantP with
                 | Some q when isValidFit q ->
-                    let fittedScanTime = q.EstimatedParams.[1]
+                    let fittedParam1 = q.EstimatedParams.[1]
+                    let fittedScanTime = PeakShape.apex q.EstimatedParams
                     let targetSide =
                         {
                             QuantMz      = ion.LockMz
@@ -1215,8 +1216,8 @@ module AlignmentBasedQuantification =
                             MeasuredApex = q.MeasuredApexIntensity
                             Seo          = q.StandardErrorOfPrediction
                             Params       = q.EstimatedParams
-                            Difference   = align.PredictedScanTime - fittedScanTime
-                            Cluster      = compareIsotopicCluster a.Target ion.TargetIsotopes fittedScanTime
+                            Difference   = align.PredictedScanTime - fittedParam1
+                            Cluster      = compareIsotopicCluster a.Target ion.TargetIsotopes fittedParam1
                             Traces       = Some a.Target
                         }
                     let topPoints = topHalf a.Target chosen
@@ -1224,11 +1225,11 @@ module AlignmentBasedQuantification =
                         let w = topPoints |> Array.filter (fun i -> isFinite a.Target.ObservedMz.[0].[i])
                         let sum = w |> Array.sumBy (fun i -> a.Target.Intensity.[0].[i])
                         if sum > 0. then (w |> Array.sumBy (fun i -> a.Target.Intensity.[0].[i] * a.Target.ObservedMz.[0].[i])) / sum else nan
-                    // ion mobility of the chosen peak: intensity weighted over the points within 1 fitted sd of its centre
+                    // ion mobility of the chosen peak: intensity weighted over the points within 1 fitted width of its apex
                     let ionMobility =
                         if not useIonMobility then nan
                         else
-                            let sd = q.EstimatedParams.[2]
+                            let sd = PeakShape.width q.EstimatedParams
                             let around = [| for i in 0 .. a.Target.Rt.Length - 1 do if abs (a.Target.Rt.[i] - fittedScanTime) <= sd then yield i |]
                             let im = weightedIonMobility a.Target around
                             if isFinite im then im else weightedIonMobility a.Target topPoints
@@ -1258,7 +1259,7 @@ module AlignmentBasedQuantification =
                                     Seo          = qp.StandardErrorOfPrediction
                                     Params       = qp.EstimatedParams
                                     Difference   = anchor - qp.EstimatedParams.[1]
-                                    Cluster      = compareIsotopicCluster traces ion.PartnerIsotopes fittedScanTime
+                                    Cluster      = compareIsotopicCluster traces ion.PartnerIsotopes fittedParam1
                                     Traces       = Some traces
                                 }, calcCorrelation a.Target.Rt q qp
                             | _ -> failed "peak fit failed"
@@ -1352,7 +1353,7 @@ module AlignmentBasedQuantification =
             Array.append psm.PsmRowsHeld quantResults
             |> Array.groupBy (fun qp -> qp.StringSequence, qp.ModSequenceID, qp.Charge, qp.GlobalMod, qp.QuantificationSource)
             |> Array.map (fun (_, rows) ->
-                rows |> Array.minBy (fun qp -> let d = abs (getTargetScanTimeDifference qp) in if isFinite d then d else infinity)
+                rows |> Array.minBy (fun qp -> let d = abs (getTargetApexDifference qp) in if isFinite d then d else infinity)
                 )
         let repeated = psm.PsmFitted + quantResults.Length - (psm.PsmWritten + outputRows.Length)
         if psm.PsmFitted < psm.PsmCount || repeated > 0 then

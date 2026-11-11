@@ -61,8 +61,8 @@ handled by AlignmentBasedQuantStatistics, which uses the decoy transfers describ
 | ion mobility distance | &#124;candidate ion mobility − `PredictedIonMobility`&#124; in units of `PredictedIonMobilitySd` (timsTOF only) |
 
 The model is trained per run on the ions the run identified itself and that QuantBasedAlignment also transferred (overlap ions). For
-these the right answer is known: the candidate within one peak standard deviation of the run's own PSM based peak. Only overlap ions with a
-reliable own fit (|search − fitted scan time| < 2 sd) are used. The training is cross-fitted: the peptides are split into 5 folds, and an
+these the right answer is known: the candidate within one standard deviation of the apex of the run's own PSM based peak. Only overlap ions with a
+reliable own fit (|search − apex of the fitted peak| < 2 standard deviations of the fitted peak) are used. The training is cross-fitted: the peptides are split into 5 folds, and an
 overlap ion is decided by the model trained on the other four folds. New ions are decided by the model trained on all overlap ions. A run with fewer than 200
 training ions uses a fixed score instead: −0.5 · min(d², 50) + 4 · shape correlation + 2 · log10 relative height, with d the scan time
 distance.
@@ -96,7 +96,7 @@ summed per m/z over the mobility scans, as PSMBasedQuantificationTIMs does, so t
 - `Estimate`: ±max(0.05, 4 · `PredictedIonMobilitySd`) 1/K0 around `PredictedIonMobility`.
 
 In a transferred row, `IonMobility` is the intensity weighted ion mobility of the chosen peak, measured within one fitted standard
-deviation of its centre.
+deviation of its apex.
 
 ## Labeled quantification
 

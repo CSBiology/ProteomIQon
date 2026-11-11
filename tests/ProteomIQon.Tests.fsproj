@@ -19,6 +19,7 @@
     <Compile Include="Unit_Tests\WaveletQuantification.fs"/>
     <Compile Include="Unit_Tests\MzCalibration.fs"/>
     <Compile Include="Unit_Tests\AlignmentScoreCalibration.fs"/>
+    <Compile Include="Unit_Tests\PeakShape.fs"/>
     <Compile Include="Main.fs" />
   </ItemGroup>
 

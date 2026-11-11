@@ -1133,7 +1133,7 @@ let pipelineTests =
                 let cell (cells: string[]) (name: string) = cells.[psmHeader.[name]]
                 let psmKey (cells: string[]) = cell cells "StringSequence", cell cells "GlobalMod", cell cells "Charge"
                 let psmIons = psmCells |> Array.map psmKey |> Set.ofArray
-                // fitted peak as in AlignmentBasedQuantification: scan time and sd at positions 1 and 2 of the parameters of the label of the row
+                // a fitted peak as AlignmentBasedQuantification reads it: a finite mean and a positive sigma at positions 1 and 2 of the parameters of the label of the row (the apex and the total width are then finite and positive too)
                 let hasFittedPeak (cells: string[]) =
                     let parameters = (cell cells (if cell cells "GlobalMod" = "0" then "Params_Light" else "Params_Heavy")).Split ';'
                     parameters.Length > 2 && Double.IsFinite (parseFloat parameters.[1]) && parseFloat parameters.[2] > 0.

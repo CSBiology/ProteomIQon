@@ -24,6 +24,7 @@
 * Add Xic, MzCalibration, PeakQuantification and PSMQuantification: the XIC of an ion, the m/z correction of a run, the peak detection and the choice of the peak, and the quantification of the PSMs of an ion, shared by PSMBasedQuantification, PSMBasedQuantificationTIMs and AlignmentBasedQuantification
 * Breaking: change QuantificationParams, the parameters of PSMBasedQuantification and PSMBasedQuantificationTIMs, and the default parameters: remove FragPipe and add QualityFilterLog2Limit, CentrePSMs, RequirePeakAtScanTime and IonMobilityWindow in XicExtraction
 * Remove DTW', the dynamic time warping of the alignment tools
+* Add PeakShape, the apex and the standard deviation of a fitted peak from its Gaussian or exponentially modified Gaussian parameters, used by the alignment tools
 
 #### 0.0.12 - Monday, September 28, 2026
 * Extend PeptideSpectrumMatchingResult with IonMobility, Hyperscore, Expectscore, MatchedIons and TotalIons. Breaking: .psm files written by earlier releases have 23 columns and have to be regenerated before PSMStatistics of this release reads them

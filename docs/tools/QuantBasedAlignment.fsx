@@ -30,8 +30,8 @@ The tool is the first of three that transfer quantifications between runs. It re
 
 The tool works on each pair of target and source run separately.
 
-1. The model uses the ions (sequence, modifications, charge) that both runs quantified with a successful peak fit whose fitted scan
-   time lies within two peak standard deviations of the identification. A pair needs at least 20 shared ions.
+1. The model uses the ions (sequence, modifications, charge) that both runs quantified with a successful peak fit whose identification
+   scan time lies within two standard deviations of the apex of the fitted peak. A pair needs at least 20 shared ions.
 2. It describes the shift *target scan time − source scan time* as a function of the source scan time. Each point of the curve is the
    median shift of the k shared ions nearest in source scan time. Between ions the curve is interpolated linearly, beyond the first and last
    ion it is constant.
