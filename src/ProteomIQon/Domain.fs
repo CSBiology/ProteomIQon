@@ -138,6 +138,10 @@ module Domain =
         MaxIterations                   : int
         MinimumIncreaseBetweenIterations: float
         PepValueFittingMethod           : PepValueFittingMethod
+        /// Score each scan with a model trained on the other two of three scan folds (Percolator-style cross-validation).
+        CrossValidation                 : bool
+        /// Add the deviation of the observed retention time from a time predicted from the peptide sequence as model features.
+        RetentionTimeFeature            : bool
     }
 
     type ScoreCutoff = {
@@ -154,6 +158,8 @@ module Domain =
             Threshold                   : Threshold 
             FastaHeaderToName           : string -> string
             KeepTemporaryFiles          : bool
+            /// Write the isotope patterns of the identified precursor ions into the peptide data base.
+            StoreIsotopePatterns        : bool
         }
 
     type WindowSize = 
@@ -195,6 +201,8 @@ module Domain =
             MzWindow_Da                  : Window 
             XicProcessing                : XicProcessing
             TopKPSMs                     : int option
+            /// Half width of the ion mobility window (1/K0). Fixed v: ±v around the ion mobility centre of the ion. Estimate (AlignmentBasedQuantification only): from the predicted ion mobility sd. PSMBasedQuantification ignores it.
+            IonMobilityWindow            : Window
         }
        
     type BaseLineCorrection = 
@@ -216,6 +224,12 @@ module Domain =
             PerformLabeledQuantification : Labeling
             XicExtraction                : XicExtraction
             BaseLineCorrection           : BaseLineCorrection option
+            /// The filters keep rows with -limit < log2 ((area / median area) / (apex / median apex)) < limit.
+            QualityFilterLog2Limit       : float
+            /// Number of PSMs, ranked by summed matched fragment intensity, whose weighted scan time (and ion mobility) locates the XIC.
+            CentrePSMs                   : int
+            /// true: only a peak that contains the scan time is quantified, none otherwise. false: the peak that contains the scan time, else the peak whose apex is closest to it (HULQ.getPeakBy).
+            RequirePeakAtScanTime        : bool
         }
 
     type LabelEfficiencyCalculationParams =
@@ -224,12 +238,20 @@ module Domain =
             UpperBound: float
         }
 
-    type AlignmentBasedQuantificationParams = 
+    type AlignmentBasedQuantificationParams =
         {
-            PerformLabeledQuantification : bool
-            PerformLocalWarp             : bool
+            PerformLabeledQuantification : Labeling
             XicExtraction                : XicExtraction
             BaseLineCorrection           : BaseLineCorrection option
+            /// Lower bound of the half width of the scan time window (minutes).
+            MinScanTimeWindow            : float
+            /// The half width of the scan time window is this factor times PredictedScanTimeSd, capped at XicExtraction.ScanTimeWindow.
+            ScanTimeWindowSdFactor       : float
+            /// Fraction of the new ions that are also quantified as decoy transfers at a shifted scan time (0: none).
+            DecoyFraction                : float
+            Seed                         : int
+            /// true: the labeled partner is quantified only when a peak contains the scan time of the ion, otherwise it stays empty. false: the peak that contains the scan time, else the peak whose apex is closest to it (HULQ.getPeakBy). The ion's own peak is chosen among the candidates by the selection model in both cases.
+            RequirePeakAtScanTime        : bool
         }
 
     type FDRMethod =
@@ -414,14 +436,44 @@ module Domain =
             AggregateToProteinGroupsParams       : LabelFreeQuantification.AggregationParams
         } 
 
+    /// Gradient boosted trees of ML.NET that AlignmentBasedQuantStatistics trains.
+    [<RequireQualifiedAccess>]
+    type AlignmentScoreTrainer =
+        | FastTree
+        | LightGbm
+
+    /// How AlignmentBasedQuantStatistics adds the false discovery rate of new ions whose analyte is absent from the run.
+    [<RequireQualifiedAccess>]
+    type AbsentAnalyteFdr =
+        /// Not added.
+        | Off
+        /// Decoy based, with the absent fraction estimated per run.
+        | Estimated
+        /// Decoy based, with an absent fraction of 1.
+        | Conservative
+
     type AlignmentBasedQuantStatisticsParams =
         {
-            PositiveQuantMzCutoff: float
-            NegativeQuantMzCutoff: float
-            PositiveQuantCutoff: float
-            NegativeQuantCutoff: float
-        } 
-               
+            /// An overlap ion is positive if its peak is at most this many sd (of the own PSM peak) away from the own PSM peak ...
+            PositiveRtSdFactor          : float
+            /// ... and ambiguous (left out of training) if it is further away, but at most this many sd. Else negative.
+            NegativeRtSdFactor          : float
+            /// Positive and ambiguous ions also have |log2(alignment quant / PSM quant)| at most this value.
+            MaxAbsLog2QuantRatio        : float
+            /// Adds the target to source quant and apex ratios and the target quant and apex as features.
+            UseIntensityRatioFeatures   : bool
+            /// Adds |IonMobility - PredictedIonMobility| / PredictedIonMobilitySd as a feature when the runs have ion mobility.
+            UseIonMobility              : bool
+            NumberOfFolds               : int
+            Trainer                     : AlignmentScoreTrainer
+            NumberOfLeaves              : int
+            NumberOfTrees               : int
+            MinimumExampleCountPerLeaf  : int
+            LearningRate                : float
+            AbsentAnalyteFdr            : AbsentAnalyteFdr
+            Seed                        : int
+        }
+
     type ConsensusAlignmentAlgorithm = 
         | FastTree
         | Spline 

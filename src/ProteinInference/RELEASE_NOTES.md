@@ -1,5 +1,6 @@
 #### Unreleased
 * Update BioFSharp.Mz to 0.2.2
+* Update BioFSharp.Mz to 0.2.3
 
 #### 0.0.10 - Wednesday, September 2, 2026
 * Use protein inference and FDR control from BioFSharp.Mz instead of the local copies

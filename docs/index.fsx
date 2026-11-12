@@ -20,9 +20,7 @@ Installing a tool
 -----------------
 
 Every tool is a .NET tool on [nuget.org](https://www.nuget.org/profiles/CSBiology), package `ProteomIQon.<ToolName>`,
-command `proteomiqon-<toolname>`. The one exception is QuantBasedAlignment, which ships as
-`ProteomIQon.QuantBasedAlignment_win_x64` and `ProteomIQon.QuantBasedAlignment_linux_x64`. The package
-`ProteomIQon.QuantBasedAlignment` is the library both wrap and installs no command.
+command `proteomiqon-<toolname>`.
 
 ```text
 dotnet tool install --global ProteomIQon.PeptideDB
@@ -43,20 +41,20 @@ column, and the next tool reads them.
 | Convert raw data | [MzMLToMzLite]({{root}}tools/MzMLToMzLite.html) | .mzML (from msconvert) | .mzlite |
 | Build the search space | [PeptideDB]({{root}}tools/PeptideDB.html) | FASTA | .db (SQLite) |
 | Identify spectra | [PeptideSpectrumMatching]({{root}}tools/PeptideSpectrumMatching.html) | .mzlite, .db | .psm |
-| Control the FDR | [PSMStatistics]({{root}}tools/PSMStatistics.html) | .psm, .db | .qpsm |
+| Control the FDR | [PSMStatistics]({{root}}tools/PSMStatistics.html) | .psm, .db | .qpsm, isotope patterns into the .db |
 | Quantify identified peptide ions | [PSMBasedQuantification]({{root}}tools/PSMBasedQuantification.html) | .mzlite, .qpsm, .db | .quant |
 | Infer proteins | [ProteinInference]({{root}}tools/ProteinInference.html) | .qpsm, .db | .prot |
 | Join peptides and proteins | [JoinQuantPepIonsWithProteins]({{root}}tools/JoinQuantPepIonsWithProteins.html) | .quant, .prot | .quantAndProt |
 | Aggregate to proteins | [LabelFreeProteinQuantification]({{root}}tools/LabelFreeProteinQuantification.html) or [LabeledProteinQuantification]({{root}}tools/LabeledProteinQuantification.html) | .quantAndProt | LabelFreeQuant.txt or LabeledQuant.txt |
 
 With several runs, the alignment tools transfer identifications between runs before the join. They sit between
-PSMBasedQuantification and JoinQuantPepIonsWithProteins:
+PSMBasedQuantification or PSMBasedQuantificationTIMs and JoinQuantPepIonsWithProteins:
 
 | Step | Tool | Reads | Writes |
 |------|------|-------|--------|
 | Map scan times between runs | [QuantBasedAlignment]({{root}}tools/QuantBasedAlignment.html) | .quant of all runs | .align, .alignmetric |
-| Quantify transferred peptide ions | [AlignmentBasedQuantification]({{root}}tools/AlignmentBasedQuantification.html) | .mzlite, .align, .alignmetric, .quant, .db | .quant |
-| Score the transfers | [AlignmentBasedQuantStatistics]({{root}}tools/AlignmentBasedQuantStatistics.html) | .quant, .align | .quant |
+| Quantify transferred peptide ions | [AlignmentBasedQuantification]({{root}}tools/AlignmentBasedQuantification.html) | .mzlite, .align, .quant, .db | .quant, .alignfeatures, .aligndecoy |
+| Score the transfers | [AlignmentBasedQuantStatistics]({{root}}tools/AlignmentBasedQuantStatistics.html) | PSM based and aligned .quant, .align, .alignfeatures, .aligndecoy | .quant |
 | Reassign protein groups | [AddDeducedPeptides]({{root}}tools/AddDeducedPeptides.html) | .quant, .prot | .prot |
 
 Five more tools cover other inputs. For 15N labeled samples, [RatioLFQ]({{root}}tools/RatioLFQ.html) turns the
@@ -65,8 +63,7 @@ light to heavy ratios in LabeledQuant.txt into one intensity per run and protein
 [MsFraggerToPSM]({{root}}tools/MsFraggerToPSM.html) imports an MSFragger search. [PeptideSpectrumMatchingTIMs]({{root}}tools/PeptideSpectrumMatchingTIMs.html) identifies the spectra of an ion
 mobility run without MSFragger and writes the `.psm` that [PSMStatistics]({{root}}tools/PSMStatistics.html) reads.
 [PSMBasedQuantificationTIMs]({{root}}tools/PSMBasedQuantificationTIMs.html) quantifies in retention time and ion
-mobility from the FragPipe layout of MsFraggerToPSM. The `.qpsm` of PSMStatistics carries no ion mobility yet, so that
-link from PeptideSpectrumMatchingTIMs to the quantification is still open.
+mobility from the `.qpsm` of PSMStatistics or MsFraggerToPSM.
 
 The core project
 ------------------

@@ -1,1110 +1,640 @@
 namespace ProteomIQon
 
-
-open System.IO
 open System
-open FSharpAux.Colors.Table.StatisticalGraphics24
-open FSharp.Stats
+open System.IO
+open System.Collections.Generic
 open FSharpAux.IO.SchemaReader
 open Plotly.NET
 open BioFSharp
-open Microsoft
-// open Microsoft.ML
-// open Microsoft.ML.Data
-// open Microsoft.ML.AutoML   
 open Dto
 open Dto.QuantificationResult
-open Core.InputPaths
 
 
-// The Spline module was implemented according to a julia implementation available at: https://github.com/nignatiadis/SmoothingSplines.jl/blob/master/LICENSE.md 
-// Copyright (c) 2016: Nikolaos Ignatiadis.
-// Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
-// The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-module Spline =
+/// Robust model of the shift between two runs (target minus source scan time, or ion mobility) as a function of the source value:
+/// a running median over the k nearest neighbours, fitted after trimming gross outliers, with k chosen by grouped cross-validation.
+module RobustShift =
 
-    open MKLNET
+    let isFinite (v: float) = not (Double.IsNaN v || Double.IsInfinity v)
 
+    /// Median of the values, nan for an empty array.
+    let median (values: float []) =
+        if values.Length = 0 then
+            nan
+        else
+            let sorted = Array.sort values
+            let n = sorted.Length
+            if n % 2 = 1 then sorted.[n / 2] else 0.5 * (sorted.[n / 2 - 1] + sorted.[n / 2])
 
-    ///Helper functions
-    ///  
-    type ReinschQ(values:float[]) =    
-        member m.h = values
-        member m.Item(i,j) = 
-                let h = values 
-                if (i = j) then
-                    1. / h.[i]
-                elif (i = j+1) then
-                    -1. / h.[j] - 1. / h.[j+1]
-                elif (i = j+2) then
-                    1. / h.[j+1]
-                else
-                    0.
-        member m.Size = 
-            let n = values.Length
-            n+1,n-1
+    /// Percentile p (0 to 1) with linear interpolation between the order statistics, nan for an empty array.
+    let percentile (p: float) (values: float []) =
+        if values.Length = 0 then
+            nan
+        else
+            let sorted = Array.sort values
+            let pos = p * float (sorted.Length - 1)
+            let lo = int (floor pos)
+            let hi = min (lo + 1) (sorted.Length - 1)
+            sorted.[lo] + (pos - float lo) * (sorted.[hi] - sorted.[lo])
 
+    type Settings =
+        {
+            /// Candidate numbers of neighbours of the running median.
+            KGrid            : int []
+            NFolds           : int
+            TrimRounds       : int
+            /// Points with |residual| > max(TrimMadFactor * 1.4826 * MAD, MinTrimThreshold) are left out of the fit.
+            TrimMadFactor    : float
+            MinTrimThreshold : float
+        }
 
-    //tests
-    let rq = ReinschQ([|5.;5.;5.|])
-    // should be 0.2
-    rq.[0,0]
-    rq.[1,1]
-    // (should be -0.4)
-    rq.[2,1]
-    // (should be 4,2)
-    rq.Size
+    /// The running median at the distinct training values, linearly interpolated in between and constant beyond the ends.
+    type Curve =
+        {
+            X     : float []
+            Shift : float []
+        }
 
-    let multiplyInplace (out:float[]) (q:ReinschQ) (g:float[]) = 
-        let n = out.Length
-        if n <> (q.Size |> fst)  then failwith "DimensionMismatch"
-        elif g.Length <> (q.Size |> snd) then failwith "DimensionMismatch"
-        else 
-            for i = 0 to n-1 do 
-                out.[i] <- 0.
-                for j = (max 0 (i-2)) to (min i (n-3)) do
-                    out.[i] <- out.[i] + g.[j]*q.[i,j]
-            out
+    let predict (curve: Curve) (x: float) =
+        let xs = curve.X
+        let n = xs.Length
+        if n = 0 || Double.IsNaN x then nan
+        elif x <= xs.[0] then curve.Shift.[0]
+        elif x >= xs.[n - 1] then curve.Shift.[n - 1]
+        else
+            // xs.[lo] <= x < xs.[hi]
+            let hi = SortedSearch.upperBound xs x
+            let lo = hi - 1
+            let t = (x - xs.[lo]) / (xs.[hi] - xs.[lo])
+            curve.Shift.[lo] + t * (curve.Shift.[hi] - curve.Shift.[lo])
 
-    //tests
-    let testmul1 = 
-        let rq = ReinschQ([|5.;5.;5.|])
-        let out = Array.init 4 (fun x -> 0.)
-        let gTest = [|2.;2.|]
-        // should be [|0.4; -0.4; -0.4; 0.4|]
-        multiplyInplace out rq gTest    
+    /// Fits the running median of k neighbours to points sorted by x. Of two equally distant neighbours the left one is taken.
+    let private fitSorted (k: int) (x: float []) (shift: float []) =
+        let n = x.Length
+        let k = min k n
+        let window = Array.zeroCreate k
+        let fitted =
+            Array.init n (fun i ->
+                let mutable lo = i
+                let mutable hi = i
+                while hi - lo + 1 < k do
+                    if lo = 0 then hi <- hi + 1
+                    elif hi = n - 1 then lo <- lo - 1
+                    elif x.[i] - x.[lo - 1] <= x.[hi + 1] - x.[i] then lo <- lo - 1
+                    else hi <- hi + 1
+                Array.blit shift lo window 0 k
+                Array.Sort window
+                if k % 2 = 1 then window.[k / 2] else 0.5 * (window.[k / 2 - 1] + window.[k / 2])
+                )
+        // one knot per distinct x
+        let knots =
+            Array.zip x fitted
+            |> Array.groupBy fst
+            |> Array.map (fun (xv, group) -> xv, group |> Array.averageBy snd)
+        {
+            X     = Array.map fst knots
+            Shift = Array.map snd knots
+        }
 
-    let testmul2 = 
-        let rq = ReinschQ([|1. .. 10.|])
-        let out = Array.init 11 (fun x -> 0.)
-        let gTest = [|for i = 0 to 8 do yield 2.|]
-        // should be [|2.0; -2.0; 1.110223025e-16; 1.110223025e-16; 0.0; -5.551115123e-17;
-        // -5.551115123e-17; 0.0; 0.0; -0.2; 0.2|]
-        multiplyInplace out rq gTest    
+    /// Fits the curve to the points with the given indices.
+    let fitCurve (k: int) (x: float []) (shift: float []) (indices: int []) =
+        let sorted = indices |> Array.sortWith (fun a b -> compare (x.[a], shift.[a]) (x.[b], shift.[b]))
+        fitSorted k (sorted |> Array.map (fun i -> x.[i])) (sorted |> Array.map (fun i -> shift.[i]))
 
-
-    let multiplyInplaceTransposedQ (out:float[]) (q:ReinschQ) (g:float[]) = 
-        let n = out.Length
-        if n <> (q.Size |> snd)  then failwith "DimensionMismatch"
-        elif g.Length <> (q.Size |> fst) then failwith "DimensionMismatch"
-        else 
-            let h = q.h
-            let mutable deltaGP1 = (g.[1] - g.[0])/h.[0]
-            for i = 0 to out.Length-1 do 
-                let deltaG = deltaGP1
-                deltaGP1 <- (g.[i+2] - g.[i+1])/h.[i+1]
-                out.[i] <- deltaGP1 - deltaG
-            out 
-
-    let testmultrans2 = 
-        let rq = ReinschQ([|1. .. 10.|])
-        let out = Array.init 9 (fun x -> 0.)
-        let gTest = [|0. .. 10.|] |> Array.rev
-        // should be   [|0.5; 0.1666666667; 0.08333333333; 0.05; 0.03333333333; 0.02380952381;
-        // 0.01785714286; 0.01388888889; 0.01111111111|]
-        multiplyInplaceTransposedQ out rq gTest    
-
-    ///Helper functions
-    ///  
-    type ReinschR(values:float[]) =    
-        member m.h = values
-        member m.Item(i,j) = 
-            let h = values 
-            if (i=j) then
-                (h.[i] + h.[i+1]) / 3.
-            elif abs(i-j) = 1 then
-                h.[max i j] / 6.
+    /// The shift of every point predicted by the curve fitted to the selected points of the other folds. If all selected
+    /// points are in the fold of a point, by the curve fitted to the selected points without the point itself.
+    let outOfFold (settings: Settings) (k: int) (x: float []) (shift: float []) (fold: int []) (selected: bool []) =
+        let predicted = Array.create x.Length nan
+        for f in 0 .. settings.NFolds - 1 do
+            let train = [| for i in 0 .. x.Length - 1 do if selected.[i] && fold.[i] <> f then yield i |]
+            if train.Length > 0 then
+                let curve = fitCurve k x shift train
+                for i in 0 .. x.Length - 1 do
+                    if fold.[i] = f then predicted.[i] <- predict curve x.[i]
             else
-                0.
-        member m.Size = 
-            let n = values.Length
-            n-1,n-1
+                for i in 0 .. x.Length - 1 do
+                    if fold.[i] = f then
+                        let others = [| for j in 0 .. x.Length - 1 do if selected.[j] && j <> i then yield j |]
+                        if others.Length > 0 then predicted.[i] <- predict (fitCurve k x shift others) x.[i]
+        predicted
 
-    //tests
-    let reinschrTests =
-        let rr = ReinschR([|5.;5.;5.|])
-        // should be 0.2
-        rr.[0,0]
-        rr.[1,1]
-        // (should be -0.4)
-        rr.[2,1]
-        // (should be 4,2)
-        rr.Size
+    /// Median absolute out-of-fold error of the selected points.
+    let private cvError (settings: Settings) (k: int) (x: float []) (shift: float []) (fold: int []) (selected: bool []) =
+        let predicted = outOfFold settings k x shift fold selected
+        let errors = [| for i in 0 .. x.Length - 1 do if selected.[i] && isFinite predicted.[i] then yield abs (shift.[i] - predicted.[i]) |]
+        let m = median errors
+        if isFinite m then m else infinity
 
-    ///
-    let QtQpR (h:float[]) (alpha:float) (w:float []) = 
-        let n = h.Length-1
-        let Q = ReinschQ h
-        let R = ReinschR h 
-        let out = Matrix.zero 3 n
-        // main diagonal
-        for i=0 to n-1 do
-            let fstTerm = (Q.[i+2,i] / w.[i+2] - Q.[i+1,i] / w.[i+1]) /  h.[i+1]
-            let sndTerm = (Q.[i+1,i] / w.[i+1] - Q.[i,i] / w.[i]) / h.[i]
-            out.[2,i] <- alpha * (fstTerm - sndTerm) + R.[i,i]
-        // 1st superdiagonal
-        for i=0 to n-2 do
-            let fstTerm = (Q.[i+2,i+1]  / w.[i+2] - Q.[i+1,i+1] / w.[i+1]) / h.[i+1]
-            let sndTerm =  Q.[i+1, i+1] / w.[i+1] / h.[i]
-            out.[1,i+1] <- alpha * (fstTerm - sndTerm) + R.[i, i+1]
-        // 2nd superdiagonal
-        for i=0 to n-3 do
-            let fstTerm = Q.[i+2,i+2] / w.[i+2] / h.[i+1]
-            out.[0,i+2] <- alpha * fstTerm + R.[i,i+2]   
-        out
+    /// The k of the grid with the smallest median absolute out-of-fold error, the smallest k on ties.
+    let chooseK (settings: Settings) (x: float []) (shift: float []) (fold: int []) (selected: bool []) =
+        settings.KGrid
+        |> Array.map (fun k -> k, cvError settings k x shift fold selected)
+        |> Array.minBy snd
+        |> fst
 
+    type Fit =
+        {
+            Curve     : Curve
+            K         : int
+            /// The points that survived the trimming; the curve is fitted to them.
+            Kept      : bool []
+            /// Out-of-fold shift of every point, trimmed points included.
+            OutOfFold : float []
+            /// Absolute out-of-fold error of every point.
+            AbsError  : float []
+        }
 
-    let QtQpRTests =
-        let rq = [|1. .. 10.|]
-        let out = Array.init (rq.Length+1) (fun x -> 1.)
-        // should be 
-            // matrix [[0.0; 0.0; 1.666666667; 0.8333333333; 0.5; 0.3333333333;
-            //    0.2380952381; 0.1785714286; 0.1388888889]
-            //   [0.0; -11.33333333; -4.222222222; -1.916666667; -0.8; -0.126984127;
-            //    0.3418367347; 0.7033730159; 1.00308642]
-            //   [36.0; 12.22222222; 7.472222222; 6.05; 5.688888889; 5.77324263;
-            //    6.077806122; 6.503858025; 7.002469136]]
-        QtQpR rq 10. out
+    /// Robust fit: k by cross-validation on all points, up to TrimRounds rounds of trimming with that k,
+    /// then k by cross-validation on the kept points and the final curve on the kept points.
+    let fit (settings: Settings) (x: float []) (shift: float []) (fold: int []) =
+        let n = x.Length
+        let indicesOf (mask: bool []) = Array.init n id |> Array.filter (fun i -> mask.[i])
+        let all = Array.create n true
+        let k0 = chooseK settings x shift fold all
+        let minKept = max settings.KGrid.[0] settings.NFolds
+        let rec trim round (kept: bool []) =
+            if round = settings.TrimRounds then
+                kept
+            else
+                let curve = fitCurve k0 x shift (indicesOf kept)
+                let residual = Array.init n (fun i -> shift.[i] - predict curve x.[i])
+                let keptResidual = indicesOf kept |> Array.map (fun i -> residual.[i])
+                let center = median keptResidual
+                let mad = 1.4826 * median (keptResidual |> Array.map (fun r -> abs (r - center)))
+                let threshold = max (settings.TrimMadFactor * mad) settings.MinTrimThreshold
+                let next = residual |> Array.map (fun r -> abs r <= threshold)
+                if next = kept || (next |> Array.filter id |> Array.length) < minKept then kept else trim (round + 1) next
+        let kept = trim 0 all
+        let k = chooseK settings x shift fold kept
+        let outOfFoldShift = outOfFold settings k x shift fold kept
+        {
+            Curve     = fitCurve k x shift (indicesOf kept)
+            K         = k
+            Kept      = kept
+            OutOfFold = outOfFoldShift
+            AbsError  = Array.init n (fun i -> abs (shift.[i] - outOfFoldShift.[i]))
+        }
 
+    /// Robust local error scale: 1.4826 * median absolute out-of-fold error of the points within +-HalfWindow of x.
+    type ErrorScale =
+        {
+            X          : float []
+            AbsError   : float []
+            /// Used where fewer than MinPoints points are in the window.
+            Global     : float
+            HalfWindow : float
+            MinPoints  : int
+            Floor      : float
+        }
 
-    let QtQpRTests2 =
-        let rq = [|1. .. 10.|]
-        let out = Array.init (rq.Length+1) (fun x -> 1.)
-        // should be 
-            // matrix [[0.0; 0.0; 1.666666667; 0.8333333333; 0.5; 0.3333333333;
-            //    0.2380952381; 0.1785714286; 0.1388888889]
-            //   [0.0; -11.33333333; -4.222222222; -1.916666667; -0.8; -0.126984127;
-            //    0.3418367347; 0.7033730159; 1.00308642]
-            //   [36.0; 12.22222222; 7.472222222; 6.05; 5.688888889; 5.77324263;
-            //    6.077806122; 6.503858025; 7.002469136]]
-        QtQpR rq 10. out
+    let initErrorScale (halfWindow: float) (minPoints: int) (floor: float) (x: float []) (absError: float []) =
+        let points =
+            Array.zip x absError
+            |> Array.filter (fun (a, b) -> isFinite a && isFinite b)
+            |> Array.sortBy fst
+        {
+            X          = Array.map fst points
+            AbsError   = Array.map snd points
+            Global     = 1.4826 * median (Array.map snd points)
+            HalfWindow = halfWindow
+            MinPoints  = minPoints
+            Floor      = floor
+        }
 
-    let diff (x:float []) = 
-        Array.init (x.Length-1) (fun i -> x.[i+1] - x.[i])
-
-    let diffTests = 
-        let t = [|1.;20.;3.;4.;5.|] 
-        diff t
-      
-    let initFullSparseRpαQtQ (RpαQtQ:matrix) =
-        let indexSequence = 
-            [|
-                for m = 0 to 2 do
-                    for n = 0 to RpαQtQ.NumCols-1 do 
-                        if m = 2 then n,n,RpαQtQ.[m,n]
-                        
-                        if m = 1 && n > 0 then 
-                            n-1,n,RpαQtQ.[m,n] 
-                        if m = 0 && n > 1 then 
-                            n-2,n,RpαQtQ.[m,n]
-                        
-                        if m = 1 && n > 0 then 
-                            n,n-1,RpαQtQ.[m,n]                    
-                        if m = 0 && n > 1 then 
-                            n,n-2,RpαQtQ.[m,n] 
-            |]
-        Matrix.initSparse RpαQtQ.NumCols RpαQtQ.NumCols indexSequence
-                        
-
-    let initFullSparseRpαQtQTests =
-        let rq = [|1. .. 10.|]
-        let out = Array.init (rq.Length+1) (fun x -> 1.)
-        // should be:
-        // matrix [[36.0; -11.33333333; 1.666666667; 0.0; 0.0; 0.0; 0.0; 0.0; 0.0]
-        //           [0.0; 12.22222222; -4.222222222; 0.8333333333; 0.0; 0.0; 0.0; 0.0;
-        //            0.0]
-        //           [0.0; 0.0; 7.472222222; -1.916666667; 0.5; 0.0; 0.0; 0.0; 0.0]
-        //           [0.0; 0.0; 0.0; 6.05; -0.8; 0.3333333333; 0.0; 0.0; 0.0]
-        //           [0.0; 0.0; 0.0; 0.0; 5.688888889; -0.126984127; 0.2380952381; 0.0;
-        //            0.0]
-        //           [0.0; 0.0; 0.0; 0.0; 0.0; 5.77324263; 0.3418367347; 0.1785714286;
-        //            0.0]
-        //           [0.0; 0.0; 0.0; 0.0; 0.0; 0.0; 6.077806122; 0.7033730159;
-        //            0.1388888889]
-        //           [0.0; 0.0; 0.0; 0.0; 0.0; 0.0; 0.0; 6.503858025; 1.00308642]
-        //           [0.0; 0.0; 0.0; 0.0; 0.0; 0.0; 0.0; 0.0; 7.002469136]]
-        QtQpR rq 10. out
-        |> initFullSparseRpαQtQ
+    /// The local scale at x, with the absolute error ownError of a point of the scale left out of the window (nan: none).
+    let localScaleWithout (scale: ErrorScale) (ownError: float) (x: float) =
+        let local =
+            if not (isFinite x) then
+                scale.Global
+            else
+                let lo = SortedSearch.lowerBound scale.X (x - scale.HalfWindow)
+                let hi = SortedSearch.upperBound scale.X (x + scale.HalfWindow)
+                let window = scale.AbsError.[lo .. hi - 1]
+                let window =
+                    match Array.tryFindIndex (fun e -> e = ownError) window with
+                    | Some j -> Array.append window.[.. j - 1] window.[j + 1 ..]
+                    | None -> window
+                if window.Length >= scale.MinPoints then 1.4826 * median window else scale.Global
+        if isFinite local then max scale.Floor local else scale.Floor
 
 
-    // expects row major matrix
-    let solveLeastSquares (m:matrix) (y:vector) = 
-        let mFlat = 
-            let flat = m |> Matrix.toJaggedArray |> Array.concat
-            let tmp = System.GC.AllocateArray<float>(flat.Length,pinned=true) 
-            flat |> Array.iteri (fun i x -> tmp.[i] <- x)
-            tmp
-        // Computes the Cholesky factorization of a symmetric (Hermitian) positive-definite band matrix.
-        let res = MKLNET.Lapack.pbtrf(Layout.RowMajor,UpLoChar.Upper,m.NumCols,2,mFlat,max 1 (m.NumCols))
-        let yFlat =
-            let tmp = System.GC.AllocateArray<float>(y.Length,pinned=true) 
-            y |> Seq.iteri (fun i x -> tmp.[i] <- x)
-            tmp 
-        let mFlat' = 
-            let tmp = System.GC.AllocateArray<float>(mFlat.Length,pinned=true) 
-            mFlat |> Array.iteri (fun i x -> tmp.[i] <- x)
-            tmp
-        let resT = MKLNET.Lapack.pbtrs(Layout.RowMajor,UpLoChar.Upper,m.NumCols, 2, 1,mFlat',m.NumCols,yFlat,1)
-        yFlat
+module QuantBasedAlignment =
 
-        
-    let fitSplineSparseLapack (x:float []) (y:float []) lambda = 
-        let ws = Array.create x.Length 1.
-        let diffx = diff x 
-        let RpαQtQ = QtQpR diffx lambda ws
-        let h = diff x
-        let Q = ReinschQ(h)
-        // fitSpline xd yd 2. should yield: gamma = [|-0.1; 0.1; 0.4; -0.1; -0.4; 0.2; 0.2; -0.4|]
-        let gamma = 
-            multiplyInplaceTransposedQ (Array.zeroCreate (x.Length-2)) Q y
-            |> vector 
-            |> solveLeastSquares RpαQtQ
-        let g = 
-            multiplyInplace (Array.zeroCreate (x.Length)) Q (gamma) 
-            |> Array.map2 (fun ws g -> g / ws) ws
-            |> Array.map (fun g -> g * lambda)
-            |> Array.map2 (fun y g -> y - g ) y
-        g
-
-
-    let initPredict (gamma:float[]) (g:float[]) (x:float[]) (xToPred:float) = 
-        let n = x.Length-1
-        let idxL = 
-            match Array.tryFindIndexBack (fun v -> v <= xToPred) x with
-            | Some i -> i
-            | None -> -1 
-        let idxR = idxL + 1
-        if idxL = -1 then 
-            let gl = g.[0]
-            let gr = g.[1]
-            let gamma' = gamma.[0]
-            let xl = x.[0]
-            let xr = x.[1]
-            let gprime = (gr-gl) / (xr-xl) - 1. / 6. * (xr-xl) * gamma'
-            gl - (xl-xToPred) * gprime
-        elif idxL = n then  
-            let gl = g.[n-1]
-            let gr = g.[n]
-            let gamma' = gamma.[n-2]
-            let xl = x.[n-1]
-            let xr = x.[n]
-            let gprime = (gr-gl) / (xr-xl) + 1./ 6. * (xr-xl) * gamma'
-            gr + (xToPred - xr)*gprime
-        else 
-            let xl = x.[idxL]
-            let xr = x.[idxR]
-            let gammaL = if idxL = 0 then 0. else gamma.[idxL-1]
-            let gammaR = if idxL = n-1 then 0. else gamma.[idxR-1]
-            let gl = g.[idxL]
-            let gr = g.[idxR]
-            let h = xr-xl
-            let tmp = ((xToPred-xl) * gr + (xr-xToPred) * gl) / h
-            tmp - (1. / 6. * (xToPred-xl) * (xr-xToPred) * ((1. + (xToPred-xl) / h) * gammaR + (1.+ (xr-xToPred) / h) * gammaL))
-
-    
-    let fitSplineSparseLapack' (x:float []) (y:float []) lambda = 
-        let ws = Array.create x.Length 1.
-        let diffx = diff x 
-        let RpαQtQ = QtQpR diffx lambda ws
-        let h = diff x
-        let Q = ReinschQ(h)
-        // fitSpline xd yd 2. should yield: gamma = [|-0.1; 0.1; 0.4; -0.1; -0.4; 0.2; 0.2; -0.4|]
-        let gamma = 
-            multiplyInplaceTransposedQ (Array.zeroCreate (x.Length-2)) Q y
-            |> vector 
-            |> solveLeastSquares RpαQtQ
-        let g = 
-            multiplyInplace (Array.zeroCreate (x.Length)) Q (gamma) 
-            |> Array.map2 (fun ws g -> g / ws) ws
-            |> Array.map (fun g -> g * lambda)
-            |> Array.map2 (fun y g -> y - g ) y
-        initPredict gamma g x 
-
-module QuantBasedAlignment = 
+    open RobustShift
 
     ///
-    let paletteArray =
-        [|
-            Blue1     
-            Blue2     
-            Blue3     
-            Red1      
-            Red2      
-            Red3      
-            LightBlue1
-            LightBlue2
-            LightBlue3
-            LightRed1 
-            LightRed2 
-            LightRed3 
-            Green1    
-            Green2    
-            Green3    
-            Orange1   
-            Orange2   
-            Orange3   
-            Cyan1     
-            Cyan2     
-            Cyan3     
-            Magenta1  
-            Magenta2  
-            Magenta3  
-        |]
-
-    /// Define the random number generator outside of a potential loop.
-    let getRandomColor (rnd: System.Random) =
-        let index = rnd.Next(0,23)
-        paletteArray.[index]
-
-    // ///
-    // let downcastPipeline (x : IEstimator<_>) = 
-    //     match x with 
-    //     | :? IEstimator<ITransformer> as y -> y
-    //     | _ -> failwith "downcastPipeline: expecting a IEstimator<ITransformer>"
-
-    ///
-    type PeptideIon = 
+    type PeptideIon =
         {
             Sequence             : string
             GlobalMod            : int
-            Charge               : int        
+            Charge               : int
         }
-    
+
     ///
-    let toPeptideIon (qp:QuantificationResult) = 
+    let toPeptideIon (qp:QuantificationResult) =
         {
             Sequence             = qp.StringSequence
             GlobalMod            = qp.GlobalMod
             Charge               = qp.Charge
         }
 
-    ///
-    type AlignmentFile = {
-        FileName                   : string
-        QuantifiedPeptides         : Map<PeptideIon,QuantificationResult> 
-        MissingPeptides            : PeptideIon []
-        GainedPeptides             : AlignmentResult []
-        PepIonsToAlign             : PeptideIon []
-        }
-    
-
-    [<CLIMutable>]
-    type PeptideForLearning = 
+    /// Scan time model (minutes).
+    let scanTimeSettings =
         {
-            // [<ColumnName("Sequence")>]
-            Sequence                     : string
-            // [<ColumnName("GlobalMod")>]
-            GlobalMod                    : string
-            // [<ColumnName("Charge")>]
-            Charge                       : string
-            // [<ColumnName("PepSequenceID")>]
-            PepSequenceID                : string
-            // [<ColumnName("ModSequenceID")>]
-            ModSequenceID                : string
-            // [<ColumnName("SourceScanTime")>]
-            SourceScanTime               : float32
-            // [<ColumnName("TargetScanTime")>]
-            TargetScanTime               : float32
-            // [<ColumnName("ScanTimeDifference")>]
-            ScanTimeDifference           : float32
+            KGrid            = [|5; 7; 11; 15; 21; 31; 41; 51; 71; 101|]
+            NFolds           = 5
+            TrimRounds       = 3
+            TrimMadFactor    = 3.
+            MinTrimThreshold = 0.05
         }
-    
-    [<CLIMutable>]
-    type PeptideComplete = 
+
+    /// Ion mobility model (1/K0).
+    let ionMobilitySettings = { scanTimeSettings with MinTrimThreshold = 0.005 }
+
+    /// Source and target pairs with fewer shared ions are not modelled.
+    let minSharedIons = 20
+
+    /// The local error scale of a scan time is taken from the shared ions within +-5 minutes, and is at least 0.01 minutes.
+    let initScanTimeScale = initErrorScale 5. 10 0.01
+
+    /// The local error scale of an ion mobility is taken from the shared ions within +-0.05 1/K0, and is at least 0.001.
+    let initIonMobilityScale = initErrorScale 0.05 10 0.001
+
+    /// A row of a .quant file that passes the filter with the scan time of the peak apex of its target label.
+    type QuantIon =
         {
-            // [<ColumnName("Sequence")>]
-            Sequence                     : string
-            // [<ColumnName("GlobalMod")>]
-            GlobalMod                    : string
-            // [<ColumnName("Charge")>]
-            Charge                       : string
-            // [<ColumnName("PepSequenceID")>]
-            PepSequenceID                : string
-            // [<ColumnName("ModSequenceID")>]
-            ModSequenceID                : string
-            // [<ColumnName("SourceScanTime")>]
-            SourceScanTime               : float32
-            // [<ColumnName("SourceIntensity")>]
-            SourceIntensity              : float32
-            // [<ColumnName("SourceStabw")>]
-            SourceStabw                  : float32
-            // [<ColumnName("TargetScanTime")>]
-            TargetScanTime               : float32
-            // [<ColumnName("TargetIntensity")>]
-            TargetIntensity              : float32
-            // [<ColumnName("RtTrace_SourceFile")>]
-            RtTrace_SourceFile                              : float [] 
-            // [<ColumnName("IntensityTrace_SourceFile")>]
-            IntensityTrace_SourceFile                       : float []
-            // [<ColumnName("RtTrace_TargetFile")>]
-            RtTrace_TargetFile                              : float []
-            // [<ColumnName("IntensityTrace_TargetFile")>]
-            IntensityTrace_TargetFile                       : float []          
-            // [<ColumnName("IsotopicPatternMz_SourceFile")>]
-            IsotopicPatternMz_SourceFile                    : float []          
-            // [<ColumnName("IsotopicPatternIntensity_Observed_SourceFile")>]
-            IsotopicPatternIntensity_Observed_SourceFile    : float []         
-            // [<ColumnName("IsotopicPatternMz_TargetFile")>]
-            IsotopicPatternMz_TargetFile                    : float []         
-            // [<ColumnName("IsotopicPatternIntensity_Observed_TargetFile")>]
-            IsotopicPatternIntensity_Observed_TargetFile    : float []
-            IonMobility                  : float32
+            Row       : QuantificationResult
+            Apex      : float
         }
 
-    /////
-    //let formatString s = String.filter (fun x -> Char.IsUpper x) s
-
     ///
-    let toPeptideForLearning (targetPep:QuantificationResult option) (sourcePep:QuantificationResult) = 
-        match targetPep with 
-        | Some tP -> 
-            {
-                Sequence                                        = (*formatString*) sourcePep.StringSequence
-                GlobalMod                                       = sourcePep.GlobalMod          |> string      
-                Charge                                          = sourcePep.Charge             |> string
-                PepSequenceID                                   = sourcePep.PepSequenceID      |> string
-                ModSequenceID                                   = sourcePep.ModSequenceID      |> string
-                SourceScanTime                                  = getTargetScanTime sourcePep  |> float32
-                TargetScanTime                                  = getTargetScanTime tP         |> float32
-                ScanTimeDifference                              = ((getTargetScanTime tP) - (getTargetScanTime sourcePep)) |> float32
-            },
-            {
-                Sequence                                        = (*formatString*) sourcePep.StringSequence
-                GlobalMod                                       = sourcePep.GlobalMod          |> string      
-                Charge                                          = sourcePep.Charge             |> string
-                PepSequenceID                                   = sourcePep.PepSequenceID      |> string
-                ModSequenceID                                   = sourcePep.ModSequenceID      |> string
-                SourceScanTime                                  = getTargetScanTime sourcePep  |> float32
-                SourceIntensity                                 = getTargetIntensity sourcePep |> float32
-                SourceStabw                                     = getTargetStabw sourcePep     |> float32
-                TargetScanTime                                  = getTargetScanTime tP         |> float32
-                TargetIntensity                                 = getTargetIntensity tP        |> float32
-                RtTrace_SourceFile                              = getTargetRtTrace sourcePep
-                IntensityTrace_SourceFile                       = getTargetIntensityTrace sourcePep
-                RtTrace_TargetFile                              = getTargetRtTrace tP
-                IntensityTrace_TargetFile                       = getTargetIntensityTrace tP
-                IsotopicPatternMz_SourceFile                    = getIsotopicPatternMz sourcePep
-                IsotopicPatternIntensity_Observed_SourceFile    = getIsotopicPatternIntensity_Observed sourcePep
-                IsotopicPatternMz_TargetFile                    = getIsotopicPatternMz tP  
-                IsotopicPatternIntensity_Observed_TargetFile    = getIsotopicPatternIntensity_Observed tP
-                IonMobility                                     = sourcePep.IonMobility |> float32
-            }
-        | None -> 
-            {
-                Sequence                                        = (*formatString*) sourcePep.StringSequence
-                GlobalMod                                       = sourcePep.GlobalMod          |> string   
-                Charge                                          = sourcePep.Charge             |> string
-                PepSequenceID                                   = sourcePep.PepSequenceID      |> string
-                ModSequenceID                                   = sourcePep.ModSequenceID      |> string
-                SourceScanTime                                  = getTargetScanTime sourcePep  |> float32
-                TargetScanTime                                  = nan                          |> float32
-                ScanTimeDifference                              = nan                          |> float32
-            },
-            {
-                Sequence                                        = (*formatString*) sourcePep.StringSequence
-                GlobalMod                                       = sourcePep.GlobalMod          |> string   
-                Charge                                          = sourcePep.Charge             |> string
-                PepSequenceID                                   = sourcePep.PepSequenceID      |> string
-                ModSequenceID                                   = sourcePep.ModSequenceID      |> string
-                SourceScanTime                                  = getTargetScanTime sourcePep  |> float32
-                SourceIntensity                                 = getTargetIntensity sourcePep |> float32
-                SourceStabw                                     = getTargetStabw sourcePep     |> float32
-                TargetScanTime                                  = nan                          |> float32
-                TargetIntensity                                 = nan                          |> float32
-                RtTrace_SourceFile                              = getTargetRtTrace sourcePep
-                IntensityTrace_SourceFile                       = getTargetIntensityTrace sourcePep
-                RtTrace_TargetFile                              = [||]
-                IntensityTrace_TargetFile                       = [||]
-                IsotopicPatternMz_SourceFile                    = getIsotopicPatternMz sourcePep
-                IsotopicPatternIntensity_Observed_SourceFile    = getIsotopicPatternIntensity_Observed sourcePep
-                IsotopicPatternMz_TargetFile                    = [||]
-                IsotopicPatternIntensity_Observed_TargetFile    = [||]
-                IonMobility                                     = sourcePep.IonMobility |> float32
-            }
-
-    ///
-    [<CLIMutable>]
-    type ScanTimePrediction = 
+    type QuantFile =
         {
-            // [<ColumnName("Score")>]
-            TargetScanTime : float32
+            FileName  : string
+            /// The ions that pass the filter; of several rows of an ion the last one is kept.
+            Ions      : Dictionary<PeptideIon,QuantIon>
+            /// The keys of Ions in file order.
+            IonOrder  : PeptideIon []
         }
 
-    ///
-    let getQuantifiedPeptides (quantFilePath:string) = 
-        ///
-        let peptides =
-            Csv.CsvReader<QuantificationResult>(SchemaMode=Csv.Fill).ReadFile(quantFilePath,'\t',false,1)
+    /// The scan time of the peak apex of the target label of an ion that is used, else the reason why it is not used.
+    let apexOrDropReason (qp:QuantificationResult) =
+        if qp.GlobalMod <> 0 && qp.GlobalMod <> 1 then
+            Error "GlobalMod is neither 0 nor 1"
+        else
+            let peakParams = if qp.GlobalMod = 0 then qp.Params_Light else qp.Params_Heavy
+            if Array.isEmpty peakParams then
+                Error "no fitted peak"
+            elif peakParams.Length < 3 then
+                Error "fit without scan time and sd"
+            else
+                let scanTime = PeakShape.apex peakParams
+                let sd = PeakShape.width peakParams
+                let difference = getTargetApexDifferenceAt scanTime qp
+                if not (isFinite scanTime && isFinite sd && sd > 0. && isFinite difference) then
+                    Error "non-finite fitted scan time, sd or search to fitted scan time difference"
+                // the fit is a good estimate of the scan time
+                elif abs difference / sd >= 2. then
+                    Error "search scan time 2 or more sd away from the fitted scan time"
+                else
+                    Ok scanTime
+
+    /// Reads a .quant file and keeps the ions whose fitted scan time can be trusted, as QuantBasedAlignment does.
+    let readQuantFile (quantFilePath:string) =
+        let fileName = Path.GetFileNameWithoutExtension quantFilePath
+        let logger = Logging.createLogger fileName
+        let rows =
+            Csv.CsvReader<QuantificationResult>().ReadFile(quantFilePath,'\t',false,1)
             |> Array.ofSeq
-        let filteredPeptides =
+        let ions = Dictionary<PeptideIon,QuantIon>(HashIdentity.Structural)
+        let ionOrder = ResizeArray<PeptideIon>()
+        let dropCounts = SortedDictionary<string,int>()
+        let mutable duplicates = 0
+        for qp in rows do
+            match apexOrDropReason qp with
+            | Error reason ->
+                logger.Debug (sprintf "Ion not used, %s: %s, GlobalMod %i, charge %i" reason qp.StringSequence qp.GlobalMod qp.Charge)
+                dropCounts.[reason] <- (match dropCounts.TryGetValue reason with | true, c -> c + 1 | _ -> 1)
+            | Ok apex ->
+                let ion = toPeptideIon qp
+                if ions.ContainsKey ion then
+                    logger.Debug (sprintf "Ion has several rows, the last one is used: %s, GlobalMod %i, charge %i" qp.StringSequence qp.GlobalMod qp.Charge)
+                    duplicates <- duplicates + 1
+                else
+                    ionOrder.Add ion
+                ions.[ion] <- { Row = qp; Apex = apex }
+        let drops =
+            dropCounts
+            |> Seq.map (fun kv -> sprintf "%s: %i" kv.Key kv.Value)
+            |> String.concat ", "
+        logger.Info (sprintf "%s: %i rows, %i ions used; rows not used: %s; repeated rows of used ions (last one kept): %i" fileName rows.Length ions.Count (if drops = "" then "none" else drops) duplicates)
+        {
+            FileName  = fileName
+            Ions      = ions
+            IonOrder  = ionOrder.ToArray()
+        }
+
+    /// Assigns every peptide (PepSequenceID, so all modified forms of a sequence) to one of nFolds cross-validation folds by a
+    /// seeded permutation of the sorted ids.
+    let assignFolds (seed:int) (nFolds:int) (peptides: seq<int>) =
+        let sorted =
             peptides
-            |> Array.filter (fun qp -> 
-                // Filter for peptides where fit assures a good estimation of the ScanTime
-                (qp.GlobalMod = 0 && qp.Params_Light |> Array.isEmpty |> not) || (qp.GlobalMod = 1 && qp.Params_Heavy |> Array.isEmpty |> not)
-                )
-            |> Array.filter (fun qp -> tryTargetGetScanTime qp |> Option.isSome)
-            |> Array.filter (fun qp -> (getTargetScanTimeDifference qp |> abs) / (getTargetStabw qp) < 2. )          
-        filteredPeptides 
-    
-    /// Reads quant files, filters for quality quantifications and creates AlignmentFiles.
-    let createAlignmentFiles (sourceFiles :string []) (targetFile:string) = 
-        let toAlignmentFile (allPepIons:PeptideIon []) (filePath:string) peptides = 
-            let presentPeptides = 
-                peptides 
-                |> Array.map (fun qp -> toPeptideIon qp, qp)
-                |> Map.ofArray
-            let missingPeptides = 
-                allPepIons
-                |> Array.filter (fun pep -> 
-                    let pepUnMod = {pep with GlobalMod = 0}
-                    let pepMod = {pep with GlobalMod = 1}
-                    (presentPeptides.ContainsKey pepMod || presentPeptides.ContainsKey pepUnMod) 
-                    |> not
-                    )
-            {
-                FileName                   = Path.GetFileNameWithoutExtension(filePath)
-                QuantifiedPeptides         = presentPeptides 
-                MissingPeptides            = missingPeptides 
-                GainedPeptides             = [||]
-                PepIonsToAlign             = allPepIons
-            }
-        let targetPeptides = 
-            targetFile 
-            |> getQuantifiedPeptides
-        let sourcePeptides = 
-            sourceFiles
-            |> Array.map getQuantifiedPeptides
-        let allPeptideIons =
-            sourcePeptides
-            |> Array.append [|targetPeptides|] 
-            |> Array.concat
-            |> Array.map (fun qp -> toPeptideIon qp)
-            |> Array.distinct
-        let targetAlignmentFile = toAlignmentFile allPeptideIons targetFile targetPeptides
-        let sourceAlignmentFiles = Array.map2 (toAlignmentFile allPeptideIons) sourceFiles sourcePeptides
-        sourceAlignmentFiles, targetAlignmentFile 
-    
+            |> Seq.distinct
+            |> Array.ofSeq
+            |> Array.sort
+        let rnd = Random(seed)
+        for i in sorted.Length - 1 .. -1 .. 1 do
+            let j = rnd.Next(i + 1)
+            let tmp = sorted.[i]
+            sorted.[i] <- sorted.[j]
+            sorted.[j] <- tmp
+        let foldOf = Dictionary<int,int>()
+        sorted |> Array.iteri (fun i peptide -> foldOf.[peptide] <- i % nFolds)
+        foldOf
+
     ///
-    let createAlignmentResult (quantifiedPeptide:QuantificationResult) (scanTimePrediction:ScanTimePrediction) = 
+    type IonMobilityModel =
+        {
+            Fit       : Fit
+            /// Ion mobility centre of the source rows of the ions the model was trained on.
+            X         : float []
+            /// Shift of the ions the model was trained on.
+            Shift     : float []
+            /// Out-of-fold predicted target ion mobility of the ions the model was trained on.
+            OutOfFold : Dictionary<PeptideIon,float>
+            /// Absolute out-of-fold error of the ions the model was trained on.
+            AbsError  : Dictionary<PeptideIon,float>
+            Scale     : ErrorScale
+        }
+
+    ///
+    type PairModel =
+        {
+            Source     : QuantFile
+            SharedIons : PeptideIon []
+            Fold       : int []
+            /// Source scan time of the shared ions.
+            X          : float []
+            /// Target minus source scan time of the shared ions.
+            Shift      : float []
+            ScanTime   : Fit
+            /// Out-of-fold predicted target scan time of the shared ions.
+            OutOfFold  : Dictionary<PeptideIon,float>
+            /// Absolute out-of-fold scan time error of the shared ions.
+            AbsError   : Dictionary<PeptideIon,float>
+            Scale      : ErrorScale
+            /// Median absolute out-of-fold scan time error over all shared ions (minutes); ranks the sources.
+            ModelError : float
+            IonMobility: IonMobilityModel option
+        }
+
+    /// Models the target scan time (and ion mobility) as a function of the source scan time (and ion mobility) on the ions both runs share.
+    let alignPair (logger:NLog.Logger) (foldOf:Dictionary<int,int>) (target:QuantFile) (source:QuantFile) =
+        let pairName = sprintf "%s -> %s" source.FileName target.FileName
+        let shared = target.IonOrder |> Array.filter source.Ions.ContainsKey
+        if shared.Length < minSharedIons then
+            logger.Warn (sprintf "%s: %i shared ions, at least %i are needed; the source is not used." pairName shared.Length minSharedIons)
+            None
+        else
+        let fold  = shared |> Array.map (fun ion -> foldOf.[target.Ions.[ion].Row.PepSequenceID])
+        let x     = shared |> Array.map (fun ion -> source.Ions.[ion].Apex)
+        let shift = shared |> Array.mapi (fun i ion -> target.Ions.[ion].Apex - x.[i])
+        let scanTime = fit scanTimeSettings x shift fold
+        let outOfFold = Dictionary<PeptideIon,float>(HashIdentity.Structural)
+        shared |> Array.iteri (fun i ion -> if isFinite scanTime.OutOfFold.[i] then outOfFold.[ion] <- x.[i] + scanTime.OutOfFold.[i])
+        let absError = Dictionary<PeptideIon,float>(HashIdentity.Structural)
+        shared |> Array.iteri (fun i ion -> absError.[ion] <- scanTime.AbsError.[i])
+        let errors = scanTime.AbsError |> Array.filter isFinite
+        let modelError = median errors
+        let trimmed = scanTime.Kept |> Array.filter not |> Array.length
+        logger.Info (sprintf "%s: %i shared ions, %i trimmed, k = %i, out-of-fold absolute scan time error median %.4f / p90 %.4f min" pairName shared.Length trimmed scanTime.K modelError (percentile 0.9 errors))
+        let ionMobility =
+            let withIonMobility =
+                [|
+                    for i in 0 .. shared.Length - 1 do
+                        if isFinite source.Ions.[shared.[i]].Row.IonMobilityCentre && isFinite target.Ions.[shared.[i]].Row.IonMobilityCentre then yield i
+                |]
+            if withIonMobility.Length = 0 then
+                logger.Trace (sprintf "%s: no ion mobility." pairName)
+                None
+            elif withIonMobility.Length < minSharedIons then
+                logger.Warn (sprintf "%s: %i shared ions with ion mobility in both runs, at least %i are needed; no ion mobility model." pairName withIonMobility.Length minSharedIons)
+                None
+            else
+                let ionsIM  = withIonMobility |> Array.map (fun i -> shared.[i])
+                let xIM     = ionsIM |> Array.map (fun ion -> source.Ions.[ion].Row.IonMobilityCentre)
+                let shiftIM = ionsIM |> Array.mapi (fun i ion -> target.Ions.[ion].Row.IonMobilityCentre - xIM.[i])
+                let foldIM  = withIonMobility |> Array.map (fun i -> fold.[i])
+                let fitIM = fit ionMobilitySettings xIM shiftIM foldIM
+                let outOfFoldIM = Dictionary<PeptideIon,float>(HashIdentity.Structural)
+                ionsIM |> Array.iteri (fun i ion -> if isFinite fitIM.OutOfFold.[i] then outOfFoldIM.[ion] <- xIM.[i] + fitIM.OutOfFold.[i])
+                let absErrorIM = Dictionary<PeptideIon,float>(HashIdentity.Structural)
+                ionsIM |> Array.iteri (fun i ion -> absErrorIM.[ion] <- fitIM.AbsError.[i])
+                let errorsIM = fitIM.AbsError |> Array.filter isFinite
+                logger.Info (
+                    sprintf "%s: ion mobility model on %i shared ions, %i trimmed, k = %i, out-of-fold absolute ion mobility error median %.5f / p90 %.5f"
+                        pairName ionsIM.Length (fitIM.Kept |> Array.filter not |> Array.length) fitIM.K (median errorsIM) (percentile 0.9 errorsIM)
+                    )
+                Some {
+                    Fit       = fitIM
+                    X         = xIM
+                    Shift     = shiftIM
+                    OutOfFold = outOfFoldIM
+                    AbsError  = absErrorIM
+                    Scale     = initIonMobilityScale xIM fitIM.AbsError
+                }
+        Some {
+            Source      = source
+            SharedIons  = shared
+            Fold        = fold
+            X           = x
+            Shift       = shift
+            ScanTime    = scanTime
+            OutOfFold   = outOfFold
+            AbsError    = absError
+            Scale       = initScanTimeScale x scanTime.AbsError
+            ModelError  = modelError
+            IonMobility = ionMobility
+        }
+
+    /// Transfers an ion of the source of the pair. Ions the model was trained on get their out-of-fold prediction and
+    /// a local error scale without their own error, so that they show the same error as ions the target lacks.
+    let createAlignmentResult (pair:PairModel) (ion:PeptideIon) : AlignmentResult =
+        let quantifiedPeptide = pair.Source.Ions.[ion].Row
+        let ownError (absError: Dictionary<PeptideIon,float>) = match absError.TryGetValue ion with | true, e -> e | _ -> nan
+        let sourceScanTime = pair.Source.Ions.[ion].Apex
+        let predictedScanTime =
+            match pair.OutOfFold.TryGetValue ion with
+            | true, v -> v
+            | _ -> sourceScanTime + predict pair.ScanTime.Curve sourceScanTime
+        let predictedIonMobility, predictedIonMobilitySd =
+            match pair.IonMobility with
+            | Some model when isFinite quantifiedPeptide.IonMobilityCentre ->
+                let sourceIonMobility = quantifiedPeptide.IonMobilityCentre
+                let predicted =
+                    match model.OutOfFold.TryGetValue ion with
+                    | true, v -> v
+                    | _ -> sourceIonMobility + predict model.Fit.Curve sourceIonMobility
+                predicted, localScaleWithout model.Scale (ownError model.AbsError) sourceIonMobility
+            | _ -> nan, nan
         {
             StringSequence                                  = quantifiedPeptide.StringSequence
             GlobalMod                                       = quantifiedPeptide.GlobalMod
             Charge                                          = quantifiedPeptide.Charge
             PepSequenceID                                   = quantifiedPeptide.PepSequenceID
             ModSequenceID                                   = quantifiedPeptide.ModSequenceID
-            Mz                                              = Mass.toMZ (quantifiedPeptide.TheoMass) (float quantifiedPeptide.Charge) 
+            Mz                                              = Mass.toMZ (quantifiedPeptide.TheoMass) (float quantifiedPeptide.Charge)
             ProteinNames                                    = quantifiedPeptide.ProteinNames
-            PredictedScanTime                               = float scanTimePrediction.TargetScanTime
-            ScanTime_SourceFile                             = getTargetScanTime quantifiedPeptide
+            PredictedScanTime                               = predictedScanTime
+            ScanTime_SourceFile                             = sourceScanTime
             ApexIntensity_SourceFile                        =
                 if quantifiedPeptide.GlobalMod = 1 then
                     quantifiedPeptide.MeasuredApex_Heavy
                 else
                     quantifiedPeptide.MeasuredApex_Light
-            Quant_SourceFile                                =
-                if quantifiedPeptide.GlobalMod = 1 then
-                    quantifiedPeptide.Quant_Heavy
-                else
-                    quantifiedPeptide.Quant_Light
+            Quant_SourceFile                                = getTargetIntensity quantifiedPeptide
             RtTrace_SourceFile                              = getTargetRtTrace quantifiedPeptide
             IntensityTrace_SourceFile                       = getTargetIntensityTrace quantifiedPeptide
-            IsotopicPatternMz_SourceFile                    = getIsotopicPatternMz quantifiedPeptide       
-            IsotopicPatternIntensity_Observed_SourceFile    = getIsotopicPatternIntensity_Observed quantifiedPeptide       
-            IonMobility                                     = quantifiedPeptide.IonMobility
-        }   
-
-
-    ///
-    type ModelMetrics = 
-        {
-        RSquared                             : float
-        Sequence                            : string []
-        GlobalMod                           : int []
-        Charge                              : int []
-        PepSequenceID                       : int []
-        ModSequenceID                       : int []
-        X_Intensities                       : float []
-        X_Stabw                             : float []        
-        X_Test                              : float []
-        X_IsotopicPatternMz                 : float [][]
-        X_IsotopicPatternIntensity_Observed : float [][]
-        X_RtTrace                           : float [][]
-        X_IntensityTrace                    : float [][]   
-        Y_Test                              : float []
-        YHat_Test                           : float []
-        YHat_Refined_Test                   : float []
-        Y_Intensities                       : float []
-        Y_IsotopicPatternMz                 : float [][]
-        Y_IsotopicPatternIntensity_Observed : float [][]
-        Y_RtTrace                           : float [][]
-        Y_IntensityTrace                    : float [][]
-        DtwDistanceBefore                   : float []
-        IonMobility                         : float []
+            IsotopicPatternMz_SourceFile                    = getIsotopicPatternMz quantifiedPeptide
+            IsotopicPatternIntensity_Observed_SourceFile    = getIsotopicPatternIntensity_Observed quantifiedPeptide
+            IonMobility                                     = quantifiedPeptide.IonMobilityCentre
+            PredictedScanTimeSd                             = localScaleWithout pair.Scale (ownError pair.AbsError) sourceScanTime
+            SourceFileName                                  = pair.Source.FileName
+            SourceModelError                                = pair.ModelError
+            PredictedIonMobility                            = predictedIonMobility
+            PredictedIonMobilitySd                          = predictedIonMobilitySd
         }
 
-
-
-    ///
-    let createMetricsChart fileName (*stabwMedian*) (rnd:System.Random) (metrics:ModelMetrics) = 
-        ///
-        let traceName = ""//(sprintf "#TestPeptides:%i Rsquared:%f RMS:%f, %s " metrics.X_Test.Length metrics.Metrics.RSquared metrics.Metrics.MeanAbsoluteError fileName)
-        let color = getRandomColor rnd |> FSharpAux.Colors.toWebColor        
-        let xVsY = 
-            [
-            Chart.Point(metrics.X_Test,metrics.Y_Test) |> Chart.withMarkerStyle(Color = Color.fromHex color)
-            Chart.Line(Array.zip metrics.X_Test metrics.YHat_Test |> Array.sortBy fst)
-            ]
-            |> Chart.combine
-            |> Chart.withXAxisStyle("source ScanTimes (X_Test)")
-            |> Chart.withYAxisStyle("measured (dotted) and predicted (Line) target ScanTimes (YHat_Test)")
-            |> Chart.withTraceInfo traceName
-        let yVsYHat = 
-            Chart.Point(metrics.Y_Test,metrics.YHat_Test)
-            |> Chart.withMarkerStyle(Color = Color.fromHex color)
-            |> Chart.withXAxisStyle("target ScanTimes (Y_Test)")
-            |> Chart.withYAxisStyle("predicted target ScanTimes (YHat_Test)")
-            |> Chart.withTraceInfo traceName
-        let xVsDifferenceYandYHat = 
-            Chart.Point(metrics.X_Test, Array.map2 (fun y yHat -> y - yHat) metrics.Y_Test metrics.YHat_Test)
-            |> Chart.withMarkerStyle(Color = Color.fromHex color)
-            |> Chart.withXAxisStyle("Source ScanTimes (X_Test)")
-            |> Chart.withYAxisStyle("target ScanTimes (Y_Test) - predicted target ScanTimes (YHat_Test)")
-            |> Chart.withTraceInfo traceName
-        let xVsDifferenceYandYHatNormed = 
-            Chart.Point(metrics.X_Test, Array.map3 (fun y yHat stabwMedian -> (y - yHat) / stabwMedian) metrics.Y_Test metrics.YHat_Test metrics.X_Stabw)
-            |> Chart.withMarkerStyle(Color = Color.fromHex color)
-            |> Chart.withXAxisStyle("Source ScanTimes (X_Test)")
-            |> Chart.withYAxisStyle("normed target ScanTimes (Y_Test) - predicted target ScanTimes (YHat_Test)")
-            |> Chart.withTraceInfo traceName
-        let xVsDifferenceYandYHat_refined = 
-            Chart.Point(metrics.X_Test, Array.map2 (fun y yHat -> y - yHat) metrics.Y_Test metrics.YHat_Refined_Test)
-            |> Chart.withMarkerStyle(Color = Color.fromHex color)
-            |> Chart.withXAxisStyle("Source ScanTimes (X_Test)")
-            |> Chart.withYAxisStyle("target ScanTimes (Y_Test) - refined target ScanTimes (YHat_Test)")
-            |> Chart.withTraceInfo traceName
-        let xVsDifferenceYandYHatNormed_refined = 
-            Chart.Point(metrics.X_Test, Array.map3 (fun y yHat stabwMedian -> (y - yHat) / stabwMedian) metrics.Y_Test metrics.YHat_Refined_Test metrics.X_Stabw)
-            |> Chart.withMarkerStyle(Color = Color.fromHex color)
-            |> Chart.withXAxisStyle("Source ScanTimes (X_Test)")
-            |> Chart.withYAxisStyle("normed target ScanTimes (Y_Test) - refined target ScanTimes (YHat_Test)")
-            |> Chart.withTraceInfo traceName
-        let makeBar yHat_Test = 
-            let metric =  Array.map3 (fun y yHat stabwMedian -> (y - yHat) / stabwMedian) metrics.Y_Test yHat_Test metrics.X_Stabw
-            let UpToOne   = metric |> Array.filter (fun x -> abs x >= 0. && abs x < 1.)   |> Array.length |> float |> fun x -> x / float metric.Length
-            let UpToTwo   = metric |> Array.filter (fun x -> abs x >= 1. && abs x < 2.)   |> Array.length |> float |> fun x -> x / float metric.Length
-            let UpToThree = metric |> Array.filter (fun x -> abs x >= 2. && abs x < 3.)   |> Array.length |> float |> fun x -> x / float metric.Length
-            let UpToFour  = metric |> Array.filter (fun x -> abs x >= 3. && abs x < 4.)   |> Array.length |> float |> fun x -> x / float metric.Length
-            let UpToFive  = metric |> Array.filter (fun x -> abs x >= 4. && abs x < 5.)   |> Array.length |> float |> fun x -> x / float metric.Length
-            let UpToSix   = metric |> Array.filter (fun x -> abs x >= 5. && abs x < 6.)   |> Array.length |> float |> fun x -> x / float metric.Length
-            let UpToSeven = metric |> Array.filter (fun x -> abs x >= 6. && abs x < 7.)   |> Array.length |> float |> fun x -> x / float metric.Length
-            let OutOfSeven  = metric |> Array.filter (fun x -> abs x > 7.)                |> Array.length |> float |> fun x -> x / float metric.Length           
-            [
-                Chart.StackedColumn(values=[UpToOne],Keys=[traceName],Name="UpToOne")       |> Chart.withMarkerStyle(Color=Color.fromHex (FSharpAux.Colors.toWebColor FSharpAux.Colors.Table.StatisticalGraphics24.Green1))
-                Chart.StackedColumn(values=[UpToTwo],Keys=[traceName],Name="UpToTwo")       |> Chart.withMarkerStyle(Color=Color.fromHex (FSharpAux.Colors.toWebColor FSharpAux.Colors.Table.StatisticalGraphics24.Green2))
-                Chart.StackedColumn(values=[UpToThree],Keys=[traceName],Name="UpToThree")   |> Chart.withMarkerStyle(Color=Color.fromHex (FSharpAux.Colors.toWebColor FSharpAux.Colors.Table.StatisticalGraphics24.Green3))
-                Chart.StackedColumn(values=[UpToFour],Keys=[traceName],Name="UpToFour")     |> Chart.withMarkerStyle(Color=Color.fromHex (FSharpAux.Colors.toWebColor FSharpAux.Colors.Table.StatisticalGraphics24.Orange1))
-                Chart.StackedColumn(values=[UpToFive],Keys=[traceName],Name="UpToFive")     |> Chart.withMarkerStyle(Color=Color.fromHex (FSharpAux.Colors.toWebColor FSharpAux.Colors.Table.StatisticalGraphics24.Orange2))
-                Chart.StackedColumn(values=[UpToSix],Keys=[traceName],Name="UpToSix")       |> Chart.withMarkerStyle(Color=Color.fromHex (FSharpAux.Colors.toWebColor FSharpAux.Colors.Table.StatisticalGraphics24.Orange3))
-                Chart.StackedColumn(values=[UpToSeven],Keys=[traceName],Name="UpToSeven")   |> Chart.withMarkerStyle(Color=Color.fromHex (FSharpAux.Colors.toWebColor FSharpAux.Colors.Table.StatisticalGraphics24.Red1))
-                Chart.StackedColumn(values=[OutOfSeven],Keys=[traceName],Name="OutOfSeven") |> Chart.withMarkerStyle(Color=Color.fromHex (FSharpAux.Colors.toWebColor FSharpAux.Colors.Table.StatisticalGraphics24.Red2))
-            ]
-            |> Chart.combine
-            |> Chart.withYAxisStyle("")
-        let bar = makeBar metrics.YHat_Test
-        let barRef = makeBar metrics.YHat_Refined_Test
-        [
-        xVsY
-        yVsYHat
-        xVsDifferenceYandYHat
-        xVsDifferenceYandYHatNormed
-        xVsDifferenceYandYHat_refined
-        xVsDifferenceYandYHatNormed_refined        
-        bar
-        barRef
-        ]
-        |> Chart.Grid(4, 2)
-        |> Chart.withSize(2000,2500)
-
-
-    ///
-    let saveMetrics outputDir targetFileName sourceFileName (metrics:ModelMetrics) = 
-        let fileName = (targetFileName ) + ".alignmetric"
-        let outFilePath = Path.Combine [|outputDir;fileName|]
-        let data = 
-            [|
-            for i = 1 to metrics.X_Intensities.Length-1 do 
-                yield
-                    {           
-                        Sequence                             = metrics.Sequence.[i]
-                        GlobalMod                            = metrics.GlobalMod.[i]
-                        Charge                               = metrics.Charge.[i]
-                        PepSequenceID                        = metrics.PepSequenceID.[i]
-                        ModSequenceID                        = metrics.ModSequenceID.[i]
-                        X_FileName                           = sourceFileName 
-                        X_Intensities                        = metrics.X_Intensities.[i] 
-                        X_Stabw                              = metrics.X_Stabw.[i]
-                        X_Test                               = metrics.X_Test.[i] 
-                        X_IsotopicPatternMz                  = metrics.X_IsotopicPatternMz.[i]
-                        X_IsotopicPatternIntensity_Observed  = metrics.X_IsotopicPatternIntensity_Observed.[i]
-                        X_RtTrace                            = metrics.X_RtTrace.[i]
-                        X_IntensityTrace                     = metrics.X_IntensityTrace.[i]
-                        Y_Test                               = metrics.Y_Test.[i] 
-                        YHat_Test                            = metrics.YHat_Test.[i] 
-                        YHat_Refined_Test                    = metrics.YHat_Refined_Test.[i]
-                        Y_Intensity                          = metrics.Y_Intensities.[i]
-                        Y_IsotopicPatternMz                  = metrics.Y_IsotopicPatternMz.[i]
-                        Y_IsotopicPatternIntensity_Observed  = metrics.Y_IsotopicPatternIntensity_Observed.[i]
-                        Y_RtTrace                            = metrics.Y_RtTrace.[i]
-                        Y_IntensityTrace                     = metrics.Y_IntensityTrace.[i]   
-                        DtwDistanceBefore                    = metrics.DtwDistanceBefore.[i]
-                        IonMobility                          = metrics.IonMobility.[i]
-                    }
-            |]
-        if System.IO.File.Exists outFilePath then 
-            data
-            |> SeqIO'.csv "\t" false false
-            |> FSharpAux.IO.SeqIO.Seq.writeOrAppend (outFilePath)
-        else
-            data
-            |> SeqIO'.csv "\t" true false
-            |> FSharpAux.IO.SeqIO.Seq.writeOrAppend (outFilePath)
-
-    ///
-    // let initAlign (logger:NLog.Logger) (ctx:MLContext) (pepsForLearning: (PeptideForLearning*PeptideComplete) []) = 
-    let initAlign (logger:NLog.Logger) (pepsForLearning: (PeptideForLearning*PeptideComplete) []) = 
-        logger.Trace ("Sampling test and train data")
-        let pepsForLearning = pepsForLearning |> Array.distinctBy (fun (pepLearning,pepComp) -> pepLearning.SourceScanTime)
-        let train,test = 
-            let getBinIdx width scantime = int ((scantime / width))    
-            let _,train,test = 
-                pepsForLearning
-                |> Array.groupBy (fun (pl,_) -> getBinIdx 10. (pl.SourceScanTime |> float))
-                |> Array.map (fun (binIdx,ions) -> 
-                    let dataS = ions |> Array.shuffleFisherYates
-                    let knotX = 
-                        dataS 
-                        |> Array.map fst
-                        |> Array.maxBy (fun x -> x.SourceScanTime)
-                    let train,test =
-                        let nTest = 
-                            (float dataS.Length) * 0.9
-                            |> int
-                        dataS.[.. nTest], dataS.[nTest+1 ..] 
-                    float knotX.SourceScanTime, train, test
-                    )
-                |> Array.unzip3
-            train |> Array.concat |> Array.sortBy (fun (pepLearning,pepComp) -> pepLearning.SourceScanTime), 
-            test |> Array.concat |> Array.sortBy (fun (pepLearning,pepComp) -> pepLearning.SourceScanTime)
-        let trainLearn,trainComp = train |> Array.unzip
-        let testLearn,testComp = test |> Array.unzip    
-        logger.Trace ("Training Spline")
-        let trainer lambda = 
-            let fit = Spline.fitSplineSparseLapack' (train |> Array.map (fun (x,y) -> float x.SourceScanTime)) (train |> Array.map (fun (x,y) -> float x.TargetScanTime)) lambda 
-            let x,y,yHat = 
-                test
-                |> Array.map (fun (x,y) -> 
-                    x, x.TargetScanTime, fit (float x.SourceScanTime)
-                    )
-                |> Array.unzip3
-            let rS = FSharp.Stats.Fitting.GoodnessOfFit.calculateDeterminationFromValue yHat (Array.map float y)
-            lambda, rS, fit                  
-        logger.Trace ("Optimizing Lambdas")
-        let models =      
-            [|1. .. 1. .. 200.|]
-            |> Array.map trainer
-        let lambda,rSquared,model = 
-            models
-            |> Array.maxBy (fun (x,y,z) -> y )                  
-        logger.Trace (sprintf "Optimizing Lambdas:Finished, selected lamda:%f" lambda)
-        logger.Trace ("Training Spline:Finished")
-        // [
-        //     test
-        //     |> Array.map (fun (x,y) -> 
-        //             x.SourceScanTime, (float x.TargetScanTime)
-        //             )
-        //     |> Chart.Point    
-        //     models
-        //     |> Array.map (fun (x,y,z) -> 
-        //         test
-        //         |> Array.map (fun (x,y) -> 
-        //                 x.SourceScanTime, z (float x.SourceScanTime)
-        //                 )
-        //         |> Chart.Line
-        //         |> Chart.withTraceInfo (sprintf "lambda %f" x)
-        //         )
-        //     |> Chart.combine
-        // ]
-        // |> Chart.combine
-        // // |> Chart.show
-        // models
-        // |> Array.map (fun (x,y,z) -> x,y)
-        // |> Chart.Point
-        // // |> Chart.show
-        let metrics =             
-            let rSquared = rSquared
-            let yHat          = testComp |> Seq.map (fun x -> model (float x.SourceScanTime))|> Array.ofSeq
-            let sequence      = testComp |> Seq.map (fun x -> x.Sequence)       |> Array.ofSeq
-            let globalMod     = testComp |> Seq.map (fun x -> x.GlobalMod)      |> Array.ofSeq
-            let charge        = testComp |> Seq.map (fun x -> x.Charge)         |> Array.ofSeq
-            let pepSequenceID = testComp |> Seq.map (fun x -> x.PepSequenceID)  |> Array.ofSeq
-            let modSequenceID = testComp |> Seq.map (fun x -> x.ModSequenceID)  |> Array.ofSeq
-            let ionMobility   = testComp |> Seq.map (fun x -> float x.IonMobility) |> Array.ofSeq
-            let i             =  testComp |> Seq.map (fun x -> float x.SourceIntensity)  |> Array.ofSeq
-            let std           =  testComp |> Seq.map (fun x -> float x.SourceStabw)      |> Array.ofSeq
-            let x             =  testComp |> Seq.map (fun x -> float x.SourceScanTime)   |> Array.ofSeq
-            let y             =  testComp |> Seq.map (fun x -> float x.TargetScanTime)   |> Array.ofSeq
-            let yIntensities  =  testComp |> Seq.map (fun x -> float x.TargetIntensity)  |> Array.ofSeq
-            let xSource = testComp |> Seq.map (fun x -> Array.ofSeq x.RtTrace_SourceFile)         |> Array.ofSeq
-            let ySource = testComp |> Seq.map (fun x -> Array.ofSeq x.IntensityTrace_SourceFile)  |> Array.ofSeq
-            let xTarget = testComp |> Seq.map (fun x -> Array.ofSeq x.RtTrace_TargetFile)         |> Array.ofSeq
-            let yTarget = testComp |> Seq.map (fun x -> Array.ofSeq x.IntensityTrace_TargetFile)  |> Array.ofSeq     
-            let yHatAfterRefinement,dtwDistanceBefore,dtwDistanceAfter = 
-                [|
-                    for i = 0 to xSource.Length-1 do                         
-                        let target = Array.zip xTarget.[i] (DTW'.zNorm yTarget.[i])
-                        let source = Array.zip xSource.[i] (DTW'.zNorm ySource.[i])
-                        let yRefined = 
-                            DTW'.align' target source x.[i] 
-                            |> snd
-                        let alignment = 
-                            DTW'.align target source 
-                            |> Array.ofList
-                        let dtwDistanceBefore = 
-                            DTW'.distance None None None None None None (Array.map snd target)  (Array.map snd source)
-                        let dtwDistanceAfter = 
-                            DTW'.distance None None None None None None (Array.map snd target)  (Array.map snd alignment)
-                        yield yRefined,dtwDistanceBefore,dtwDistanceAfter
-                |]
-                |> Array.unzip3
-
-            let x_IsotopicPatternMz                 = testComp |> Seq.map (fun x -> Array.ofSeq x.IsotopicPatternMz_SourceFile)                 |> Array.ofSeq
-            let x_IsotopicPatternIntensity_Observed = testComp |> Seq.map (fun x -> Array.ofSeq x.IsotopicPatternIntensity_Observed_SourceFile) |> Array.ofSeq
-            let y_IsotopicPatternMz                 = testComp |> Seq.map (fun x -> Array.ofSeq x.IsotopicPatternMz_TargetFile)                 |> Array.ofSeq
-            let y_IsotopicPatternIntensity_Observed = testComp |> Seq.map (fun x -> Array.ofSeq x.IsotopicPatternIntensity_Observed_TargetFile) |> Array.ofSeq       
+    /// The out-of-fold predictions of the shared ions in the first cross-validation fold, in the .alignmetric layout.
+    let createMetrics (target:QuantFile) (pair:PairModel) : AlignmentMetricsDTO [] =
+        pair.SharedIons
+        |> Array.mapi (fun i ion -> i, ion)
+        |> Array.filter (fun (i, ion) -> pair.Fold.[i] = 0 && pair.OutOfFold.ContainsKey ion)
+        |> Array.map (fun (i, ion) ->
+            let sourcePep = pair.Source.Ions.[ion].Row
+            let targetPep = target.Ions.[ion].Row
+            let predicted = pair.OutOfFold.[ion]
             {
-                RSquared                            = rSquared
-                Sequence                            = sequence                           
-                GlobalMod                           = globalMod     |> Array.map int                     
-                Charge                              = charge        |> Array.map int                     
-                PepSequenceID                       = pepSequenceID |> Array.map int                     
-                ModSequenceID                       = modSequenceID |> Array.map int                     
-                X_Intensities                       = i
-                X_Stabw                             = std      
-                X_Test                              = x
-                X_IsotopicPatternMz                 = x_IsotopicPatternMz
-                X_IsotopicPatternIntensity_Observed = x_IsotopicPatternIntensity_Observed
-                X_RtTrace                           = xSource
-                X_IntensityTrace                    = ySource
-                Y_Test                              = y
-                YHat_Test                           = yHat
-                YHat_Refined_Test                   = yHatAfterRefinement
-                Y_Intensities                       = yIntensities
-                Y_IsotopicPatternMz                 = y_IsotopicPatternMz
-                Y_IsotopicPatternIntensity_Observed = y_IsotopicPatternIntensity_Observed
-                Y_RtTrace                           = xTarget
-                Y_IntensityTrace                    = yTarget
-                DtwDistanceBefore                   = dtwDistanceBefore
-                IonMobility                         = ionMobility
+                Sequence                             = ion.Sequence
+                GlobalMod                            = ion.GlobalMod
+                Charge                               = ion.Charge
+                PepSequenceID                        = sourcePep.PepSequenceID
+                ModSequenceID                        = sourcePep.ModSequenceID
+                X_FileName                           = pair.Source.FileName
+                X_Intensities                        = getTargetIntensity sourcePep
+                X_Stabw                              = getTargetPeakWidth sourcePep
+                X_Test                               = pair.X.[i]
+                X_IsotopicPatternMz                  = getIsotopicPatternMz sourcePep
+                X_IsotopicPatternIntensity_Observed  = getIsotopicPatternIntensity_Observed sourcePep
+                X_RtTrace                            = getTargetRtTrace sourcePep
+                X_IntensityTrace                     = getTargetIntensityTrace sourcePep
+                Y_Test                               = target.Ions.[ion].Apex
+                YHat_Test                            = predicted
+                YHat_Refined_Test                    = predicted
+                Y_Intensity                          = getTargetIntensity targetPep
+                Y_IsotopicPatternMz                  = getIsotopicPatternMz targetPep
+                Y_IsotopicPatternIntensity_Observed  = getIsotopicPatternIntensity_Observed targetPep
+                Y_RtTrace                            = getTargetRtTrace targetPep
+                Y_IntensityTrace                     = getTargetIntensityTrace targetPep
+                DtwDistanceBefore                    = nan
+                IonMobility                          = sourcePep.IonMobilityCentre
             }
+            )
 
-        // Spline
-        let predict quantifiedPeptide = 
-            quantifiedPeptide
-            |> toPeptideForLearning None
-            |> fun (pepToLearn,pepComp) -> 
-                let v = model (float pepToLearn.SourceScanTime)
-                {
-                TargetScanTime = float32 v
-                }
-            |> createAlignmentResult quantifiedPeptide
-
-        metrics, predict
-
-    type Alignment = {
-        Metrics      : ModelMetrics
-        MetricsChart : GenericChart
-        AlignFunc    : (QuantificationResult->AlignmentResult)
-        SourceFile   : AlignmentFile
-        }
-    ///
-    let performAlignment outDir rnd align (target: AlignmentFile) (source: AlignmentFile) =    
-        ///
-        let peptidesForLearning = 
-            target.QuantifiedPeptides
-            |> Seq.choose (fun tarQP -> 
-                match Map.tryFind tarQP.Key source.QuantifiedPeptides with 
-                | Some sourceQP ->
-                    toPeptideForLearning (Some tarQP.Value) sourceQP
-                    |> Some
-                | None -> None
-                ) 
-            |> Array.ofSeq
-            |> Array.groupBy (fun (x,y) -> x.SourceScanTime)
-            |> Array.map (fun (_,(d)) -> d |> Array.maxBy (fun (x,y) -> y.SourceIntensity))
-        ///
-        let metrics,model: ModelMetrics*(QuantificationResult->AlignmentResult) = 
-            align peptidesForLearning
-
-        {
-        Metrics      = metrics
-        MetricsChart = createMetricsChart source.FileName (*stabwMedian*) rnd metrics
-        AlignFunc    = model
-        SourceFile   = source
-        }
-        
-    ///
-    let alignFiles diagCharts (processParams:AlignmentParams) (outputDir:string) (sourceFiles:string []) (targetFile:string) = 
-        let logger = Logging.createLogger (Path.GetFileNameWithoutExtension targetFile)
-        logger.Trace (sprintf "target file: %A" targetFile)
-        logger.Trace (sprintf "source files: %A" sourceFiles)
-        logger.Trace (sprintf "Output directory: %s" outputDir)
-        logger.Trace (sprintf "Parameters: %A" processParams)
-        let getPlotFilePathFilePath (plotName:string) (fileName:string) =
-            let fileName = (Path.GetFileNameWithoutExtension fileName) + "_" + plotName 
-            Path.Combine [|outputDir;fileName|]
-        logger.Trace "Init align function"
-        // let ctx = ML.MLContext()
-        let rnd = System.Random()
-        let align = initAlign logger 
-        logger.Trace "Init align function: finished"
-         
-        logger.Trace "Reading and preparing .quant files for alignment"
-        let sourceAlignmentFiles, targetAlignmentFile  = createAlignmentFiles sourceFiles targetFile
-        logger.Trace "Reading and preparing .quant files for alignment: finished"
-
-        logger.Trace "Performing Alignments"
-        let alignmentsSortedByQuality = 
-            let alignments =
-                sourceAlignmentFiles
-                |> Array.map (fun (sourceFile)  -> 
-                    logger.Trace (sprintf "Performing Alignment %s vs %s" targetAlignmentFile.FileName sourceFile.FileName)
-                    let alignResult = performAlignment outputDir rnd align targetAlignmentFile sourceFile
-                    saveMetrics outputDir targetAlignmentFile.FileName sourceFile.FileName alignResult.Metrics
-                    logger.Trace (sprintf "Performing Alignment %s vs %s: finished" targetAlignmentFile.FileName sourceFile.FileName)
-                    alignResult
-                    ) 
-            let sortedByQuality = 
-                alignments
-                |> Array.sortByDescending (fun x -> x.Metrics.RSquared)
-            if diagCharts then 
-                sortedByQuality
-                |> Array.map (fun x -> x.MetricsChart)
+    /// Per pair: the shifts of the shared ions with the fitted curve, and the out-of-fold errors.
+    let createModelChart (target:QuantFile) (pairs:PairModel []) =
+        pairs
+        |> Array.collect (fun pair ->
+            let kept, trimmed = Array.init pair.X.Length id |> Array.partition (fun i -> pair.ScanTime.Kept.[i])
+            let points (indices:int []) (values:float []) = indices |> Array.map (fun i -> pair.X.[i], values.[i])
+            let shiftChart =
+                [
+                    Chart.Point(points kept pair.Shift)    |> Chart.withTraceInfo (sprintf "%s used" pair.Source.FileName)
+                    Chart.Point(points trimmed pair.Shift) |> Chart.withTraceInfo (sprintf "%s trimmed" pair.Source.FileName)
+                    Chart.Line(Array.zip pair.ScanTime.Curve.X pair.ScanTime.Curve.Shift) |> Chart.withTraceInfo (sprintf "%s running median, k = %i" pair.Source.FileName pair.ScanTime.K)
+                ]
                 |> Chart.combine
-                |> Chart.withTitle(targetAlignmentFile.FileName)
-                |> Chart.saveHtml(getPlotFilePathFilePath "Metrics" targetAlignmentFile.FileName)                    
-            sortedByQuality 
-        logger.Trace "Performing Alignments: finished"
-        logger.Trace "Transfer identifications"
-        let result = 
-            alignmentsSortedByQuality
-            |> Array.fold (fun target alignment -> 
-                    let peptideIonsToTransfer,peptideIonsStillMissing =
-                        target.PepIonsToAlign
-                        |> Array.fold (fun (pepsToTransfer,stillMissingPeps) missingPep -> 
-                            match Map.tryFind missingPep alignment.SourceFile.QuantifiedPeptides with 
-                            | Some pepToTransfer -> (pepToTransfer::pepsToTransfer,stillMissingPeps)
-                            | None -> (pepsToTransfer,missingPep::stillMissingPeps)
-                            ) ([],[])
-                    let alignmentResults : AlignmentResult [] = 
-                        peptideIonsToTransfer 
-                        |> List.toArray 
-                        |> Array.map alignment.AlignFunc 
-                    {target with MissingPeptides = peptideIonsStillMissing |> Array.ofList; GainedPeptides = Array.append target.GainedPeptides alignmentResults; PepIonsToAlign = peptideIonsStillMissing |> Array.ofList}
-                ) targetAlignmentFile
-        logger.Trace "Writing Results"
-        let outFilePath =
-            let fileName = (result.FileName) + ".align"
-            Path.Combine [|outputDir;fileName|]
-        logger.Trace (sprintf "outFilePath:%s" outFilePath)
-        result.GainedPeptides
-        |> SeqIO'.csv "\t" true false
-        |> FSharpAux.IO.SeqIO.Seq.writeOrAppend (outFilePath)
-        logger.Trace "Writing Results:finished"
-                
-    open CLIArgumentParsing
-    open Argu 
-    
-    let execute argv =
-        let errorHandler = ProcessExiter(colorizer = function ErrorCode.HelpText -> None | _ -> Some System.ConsoleColor.Red)
-        let parser = ArgumentParser.Create<CLIArguments>(programName =  (System.Reflection.Assembly.GetExecutingAssembly().GetName().Name),errorHandler=errorHandler)     
-        let directory = Environment.CurrentDirectory
-        let getPathRelativeToDir = getRelativePath directory
-        let results = parser.Parse argv
-        let i   = results.GetResult TargetFiles |> List.map getPathRelativeToDir
-        let ii  = results.GetResult SourceFiles |> List.map getPathRelativeToDir 
-        let o   = results.GetResult OutputDirectory    |> getPathRelativeToDir
-        // let p   = results.GetResult ParamFile          |> getPathRelativeToDir
-        let dc  = results.Contains DiagnosticCharts
-        Logging.generateConfig o
-        let logger = Logging.createLogger "QuantBasedAlignment"
-        logger.Info (sprintf "InputFilePath -i = %A" i)
-        logger.Info (sprintf "OutputFilePath -o = %s" o)
-        // logger.Info (sprintf "ParamFilePath -p = %s" p)
-        logger.Trace (sprintf "CLIArguments: %A" results)
-        Directory.CreateDirectory(o) |> ignore
-        //let p =
-        //    Json.ReadAndDeserialize<Dto.QuantificationParams> p
-        //    |> Dto.QuantificationParams.toDomain
-        let targetFiles = 
-            parsePaths (fun path -> Directory.GetFiles(path,("*.quant"))) i
+                |> Chart.withXAxisStyle "source scan time"
+                |> Chart.withYAxisStyle "target - source scan time"
+            let errorChart =
+                Chart.Point(points (Array.append kept trimmed) (Array.map2 (-) pair.Shift pair.ScanTime.OutOfFold))
+                |> Chart.withTraceInfo (sprintf "%s out-of-fold error" pair.Source.FileName)
+                |> Chart.withXAxisStyle "source scan time"
+                |> Chart.withYAxisStyle "target scan time - out-of-fold prediction"
+            [|shiftChart; errorChart|]
+            )
+        |> Chart.Grid(pairs.Length, 2)
+        |> Chart.withSize(2000, 600 * pairs.Length)
+        |> Chart.withTitle target.FileName
+
+    /// Aligns all sources to the target and writes the .align and .alignmetric files of the target.
+    let alignFiles diagCharts (outputDir:string) (foldOf:Dictionary<int,int>) (sources:QuantFile []) (target:QuantFile) =
+        let logger = Logging.createLogger target.FileName
+        logger.Info (sprintf "%s: aligning %i source runs" target.FileName sources.Length)
+        let pairs =
+            sources
+            |> Array.choose (alignPair logger foldOf target)
+            |> Array.sortBy (fun pair -> pair.ModelError, pair.Source.FileName)
+        if pairs.Length = 0 then
+            logger.Warn (sprintf "%s: no source run shares at least %i ions with it; no ion is transferred." target.FileName minSharedIons)
+        logger.Info (
+            pairs
+            |> Array.map (fun pair -> sprintf "%s (%.4f min)" pair.Source.FileName pair.ModelError)
+            |> String.concat ", "
+            |> sprintf "%s: sources ranked by median absolute out-of-fold scan time error: %s" target.FileName
+            )
+        if diagCharts && pairs.Length > 0 then
+            createModelChart target pairs
+            |> Chart.saveHtml(Path.Combine [|outputDir; target.FileName + "_ScanTimeModels"|])
+        // every ion of the target and the sources, from the best ranked source that has it
+        let ionsToAlign =
+            Seq.append target.IonOrder (sources |> Seq.collect (fun source -> source.IonOrder))
+            |> Seq.distinct
             |> Array.ofSeq
-        let sourceFiles = 
-            parsePaths (fun path -> Directory.GetFiles(path,("*.quant"))) ii
-            |> Array.ofSeq
-        if targetFiles.Length = 1 then
-            logger.Info "single file detected"
-            alignFiles dc {Placeholder=true} o sourceFiles targetFiles.[0]
-        else
-            logger.Info "directory found"
-            logger.Trace (sprintf ".quant files : %A" targetFiles)
-            let c =
-                match results.TryGetResult Parallelism_Level with
-                | Some c    -> c
-                | None      -> 1
-            logger.Trace (sprintf "Program is running on %i cores" c)
-            targetFiles
+        let transferred =
+            ionsToAlign
+            |> Array.choose (fun ion ->
+                pairs
+                |> Array.tryFind (fun pair -> pair.Source.Ions.ContainsKey ion)
+                |> Option.map (fun pair -> ion, createAlignmentResult pair ion)
+                )
+        let targetOnly = ionsToAlign |> Array.filter (fun ion -> sources |> Array.forall (fun source -> source.Ions.ContainsKey ion |> not)) |> Array.length
+        let unusedSourcesOnly = ionsToAlign.Length - transferred.Length - targetOnly
+        let overlap = transferred |> Array.filter (fun (ion, _) -> target.Ions.ContainsKey ion) |> Array.length
+        let results = transferred |> Array.map snd
+        logger.Info (
+            sprintf "%s: %i ions transferred (%i of them used in the target, %i new), per source: %s; median PredictedScanTimeSd %.4f min; %i with predicted ion mobility; not transferred: %i quantified in the target only, %i only in sources that are not used"
+                target.FileName results.Length overlap (results.Length - overlap)
+                (pairs |> Array.map (fun pair -> sprintf "%s %i" pair.Source.FileName (results |> Array.filter (fun r -> r.SourceFileName = pair.Source.FileName) |> Array.length)) |> String.concat ", ")
+                (results |> Array.map (fun r -> r.PredictedScanTimeSd) |> median)
+                (results |> Array.filter (fun r -> isFinite r.PredictedIonMobility) |> Array.length)
+                targetOnly unusedSourcesOnly
+            )
+        let alignFilePath = Path.Combine [|outputDir; target.FileName + ".align"|]
+        File.WriteAllLines(alignFilePath, results |> SeqIO'.csv "\t" true false)
+        let metricFilePath = Path.Combine [|outputDir; target.FileName + ".alignmetric"|]
+        File.WriteAllLines(metricFilePath, pairs |> Array.collect (createMetrics target) |> SeqIO'.csv "\t" true false)
+        logger.Trace (sprintf "Results written to %s and %s" alignFilePath metricFilePath)
+
+    /// Reads the target and source .quant files, assigns the cross-validation folds by peptide and aligns each target
+    /// file to the source files other than itself, writing its .align and .alignmetric files to outputDir. c is the
+    /// number of files processed in parallel.
+    let alignRuns (diagCharts: bool) (outputDir: string) (seed: int) (c: int) (targetFiles: string []) (sourceFiles: string []) =
+        let quantFiles =
+            Array.append targetFiles sourceFiles
+            |> Array.distinct
             |> FSharpAux.PSeq.withDegreeOfParallelism c
-            |> FSharpAux.PSeq.iter (fun (t) -> 
-                let sourceFiles' = 
-                    sourceFiles
-                    |> Array.filter (fun x -> x <> t)
-                alignFiles dc {Placeholder=true} o sourceFiles' t)
-            |> ignore
-        logger.Info "Done"
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+            |> FSharpAux.PSeq.map (fun path -> path, readQuantFile path)
+            |> dict
+        let foldOf =
+            quantFiles.Values
+            |> Seq.collect (fun quantFile -> quantFile.IonOrder |> Seq.map (fun ion -> quantFile.Ions.[ion].Row.PepSequenceID))
+            |> assignFolds seed scanTimeSettings.NFolds
+        targetFiles
+        |> FSharpAux.PSeq.withDegreeOfParallelism c
+        |> FSharpAux.PSeq.iter (fun targetFile ->
+            let sources =
+                sourceFiles
+                |> Array.filter (fun sourceFile -> sourceFile <> targetFile)
+                |> Array.map (fun sourceFile -> quantFiles.[sourceFile])
+            alignFiles diagCharts outputDir foldOf sources quantFiles.[targetFile]
+            )

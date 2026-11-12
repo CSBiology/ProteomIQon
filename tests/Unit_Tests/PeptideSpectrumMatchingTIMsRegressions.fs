@@ -3,6 +3,7 @@ module ProteomIQon.UnitTestsPeptideSpectrumMatchingTIMsRegressions
 open System
 open Expecto
 open ProteomIQon
+open ProteomIQon.SpectrumIndex
 open PeptideIndex
 open SpectrumSearch
 open PeptideSpectrumMatchingTIMs
@@ -32,7 +33,8 @@ let peaks =
 
 let pass lo hi =
     let index=buildFragmentIndex table 0.01 500. 1 lo hi ignore
-    match indexPass settings table index (Scratch()) 10 (table.Mass.[0]/2.+protonMass) peaks 2 lo hi with
+    let decoyIndex=buildDecoyFragmentIndex table 0.01 500. 1 lo hi ignore
+    match indexPass settings table index decoyIndex (Scratch()) 10 (table.Mass.[0]/2.+protonMass) peaks 2 lo hi with
     | SliceFound (scores,t,d) -> scores,t,d
     | x -> failwithf "Unexpected %A" x
 
@@ -124,10 +126,12 @@ let all = testList "PeptideSpectrumMatchingTIMs regressions" [
         use writer=new IO.StreamWriter(stream)
         let run={Path="test";Log=logs.Add;Reader=Unchecked.defaultof<_>;Headers=[|header|];AttemptStart=[|0;1|];Attempts=[|attempt|];Kept=null;Scratch=Scratch();Writer=writer;Stopwatch=Diagnostics.Stopwatch.StartNew();PhaseTicks=Profile.create()}
         let index1=buildFragmentIndex table 0.01 500. 1 0 10 ignore
-        searchSliceWith (fun _ _ _ -> Ok spectrum) settings table [|2|] 10 index1 0 10 0 run
+        let decoyIndex1=buildDecoyFragmentIndex table 0.01 500. 1 0 10 ignore
+        searchSliceWith (fun _ _ _ -> Ok spectrum) settings table [|2|] 10 index1 decoyIndex1 0 10 0 run
         Expect.isTrue attempt.Searched "first slice searched"
         let index2=buildFragmentIndex table 0.01 500. 1 10 21 ignore
-        searchSliceWith (fun _ _ _ -> Error(IO.IOException("injected second-slice read error"))) settings table [|2|] 10 index2 10 21 1 run
+        let decoyIndex2=buildDecoyFragmentIndex table 0.01 500. 1 10 21 ignore
+        searchSliceWith (fun _ _ _ -> Error(IO.IOException("injected second-slice read error"))) settings table [|2|] 10 index2 decoyIndex2 10 21 1 run
         Expect.isTrue attempt.Failed "incomplete histogram must be unusable"
         let classic={CalcIonSeries=(fun _ -> failwith "must not score");ParseSequence=(fun _ _ -> []);ParseRank=(fun _ -> []);AndromedaPMinPMax=(4,10);AndromedaTolerancePpm=20.}
         finishRunWith (fun _ _ _ -> failwith "failed attempt must not read peaks again") settings classic table [|2|] run
@@ -222,9 +226,75 @@ let all = testList "PeptideSpectrumMatchingTIMs regressions" [
         for rank in 0 .. max 1 (t.Count/500) .. t.Count-1 do
             let parsed=classic.ParseSequence (int(t.GlobalMod rank)) (t.SequenceString rank)
             Expect.equal (classic.ParseRank rank) parsed "labels, modifications and dropped terminators"
-            let expected=Fragmentation.Series.fragmentMasses p.nTerminalSeries p.cTerminalSeries sdb.MassFunction parsed
+            let expected=Fragmentation.Series.fragmentMassesPseudoReversed p.nTerminalSeries p.cTerminalSeries sdb.MassFunction parsed
             let actual=classic.CalcIonSeries (classic.ParseRank rank)
             Expect.equal actual expected "identical target and decoy ion families"
+    testCase "the decoy fragments of the index are the b and y ions of the pseudo-reversed sequence" <| fun _ ->
+        let path name=IO.Path.Combine(AppContext.BaseDirectory,name)
+        let p=Json.ReadAndDeserialize<Dto.PeptideSpectrumMatchingTIMsParams> (path "defaultParams.json") |> Dto.PeptideSpectrumMatchingTIMsParams.toDomain
+        use cn=SearchDB.getDBConnection (path "MinimalTIMs.db")
+        let sdb,t=prepareTable p cn ignore
+        let classic=toClassicScoring p sdb t
+        let buffer=Array.zeroCreate (2*t.MaxLength)
+        for rank in 0 .. t.Count-1 do
+            let decoy=Fragmentation.Series.pseudoReverse (classic.ParseRank rank)
+            let library series=
+                series sdb.MassFunction decoy
+                |> List.map (fun (f: PeakFamily<TaggedMass.TaggedMass>) -> f.MainPeak.Mass)
+                |> List.sort
+                |> fun masses -> List.truncate (List.length masses-1) masses
+            let count=decoyFragmentMasses t rank buffer
+            let half=count/2
+            let index from=Array.sub buffer from half |> Array.sort |> List.ofArray
+            for expected,actual in [library Fragmentation.Series.bOfBioList,index 0; library Fragmentation.Series.yOfBioList,index half] do
+                Expect.equal actual.Length expected.Length "one fragment per cleavage"
+                List.iter2 (fun (a: float) e -> Expect.isTrue (abs (a-e) < 1e-9) (sprintf "rank %i: %f vs %f" rank a e)) actual expected
+    testCase "a peptide that equals its pseudo-reversal gets the reversed sequence as decoy in the index" <| fun _ ->
+        // residue codes 0 = A, 1 = G, 2 = K; peptides AAAK, GAGK, AGK and K
+        let mass=[|71.03711;57.02146;128.09496|]
+        let peptides=[| [|0;0;0;2|]; [|1;0;1;2|]; [|0;1;2|]; [|2|] |]
+        let starts=Array.scan (fun s (p: int[]) -> s+p.Length) 0 peptides
+        let t={ Count=4; Mass=Array.zeroCreate 4; Order=Array.init 4 id; ModSequenceIdRow=Array.init 4 id; PepSequenceIdRow=Array.init 4 id
+                GlobalModRow=Array.zeroCreate 4; SeqStartRow=starts; Residues=peptides |> Array.concat |> Array.map byte
+                Codes=mass |> Array.mapi (fun i m -> {Token=string i;Masses=[|m|]}); MaxLength=4; RawSequenceRow=dict [] }
+        let ions (decoy: int[])=
+            let n=decoy.Length
+            [| for k in 1 .. n-1 -> Array.sumBy (fun c -> mass.[c]) decoy.[.. k-1] |],
+            [| for k in 1 .. n-1 -> waterMass + Array.sumBy (fun c -> mass.[c]) decoy.[n-k ..] |]
+        // KAAA and KGAG are reversed completely, AGK is pseudo-reversed to GAK
+        for rank,decoy in [0,[|2;0;0;0|]; 1,[|2;1;0;1|]; 2,[|1;0;2|]; 3,[|2|]] do
+            let buffer=Array.zeroCreate 8
+            let count=decoyFragmentMasses t rank buffer
+            let b,y=ions decoy
+            Expect.equal count (2*(decoy.Length-1)) "one b and one y ion per cleavage"
+            Array.iteri (fun i e -> Expect.floatClose Accuracy.veryHigh buffer.[i] e (sprintf "b%i of rank %i" (i+1) rank)) b
+            Array.iteri (fun i e -> Expect.floatClose Accuracy.veryHigh buffer.[count/2+i] e (sprintf "y%i of rank %i" (i+1) rank)) y
+    testCase "the decoy of a modified peptide in the index equals the library decoy, including the fallback" <| fun _ ->
+        let path name=IO.Path.Combine(AppContext.BaseDirectory,name)
+        let p=Json.ReadAndDeserialize<Dto.PeptideSpectrumMatchingTIMsParams> (path "defaultParams.json") |> Dto.PeptideSpectrumMatchingTIMsParams.toDomain
+        use cn=SearchDB.getDBConnection (path "MinimalTIMs.db")
+        let sdb0=SearchDB.getSDBParamsByCn cn
+        let sdb={sdb0 with VariableMods=[SearchDB.Table.oxidation'Met']}
+        // residue codes 0 = M, 1 = A, 2 = [ox]M, 3 = K
+        let tokens=[|"M";"A";"[ox]M";"K"|]
+        // M A [ox]M K differs from its pseudo-reversal because the modification counts, while
+        // [ox]M A [ox]M K and M A M K equal it, so their decoy falls back to the complete reversal.
+        let peptides=[| [|0;1;2;3|]; [|2;1;2;3|]; [|0;1;0;3|] |]
+        let starts=Array.scan (fun s (q: int[]) -> s+q.Length) 0 peptides
+        let t={ Count=3; Mass=Array.zeroCreate 3; Order=Array.init 3 id; ModSequenceIdRow=Array.init 3 id; PepSequenceIdRow=Array.init 3 id
+                GlobalModRow=Array.zeroCreate 3; SeqStartRow=starts; Residues=peptides |> Array.concat |> Array.map byte
+                Codes=tokens |> Array.map (createResidueCode sdb 1); MaxLength=4; RawSequenceRow=dict [] }
+        let classic=toClassicScoring p sdb t
+        let buffer=Array.zeroCreate 8
+        for rank in 0 .. t.Count-1 do
+            let masses (series: PeakFamily<TaggedMass.TaggedMass> list)=series |> List.map (fun f -> f.MainPeak.Mass) |> List.sort
+            let library=(classic.CalcIonSeries (classic.ParseRank rank)).DecoyMasses |> masses
+            // the library also lists the complete b and y ions, the two heaviest, which the index leaves out
+            let library=List.truncate (List.length library-2) library
+            let count=decoyFragmentMasses t rank buffer
+            let actual=Array.sub buffer 0 count |> Array.sort |> List.ofArray
+            Expect.equal actual.Length library.Length (sprintf "rank %i: one fragment per cleavage" rank)
+            List.iter2 (fun (a: float) e -> Expect.floatClose Accuracy.veryHigh a e (sprintf "rank %i: %f vs %f" rank a e)) actual library
     testCase "parameter validation rejects invalid tolerances and ceilings" <| fun _ ->
         let p=Json.ReadAndDeserialize<Dto.PeptideSpectrumMatchingTIMsParams> (IO.Path.Combine(AppContext.BaseDirectory,"defaultParams.json")) |> Dto.PeptideSpectrumMatchingTIMsParams.toDomain
         validateParameters {p with PrecursorTolerancePPM=0.} 0. 1
@@ -254,16 +324,6 @@ let all = testList "PeptideSpectrumMatchingTIMs regressions" [
         let small={table with Count=3; Mass=[|1000.-0.02; 1000.;1000.+0.02|]}
         let windows=precursorWindows {settings with IsotopeErrors=[|0|]} small 1000.
         Expect.equal (windows |> Array.sumBy (fun w -> w.Hi-w.Lo)) 3 "include upper and lower boundary"
-    testCase "truncated root at a token boundary is rejected" <| fun _ ->
-        let json="""{"ID":"x","properties":{"MS:1000511":{"Values":["2"]}}"""
-        Expect.isNotNull (TimSpectrumHeader.tryParse json).Error "missing final brace is an error"
-    testCase "empty, scalar, array and multiple-root descriptions are rejected" <| fun _ ->
-        for json in ["";"null";"[]";"{}{}";"{\"ID\":\"x\""] do
-            Expect.isNotNull (TimSpectrumHeader.tryParse json).Error json
-    testCase "every truncation of a real description is rejected" <| fun _ ->
-        let json=IO.File.ReadAllText(IO.Path.Combine(AppContext.BaseDirectory,"sample_description.json")).Trim()
-        for length in 0 .. json.Length-1 do
-            Expect.isNotNull (TimSpectrumHeader.tryParse (json.Substring(0,length))).Error (sprintf "prefix length %i" length)
     testCase "a read failure marks all charges of only the affected spectrum" <| fun _ ->
         let attempt () = {TooFewPeaks=false; Failed=false; Searched=true; Histogram=[|0;1;0|];Targets=[||];Decoys=[||]}
         let header id = {Id=id;Position=0;ScanTime=1.;PrecursorMz=500.;Charge=0;IonMobility=nan}

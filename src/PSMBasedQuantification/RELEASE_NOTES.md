@@ -1,5 +1,28 @@
 #### Unreleased
+* Read the isotope patterns of the precursor ions from the table IsotopePattern of the peptide data base where PSMStatistics stored them and compute them otherwise; the results do not change
+* Skip with a warning the spectrum descriptions that cannot be read and the MS1 spectra without a finite scan time or an ID
 * Update BioFSharp.Mz to 0.2.2
+* Read the spectra faster with the same results
+* Compute the ALS baseline faster with the same values
+* Update BioFSharp.Mz to 0.2.3
+* Speed up the wavelet peak detection with the same results
+* Update MzIO to 0.1.8, MzIO.Processing to 0.1.8, MzIO.SQL to 0.1.10 and MzIO.MzML to 0.1.11
+* Write AlignmentQValue 0 instead of NaN for the .quant rows
+* Write the diagnostic charts faster with the same content
+* Write an empty .quant with a warning for a run without PSMs instead of stopping
+* Use the Wavelet settings of the parameter file in the wavelet peak detection; they were ignored before
+* Default to MinPeakDistance 0.1 min
+* Pick the top PSMs of TopKPSMs by ModelScore instead of SequestScore
+* Quantify ions with short XIC traces, on which the wavelet peak detection failed
+* Lower the memory with the same results
+* Add the parameter QualityFilterLog2Limit (default 2): the quality filter keeps the rows with -limit < log2 ((area / median area) / (apex / median apex)) < limit
+* Add the parameter CentrePSMs (default 3): the number of PSMs with the highest summed matched fragment intensity whose weighted scan time centres the XIC
+* Add IonMobilityWindow to XicExtraction, as in PSMBasedQuantificationTIMs; this tool ignores it
+* Breaking: parameter files of earlier releases stop the tool; they need CentrePSMs and QualityFilterLog2Limit
+* Add the parameter RequirePeakAtScanTime (default true): an ion is quantified only when a peak contains the weighted scan time of its PSMs, and its labeled partner only when a peak of the partner trace contains the expected scan time; false takes the peak with the closest apex when no peak contains the scan time
+* Fit the m/z correction of a run in ppm over scan time and m/z; MzWindow_Da Estimate stays four standard deviations of the precursor m/z offsets
+* Drop the rows with a non-finite or non-positive quantity or apex intensity in the quality filter, as PSMBasedQuantificationTIMs does; with N15Labeling a row whose labeled partner could not be quantified is dropped
+* Add the column IonMobilityCentre as the last column of the .quant; it is NaN, as the tool reads no ion mobility
 
 #### 0.0.12 - Wednesday, September 2, 2026
 * Fall back to a median mz correction when the smoothing spline cannot be fitted on sparse data

@@ -48,7 +48,7 @@ module LabeledProteinQuantification =
                         x < a || FSharp.Stats.Ops.isNan x
                     ) alignmentQVal
                     |> Series.fillMissingWith true
-                | None -> Core.createFilter (fun x -> true ) alignmentQVal
+                | None -> Core.createFilter (fun x -> true ) alignmentQVal |> Series.fillMissingWith true
             /// GroupFilters = 
             let lightGF = groupFilters.Light |> Seq.map (fun f -> Core.createGroupFilter f modifyKeyColumns keyColumns lightT)
             let heavyGF = groupFilters.Heavy |> Seq.map (fun f -> Core.createGroupFilter f modifyKeyColumns keyColumns heavyT) 

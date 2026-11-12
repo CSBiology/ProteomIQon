@@ -6,7 +6,7 @@
   "MinMissedCleavages": 0,
   "MaxMissedCleavages": 2,
   "MaxMass": 15000.0,
-  "MinPepLength": 4,
+  "MinPepLength": 6,
   "MaxPepLength": 65,
   "IsotopicMod": [ { "Case": "N15" } ],
   "MassMode": { "Case": "Monoisotopic" },

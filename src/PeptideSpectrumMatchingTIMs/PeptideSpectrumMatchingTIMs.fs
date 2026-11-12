@@ -16,6 +16,7 @@ open MzIO.Processing
 open FSharpAux.IO
 open ProteomIQon.Domain
 open ProteomIQon.Core
+open ProteomIQon.SpectrumIndex
 open PeptideIndex
 open SpectrumSearch
 
@@ -89,7 +90,7 @@ module PeptideSpectrumMatchingTIMs =
         let compute = Func<IBioItem, float>(sdbParams.MassFunction)
         let massOf item = masses.GetOrAdd(item, compute)
         {
-            CalcIonSeries = Fragmentation.Series.fragmentMasses processParams.nTerminalSeries processParams.cTerminalSeries massOf
+            CalcIonSeries = Fragmentation.Series.fragmentMassesPseudoReversed processParams.nTerminalSeries processParams.cTerminalSeries massOf
             ParseSequence = parse
             ParseRank = fun rank ->
                 let start = table.Start rank
@@ -152,65 +153,16 @@ module PeptideSpectrumMatchingTIMs =
             |> Array.mapi (fun i name -> sprintf "%s %.1f s" name (seconds ticks.[i]))
             |> String.concat ", "
 
-    /// The few values the search needs from a spectrum description. Only these are kept, one
-    /// description at a time is read, and Position is the place of the spectrum in the file, which
-    /// orders spectra that share a scan time.
-    type Ms2Header =
-        {
-            Id          : string
-            Position    : int
-            ScanTime    : float
-            PrecursorMz : float
-            Charge      : int
-            IonMobility : float
-        }
-
-    /// The MS2 headers of a run in scan time order, equal scan times in file order, which the
-    /// reader delivers by row id. The descriptions are deserialized one at a time, so the metadata
-    /// of the run never exists as a whole. A description that cannot be read is logged and skipped.
-    let private readMs2HeadersOf (reader: IMzIODataReader) (runId: string) (log: string -> unit) =
+    /// The MS2 headers of the run in scan time order, equal scan times in file order. ScanNr is the position in that
+    /// order. Only the headers are read, the peaks are not. A description that cannot be read is logged and skipped.
+    let readMs2Headers (reader: IMzIODataReader) (runId: string) (log: string -> unit) =
         let started = Diagnostics.Stopwatch.GetTimestamp()
-        let descriptions =
+        let headers =
             match reader with
-            | :? MzSQL as sql ->
-                seq {
-                    use cmd = new System.Data.SQLite.SQLiteCommand("SELECT Description FROM Spectrum WHERE RunID = @runID ORDER BY rowid", sql.Connection)
-                    cmd.Parameters.AddWithValue("@runID", runId) |> ignore
-                    use rows = cmd.ExecuteReader()
-                    while rows.Read() do yield TimSpectrumHeader.tryParse (rows.GetString 0)
-                }
+            | :? MzSQL as sql -> SpectrumIndex.readMs2Headers sql runId log
             | _ -> failwith "PeptideSpectrumMatchingTIMs reads mzlite files, which MzIO serves one spectrum at a time."
-        let headers = ResizeArray<Ms2Header>()
-        let mutable position = 0
-        for h in descriptions do
-            if not (isNull h.Error) then
-                log (sprintf "spectrum at position %i cannot be read: %s" position h.Error)
-            elif h.MsLevel = Some 2 &&
-                 (String.IsNullOrWhiteSpace h.ID ||
-                  not (h.ScanTime |> Option.exists (fun x -> Double.IsFinite x && x >= 0.)) ||
-                  not (h.PrecursorMz |> Option.exists (fun x -> Double.IsFinite x && x > protonMass)) ||
-                  (h.ChargeState |> Option.exists (fun x -> x < 0))) then
-                log (sprintf "spectrum at position %i has missing or invalid search metadata; skipped." position)
-            elif h.MsLevel = Some 2 then
-                headers.Add
-                    {
-                        Id = h.ID
-                        Position = position
-                        ScanTime = defaultArg h.ScanTime -1.
-                        PrecursorMz = defaultArg h.PrecursorMz -1.
-                        Charge = defaultArg h.ChargeState 0
-                        IonMobility = defaultArg h.IonMobility nan
-                    }
-            position <- position + 1
-        let ordered = headers.ToArray()
-        Array.sortInPlaceWith (fun a b -> compare (a.ScanTime, a.Position) (b.ScanTime, b.Position)) ordered
         Profile.add 0 started
-        ordered
-
-    /// MS2 spectra of the run in scan time order. ScanNr is the position in that order. The peaks
-    /// of a spectrum are read when the sequence reaches it and are dropped again afterwards. A
-    /// spectrum whose peaks cannot be read is logged and skipped.
-    let readMs2Headers (reader: IMzIODataReader) (runId: string) (log: string -> unit) = readMs2HeadersOf reader runId log
+        headers
 
     let validateMobilityMergePpm ppm =
         if not (Double.IsFinite ppm) || ppm < 0. then
@@ -289,7 +241,7 @@ module PeptideSpectrumMatchingTIMs =
         Math.Max(0., Math.Round(Array.min mz, 0) |> floorToClosest10), Math.Round(Array.max mz, 0) |> ceilToClosest10
 
     /// Scores the given peptides with the BioFSharp.Mz functions that PeptideSpectrumMatching
-    /// uses. Every peptide yields a target and a reversed decoy result, keyed by
+    /// uses. Every peptide yields a target and a pseudo-reversed decoy result, keyed by
     /// (ModSequenceID, GlobalMod, isTarget).
     let classicScores (classic: ClassicScoring) (table: PeptideTable) (spectrum: Ms2Spectrum) (charge: int) (ranks: int[]) =
         let t = Diagnostics.Stopwatch.GetTimestamp()
@@ -335,7 +287,7 @@ module PeptideSpectrumMatchingTIMs =
         | SliceFound of histogram: int[] * targets: Candidate[] * decoys: Candidate[]
 
     /// The index pass of one slice for one spectrum at one charge.
-    let indexPass (settings: SearchSettings) (table: PeptideTable) (index: FragmentIndex) (scratch: Scratch)
+    let indexPass (settings: SearchSettings) (table: PeptideTable) (index: FragmentIndex) (decoyIndex: FragmentIndex) (scratch: Scratch)
                   (maxFragments: int) (precursorMz: float) (processed: ProcessedSpectrum) (charge: int) (rankLo: int) (rankHi: int) =
         if processed.Mz.Length < settings.MinimumPeaks then SliceTooFewPeaks
         else
@@ -347,7 +299,7 @@ module PeptideSpectrumMatchingTIMs =
             else
                 let t = Diagnostics.Stopwatch.GetTimestamp()
                 scratch.Reset (slotCount windows) maxFragments
-                scatter settings index scratch windows charge processed
+                scatter settings index decoyIndex scratch windows charge processed
                 Profile.add 4 t
                 let t = Diagnostics.Stopwatch.GetTimestamp()
                 let refine c =
@@ -632,12 +584,12 @@ module PeptideSpectrumMatchingTIMs =
     /// The index pass of one slice over one run. The first slice reads the peaks of every
     /// spectrum. With kept spectra the later slices search those and read nothing.
     let searchSliceWith (read: IMzIODataReader -> Ms2Header[] -> int -> Result<Ms2Spectrum, exn>) (settings: SearchSettings) (table: PeptideTable) (fallbackCharges: int[]) (maxFragments: int)
-                            (index: FragmentIndex) (rankLo: int) (rankHi: int) (slice: int) (run: Run) =
+                            (index: FragmentIndex) (decoyIndex: FragmentIndex) (rankLo: int) (rankHi: int) (slice: int) (run: Run) =
         Profile.countInto run.PhaseTicks (fun () ->
             let log = run.Log
             let searchAttempt (spectrumId: string) (precursorMz: float) (charge: int) (attempt: Attempt) (processed: ProcessedSpectrum) =
                 try
-                    match indexPass settings table index run.Scratch maxFragments precursorMz processed charge rankLo rankHi with
+                    match indexPass settings table index decoyIndex run.Scratch maxFragments precursorMz processed charge rankLo rankHi with
                     | SliceTooFewPeaks -> attempt.TooFewPeaks <- true
                     | SliceNoCandidates -> ()
                     | SliceFound (scores, targets, decoys) ->
@@ -809,7 +761,9 @@ module PeptideSpectrumMatchingTIMs =
                 let rankLo, rankHi = boundaries.[slice], boundaries.[slice + 1]
                 log (sprintf "Slice %i of %i: ranks %i to %i." (slice + 1) slices rankLo rankHi)
                 let index = buildFragmentIndexFor eligible table processParams.FragmentIndexBinWidth ceiling workers rankLo rankHi log
-                runs |> Array.Parallel.iter (searchSliceWith read settings table fallbackCharges maxFragments index rankLo rankHi slice)
+                log "Building the fragment index of the decoys."
+                let decoyIndex = buildDecoyFragmentIndexFor eligible table processParams.FragmentIndexBinWidth ceiling workers rankLo rankHi log
+                runs |> Array.Parallel.iter (searchSliceWith read settings table fallbackCharges maxFragments index decoyIndex rankLo rankHi slice)
                 log (sprintf "Slice %i of %i searched." (slice + 1) slices)
                 GC.Collect()
             runs |> Array.iter (fun run -> run.Kept <- null)

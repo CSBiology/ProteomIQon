@@ -1,5 +1,7 @@
 #### Unreleased
 * Update BioFSharp.Mz to 0.2.2
+* Update BioFSharp.Mz to 0.2.3
+* Update MzIO to 0.1.8, MzIO.Processing to 0.1.8, MzIO.SQL to 0.1.10 and MzIO.MzML to 0.1.11
 
 #### 0.0.10 - Wednesday, September 2, 2026
 * Update to .NET 10
