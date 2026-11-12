@@ -1,0 +1,2 @@
+# byte offsets of the index and the checksum must not change with the line endings
+*.mzML -text

@@ -1,5 +1,8 @@
 #### Unreleased
 * Update BioFSharp.Mz to 0.2.2
+* Update BioFSharp.Mz to 0.2.3
+* Update MzIO to 0.1.8, MzIO.Processing to 0.1.8, MzIO.SQL to 0.1.10 and MzIO.MzML to 0.1.11
+* Default to Alignment_QValue 0.05
 
 #### 0.0.5 - Wednesday, September 2, 2026
 * Update to .NET 10

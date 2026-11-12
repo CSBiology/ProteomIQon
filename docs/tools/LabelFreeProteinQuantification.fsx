@@ -43,7 +43,7 @@ The tool writes up to four tab separated tables into the output directory. Charg
 
 | Parameter | Default | Meaning |
 |---|---|---|
-| Alignment_QValue | None | Rows that came from alignment and have an alignment q-value at or above this value are dropped, None keeps everything. |
+| Alignment_QValue | Some 0.05 | Rows that came from alignment and have an alignment q-value at or above this value are dropped. PSM based quantifications carry the q-value 0, and rows without an alignment q-value are kept. None keeps every row. |
 | ModificationFilter | UseModifiedPeptides.All | Which peptides enter the aggregation. All keeps every peptide, No drops every peptide with a modification, UseOnly mods keeps unmodified peptides and peptides whose modifications are all in the list. |
 | AggregatePeptideChargeStatesParams | None | Some params runs the charge step with the given AggregationParams. None skips it. |
 | AggregateModifiedPeptidesParams | None | Some params runs the modification step. None skips it. |
@@ -58,7 +58,7 @@ An AggregationParams record describes one step.
 | GroupFilters | None | Some { Light = Some (seq [Tukey 1.5]) } removes outliers within each group before aggregation. GroupFilter is Tukey factor, Stdev factor or TopX count. |
 | Aggregation | { Light = Mean } | How the remaining values of a group are combined. NumericAggregation is Mean, Median or Sum. |
 
-Four default files exist. [LabelFreeQuantificationParams.json](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/LabelFreeQuantificationParams.json) is the table above and only runs the protein step. [LabelFreeQuantificationParams_ChargeAgg.json](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/LabelFreeQuantificationParams_ChargeAgg.json) adds the charge step with Mean. [LabelFreeQuantificationParams_ChargeAgg_ModAgg.json](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/LabelFreeQuantificationParams_ChargeAgg_ModAgg.json) adds the charge and the modification step, both with Mean. [LabelFreeQuantificationParams_Transform_Filter_Sum.json](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/LabelFreeQuantificationParams_Transform_Filter_Sum.json) runs only the protein step, but log2 transforms the intensities, keeps those above 4.0 and sums them.
+Four default files exist, all with Alignment_QValue set to Some 0.05. [LabelFreeQuantificationParams.json](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/LabelFreeQuantificationParams.json) is the table above and only runs the protein step. [LabelFreeQuantificationParams_ChargeAgg.json](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/LabelFreeQuantificationParams_ChargeAgg.json) adds the charge step with Mean. [LabelFreeQuantificationParams_ChargeAgg_ModAgg.json](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/LabelFreeQuantificationParams_ChargeAgg_ModAgg.json) adds the charge and the modification step, both with Mean. [LabelFreeQuantificationParams_Transform_Filter_Sum.json](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/LabelFreeQuantificationParams_Transform_Filter_Sum.json) runs only the protein step, but log2 transforms the intensities, keeps those above 4.0 and sums them.
 
 ## Writing a parameter file
 *)
@@ -77,7 +77,7 @@ let proteinStep : Common.LabelFreeQuantification.AggregationParams =
 
 let labelFreeQuantificationParams : Dto.LabelFreeQuantificationParams =
     {
-        Alignment_QValue                   = None
+        Alignment_QValue                   = Some 0.05
         ModificationFilter                 = UseModifiedPeptides.All
         AggregatePeptideChargeStatesParams = None
         AggregateModifiedPeptidesParams    = None

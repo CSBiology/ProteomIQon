@@ -1,3 +1,6 @@
+#### Unreleased
+* Update MzIO to 0.1.8, MzIO.Processing to 0.1.8, MzIO.SQL to 0.1.10 and MzIO.MzML to 0.1.11
+
 #### 0.0.6 - Wednesday, September 2, 2026
 * Update field names
 * Update to .NET 10

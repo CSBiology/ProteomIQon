@@ -27,7 +27,7 @@ index: 8
 # PSMBasedQuantification
 
 PSMBasedQuantification turns the identifications from [PSMStatistics]({{root}}tools/PSMStatistics.html) into peptide ion intensities.
-For every identified peptide ion (sequence, modification state and charge) it takes the scan times of its MS/MS identifications, extracts an [ion chromatogram](https://www.biofsharp.com/BioFSharp.Mz/03_01_quantification.html#Building-an-XIC-trace) of the monoisotopic m/z in a window around them, detects the peaks in that trace and [fits the peak](https://www.biofsharp.com/BioFSharp.Mz/03_01_quantification.html#Fitting-and-integrating-the-main-peak) closest to the identification. The fitted area is the reported quantity.
+For every identified peptide ion (sequence, modification state and charge) it takes the scan times of its MS/MS identifications, extracts an [ion chromatogram](https://www.biofsharp.com/BioFSharp.Mz/03_01_quantification.html#Building-an-XIC-trace) of the monoisotopic m/z in a window around them, detects the peaks in that trace and [fits the peak](https://www.biofsharp.com/BioFSharp.Mz/03_01_quantification.html#Fitting-and-integrating-the-main-peak) that contains the weighted scan time of its identifications (see `CentrePSMs` and `RequirePeakAtScanTime`). The fitted area is the reported quantity.
 For metabolically labeled samples the tool computes the m/z of the partner ion (the heavy form of a light identification, or the other way round) and quantifies that trace as well, so every row can carry a light and a heavy value.
 
 <img src="{{root}}img/LabeledQuant.png" width="1000" height="750" />
@@ -52,19 +52,22 @@ With one file per flag the pair is used as given. With lists, the n-th mzlite fi
 For every run the tool writes `run.quant`, tab separated with a header and one row per quantified peptide ion. Next to the identifiers and the best q-value and PEP value of the ion it reports the fitted quantity (`Quant_Light`, `Quant_Heavy`), the apex intensity, the fit parameters, the difference between identification and fitted scan time, the extracted traces and the isotope pattern for both channels.
 [QuantBasedAlignment]({{root}}tools/QuantBasedAlignment.html), [AlignmentBasedQuantification]({{root}}tools/AlignmentBasedQuantification.html), [AlignmentBasedQuantStatistics]({{root}}tools/AlignmentBasedQuantStatistics.html) and [JoinQuantPepIonsWithProteins]({{root}}tools/JoinQuantPepIonsWithProteins.html) read `.quant` files.
 
-With `-dc` the tool writes one chart per peptide ion into `run_plots`, plus `mzErrorAndCorrection.html` and `precMzCorrected.html` for the m/z calibration it derives from the identifications. `-z` packs that directory into `run_plots.zip` and deletes it. Delete an existing `run.quant` in the output directory before a rerun, the tool appends to it. Logs go to `PSMBasedQuantification_log.txt` and `run_log.txt` in the output directory.
+With `-dc` the tool writes one chart per peptide ion into `run_plots`, plus `mzErrorAndCorrection.html` for the m/z calibration it derives from the identifications. `-z` packs that directory into `run_plots.zip` and deletes it. Delete an existing `run.quant` in the output directory before a rerun, the tool appends to it. Logs go to `PSMBasedQuantification_log.txt` and `run_log.txt` in the output directory.
 
 ## Parameters
 
 | Parameter | Default | Meaning |
 |-----------|---------|---------|
 | `PerformLabeledQuantification` | `Labeling.N15Labeling` | `Unlabeled` quantifies only the identified ion. `N15Labeling` quantifies the partner ion too and keeps rows where both fits pass the quality filter. `N15LabelingOnly` applies the filter to the heavy channel alone. `Labelshift` quantifies both and skips the filter. |
-| `FragPipe` | `false` | Marks qpsm input in the FragPipe layout, which [PSMBasedQuantificationTIMs]({{root}}tools/PSMBasedQuantificationTIMs.html) reads. Keep it at `false` for this tool. |
 | `XicExtraction.ScanTimeWindow` | `2.0` | Half width of the scan time window around the identification that is extracted and searched for the peak, in the scan time unit of the run. |
-| `XicExtraction.MzWindow_Da` | `Window.Estimate` | Half width of the m/z window of the trace, in Da. `Estimate` uses four times the MS1 mass error the tool measures on the precursor m/z of the identifications. `Window.Fixed 0.07` sets it to 0.07 Da. |
-| `XicExtraction.XicProcessing` | `XicProcessing.Wavelet waveletParams` | Peak detection on the trace. The wavelet parameters are listed below. `SecondDerivative` is the other supported case. `Gabor3D` belongs to the TIMs tool and makes this tool fail. |
-| `XicExtraction.TopKPSMs` | `None` | `Some k` keeps only the k identifications with the highest `SequestScore` per peptide ion when placing the scan time. |
+| `XicExtraction.MzWindow_Da` | `Window.Estimate` | Half width of the m/z window of the trace, in Da, the same at every m/z. The trace is centred on the m/z corrected by an offset that the tool fits on the precursor m/z of the identifications, in ppm over retention time and m/z. `Estimate` uses four times the standard deviation of the difference between the measured and theoretical precursor m/z of the identifications, leaving out outliers. `Window.Fixed 0.07` sets 0.07 Da. |
+| `XicExtraction.XicProcessing` | `XicProcessing.Wavelet waveletParams` | Peak detection on the trace. The wavelet parameters are listed below. `SecondDerivative` is the other supported case. `Gabor3D` is in development and does not work currently. |
+| `XicExtraction.TopKPSMs` | `None` | `Some k` keeps only the k identifications with the highest `ModelScore` per peptide ion when placing the scan time. |
+| `XicExtraction.IonMobilityWindow` | `Window.Fixed 0.05` | Not used, the tool does not read ion mobility. |
 | `BaseLineCorrection` | `Some { MaxIterations = 10; Lambda = 6; P = 0.05 }` | Asymmetric least squares baseline subtraction on the trace before peak detection. `None` skips it. |
+| `QualityFilterLog2Limit` | `2.0` | The quality filter keeps rows with -limit < log2 ((area / median area) / (apex / median apex)) < limit. Rows with a non-finite or non-positive area, apex or ratio are dropped. |
+| `CentrePSMs` | `3` | Number of identifications per peptide ion, ranked by the summed intensity of their matched fragment ions, whose intensity weighted scan time centres the trace. It is applied after `TopKPSMs`, which ranks by `ModelScore`. At least 1. |
+| `RequirePeakAtScanTime` | `true` | `true` quantifies only a peak that contains the weighted scan time of the identifications, so an ion without such a peak gets no row. The labeled partner needs a peak of its own trace that contains the fitted scan time of the ion. Without one it is not quantified, and the quality filter then drops the row with `N15Labeling`, and with `N15LabelingOnly` when the missing partner is heavy. `false` takes the peak with the closest apex when no peak contains the scan time. |
 
 The wavelet parameters:
 
@@ -75,7 +78,7 @@ The wavelet parameters:
 | `InternalPaddingMethod` | `Padding.InternalPaddingMethod.LinearInterpolation` | How small gaps inside the trace are filled. |
 | `HugeGapPaddingMethod` | `Padding.HugeGapPaddingMethod.Zero` | How gaps longer than `HugeGapPaddingDistance` are filled. |
 | `HugeGapPaddingDistance` | `100.` | Gap length from which a gap counts as huge. |
-| `MinPeakDistance` | `None` | Peaks closer than this are merged. `None` uses the point spacing of the trace. |
+| `MinPeakDistance` | `Some 0.1` | Peaks closer than this (in minutes) are merged. The distance is at least 1.5 times the median point spacing of the trace, which is also what `None` uses. |
 | `MinPeakLength` | `Some 0.1` | Smallest peak width the wavelet scales start at. |
 | `MaxPeakLength` | `1.5` | Largest peak width the wavelet scales go up to. |
 | `NoiseQuantile` | `0.01` | Quantile of the wavelet correlation used as noise level. |
@@ -97,7 +100,7 @@ let waveletParams : WaveletParameters =
         InternalPaddingMethod  = Padding.InternalPaddingMethod.LinearInterpolation
         HugeGapPaddingMethod   = Padding.HugeGapPaddingMethod.Zero
         HugeGapPaddingDistance = 100.
-        MinPeakDistance        = None
+        MinPeakDistance        = Some 0.1
         MinPeakLength          = Some 0.1
         MaxPeakLength          = 1.5
         NoiseQuantile          = 0.01
@@ -107,15 +110,18 @@ let waveletParams : WaveletParameters =
 let quantificationParams : Dto.QuantificationParams =
     {
         PerformLabeledQuantification = Labeling.N15Labeling
-        FragPipe                     = false
         XicExtraction =
             {
                 ScanTimeWindow = 2.
                 MzWindow_Da    = Window.Estimate
                 XicProcessing  = XicProcessing.Wavelet waveletParams
                 TopKPSMs       = None
+                IonMobilityWindow = Window.Fixed 0.05
             }
         BaseLineCorrection = Some { MaxIterations = 10; Lambda = 6; P = 0.05 }
+        QualityFilterLog2Limit = 2.
+        CentrePSMs = 3
+        RequirePeakAtScanTime = true
     }
 
 // Replace the temp folder with your project folder.
@@ -126,8 +132,7 @@ Json.serializeAndWrite outputPath quantificationParams
 
 (**
 ## Outputs 
-The resulting `.quant` file is generated as a tab-delimited text file.
-These columns can be inspected individually to examine specific search results, scoring metrics, and identification parameters.
+The columns of the `.quant` file:
 
 | Column                                   | Description                                                                                                                                                      |
 |------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -136,30 +141,30 @@ These columns can be inspected individually to examine specific search results, 
 | Charge                                   | Precursor ion charge state                                                                                                                                       |
 | PepSequenceID                            | Unique identifier of the unmodified peptide sequence, which points to PeptideDB                                                                                  |
 | ModSequenceID                            | Unique identifier of the modified peptide sequence (including PTMs, e.g., methylation), which points to PeptideDB                                                |
-| PrecursorMZ                              | Precursor ion mass-to-charge ratio (m/z)                                                                                                                         |
-| MeasuredMass                             | Measured mass of precursor ions in Dalton                                                                                                                        |
+| PrecursorMZ                              | Theoretical m/z of the ion plus the m/z correction, the m/z the XIC is centred on                                                                                |
+| MeasuredMass                             | Mass that corresponds to PrecursorMZ, in Dalton                                                                                                                  |
 | TheoMass                                 | Theoretical peptide mass in the spectrum (based on amino acid composition) in Dalton                                                                             |
-| AbsDeltaMass                             | Absolute mass deviation between theoretical and measured mass (mass error)                                                                                       |
-| MeanPercolatorScore                      | The peptide spectrum matches (PSMs) are re-scored based on several parameters. This value corresponds to the average consensus score determined in the process   |
+| AbsDeltaMass                             | Absolute difference between MeasuredMass and TheoMass                                                                                                            |
+| MeanPercolatorScore                      | Mean ModelScore of the identifications of the ion                                                                                                                |
 | QValue                                   | Q-value (False-Discovery-Rate) based on combined model scores                                                                                                     |
 | PEPValue                                 | Posterior Error Probability                                                                                                                                      |
 | ProteinNames                             | Protein Names out of the PeptideDB                                                                                                                               |
-| QuantMZ_Light                            | Mass-to-charge ratio from the extracted XIC of the unlabeled peptide ion                                                                                         |
+| QuantMz_Light                            | Mass-to-charge ratio from the extracted XIC of the unlabeled peptide ion                                                                                         |
 | Quant_Light                              | Peak area from the extracted XIC of the unlabeled peptide ion                                                                                                    |
 | MeasuredApex_Light                       | Measured Apex of unlabeled peak                                                                                                                                  |
 | Seo_Light                                | Standard Error of Prediction for quantification                                                                                                                  |
 | Params_Light                             | Describes the shape of the fitted peak for the unlabeled version of a peptide. Contains information about peak height, estimated peak time, and peak width.      |
-| Diffrence_SearchRT_FittedRT_Light        | Difference between the retention time originally determined using PSMs and the retention time calculated from the measured peak                                  |
+| Difference_SearchRT_FittedRT_Light       | Difference between the retention time originally determined using PSMs and the retention time calculated from the measured peak                                  |
 | KLDiv_Observed_Theoretical_Light         | Describes how well the measured unlabeled isotope pattern matches the theoretically expected pattern.                                                            |
-| KLDiv_CorrectObserved_Theoretical_Light  | Corrected Kullback-Leiber divergence of isotopic pattern of unlabeled peptide ion versus the measured pattern                                                    |
-| QuantMZ_Heavy                            | Mass-to-charge ratio from the extracted XIC of the labeled peptide ion                                                                                           |
+| KLDiv_CorrectedObserved_Theoretical_Light| Corrected Kullback-Leiber divergence of isotopic pattern of unlabeled peptide ion versus the measured pattern                                                    |
+| QuantMz_Heavy                            | Mass-to-charge ratio from the extracted XIC of the labeled peptide ion                                                                                           |
 | Quant_Heavy                              | Peak area from the extracted XIC of the labeled peptide ion                                                                                                      |
 | MeasuredApex_Heavy                       | Measured Apex of labeled peak                                                                                                                                    |
 | Seo_Heavy                                | Standard Error of Prediction of quantification                                                                                                                   |
 | Params_Heavy                             | Describes the shape of the fitted peak for the labeled version of a peptide. Contains information about peak height, estimated peak time, and peak width.        |
-| Diffrence_SearchRT_FittedRT_Heavy        | Difference between the retention time originally determined using PSMs and the retention time calculated from the measured peak                                  |
+| Difference_SearchRT_FittedRT_Heavy       | Difference between the retention time originally determined using PSMs and the retention time calculated from the measured peak                                  |
 | KLDiv_Observed_Theoretical_Heavy         | Describes how well the measured labeled isotope pattern matches the theoretically expected pattern.                                                              |
-| KLDiv_CorrectObserved_Theoretical_Heavy  | Corrected Kullback-Leiber divergence of isotopic pattern of labeled peptide ion versus the measured pattern                                                      |
+| KLDiv_CorrectedObserved_Theoretical_Heavy| Corrected Kullback-Leiber divergence of isotopic pattern of labeled peptide ion versus the measured pattern                                                      |
 | Correlation_Light_Heavy                  | Correlation calculated based on Pearson between unlabeled and labeled peaks                                                                                      |
 | QuantificationSource                     | If spectra are found over Alignments or Peptide Spectrum Matching                                                                                                |
 | IsotopicPatternMz_Light                  | M/z-distribution of isotope cluster in spectra for unlabeled peaks                                                                                               |
@@ -168,14 +173,16 @@ These columns can be inspected individually to examine specific search results, 
 | RtTrace_Light                            | Retention Time Profile of unlabeled peptide ion                                                                                                                  |
 | IntensityTrace_Observed_Light            | Intensity trace over for an observed unlabeled isotopic peak cluster                                                                                          |
 | IntensityTrace_Corrected_Light           | Corrected intensity trace between an unlabeled peak and a measured isotopic peak cluster                                                                        |
-| IsotopicPatternMZ_Heavy                  | M/z-distribution of isotope cluster in spectra for labeled peaks                                                                                                 |
+| IsotopicPatternMz_Heavy                  | M/z-distribution of isotope cluster in spectra for labeled peaks                                                                                                 |
 | IsotopicPatternIntensity_Observed_Heavy  | Observed intensity distribution of labeled isotopic clusters                                                                                                     |
 | IsotopicPatternIntensity_Corrected_Heavy | Corrected intensity distribution of labeled isotopic clusters                                                                                                    |
 | RtTrace_Heavy                            | Retention Time Profile of labeled peptide ion                                                                                                                    |
 | IntensityTrace_Observed_Heavy            | Intensity trace for an observed labeled isotopic peak cluster                                                                                            |
 | IntensityTrace_Corrected_Heavy           | Corrected intensity trace between a labeled peak and a measured isotopic peak cluster                                                                           |
-| AlignmentScore                           | Actual known alignments compared with the observed alignments                                                                                                    |
-| AlignmentQValue                          | Q-value, which is calculated based on the alignment score                                                                                                        |
+| AlignmentScore                           | NaN in PSM based rows. In transferred rows the probability from AlignmentBasedQuantStatistics that the quantified peak is the ion's peak                         |
+| AlignmentQValue                          | 0 in PSM based rows. In transferred rows the q-value from AlignmentBasedQuantStatistics                                                                          |
+| IonMobility                              | Ion mobility of the identifications, weighted by their matched fragment intensity, NaN without ion mobility                                                      |
+| IonMobilityCentre                        | Ion mobility the XIC of the row is summed around, NaN without an ion mobility window                                                                             |
 
 *)
 

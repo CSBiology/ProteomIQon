@@ -10,7 +10,7 @@ index: 3
 (*** hide ***)
 
 (*** condition: prepare ***)
-#r "nuget: BioFSharp.Mz, 0.2.2"
+#r "nuget: BioFSharp.Mz, 0.2.3"
 #r "nuget: Newtonsoft.Json, 13.0.4"
 #r "../../src/ProteomIQon/bin/Release/net10.0/ProteomIQon.dll"
 
@@ -51,7 +51,7 @@ The output directory also receives `PeptideDB_log.txt` and `PeptideDB_<Name>_log
 | MinMissedCleavages | 0 | Lowest number of missed cleavage sites a peptide may have. |
 | MaxMissedCleavages | 2 | Highest number of missed cleavage sites a peptide may have. |
 | MaxMass | 15000.0 | Peptides above this mass in Da are dropped. |
-| MinPepLength | 4 | Shortest peptide length kept, in residues. |
+| MinPepLength | 6 | Shortest peptide length kept, in residues. |
 | MaxPepLength | 65 | Longest peptide length kept, in residues. |
 | IsotopicMod | [IsotopicMod.N15] | Isotopic labels of the experiment. Each label adds a labeled variant of every peptide next to the unlabeled one. Use [] for an unlabeled experiment. Other values are IsotopicMod.C13, IsotopicMod.O17, IsotopicMod.O18 and IsotopicMod.D. |
 | MassMode | MassMode.Monoisotopic | Mass calculation, MassMode.Monoisotopic or MassMode.Average. |
@@ -76,7 +76,7 @@ let peptideDBParams : Dto.PeptideDBParams =
         MinMissedCleavages         = 0
         MaxMissedCleavages         = 2
         MaxMass                    = 15000.0
-        MinPepLength               = 4
+        MinPepLength               = 6
         MaxPepLength               = 65
         IsotopicMod                = [IsotopicMod.N15]
         MassMode                   = MassMode.Monoisotopic

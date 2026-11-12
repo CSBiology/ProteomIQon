@@ -1,4 +1,4 @@
-PSMId	PepSequenceID	ModSequenceID	ScanTime	Charge	PrecursorMZ	TheoMass	AbsDeltaMass	IonMobility	PeptideLength	MissCleavages	Expectscore	Hyperscore	Probability	StringSequence	ProteinNames	GlobalMod
-merged=53666 frame=13809 scanStart=714 scanEnd=738	2285695	9533785	24.48500166666667	4	455.7369	1818.9196	0.0011	0.7847	15	3	12.02331	7.872	0.5422	HRRPADENIREEAAR	Nta06g29410.1	0
-merged=53955 frame=13856 scanStart=759 scanEnd=783	2710878	10982039	24.582465	3	466.916	1397.7262	0.0001	0.7667	14	1	5.524131E-05	23.907	1	GPRPSNSTSTPAVK	Nta06g22630.1	0
-merged=53997 frame=13863 scanStart=697 scanEnd=721	931200	3994006	24.582465	3	472.9004	1415.6866	0.0072	0.8017	12	2	0.2195331	12.134	0.9947	AFPKDDPNKP[ca]CK	Nta02g30880.1	0
+PSMId	GlobalMod	PepSequenceID	ModSequenceID	Label	ScanNr	ScanTime	Charge	PrecursorMZ	TheoMass	AbsDeltaMass	PeptideLength	MissCleavages	SequestScore	SequestNormDeltaBestToRest	SequestNormDeltaNext	AndroScore	AndroNormDeltaBestToRest	AndroNormDeltaNext	XtandemScore	XtandemNormDeltaBestToRest	XtandemNormDeltaNext	ModelScore	QValue	PEPValue	StringSequence	ProteinNames
+merged=53666 frame=13809 scanStart=714 scanEnd=738	0	2285695	9533785	1	0	24.48500166666667	4	455.7369	1818.9196	0.0011	15	3	NaN	NaN	NaN	NaN	NaN	NaN	7.872	NaN	NaN	0.559	0.1481333333333333	0.44099999999999995	HRRPADENIREEAAR	Nta06g29410.1
+merged=54012 frame=13865 scanStart=733 scanEnd=757	0	2710878	10982039	1	3	24.582465	3	466.916	1397.7262	0.0001	14	1	NaN	NaN	NaN	NaN	NaN	NaN	23.907	NaN	NaN	1	0	0	GPRPSNSTSTPAVK	Nta06g22630.1
+merged=53997 frame=13863 scanStart=697 scanEnd=721	0	931200	3994006	1	2	24.582465	3	472.9004	1415.6866	0.0072	12	2	NaN	NaN	NaN	NaN	NaN	NaN	12.134	NaN	NaN	0.9966	0.0016999999999999793	0.0033999999999999586	AFPKDDPNKP[ca]CK	Nta02g30880.1

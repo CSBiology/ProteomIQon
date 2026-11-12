@@ -293,8 +293,8 @@ module SpectrumSearch =
 
     /// Neutral mass intervals a spectrum matches: every peak at every fragment charge gives
     /// the interval of its tolerance, and intervals closer than one index bin are merged with
-    /// the larger intensity. The merged intervals cover disjoint bins even after a shift by
-    /// the water mass, so every index entry is counted at most once per pass, the way the
+    /// the larger intensity. The merged intervals cover disjoint bins, so every index entry
+    /// is counted at most once per pass, the way the
     /// exact rescoring counts every theoretical fragment once with its closest peak.
     let massIntervals (settings: SearchSettings) (binWidth: float) (maxFragmentCharge: int) (spectrum: ProcessedSpectrum) =
         Array.init (spectrum.Mz.Length * maxFragmentCharge) (fun i ->
@@ -340,19 +340,16 @@ module SpectrumSearch =
                     count <- count + 1
         count
 
-    /// Scatters the mass intervals of a spectrum over the fragment index and accumulates the
-    /// matched b and y ions per candidate. Decoy candidates are served from the target index:
-    /// a decoy b ion of mass m is a target y ion of mass m + water, a decoy y ion of mass m is
-    /// a target b ion of mass m - water. This loop runs for every interval of every spectrum,
-    /// so it uses index arithmetic and mutable cursors.
-    let scatter (settings: SearchSettings) (index: FragmentIndex) (scratch: Scratch) (windows: Window[]) (precursorCharge: int) (spectrum: ProcessedSpectrum) =
+    /// Scatters the mass intervals of a spectrum over the fragment indexes of the targets and
+    /// of the decoys and accumulates the matched b and y ions per candidate. This loop runs for
+    /// every interval of every spectrum, so it uses index arithmetic and mutable cursors.
+    let scatter (settings: SearchSettings) (index: FragmentIndex) (decoyIndex: FragmentIndex) (scratch: Scratch) (windows: Window[]) (precursorCharge: int) (spectrum: ProcessedSpectrum) =
         let maxFragmentCharge = max 1 (min settings.MaxFragmentCharge (precursorCharge - 1))
         let slots = scratch.Slots
         let unionHi = windows.[windows.Length - 1].Hi
-        // Adds the index entries of the neutral mass interval to the accumulators of the slot
-        // parity decoy. takeB and takeY select the entry types that count. For decoys the ion
-        // type flips: a target y entry counts as a decoy b ion and a target b entry as a decoy y ion.
-        let accumulate (lo: float) (hi: float) (intensity: float) (decoy: int) (takeB: bool) (takeY: bool) =
+        // Adds the entries of the neutral mass interval in the given index to the accumulators
+        // of the slot parity decoy.
+        let accumulate (index: FragmentIndex) (lo: float) (hi: float) (intensity: float) (decoy: int) =
             let b0 = max 0 (int (lo / index.BinWidth))
             let b1 = min (index.BinCount - 1) (int (hi / index.BinWidth))
             for b = b0 to b1 do
@@ -372,23 +369,20 @@ module SpectrumSearch =
                         while rank >= windows.[w].Hi do w <- w + 1
                         let window = windows.[w]
                         if rank >= window.Lo then
-                            let isY = entry &&& YFlag <> 0
-                            if (isY && takeY) || (not isY && takeB) then
-                                let slot = ((window.Offset + rank - window.Lo) <<< 1) ||| decoy
-                                if isY = (decoy = 0) then
-                                    slots.[slot].CountY <- slots.[slot].CountY + 1
-                                    slots.[slot].SumY <- slots.[slot].SumY + intensity
-                                else
-                                    slots.[slot].CountB <- slots.[slot].CountB + 1
-                                    slots.[slot].SumB <- slots.[slot].SumB + intensity
+                            let slot = ((window.Offset + rank - window.Lo) <<< 1) ||| decoy
+                            if entry &&& YFlag <> 0 then
+                                slots.[slot].CountY <- slots.[slot].CountY + 1
+                                slots.[slot].SumY <- slots.[slot].SumY + intensity
+                            else
+                                slots.[slot].CountB <- slots.[slot].CountB + 1
+                                slots.[slot].SumB <- slots.[slot].SumB + intensity
                         i <- i + 1
         let intervals = scratch.IntervalBuffer (spectrum.Mz.Length * maxFragmentCharge)
         let count = massIntervalsInto settings index.BinWidth maxFragmentCharge spectrum intervals
         for i = 0 to count - 1 do
             let struct (lo, hi, intensity) = intervals.[i]
-            accumulate lo hi intensity 0 true true
-            accumulate (lo + waterMass) (hi + waterMass) intensity 1 false true
-            accumulate (lo - waterMass) (hi - waterMass) intensity 1 true false
+            accumulate index lo hi intensity 0
+            accumulate decoyIndex lo hi intensity 1
 
     /// All candidates at the cutoff score. Production selection visits this tie in place
     /// and retains only the best limit candidates after rescoring.
@@ -510,7 +504,7 @@ module SpectrumSearch =
                 (spectrum: ProcessedSpectrum) (rank: int) (isDecoy: bool) =
         let maxFragmentCharge = max 1 (min settings.MaxFragmentCharge (precursorCharge - 1))
         let buffer = scratch.Fragments
-        let count = fragmentMasses table rank buffer
+        let count = if isDecoy then decoyFragmentMasses table rank buffer else fragmentMasses table rank buffer
         let half = count / 2
         let mz = spectrum.Mz
         // Intensity of the closest peak within tolerance over the fragment charge states, or -1.
@@ -534,6 +528,6 @@ module SpectrumSearch =
             |> Seq.map matchedIntensity
             |> Seq.filter (fun intensity -> intensity >= 0.)
             |> Seq.fold (fun (n, sum) intensity -> n + 1, sum + intensity) (0, 0.)
-        let nb, sumB = series (fun i -> if isDecoy then buffer.[half + i] - waterMass else buffer.[i])
-        let ny, sumY = series (fun i -> if isDecoy then buffer.[i] + waterMass else buffer.[half + i])
+        let nb, sumB = series (fun i -> buffer.[i])
+        let ny, sumY = series (fun i -> buffer.[half + i])
         nb, ny, sumB, sumY, count
