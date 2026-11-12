@@ -44,6 +44,10 @@ module console1 =
         let files = 
             parsePaths (fun path -> Directory.GetFiles(path,("*.psm"))) i
             |> Array.ofSeq
+        let c = 
+            match results.TryGetResult Parallelism_Level with 
+            | Some c    -> c
+            | None      -> 1
         if files.Length = 1 then
             logger.Info (sprintf "single file")
             logger.Trace (sprintf "Processing %s" files.[0])
@@ -51,16 +55,30 @@ module console1 =
         else
             logger.Info (sprintf "multiple files")
             logger.Trace (sprintf "Processing multiple files: %A" files)
-            let c = 
-                match results.TryGetResult Parallelism_Level with 
-                | Some c    -> c
-                | None      -> 1
             logger.Trace (sprintf "Program is running on %i cores" c)
             files 
             |> FSharpAux.PSeq.map (psmStats dc p o dbConnection) 
             |> FSharpAux.PSeq.withDegreeOfParallelism c
             |> Array.ofSeq
             |> ignore
+        let labelled = p.StoreIsotopePatterns && not (SearchDB.getSDBParamsByCn dbConnection).IsotopicMod.IsEmpty
         dbConnection.Dispose()
+        if p.StoreIsotopePatterns then
+            // The ions of all files, each once; with isotopic modifications both global modifications are stored, so the global modification does not distinguish ions.
+            let ions =
+                files
+                |> Array.collect (fun psms ->
+                    let qpsms = Path.Combine [|o; (Path.GetFileNameWithoutExtension psms) + ".qpsm"|]
+                    if File.Exists qpsms then readIons qpsms else [||])
+                |> Array.distinctBy (fun (sequence, globalMod, charge) -> sequence, (if labelled then 0 else globalMod), charge)
+            // Round-robin parts of the union, at most one per core, so that the work does not depend on which file has most of the ions.
+            let cores = max 1 c
+            let parts = ions |> Array.indexed |> Array.groupBy (fun (i, _) -> i % cores) |> Array.map (snd >> Array.map snd)
+            logger.Info (sprintf "Storing the isotope patterns of %i ions in the peptide data base, in %i part(s)" ions.Length parts.Length)
+            parts
+            |> FSharpAux.PSeq.map (IsotopePatterns.store logger d)
+            |> FSharpAux.PSeq.withDegreeOfParallelism cores
+            |> Array.ofSeq
+            |> ignore
         logger.Info "Done"
         0

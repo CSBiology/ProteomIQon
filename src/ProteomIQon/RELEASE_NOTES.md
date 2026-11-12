@@ -1,8 +1,32 @@
 #### Unreleased
+* Add StoreIsotopePatterns to the PSMStatistics parameters and the default parameters
+* Add IsotopePatterns: the isotope pattern of a peptide at a charge (MIDA, resolution 0.01, minimum probability 0.001) for the quantification tools, its BLOB encoding, the table IsotopePattern of the peptide data base with a look up that reads the table and computes missing patterns, and the function that stores the patterns
+* Add SpectrumIndex (the MS1 index and the MS2 headers from one pass over the spectrum descriptions, skipping with a warning the descriptions that cannot be read) and SortedSearch (binary searches and the closest scan time), and the m/z sort of the peaks of a spectrum in SortedPeaks, shared by the quantification and search tools
 * Use CrossValidation and no PEP cutoff (PepValueThreshold 1.0) in the default PSMStatistics parameters
-* Add SpectrumDescription, a streaming parser of the spectrum description that reads only the fields the spectrum search needs, shared by PeptideSpectrumMatching and PeptideSpectrumMatchingTIMs
+* Add Charts.useReferenceEqualityForJson, which makes saving Plotly.NET charts faster with the same output
+* Add the local scan time error scale, the source run, the source model error and the predicted ion mobility with its error scale to AlignmentResult, the .align row of QuantBasedAlignment
+* Breaking: change the parameters of AlignmentBasedQuantification (AlignmentBasedQuantificationParams) and its default parameters: PerformLocalWarp is removed, PerformLabeledQuantification is a Labeling as in QuantificationParams, and MinScanTimeWindow, ScanTimeWindowSdFactor, DecoyFraction, Seed, RequirePeakAtScanTime and IonMobilityWindow in XicExtraction are added
+* Breaking: replace the parameters of AlignmentBasedQuantStatistics (AlignmentBasedQuantStatisticsParams), PositiveQuantMzCutoff, NegativeQuantMzCutoff, PositiveQuantCutoff and NegativeQuantCutoff, by the label, feature, trainer, absent-analyte FDR and seed parameters, and change its default parameters
+* Remove PSMStatisticsResultFragpipe. MsFraggerToPSM writes and PSMBasedQuantificationTIMs reads PSMStatisticsResult
+* Write warnings to the log file of the tools
 * Add CrossValidation to the PSMStatistics EstimationParams
+* Add BaselineAls, the ALS baseline of FSharp.Stats baselineAls' computed faster with the same values, shared by PSMBasedQuantification, PSMBasedQuantificationTIMs and AlignmentBasedQuantification
 * Update BioFSharp.Mz to 0.2.3
+* Speed up the wavelet peak detection of FSharpStats'.Wavelet with the same results
+* Update MzIO to 0.1.8, MzIO.Processing to 0.1.8, MzIO.SQL to 0.1.10 and MzIO.MzML to 0.1.11
+* FSharpStats'.Wavelet.identify uses the parameters it is given, which were ignored before, and handles short traces, on which it failed
+* Set MinPeakDistance 0.1 in the default parameters QuantificationParams
+* Use the Wavelet peak detection with the ALS baseline correction in the default parameters QuantificationTIMsParams
+* Add RetentionTimeFeature to the PSMStatistics EstimationParams, true in the default parameters
+* Correct the default parameters QuantificationParams_NoBaseline, which could not be read, and make them equal to QuantificationParams except for the baseline correction
+* Set Alignment_QValue 0.05 in the default parameters of LabelFreeProteinQuantification and LabeledProteinQuantification
+* Set MinPepLength 6 in the default parameters of PeptideDB
+* Add Xic, MzCalibration, PeakQuantification and PSMQuantification: the XIC of an ion (on spectra with ion mobility the sum of all peaks inside the m/z window and the ion mobility window, for a fixed window around the ion mobility centre of the ion), the m/z correction of a run, the peak detection and the choice of the peak, and the quantification of the PSMs of an ion with its quality filter, shared by PSMBasedQuantification, PSMBasedQuantificationTIMs and AlignmentBasedQuantification
+* Breaking: change QuantificationParams, the parameters of PSMBasedQuantification and PSMBasedQuantificationTIMs, and the default parameters: remove FragPipe and add QualityFilterLog2Limit, CentrePSMs, RequirePeakAtScanTime and IonMobilityWindow in XicExtraction
+* Remove DTW', the dynamic time warping of the alignment tools
+* Add PeakShape, the apex and the standard deviation of a fitted peak from its Gaussian or exponentially modified Gaussian parameters, used by the alignment tools
+* Add the column IonMobilityCentre as the last column of the .quant row (QuantificationResult): the ion mobility the XIC of the row is summed around, NaN without an ion mobility window. Breaking: QuantBasedAlignment, AlignmentBasedQuantification and AlignmentBasedQuantStatistics do not read .quant files without it
+* Set MzWindow_Da Fixed 0.008 and IonMobilityWindow Fixed 0.025 in the default parameters QuantificationTIMsParams and add AlignmentBasedQuantificationTIMsParams, the default parameters of AlignmentBasedQuantification with the same two values
 
 #### 0.0.12 - Monday, September 28, 2026
 * Extend PeptideSpectrumMatchingResult with IonMobility, Hyperscore, Expectscore, MatchedIons and TotalIons. Breaking: .psm files written by earlier releases have 23 columns and have to be regenerated before PSMStatistics of this release reads them

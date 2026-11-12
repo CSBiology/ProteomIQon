@@ -27,6 +27,7 @@ let defaultLabelFreeQuantificationParams :Dto.LabelFreeQuantificationParams =
                 Aggregation      = {Light= NumericAggregation.Mean}
         }
     {
+        Alignment_QValue                     = Some 0.05
         ModificationFilter                   = UseModifiedPeptides.All 
         AggregatePeptideChargeStatesParams   = Some chargeParams
         AggregateModifiedPeptidesParams      = None

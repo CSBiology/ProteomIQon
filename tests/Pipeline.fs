@@ -124,6 +124,63 @@ let qpsmProblems (qValueThreshold: float) (pepThreshold: float) (referencePath: 
             ]
         if problems.Length > 10 then List.truncate 10 problems @ [ sprintf "and %i more" (problems.Length - 10) ] else problems
 
+/// A copy of a peptide data base in the temp folder, for the tools that write to it.
+let tempCopy (source: string) =
+    let path = Path.Combine(Path.GetTempPath(), sprintf "pipeline_%s_%s" (Guid.NewGuid().ToString "N") (Path.GetFileName source))
+    File.Copy(source, path)
+    path
+
+/// Deletes a temporary copy; SQLite keeps the file open until the commands of the look ups of BioFSharp.Mz, which are not disposed, are finalized.
+let deleteTemp (path: string) =
+    GC.Collect()
+    GC.WaitForPendingFinalizers()
+    try File.Delete path with _ -> ()
+
+/// The bytes of a file that may still be open in another process.
+let fileBytes (path: string) =
+    use stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite)
+    use memory = new MemoryStream()
+    stream.CopyTo memory
+    memory.ToArray()
+
+/// The distinct (sequence, global modification, charge) ions of a .qpsm file.
+let readIons (qpsmPath: string) =
+    FSharpAux.IO.SchemaReader.Csv.CsvReader<ProteomIQon.Dto.PSMStatisticsResult>(SchemaMode=FSharpAux.IO.SchemaReader.Csv.Fill).ReadFile(qpsmPath,'\t',false,1)
+    |> Seq.map (fun x -> x.StringSequence, x.GlobalMod, x.Charge)
+    |> Seq.distinct
+    |> Array.ofSeq
+
+/// How many isotope patterns of the (sequence, global modification, charge) ions of a .qpsm file the IsotopePatternLookUp reads from the
+/// peptide data base and how many it computes, and the number of requests that are in the data base: both global modifications of every ion if the
+/// data base has isotopic modifications, else the global modification of the ion.
+let isotopePatternCounts (dbPath: string) (qpsmPath: string) =
+    let ions = readIons qpsmPath
+    use cn = new SQLiteConnection(sprintf "Data Source=%s;Version=3" dbPath)
+    cn.Open()
+    let sdbParams = SearchDB.getSDBParamsByCn cn
+    let lookUp = SearchDB.getThreadSafePeptideLookUpFromFileBySequenceAndGMod cn sdbParams
+    let requests =
+        ions
+        |> Array.collect (fun (sequence, globalMod, charge) -> (if sdbParams.IsotopicMod.IsEmpty then [| globalMod |] else [| 0; 1 |]) |> Array.map (fun gMod -> sequence, gMod, charge))
+        |> Array.distinct
+    // a peptide that is not in the data base has the ID -1, its pattern is never stored
+    let found =
+        requests
+        |> Array.map (fun (sequence, gMod, charge) -> lookUp sequence gMod, charge)
+        |> Array.filter (fun (peptide, _) -> peptide.ModSequenceID >= 0)
+        |> Array.distinctBy (fun (peptide, charge) -> peptide.ModSequenceID, charge)
+    use patterns = new ProteomIQon.IsotopePatterns.IsotopePatternLookUp(NLog.LogManager.CreateNullLogger(), cn)
+    for (peptide, charge) in found do
+        patterns.Get (peptide, charge) |> ignore
+    patterns.Read, patterns.Computed, found.Length
+
+/// Whether the data base has the table of the isotope patterns.
+let hasIsotopePatternTable (dbPath: string) =
+    use cn = new SQLiteConnection(sprintf "Data Source=%s;Version=3" dbPath)
+    cn.Open()
+    use cmd = new SQLiteCommand("SELECT COUNT(*) FROM sqlite_master WHERE name = 'IsotopePattern'", cn)
+    Convert.ToInt32 (cmd.ExecuteScalar()) > 0
+
 let selectAllModSequence cn =
     let querystring = "SELECT * FROM ModSequence"
     use cmd = new SQLiteCommand(querystring, cn)
@@ -159,6 +216,330 @@ let selectAllProtein cn =
         while reader.Read() do 
             yield (reader.GetValue(0), reader.GetValue(1))
     ]
+
+/// The parameters with the second derivative peak detection instead of the wavelet. The wavelet settings of the test parameter files pad the XIC borders
+/// with unseeded random numbers (BorderPadMethod Random), so the quantification with the wavelet differs from run to run. The second derivative has no randomness.
+let secondDerivativeParams (json: string) =
+    Text.RegularExpressions.Regex.Replace(
+        json,
+        "\"XicProcessing\":\s*\{\s*\"Case\":\s*\"Wavelet\".*?\}\s*\]\s*\}",
+        "\"XicProcessing\": {\"Case\": \"SecondDerivative\", \"Fields\": [{\"MinSNR\": 0.01, \"PolynomOrder\": 3, \"WindowSize\": {\"Case\": \"Fixed\", \"Fields\": [7]}}]}",
+        Text.RegularExpressions.RegexOptions.Singleline)
+
+/// Runs a quantification tool on a .qpsm without PSMs (header only): the tool has to write a warning and a .quant with the header and no rows.
+let emptyQpsmCase name (tool: string) (dataDirectory: string) (paramsFile: string) (editParams: string -> string) =
+    testCase name <| fun _ ->
+        let relToDirectory = getRelativePath baseDir
+        let inDirectory = relToDirectory (sprintf "../../../data/%s/in/" dataDirectory)
+        let work = Path.Combine(Path.GetTempPath(), sprintf "emptyQpsm_%s" (Guid.NewGuid().ToString "N"))
+        Directory.CreateDirectory work |> ignore
+        // copies, as the tools lock the mzlite
+        let mzlite = Path.Combine(work, "minimal.mzlite")
+        let quantParams = Path.Combine(work, paramsFile)
+        File.Copy(Path.Combine(inDirectory, "minimal.mzlite"), mzlite)
+        File.WriteAllText(quantParams, editParams (File.ReadAllText (Path.Combine(inDirectory, paramsFile))))
+        let qpsm = relToDirectory "../../../data/PSMBasedQuantification/in/empty.qpsm"
+        let db = Directory.GetFiles(inDirectory, "*.db") |> Array.exactlyOne
+        let outDirectory = Path.Combine(work, "out")
+        runDotNet (sprintf "%s -i %s -ii %s -o %s -p %s -d %s" (toolDll tool) mzlite qpsm outDirectory quantParams db) baseDir
+        let lines = File.ReadAllLines (Path.Combine(outDirectory, "minimal.quant")) |> Array.filter (fun line -> line <> "")
+        let log = File.ReadAllText (Path.Combine(outDirectory, "empty_log.txt"))
+        GC.Collect()
+        GC.WaitForPendingFinalizers()
+        Directory.Delete(work, true)
+        let expectedHeader =
+            Reflection.FSharpType.GetRecordFields(typeof<ProteomIQon.Dto.QuantificationResult>)
+            |> Array.map (fun field -> field.Name)
+        Expect.stringContains log "contains no PSMs" "the tool warns about the missing PSMs"
+        Expect.equal lines.Length 1 "the .quant has the header and no rows"
+        Expect.equal (lines.[0].Split '\t') expectedHeader "the header is the one of QuantificationResult"
+
+/// Runs PSMBasedQuantification with and without RequirePeakAtScanTime on the minimal input: the ions quantified with the requirement are a strict subset of
+/// the ions quantified without it, and ILVGDIK (modification state 1, charge 2) only gets a row without it.
+let peakAtScanTimeCase name =
+    testCase name <| fun _ ->
+        let relToDirectory = getRelativePath baseDir
+        let inDirectory = relToDirectory "../../../data/PSMBasedQuantification/in/"
+        let work = Path.Combine(Path.GetTempPath(), sprintf "peakAtScanTime_%s" (Guid.NewGuid().ToString "N"))
+        Directory.CreateDirectory work |> ignore
+        try
+            // copies, as the tool locks the mzlite
+            let mzlite = Path.Combine(work, "minimal.mzlite")
+            File.Copy(Path.Combine(inDirectory, "minimal.mzlite"), mzlite)
+            let qpsm = Path.Combine(inDirectory, "minimal.qpsm")
+            let db = Path.Combine(inDirectory, "Minimal.db")
+            let paramsText = File.ReadAllText (Path.Combine(inDirectory, "QuantificationParams.json"))
+            let pattern = Text.RegularExpressions.Regex "\"RequirePeakAtScanTime\"\s*:\s*true"
+            Expect.isTrue (pattern.IsMatch paramsText) "the params file sets RequirePeakAtScanTime to true"
+            let ions (require: bool) =
+                let editedText = pattern.Replace(paramsText, sprintf "\"RequirePeakAtScanTime\": %b" require)
+                if not require then Expect.notEqual editedText paramsText "the params text changed for false"
+                let quantParams = Path.Combine(work, sprintf "params_%b.json" require)
+                File.WriteAllText(quantParams, editedText)
+                let outDirectory = Path.Combine(work, sprintf "out_%b" require)
+                runDotNet (sprintf "%s -i %s -ii %s -o %s -p %s -d %s" (toolDll "PSMBasedQuantification") mzlite qpsm outDirectory quantParams db) baseDir
+                let lines = File.ReadAllLines (Path.Combine(outDirectory, "minimal.quant")) |> Array.filter (fun line -> line <> "")
+                let header = lines.[0].Split '\t'
+                let column name = Array.findIndex ((=) name) header
+                let sequenceColumn, modColumn, chargeColumn = column "StringSequence", column "GlobalMod", column "Charge"
+                lines.[1..]
+                |> Array.map (fun line ->
+                    let fields = line.Split '\t'
+                    fields.[sequenceColumn], int fields.[modColumn], int fields.[chargeColumn])
+                |> Set.ofArray
+            let required = ions true
+            let notRequired = ions false
+            Expect.isNonEmpty required "the minimal input has rows"
+            Expect.isTrue (Set.isProperSuperset notRequired required) "without the peak requirement the ions are a strict superset"
+            Expect.contains notRequired ("ILVGDIK", 1, 2) "ILVGDIK only gets a row without the peak requirement"
+        finally
+            GC.Collect()
+            GC.WaitForPendingFinalizers()
+            try Directory.Delete(work, true) with _ -> ()
+
+/// Runs a quantification tool on a peptide data base without the isotope patterns and on a copy that PSMStatistics' store filled with the patterns of the
+/// ions of the .qpsm: the logs of the tools show that the first computed every pattern and the second read them, and the .quant files have to be byte identical.
+/// The wavelet pads randomly, so with deterministic = false the .quant files only have to hold the same ions.
+let isotopePatternEquivalenceCase name (tool: string) (dataDirectory: string) (paramsFile: string) (editParams: string -> string) (deterministic: bool) =
+    testCase name <| fun _ ->
+        let relToDirectory = getRelativePath baseDir
+        let inDirectory = relToDirectory (sprintf "../../../data/%s/in/" dataDirectory)
+        let work = Path.Combine(Path.GetTempPath(), sprintf "isotopePatterns_%s" (Guid.NewGuid().ToString "N"))
+        Directory.CreateDirectory work |> ignore
+        // copies, as the tools lock the mzlite
+        let mzlite = Path.Combine(work, "minimal.mzlite")
+        let qpsm = Path.Combine(work, "minimal.qpsm")
+        let quantParams = Path.Combine(work, paramsFile)
+        File.Copy(Path.Combine(inDirectory, "minimal.mzlite"), mzlite)
+        File.Copy(Path.Combine(inDirectory, "minimal.qpsm"), qpsm)
+        File.WriteAllText(quantParams, editParams (File.ReadAllText (Path.Combine(inDirectory, paramsFile))))
+        let dbName = Directory.GetFiles(inDirectory, "*.db") |> Array.exactlyOne
+        let dbWithout = Path.Combine(work, "without.db")
+        let dbWith = Path.Combine(work, "with.db")
+        File.Copy(dbName, dbWithout)
+        File.Copy(dbName, dbWith)
+        ProteomIQon.IsotopePatterns.store (NLog.LogManager.CreateNullLogger()) dbWith (readIons qpsm)
+        let quantExe = toolDll tool
+        let run (db: string) (outDirectory: string) =
+            runDotNet (sprintf "%s -i %s -ii %s -o %s -p %s -d %s" quantExe mzlite qpsm outDirectory quantParams db) baseDir
+            let log = File.ReadAllText (Path.Combine(outDirectory, "minimal_log.txt"))
+            let m = Text.RegularExpressions.Regex.Match(log, @"Isotope patterns: (\d+) read from the peptide data base, (\d+) computed")
+            Expect.isTrue m.Success "the log has the counts of the isotope patterns"
+            File.ReadAllBytes (Path.Combine(outDirectory, "minimal.quant")), int m.Groups.[1].Value, int m.Groups.[2].Value
+        let quantWithout, storedWithout, computedWithout = run dbWithout (Path.Combine(work, "without"))
+        let quantWith, storedWith, computedWith = run dbWith (Path.Combine(work, "with"))
+        let isFilled = hasIsotopePatternTable dbWith
+        GC.Collect()
+        GC.WaitForPendingFinalizers()
+        try Directory.Delete(work, true) with _ -> ()
+        Expect.isTrue isFilled "the store filled the data base"
+        Expect.equal storedWithout 0 "without the table nothing is read"
+        Expect.isGreaterThan computedWithout 0 "without the table the patterns are computed"
+        Expect.isGreaterThan storedWith 0 "with the table the patterns are read"
+        Expect.equal computedWith 0 "with the table no pattern is computed"
+        Expect.equal storedWith computedWithout "the same patterns are requested"
+        if deterministic then
+            Expect.isTrue (quantWith = quantWithout) "the .quant files are byte identical"
+        else
+            // the wavelet pads randomly: the same ions in the same order
+            let ionsOf (quant: byte[]) =
+                Text.Encoding.UTF8.GetString(quant).Split('\n')
+                |> Array.map (fun line -> String.Join("\t", line.Split('\t') |> Array.truncate 3))
+            Expect.equal (ionsOf quantWith) (ionsOf quantWithout) "the .quant files have the same ions"
+
+/// The spectra of an mzML file, decoded without MzIO: ID, MS level, scan start time and its unit, m/z of the first selected ion
+/// (nan without one), and the m/z, intensity and ion mobility arrays (32 or 64 bit floats, zlib compressed or not).
+let readMzMLSpectra (path: string) =
+    let ns = Xml.Linq.XNamespace.Get "http://psi.hupo.org/ms/mzml"
+    let attribute (name: string) (element: Xml.Linq.XElement) = element.Attribute(Xml.Linq.XName.Get name).Value
+    let tryCv (accession: string) (element: Xml.Linq.XElement) =
+        element.Elements(ns + "cvParam") |> Seq.tryFind (fun p -> attribute "accession" p = accession)
+    let decode (array: Xml.Linq.XElement) =
+        let bytes = Convert.FromBase64String (array.Element(ns + "binary").Value)
+        let raw =
+            if (tryCv "MS:1000574" array).IsSome then
+                use input = new MemoryStream(bytes)
+                use zlib = new Compression.ZLibStream(input, Compression.CompressionMode.Decompress)
+                use output = new MemoryStream()
+                zlib.CopyTo output
+                output.ToArray()
+            else bytes
+        if (tryCv "MS:1000521" array).IsSome then Array.init (raw.Length / 4) (fun i -> float (BitConverter.ToSingle(raw, 4 * i)))
+        else Array.init (raw.Length / 8) (fun i -> BitConverter.ToDouble(raw, 8 * i))
+    Xml.Linq.XDocument.Load(path).Descendants(ns + "spectrum")
+    |> Seq.map (fun spectrum ->
+        let arrays = spectrum.Descendants(ns + "binaryDataArray") |> Array.ofSeq
+        let arrayOf accession = arrays |> Array.find (fun a -> (tryCv accession a).IsSome) |> decode
+        let scanTime = spectrum.Descendants(ns + "scan") |> Seq.pick (tryCv "MS:1000016")
+        let selectedIonMz =
+            spectrum.Descendants(ns + "selectedIon") |> Seq.tryHead |> Option.bind (tryCv "MS:1000744")
+            |> Option.map (attribute "value" >> float) |> Option.defaultValue nan
+        {|
+            ID            = attribute "id" spectrum
+            MsLevel       = tryCv "MS:1000511" spectrum |> Option.get |> attribute "value" |> int
+            ScanTime      = float (attribute "value" scanTime)
+            ScanTimeUnit  = attribute "unitAccession" scanTime
+            SelectedIonMz = selectedIonMz
+            Mz            = arrayOf "MS:1000514"
+            Intensity     = arrayOf "MS:1000515"
+            IonMobility   = arrayOf "MS:1003006"
+        |})
+    |> Array.ofSeq
+
+/// The spectra of an mzlite file read with MzIO, by ID: MS level, scan time and its unit, precursor m/z and peaks.
+let readMzliteSpectra (path: string) =
+    use reader = new MzIO.MzSQL.MzSQL(path)
+    reader.Connection.Open()
+    reader.ReadMassSpectra "sample=0"
+    |> Seq.map (fun spectrum ->
+        let scanTimeUnit =
+            spectrum.Scans.GetProperties false
+            |> Seq.pick (fun scan ->
+                match scan.Value with
+                | :? MzIO.Model.Scan as s -> s.TryGetValue MzIO.MetaData.PSIMSExtension.PSIMS_Scan.ScanStartTime
+                | _ -> None)
+            |> fun p -> MzIO.Model.CvParam.tryGetCvUnitAccession (p :?> MzIO.Model.CvParam.IParamBase<IConvertible>)
+        spectrum.ID,
+        (MzIO.Processing.MassSpectrum.getMsLevel spectrum, MzIO.Processing.MassSpectrum.getScanTime spectrum, scanTimeUnit,
+         MzIO.Processing.MassSpectrum.getPrecursorMZ spectrum, reader.ReadSpectrumPeaks(spectrum.ID).Peaks |> Array.ofSeq))
+    |> Map.ofSeq
+
+/// Deletes a directory whose SQLite files may still be open: MzIO does not dispose its commands, so a file stays open until they are
+/// finalized.
+let deleteDirectory (path: string) =
+    let rec attempt n =
+        GC.Collect()
+        GC.WaitForPendingFinalizers()
+        GC.Collect()
+        try Directory.Delete(path, true)
+        with :? IOException | :? UnauthorizedAccessException when n > 0 ->
+            Threading.Thread.Sleep 500
+            attempt (n - 1)
+    attempt 10
+
+/// The header of a tab separated file as a map from column name to index, and its rows split into cells.
+let readTable (path: string) =
+    let lines = File.ReadAllLines path |> Array.filter (fun line -> line <> "")
+    let header = lines.[0].Split '\t' |> Array.mapi (fun i name -> name, i) |> Map.ofArray
+    header, lines.[1..] |> Array.map (fun line -> line.Split '\t')
+
+let parseFloat (s: string) = Double.Parse(s, Globalization.CultureInfo.InvariantCulture)
+
+/// The three UPS1 runs of the alignment tests: a 7 minute, 45 m/z slice (fitted scan time 50 to 57 min, precursor m/z 450 to 495) of runs
+/// 01 to 03, with the MS1 spectra 2 min around it, their peaks within m/z 448.5 to 500, and the peptide data base rows of their ions.
+let alignmentRuns = [| "UPS1_01"; "UPS1_02"; "UPS1_03" |]
+
+/// Runs QuantBasedAlignment, AlignmentBasedQuantification and AlignmentBasedQuantStatistics on the runs of a test data folder
+/// (mzlite, quant, peptide data base and the ABQ params file in its in folder) twice and returns the output files of both runs (path
+/// relative to the run folder -> bytes); the output folders are deleted.
+let runAlignmentChain (dataFolder: string) (dbFile: string) (abqParamsFile: string) (statsParamsFile: string) =
+    let relToDirectory = getRelativePath baseDir
+    let inDirectory = relToDirectory (sprintf "../../../data/%s/in" dataFolder)
+    let quant = Path.Combine(inDirectory, "quant")
+    let abqParams = Path.Combine(inDirectory, abqParamsFile)
+    let statsParams = relToDirectory statsParamsFile
+    let run (name: string) =
+        let outDirectory = relToDirectory (sprintf "../../../data/%s/out/%s" dataFolder name)
+        if Directory.Exists outDirectory then Directory.Delete(outDirectory, true)
+        let mzlite = Path.Combine(outDirectory, "mzlite")
+        Directory.CreateDirectory mzlite |> ignore
+        // copies, as the tool locks the mzlite and the peptide data base
+        for file in Directory.GetFiles(Path.Combine(inDirectory, "mzlite")) do
+            File.Copy(file, Path.Combine(mzlite, Path.GetFileName file))
+        let db = Path.Combine(outDirectory, dbFile)
+        File.Copy(Path.Combine(inDirectory, dbFile), db)
+        let align, abq, stats = Path.Combine(outDirectory, "align"), Path.Combine(outDirectory, "abq"), Path.Combine(outDirectory, "stats")
+        runDotNet (sprintf "%s -i %s -ii %s -o %s" (toolDll "QuantBasedAlignment") quant quant align) baseDir
+        runDotNet (sprintf "%s -i %s -ii %s -iv %s -d %s -o %s -p %s -mf" (toolDll "AlignmentBasedQuantification") mzlite align quant db abq abqParams) baseDir
+        runDotNet (sprintf "%s -i %s -ii %s -iii %s -l %s -ll %s -lll %s -o %s -p %s -mf" (toolDll "AlignmentBasedQuantStatistics") quant align abq quant align abq stats statsParams) baseDir
+        let files =
+            [ for folder in [ align; abq; stats ] do
+                for file in Directory.GetFiles folder do
+                    yield sprintf "%s/%s" (Path.GetFileName folder) (Path.GetFileName file), File.ReadAllBytes file ]
+            |> Map.ofList
+        deleteDirectory outDirectory
+        files
+    run "first", run "second"
+
+/// The chain on the three UPS1 runs. Shared by the tests of both tools, which run at the same time.
+let alignmentChainOutputs =
+    lazy (runAlignmentChain "AlignmentBasedQuantification" "UPS1.db" "AlignmentBasedQuantificationParams.json" "../../../data/AlignmentBasedQuantStatistics/in/AlignmentBasedQuantStatisticsParams.json")
+
+/// The three labeled runs of the alignment test: a 4 minute, 50 m/z slice (fitted scan time 31 to 35 min, light and heavy m/z 500 to 550)
+/// of the 14N/15N Chlamydomonas TripleTOF runs 3501, 3509 and 3517 of a dilution series, with the MS1 spectra 2 min around it, their peaks
+/// within m/z 498.5 to 555, and the peptide data base rows of their ions.
+let labeledAlignmentRuns = [| "Chlamy_3501"; "Chlamy_3509"; "Chlamy_3517" |]
+
+/// The chain on the three labeled runs with PerformLabeledQuantification.
+let labeledAlignmentChainOutputs =
+    lazy (runAlignmentChain "AlignmentLabeled" "Chlamy.db" "AlignmentBasedQuantificationParams.json" "../../../data/AlignmentLabeled/in/AlignmentBasedQuantStatisticsParams.json")
+
+/// The rows of an output of the alignment chain as maps from column name to cell.
+let alignmentOutputRows (files: Map<string, byte[]>) (file: string) =
+    let lines = Text.Encoding.UTF8.GetString(files.[file]).Split('\n') |> Array.map (fun line -> line.TrimEnd '\r') |> Array.filter (fun line -> line <> "")
+    let header = lines.[0].Split '\t'
+    lines.[1..] |> Array.map (fun line -> Array.zip header (line.Split '\t') |> Map.ofArray)
+
+let ionKey (row: Map<string, string>) = row.["StringSequence"], row.["GlobalMod"], row.["Charge"]
+
+/// The (sequence, global modification, charge) ions of the PSM based .quant of a UPS1 run of the alignment tests.
+let alignmentInputIons (run: string) =
+    let header, rows = readTable (getRelativePath baseDir (sprintf "../../../data/AlignmentBasedQuantification/in/quant/%s.quant" run))
+    rows |> Array.map (fun cells -> cells.[header.["StringSequence"]], cells.[header.["GlobalMod"]], cells.[header.["Charge"]]) |> Set.ofArray
+
+/// Runs AlignmentBasedQuantification on the labeled alignment runs with and without RequirePeakAtScanTime: the rows and the own side of every row are
+/// the same, the partner side is the same where both runs quantify it, and the run with the requirement quantifies the partner of fewer rows.
+let partnerPeakAtScanTimeCase name =
+    testCase name <| fun _ ->
+        let relToDirectory = getRelativePath baseDir
+        let inDirectory = relToDirectory "../../../data/AlignmentLabeled/in"
+        let work = Path.Combine(Path.GetTempPath(), sprintf "partnerPeakAtScanTime_%s" (Guid.NewGuid().ToString "N"))
+        let mzlite = Path.Combine(work, "mzlite")
+        Directory.CreateDirectory mzlite |> ignore
+        try
+            // copies, as the tool locks the mzlite and the peptide data base
+            for file in Directory.GetFiles(Path.Combine(inDirectory, "mzlite")) do
+                File.Copy(file, Path.Combine(mzlite, Path.GetFileName file))
+            let db = Path.Combine(work, "Chlamy.db")
+            File.Copy(Path.Combine(inDirectory, "Chlamy.db"), db)
+            let quant = Path.Combine(inDirectory, "quant")
+            let align = Path.Combine(work, "align")
+            runDotNet (sprintf "%s -i %s -ii %s -o %s" (toolDll "QuantBasedAlignment") quant quant align) baseDir
+            let paramsText = File.ReadAllText (Path.Combine(inDirectory, "AlignmentBasedQuantificationParams.json"))
+            let pattern = Text.RegularExpressions.Regex "\"RequirePeakAtScanTime\"\s*:\s*true"
+            Expect.isTrue (pattern.IsMatch paramsText) "the params file sets RequirePeakAtScanTime to true"
+            let rows (require: bool) =
+                let abqParams = Path.Combine(work, sprintf "params_%b.json" require)
+                File.WriteAllText(abqParams, pattern.Replace(paramsText, sprintf "\"RequirePeakAtScanTime\": %b" require))
+                let abq = Path.Combine(work, sprintf "abq_%b" require)
+                runDotNet (sprintf "%s -i %s -ii %s -iv %s -d %s -o %s -p %s -mf" (toolDll "AlignmentBasedQuantification") mzlite align quant db abq abqParams) baseDir
+                labeledAlignmentRuns
+                |> Array.collect (fun run ->
+                    let header, cells = readTable (Path.Combine(abq, sprintf "%s.quant" run))
+                    cells |> Array.map (fun row -> run, header |> Map.map (fun _ index -> row.[index])))
+                |> Array.map (fun (run, row) -> (run, ionKey row, row.["QuantificationSource"]), row)
+                |> fun keyed ->
+                    Expect.equal (keyed |> Array.map fst |> Array.distinct |> Array.length) keyed.Length "the rows have distinct keys"
+                    Map.ofArray keyed
+            let required = rows true
+            let notRequired = rows false
+            Expect.equal (required |> Map.toList |> List.map fst) (notRequired |> Map.toList |> List.map fst) "the same rows"
+            let partnerColumns (row: Map<string, string>) =
+                let label = if row.["GlobalMod"] = "0" then "Heavy" else "Light"
+                row |> Map.filter (fun name _ -> name.EndsWith ("_" + label) || name = "Correlation_Light_Heavy")
+            let hasPartner (row: Map<string, string>) = Double.IsFinite (parseFloat row.[if row.["GlobalMod"] = "0" then "Quant_Heavy" else "Quant_Light"])
+            let mutable dropped = 0
+            for KeyValue (key, requiredRow) in required do
+                let notRequiredRow = notRequired.[key]
+                let withoutPartner (row: Map<string, string>) = row |> Map.filter (fun name _ -> not ((partnerColumns row).ContainsKey name))
+                Expect.equal (withoutPartner requiredRow) (withoutPartner notRequiredRow) (sprintf "%A: the own side is the same" key)
+                if hasPartner requiredRow then
+                    Expect.equal (partnerColumns requiredRow) (partnerColumns notRequiredRow) (sprintf "%A: the partner is the same" key)
+                elif hasPartner notRequiredRow then
+                    dropped <- dropped + 1
+            Expect.isGreaterThan dropped 0 "the requirement leaves the partner of some rows empty"
+        finally
+            try deleteDirectory work with _ -> ()
 
 [<Tests>]
 let pipelineTests =
@@ -243,8 +624,12 @@ let pipelineTests =
 
         testCase "PSMStatistics" <| fun _ ->
             let relToDirectory = getRelativePath baseDir
-            let dbEstimate = relToDirectory "../../../data/PSMStatistics/in/MinimalEstimate.db"
-            let dbFixed = relToDirectory "../../../data/PSMStatistics/in/MinimalFixed.db"
+            // the tool stores the isotope patterns in the peptide data base, so it runs on copies; the tracked data bases must not change
+            let originalEstimate = relToDirectory "../../../data/PSMStatistics/in/MinimalEstimate.db"
+            let originalFixed = relToDirectory "../../../data/PSMStatistics/in/MinimalFixed.db"
+            let originalBytes = fileBytes originalEstimate, fileBytes originalFixed
+            let dbEstimate = tempCopy originalEstimate
+            let dbFixed = tempCopy originalFixed
             let psmEstimate = relToDirectory "../../../data/PSMStatistics/in/minimalEstimate.psm"
             let psmFixed = relToDirectory "../../../data/PSMStatistics/in/minimalFixed.psm"
             let psmStatsParamsEstimate = relToDirectory "../../../data/PSMStatistics/in/pSMStatisticsParamsEstimate.json"
@@ -255,6 +640,9 @@ let pipelineTests =
             // run tool
             runDotNet (sprintf "%s -i %s -o %s -p %s -d %s" psmStatsExe psmEstimate outDirectoryEstimate psmStatsParamsEstimate dbEstimate) baseDir
             runDotNet (sprintf "%s -i %s -o %s -p %s -d %s" psmStatsExe psmFixed outDirectoryFixed psmStatsParamsFixed dbFixed) baseDir
+            let estimateCounts = isotopePatternCounts dbEstimate (relToDirectory "../../../data/PSMStatistics/out/estimateOut/minimalEstimate.qpsm")
+            let fixedCounts = isotopePatternCounts dbFixed (relToDirectory "../../../data/PSMStatistics/out/fixedOut/minimalFixed.qpsm")
+            let unchanged = (fileBytes originalEstimate, fileBytes originalFixed) = originalBytes
             // the cutoffs of pSMStatisticsParamsEstimate.json
             let estimateProblems =
                 qpsmProblems 0.01 0.05
@@ -273,19 +661,26 @@ let pipelineTests =
             File.Delete (relToDirectory "../../../data/PSMStatistics/out/estimateOut/minimalEstimate_log.txt")
             File.Delete (relToDirectory "../../../data/PSMStatistics/out/estimateOut/PSMStatistics_log.txt")
             Directory.Delete (relToDirectory "../../../data/PSMStatistics/out/estimateOut/minimalEstimate_plots")
+            deleteTemp dbEstimate
+            deleteTemp dbFixed
             Expect.isTrue (List.isEmpty estimateProblems) (String.concat "; " estimateProblems)
             Expect.isTrue fixedEqual "QPSMs are different"
+            Expect.isTrue unchanged "the data bases of the test data are not changed"
+            for name, (stored, computed, requests) in [ "estimate", estimateCounts; "fixed", fixedCounts ] do
+                Expect.isGreaterThan requests 0 (sprintf "%s: the .qpsm holds ions" name)
+                Expect.equal (stored, computed) (requests, 0) (sprintf "%s: the data base holds the patterns of the ions of the .qpsm" name)
 
         testCase "PSMStatisticsTIMs" <| fun _ ->
             // a .psm of PeptideSpectrumMatchingTIMs, which carries the hyperscore and the expectation value
             let relToDirectory = getRelativePath baseDir
-            let db = relToDirectory "../../../data/PSMStatistics/in/MinimalTIMs.db"
+            let db = tempCopy (relToDirectory "../../../data/PSMStatistics/in/MinimalTIMs.db")
             let psm = relToDirectory "../../../data/PSMStatistics/in/minimalTIMs.psm"
             let psmStatsParams = relToDirectory "../../../data/PSMStatistics/in/pSMStatisticsParamsEstimate.json"
             let outDirectory = relToDirectory "../../../data/PSMStatistics/out/timsOut"
             let psmStatsExe = toolDll "PSMStatistics"
             runDotNet (sprintf "%s -i %s -o %s -p %s -d %s" psmStatsExe psm outDirectory psmStatsParams db) baseDir
             let log = File.ReadAllText (relToDirectory "../../../data/PSMStatistics/out/timsOut/minimalTIMs_log.txt")
+            let stored, computed, requests = isotopePatternCounts db (relToDirectory "../../../data/PSMStatistics/out/timsOut/minimalTIMs.qpsm")
             // the cutoffs of pSMStatisticsParamsEstimate.json
             let problems =
                 qpsmProblems 0.01 0.05
@@ -295,12 +690,15 @@ let pipelineTests =
             File.Delete (relToDirectory "../../../data/PSMStatistics/out/timsOut/minimalTIMs_log.txt")
             File.Delete (relToDirectory "../../../data/PSMStatistics/out/timsOut/PSMStatistics_log.txt")
             Directory.Delete (relToDirectory "../../../data/PSMStatistics/out/timsOut/minimalTIMs_plots")
+            deleteTemp db
+            Expect.isGreaterThan requests 0 "the .qpsm holds ions"
+            Expect.equal (stored, computed) (requests, 0) "the data base holds the patterns of both global modifications of the ions"
             Expect.stringContains log "Hyperscore and expectation value present: true" "the hyperscore and the expectation value are used"
             Expect.isTrue (List.isEmpty problems) (String.concat "; " problems)
 
         testCase "PSMStatisticsCrossValidation" <| fun _ ->
             let relToDirectory = getRelativePath baseDir
-            let db = relToDirectory "../../../data/PSMStatistics/in/MinimalTIMs.db"
+            let db = tempCopy (relToDirectory "../../../data/PSMStatistics/in/MinimalTIMs.db")
             let psm = relToDirectory "../../../data/PSMStatistics/in/minimalTIMs.psm"
             let psmStatsParams = relToDirectory "../../../data/PSMStatistics/in/pSMStatisticsParamsCrossValidation.json"
             let outDirectory = relToDirectory "../../../data/PSMStatistics/out/timsCvOut"
@@ -310,8 +708,28 @@ let pipelineTests =
             let log = File.ReadAllText (Path.Combine(outDirectory, "minimalTIMs_log.txt"))
             let qpsmLines = File.ReadAllLines (Path.Combine(outDirectory, "minimalTIMs.qpsm")) |> Array.filter (fun line -> line <> "")
             Directory.Delete(outDirectory, true)
+            deleteTemp db
             Expect.stringContains log "Cross-validated scores" "the scans are scored by cross-validation"
             Expect.isGreaterThan qpsmLines.Length 1 "the qpsm holds PSMs"
+
+        testCase "PSMStatisticsRetentionTime" <| fun _ ->
+            // too few confident peptides for the predictor: the tool logs the reason and gives the result without the feature
+            let relToDirectory = getRelativePath baseDir
+            let db = tempCopy (relToDirectory "../../../data/PSMStatistics/in/MinimalEstimate.db")
+            let psm = relToDirectory "../../../data/PSMStatistics/in/minimalEstimate.psm"
+            let psmStatsParams = relToDirectory "../../../data/PSMStatistics/in/pSMStatisticsParamsRetentionTime.json"
+            let outDirectory = relToDirectory "../../../data/PSMStatistics/out/retentionTimeOut"
+            let psmStatsExe = toolDll "PSMStatistics"
+            if Directory.Exists outDirectory then Directory.Delete(outDirectory, true)
+            runDotNet (sprintf "%s -i %s -o %s -p %s -d %s" psmStatsExe psm outDirectory psmStatsParams db) baseDir
+            let log = File.ReadAllText (Path.Combine(outDirectory, "minimalEstimate_log.txt"))
+            let qpsm = Path.Combine(outDirectory, "minimalEstimate.qpsm")
+            let reference = relToDirectory "../../../data/PSMStatistics/out/estimateOut/minimalReference.qpsm"
+            let problems = qpsmProblems 0.01 0.05 reference qpsm
+            Directory.Delete(outDirectory, true)
+            deleteTemp db
+            Expect.stringContains log "Retention time feature not used (fewer than 500 confident unique peptides)" "the skip is logged"
+            Expect.isTrue (List.isEmpty problems) (String.concat "; " problems)
 
         testCase "PSMBasedQuantification" <| fun _ ->
             let relToDirectory = getRelativePath baseDir
@@ -362,7 +780,7 @@ let pipelineTests =
                             "ModSequenceID",
                                 test.ModSequenceID = reference.ModSequenceID
                             "PrecursorMZ",
-                                nanCasesForUnlabledData 0.99 1.01 test.PrecursorMZ reference.PrecursorMZ
+                                nanCasesForUnlabledData 0.999999 1.000001 test.PrecursorMZ reference.PrecursorMZ
                             "MeasuredMass",
                                 nanCasesForUnlabledData 0.99 1.01 test.MeasuredMass reference.MeasuredMass
                             "TheoMass"
@@ -372,7 +790,7 @@ let pipelineTests =
                             "ProteinNames",
                                 test.ProteinNames = reference.ProteinNames
                             "QuantMz_Light",
-                                nanCasesForUnlabledData 0.99 1.01 test.QuantMz_Light reference.QuantMz_Light
+                                nanCasesForUnlabledData 0.999999 1.000001 test.QuantMz_Light reference.QuantMz_Light
                             "Quant_Light",
                                 nanCasesForUnlabledData 0.99 1.01 test.Quant_Light reference.Quant_Light
                             "MeasuredApex_Light",
@@ -387,7 +805,7 @@ let pipelineTests =
                             "KLDiv_Observed_Theoretical_Light",
                                 nanCasesForUnlabledData 0.99 1.01 test.KLDiv_Observed_Theoretical_Light reference.KLDiv_Observed_Theoretical_Light
                             "QuantMz_Heavy",
-                                nanCasesForUnlabledData 0.99 1.01 test.QuantMz_Heavy reference.QuantMz_Heavy
+                                nanCasesForUnlabledData 0.999999 1.000001 test.QuantMz_Heavy reference.QuantMz_Heavy
                             "Quant_Heavy",
                                 nanCasesForUnlabledData 0.99 1.01 test.Quant_Heavy reference.Quant_Heavy
                             "MeasuredApex_Heavy",
@@ -403,8 +821,12 @@ let pipelineTests =
                                 nanCasesForUnlabledData 0.9 1.1 test.KLDiv_Observed_Theoretical_Heavy reference.KLDiv_Observed_Theoretical_Heavy
                             "Correlation_Light_Heavy",
                                 nanCasesForUnlabledData 0.99 1.01 test.Correlation_Light_Heavy reference.Correlation_Light_Heavy
+                            "AlignmentQValue",
+                                test.AlignmentQValue = 0.
                             "QuantificationSource",
                                 test.QuantificationSource = reference.QuantificationSource
+                            "IonMobilityCentre",
+                                nanCasesForUnlabledData 0.999999 1.000001 test.IonMobilityCentre reference.IonMobilityCentre
                         |]
                     ) referenceQuant testQuant
                     |> Array.collect (
@@ -415,170 +837,396 @@ let pipelineTests =
                 if unequalFields |> Array.isEmpty then true , ""
                 else false, unequalFields |> String.concat ";"
             Expect.isTrue compare (sprintf "Quants are different in the following fields: %s" fields)
-        testCase "PSMBasedQuantificationTIMs" <| fun _ -> 
+        testCase "PSMStatisticsStoreIsotopePatternsFalse" <| fun _ ->
             let relToDirectory = getRelativePath baseDir
+            let original = relToDirectory "../../../data/PSMStatistics/in/MinimalFixed.db"
+            let db = tempCopy original
+            let psm = relToDirectory "../../../data/PSMStatistics/in/minimalFixed.psm"
+            let outDirectory = Path.Combine(Path.GetTempPath(), sprintf "psmStatistics_%s" (Guid.NewGuid().ToString "N"))
+            Directory.CreateDirectory outDirectory |> ignore
+            // the fixed cutoffs of the test with the parameter off
+            let psmStatsParams = Path.Combine(outDirectory, "params.json")
+            File.WriteAllText(psmStatsParams, (File.ReadAllText (relToDirectory "../../../data/PSMStatistics/in/pSMStatisticsParamsFixed.json")).Replace("\"StoreIsotopePatterns\":true", "\"StoreIsotopePatterns\":false"))
+            let before = fileBytes db
+            let psmStatsExe = toolDll "PSMStatistics"
+            runDotNet (sprintf "%s -i %s -o %s -p %s -d %s" psmStatsExe psm outDirectory psmStatsParams db) baseDir
+            let qpsmLines = File.ReadAllLines (Path.Combine(outDirectory, "minimalFixed.qpsm")) |> Array.filter (fun line -> line <> "")
+            let unchanged = fileBytes db = before
+            let hasTable = hasIsotopePatternTable db
+            deleteTemp db
+            try Directory.Delete(outDirectory, true) with _ -> ()
+            Expect.isGreaterThan qpsmLines.Length 1 "the .qpsm holds PSMs"
+            Expect.isTrue unchanged "the data base is not written to"
+            Expect.isFalse hasTable "the data base has no table of isotope patterns"
+
+        testCase "PSMStatisticsIsotopePatternsOfSeveralFiles" <| fun _ ->
+            // two files with the same ions: the union is stored once
+            let relToDirectory = getRelativePath baseDir
+            let db = tempCopy (relToDirectory "../../../data/PSMStatistics/in/MinimalFixed.db")
+            let inDirectory = Path.Combine(Path.GetTempPath(), sprintf "psmStatistics_%s" (Guid.NewGuid().ToString "N"))
+            let outDirectory = Path.Combine(inDirectory, "out")
+            Directory.CreateDirectory inDirectory |> ignore
+            File.Copy(relToDirectory "../../../data/PSMStatistics/in/minimalFixed.psm", Path.Combine(inDirectory, "a.psm"))
+            File.Copy(relToDirectory "../../../data/PSMStatistics/in/minimalFixed.psm", Path.Combine(inDirectory, "b.psm"))
+            let psmStatsExe = toolDll "PSMStatistics"
+            runDotNet (sprintf "%s -i %s -o %s -p %s -d %s -c 2" psmStatsExe inDirectory outDirectory (relToDirectory "../../../data/PSMStatistics/in/pSMStatisticsParamsFixed.json") db) baseDir
+            let stored, computed, requests = isotopePatternCounts db (Path.Combine(outDirectory, "a.qpsm"))
+            let rows =
+                use cn = new SQLiteConnection(sprintf "Data Source=%s;Version=3" db)
+                cn.Open()
+                use cmd = new SQLiteCommand("SELECT COUNT(*) FROM IsotopePattern", cn)
+                Convert.ToInt32 (cmd.ExecuteScalar())
+            deleteTemp db
+            try Directory.Delete(inDirectory, true) with _ -> ()
+            Expect.isGreaterThan requests 0 "the .qpsm holds ions"
+            Expect.equal (stored, computed) (requests, 0) "the data base holds the patterns of the ions"
+            Expect.equal rows requests "each pattern is stored once"
+
+        // sequenced, as the tools lock the data bases they read and the runs compare the CPU bound tools
+        isotopePatternEquivalenceCase "PSMBasedQuantificationIsotopePatterns" "PSMBasedQuantification" "PSMBasedQuantification" "QuantificationParams.json" secondDerivativeParams true |> testSequenced
+        isotopePatternEquivalenceCase "PSMBasedQuantificationIsotopePatternsLabelFree" "PSMBasedQuantification" "PSMBasedQuantification" "QuantificationParams.json" (fun json -> (secondDerivativeParams json).Replace("N15Labeling", "Unlabeled")) true |> testSequenced
+        isotopePatternEquivalenceCase "PSMBasedQuantificationWaveletIsotopePatterns" "PSMBasedQuantification" "PSMBasedQuantification" "QuantificationParams.json" id false |> testSequenced
+        isotopePatternEquivalenceCase "PSMBasedQuantificationTIMsIsotopePatterns" "PSMBasedQuantificationTIMs" "PSMBasedQuantificationTIMs" "QuantificationTIMsParams.json" id true |> testSequenced
+        isotopePatternEquivalenceCase "PSMBasedQuantificationTIMsLabelledIsotopePatterns" "PSMBasedQuantificationTIMs" "PSMBasedQuantificationTIMs" "QuantificationTIMsParams.json" (fun json -> json.Replace("Unlabeled", "N15Labeling")) true |> testSequenced
+        isotopePatternEquivalenceCase "PSMBasedQuantificationTIMsWaveletIsotopePatterns" "PSMBasedQuantificationTIMs" "PSMBasedQuantificationTIMs" "QuantificationTIMsWaveletParams.json" id false |> testSequenced
+        peakAtScanTimeCase "PSMBasedQuantificationPeakAtScanTime" |> testSequenced
+        emptyQpsmCase "PSMBasedQuantificationEmptyQpsmLabelled" "PSMBasedQuantification" "PSMBasedQuantification" "QuantificationParams.json" id |> testSequenced
+        emptyQpsmCase "PSMBasedQuantificationEmptyQpsmLabelFree" "PSMBasedQuantification" "PSMBasedQuantification" "QuantificationParams.json" (fun json -> json.Replace("N15Labeling", "Unlabeled")) |> testSequenced
+        emptyQpsmCase "PSMBasedQuantificationTIMsEmptyQpsmLabelFree" "PSMBasedQuantificationTIMs" "PSMBasedQuantificationTIMs" "QuantificationTIMsParams.json" id |> testSequenced
+        emptyQpsmCase "PSMBasedQuantificationTIMsEmptyQpsmLabelled" "PSMBasedQuantificationTIMs" "PSMBasedQuantificationTIMs" "QuantificationTIMsParams.json" (fun json -> json.Replace("Unlabeled", "N15Labeling")) |> testSequenced
+
+        testCase "MsFraggerToPSM" <| fun _ ->
+            let relToDirectory = getRelativePath baseDir
+            let tsv = relToDirectory "../../../data/MsFraggerToPSM/in/minimal.tsv"
             let db = relToDirectory "../../../data/PSMBasedQuantificationTIMs/in/minimal.db"
-            let qpsm = relToDirectory "../../../data/PSMBasedQuantificationTIMs/in/minimal.qpsm"
-            let mzlite = relToDirectory "../../../data/PSMBasedQuantificationTIMs/in/minimal.mzlite"
-            let quantParamsTIMs = relToDirectory "../../../data/PSMBasedQuantificationTIMs/in/QuantificationTIMsParams.json"
-            let outDirectory = relToDirectory "../../../data/PSMBasedQuantificationTIMs/out"
-            let quantTIMsExe = toolDll "PSMBasedQuantificationTIMs"
-            // cleanup
-            try
-                File.Delete (relToDirectory "../../../data/PSMBasedQuantificationTIMs/out/minimal.quant")
-                File.Delete (relToDirectory "../../../data/PSMBasedQuantificationTIMs/out/minimal_log.txt")
-                File.Delete (relToDirectory "../../../data/PSMBasedQuantificationTIMs/out/PSMBasedQuantification_log.txt")
-                Directory.Delete (relToDirectory "../../../data/PSMBasedQuantificationTIMs/out/minimal_plots")
-            with
-            | _ -> ()
-            // run tool
-            runDotNet (sprintf "%s -i %s -ii %s -o %s -p %s -d %s -dc" quantTIMsExe mzlite qpsm outDirectory quantParamsTIMs db) baseDir
-            let referenceQuantTIMs =
-                let quantPath = relToDirectory "../../../data/PSMBasedQuantificationTIMs/out/minimalReference.quant"
-                FSharpAux.IO.SchemaReader.Csv.CsvReader<ProteomIQon.Dto.QuantificationResult>().ReadFile(quantPath,'\t',false,1)
-                |> Array.ofSeq
-            let testQuantTIMs =
-                let quantPath = relToDirectory "../../../data/PSMBasedQuantificationTIMs/out/minimal.quant"
-                FSharpAux.IO.SchemaReader.Csv.CsvReader<ProteomIQon.Dto.QuantificationResult>().ReadFile(quantPath,'\t',false,1)
-                |> Array.ofSeq
-            let nanCasesForUnlabledData lowerLimit upperLimit actual reference = 
-                if Double.IsNaN actual && Double.IsNaN reference  then 
-                    true
-                elif Double.IsNaN actual || Double.IsNaN reference then
-                    false
-                else 
-                    actual >= reference * lowerLimit &&
-                    actual <= reference * upperLimit
-            let compare,fields = 
-                let unequalFields =
-                    Array.map2 (fun (reference: ProteomIQon.Dto.QuantificationResult) (test: ProteomIQon.Dto.QuantificationResult) ->
-                        [|
-                            "StringSequence",
-                                test.StringSequence = reference.StringSequence
-                            "GlobalMod",
-                                test.GlobalMod = reference.GlobalMod
-                            "Charge",
-                                test.Charge = reference.Charge
-                            "PepSequenceID",
-                                test.PepSequenceID = reference.PepSequenceID
-                            "ModSequenceID",
-                                test.ModSequenceID = reference.ModSequenceID
-                            "PrecursorMZ",
-                                nanCasesForUnlabledData 0.99 1.01 test.PrecursorMZ reference.PrecursorMZ
-                            "MeasuredMass",
-                                nanCasesForUnlabledData 0.99 1.01 test.MeasuredMass reference.MeasuredMass
-                            "TheoMass"
-                                ,test.TheoMass = reference.TheoMass
-                            "AbsDeltaMass",
-                                nanCasesForUnlabledData 0.7 1.3 test.AbsDeltaMass reference.AbsDeltaMass
-                            "ProteinNames",
-                                test.ProteinNames = reference.ProteinNames
-                            "QuantMz_Light",
-                                nanCasesForUnlabledData 0.99 1.01 test.QuantMz_Light reference.QuantMz_Light
-                            "Quant_Light",
-                                nanCasesForUnlabledData 0.99 1.01 test.Quant_Light reference.Quant_Light
-                            "MeasuredApex_Light",
-                                nanCasesForUnlabledData 0.99 1.01 test.MeasuredApex_Light reference.MeasuredApex_Light
-                            //"Seo_Light",
-                            //    test.Seo_Light >= reference.Seo_Light * 0.99 &&
-                            //    test.Seo_Light <= reference.Seo_Light * 1.01
-                            "Difference_SearchRT_FittedRT_Light",
-                                nanCasesForUnlabledData 0.9 1.1 (abs test.Difference_SearchRT_FittedRT_Light) (abs reference.Difference_SearchRT_FittedRT_Light)
-                            "KLDiv_CorrectedObserved_Theoretical_Light",
-                                nanCasesForUnlabledData 0.9 1.1 test.KLDiv_CorrectedObserved_Theoretical_Light reference.KLDiv_CorrectedObserved_Theoretical_Light
-                            "KLDiv_Observed_Theoretical_Light",
-                                nanCasesForUnlabledData 0.99 1.01 test.KLDiv_Observed_Theoretical_Light reference.KLDiv_Observed_Theoretical_Light
-                            "QuantMz_Heavy",
-                                nanCasesForUnlabledData 0.99 1.01 test.QuantMz_Heavy reference.QuantMz_Heavy
-                            "Quant_Heavy",
-                                nanCasesForUnlabledData 0.99 1.01 test.Quant_Heavy reference.Quant_Heavy
-                            "MeasuredApex_Heavy",
-                                nanCasesForUnlabledData 0.99 1.01 test.MeasuredApex_Heavy reference.MeasuredApex_Heavy
-                            //"Seo_Heavy",
-                            //    test.Seo_Heavy >= reference.Seo_Heavy * 0.99 &&
-                            //    test.Seo_Heavy <= reference.Seo_Heavy * 1.01
-                            "Difference_SearchRT_FittedRT_Heavy",
-                                nanCasesForUnlabledData 0.9 1.1 (abs test.Difference_SearchRT_FittedRT_Heavy) (abs reference.Difference_SearchRT_FittedRT_Heavy)
-                            "KLDiv_CorrectedObserved_Theoretical_Heavy",
-                                nanCasesForUnlabledData 0.9 1.1 test.KLDiv_CorrectedObserved_Theoretical_Heavy reference.KLDiv_CorrectedObserved_Theoretical_Heavy
-                            "KLDiv_Observed_Theoretical_Heavy",
-                                nanCasesForUnlabledData 0.9 1.1 test.KLDiv_Observed_Theoretical_Heavy reference.KLDiv_Observed_Theoretical_Heavy
-                            "Correlation_Light_Heavy",
-                                nanCasesForUnlabledData 0.99 1.01 test.Correlation_Light_Heavy reference.Correlation_Light_Heavy
-                            "QuantificationSource",
-                                test.QuantificationSource = reference.QuantificationSource
-                            "IonMobility",
-                                nanCasesForUnlabledData 0.99 1.01 test.IonMobility reference.IonMobility
-                        |]
-                    ) referenceQuantTIMs testQuantTIMs
-                    |> Array.collect (
-                        Array.filter (fun (field,equal) -> equal = false)
-                    )
-                    |> Array.distinct
-                    |> Array.map fst
-                if unequalFields |> Array.isEmpty then true , ""
-                else false, unequalFields |> String.concat ";"
-            Expect.isTrue compare (sprintf "Quants are different in the following fields: %s" fields)
+            let outDirectory = relToDirectory "../../../data/MsFraggerToPSM/out/test/"
+            let msFraggerExe = toolDll "MsFraggerToPSM"
+            if Directory.Exists outDirectory then Directory.Delete(outDirectory, true)
+            Directory.CreateDirectory outDirectory |> ignore
+            // a copy, because the PSMBasedQuantificationTIMs test locks the mzlite at the same time
+            let mzlite = Path.Combine(outDirectory, "minimal.mzlite")
+            File.Copy(relToDirectory "../../../data/PSMBasedQuantificationTIMs/in/minimal.mzlite", mzlite)
+            runDotNet (sprintf "%s -i %s -ii %s -o %s -d %s" msFraggerExe tsv mzlite outDirectory db) baseDir
+            let testPath = relToDirectory "../../../data/MsFraggerToPSM/out/test/minimal.qpsm"
+            // the output has the column layout of PSMStatistics
+            let header = (File.ReadLines testPath |> Seq.head).Split '\t'
+            let expectedHeader =
+                Reflection.FSharpType.GetRecordFields(typeof<ProteomIQon.Dto.PSMStatisticsResult>)
+                |> Array.map (fun field -> field.Name)
+            let compare =
+                tsvFilesEqual 1e-9
+                    (relToDirectory "../../../data/MsFraggerToPSM/out/minimalReference.qpsm")
+                    testPath
+            Directory.Delete(outDirectory, true)
+            Expect.equal header expectedHeader "the header is the one of PSMStatisticsResult"
+            Expect.isTrue compare "QPSMs are different"
+
+        let quantTIMsCase name paramsFile outSubDir referenceFile =
+            testCase name <| fun _ ->
+                let relToDirectory = getRelativePath baseDir
+                let db = relToDirectory "../../../data/PSMBasedQuantificationTIMs/in/minimal.db"
+                let qpsm = relToDirectory "../../../data/PSMBasedQuantificationTIMs/in/minimal.qpsm"
+                let mzlite = relToDirectory "../../../data/PSMBasedQuantificationTIMs/in/minimal.mzlite"
+                let quantParamsTIMs = relToDirectory "../../../data/PSMBasedQuantificationTIMs/in/" + paramsFile
+                let outDirectory = relToDirectory ("../../../data/PSMBasedQuantificationTIMs/out" + outSubDir)
+                let quantTIMsExe = toolDll "PSMBasedQuantificationTIMs"
+                // cleanup
+                try
+                    File.Delete (Path.Combine(outDirectory, "minimal.quant"))
+                    File.Delete (Path.Combine(outDirectory, "minimal_log.txt"))
+                    File.Delete (Path.Combine(outDirectory, "PSMBasedQuantification_log.txt"))
+                    Directory.Delete (Path.Combine(outDirectory, "minimal_plots"))
+                with
+                | _ -> ()
+                // run tool
+                runDotNet (sprintf "%s -i %s -ii %s -o %s -p %s -d %s -dc" quantTIMsExe mzlite qpsm outDirectory quantParamsTIMs db) baseDir
+                let referenceQuantTIMs =
+                    let quantPath = relToDirectory "../../../data/PSMBasedQuantificationTIMs/out/" + referenceFile
+                    FSharpAux.IO.SchemaReader.Csv.CsvReader<ProteomIQon.Dto.QuantificationResult>().ReadFile(quantPath,'\t',false,1)
+                    |> Array.ofSeq
+                let testQuantTIMs =
+                    let quantPath = Path.Combine(outDirectory, "minimal.quant")
+                    FSharpAux.IO.SchemaReader.Csv.CsvReader<ProteomIQon.Dto.QuantificationResult>().ReadFile(quantPath,'\t',false,1)
+                    |> Array.ofSeq
+                let nanCasesForUnlabledData lowerLimit upperLimit actual reference = 
+                    if Double.IsNaN actual && Double.IsNaN reference  then 
+                        true
+                    elif Double.IsNaN actual || Double.IsNaN reference then
+                        false
+                    else 
+                        actual >= reference * lowerLimit &&
+                        actual <= reference * upperLimit
+                let compare,fields = 
+                    let unequalFields =
+                        Array.map2 (fun (reference: ProteomIQon.Dto.QuantificationResult) (test: ProteomIQon.Dto.QuantificationResult) ->
+                            [|
+                                "StringSequence",
+                                    test.StringSequence = reference.StringSequence
+                                "GlobalMod",
+                                    test.GlobalMod = reference.GlobalMod
+                                "Charge",
+                                    test.Charge = reference.Charge
+                                "PepSequenceID",
+                                    test.PepSequenceID = reference.PepSequenceID
+                                "ModSequenceID",
+                                    test.ModSequenceID = reference.ModSequenceID
+                                "PrecursorMZ",
+                                    nanCasesForUnlabledData 0.999999 1.000001 test.PrecursorMZ reference.PrecursorMZ
+                                "MeasuredMass",
+                                    nanCasesForUnlabledData 0.99 1.01 test.MeasuredMass reference.MeasuredMass
+                                "TheoMass"
+                                    ,test.TheoMass = reference.TheoMass
+                                "AbsDeltaMass",
+                                    nanCasesForUnlabledData 0.7 1.3 test.AbsDeltaMass reference.AbsDeltaMass
+                                "MeanPercolatorScore",
+                                    nanCasesForUnlabledData 0.99 1.01 test.MeanPercolatorScore reference.MeanPercolatorScore
+                                "QValue",
+                                    nanCasesForUnlabledData 0.99 1.01 test.QValue reference.QValue
+                                "PEPValue",
+                                    nanCasesForUnlabledData 0.99 1.01 test.PEPValue reference.PEPValue
+                                "ProteinNames",
+                                    test.ProteinNames = reference.ProteinNames
+                                "QuantMz_Light",
+                                    nanCasesForUnlabledData 0.999999 1.000001 test.QuantMz_Light reference.QuantMz_Light
+                                "Quant_Light",
+                                    nanCasesForUnlabledData 0.99 1.01 test.Quant_Light reference.Quant_Light
+                                "MeasuredApex_Light",
+                                    nanCasesForUnlabledData 0.99 1.01 test.MeasuredApex_Light reference.MeasuredApex_Light
+                                //"Seo_Light",
+                                //    test.Seo_Light >= reference.Seo_Light * 0.99 &&
+                                //    test.Seo_Light <= reference.Seo_Light * 1.01
+                                "Difference_SearchRT_FittedRT_Light",
+                                    nanCasesForUnlabledData 0.9 1.1 (abs test.Difference_SearchRT_FittedRT_Light) (abs reference.Difference_SearchRT_FittedRT_Light)
+                                "KLDiv_CorrectedObserved_Theoretical_Light",
+                                    nanCasesForUnlabledData 0.9 1.1 test.KLDiv_CorrectedObserved_Theoretical_Light reference.KLDiv_CorrectedObserved_Theoretical_Light
+                                "KLDiv_Observed_Theoretical_Light",
+                                    nanCasesForUnlabledData 0.99 1.01 test.KLDiv_Observed_Theoretical_Light reference.KLDiv_Observed_Theoretical_Light
+                                "QuantMz_Heavy",
+                                    nanCasesForUnlabledData 0.999999 1.000001 test.QuantMz_Heavy reference.QuantMz_Heavy
+                                "Quant_Heavy",
+                                    nanCasesForUnlabledData 0.99 1.01 test.Quant_Heavy reference.Quant_Heavy
+                                "MeasuredApex_Heavy",
+                                    nanCasesForUnlabledData 0.99 1.01 test.MeasuredApex_Heavy reference.MeasuredApex_Heavy
+                                //"Seo_Heavy",
+                                //    test.Seo_Heavy >= reference.Seo_Heavy * 0.99 &&
+                                //    test.Seo_Heavy <= reference.Seo_Heavy * 1.01
+                                "Difference_SearchRT_FittedRT_Heavy",
+                                    nanCasesForUnlabledData 0.9 1.1 (abs test.Difference_SearchRT_FittedRT_Heavy) (abs reference.Difference_SearchRT_FittedRT_Heavy)
+                                "KLDiv_CorrectedObserved_Theoretical_Heavy",
+                                    nanCasesForUnlabledData 0.9 1.1 test.KLDiv_CorrectedObserved_Theoretical_Heavy reference.KLDiv_CorrectedObserved_Theoretical_Heavy
+                                "KLDiv_Observed_Theoretical_Heavy",
+                                    nanCasesForUnlabledData 0.9 1.1 test.KLDiv_Observed_Theoretical_Heavy reference.KLDiv_Observed_Theoretical_Heavy
+                                "Correlation_Light_Heavy",
+                                    nanCasesForUnlabledData 0.99 1.01 test.Correlation_Light_Heavy reference.Correlation_Light_Heavy
+                                "AlignmentQValue",
+                                    test.AlignmentQValue = 0.
+                                "QuantificationSource",
+                                    test.QuantificationSource = reference.QuantificationSource
+                                "IonMobility",
+                                    nanCasesForUnlabledData 0.99 1.01 test.IonMobility reference.IonMobility
+                                "IonMobilityCentre",
+                                    nanCasesForUnlabledData 0.999999 1.000001 test.IonMobilityCentre reference.IonMobilityCentre
+                            |]
+                        ) referenceQuantTIMs testQuantTIMs
+                        |> Array.collect (
+                            Array.filter (fun (field,equal) -> equal = false)
+                        )
+                        |> Array.distinct
+                        |> Array.map fst
+                    if unequalFields |> Array.isEmpty then true , ""
+                    else false, unequalFields |> String.concat ";"
+                Expect.isTrue compare (sprintf "Quants are different in the following fields: %s" fields)
+
+        // sequenced, as both read minimal.mzlite, which the tool locks
+        quantTIMsCase "PSMBasedQuantificationTIMs" "QuantificationTIMsParams.json" "" "minimalReference.quant" |> testSequenced
+        // wavelet path with baseline correction, in its own folder
+        quantTIMsCase "PSMBasedQuantificationTIMsWavelet" "QuantificationTIMsWaveletParams.json" "/wavelet" "minimalWaveletReference.quant" |> testSequenced
+        // wavelet path with N15 labeling and Zero border padding (deterministic), in its own folder
+        quantTIMsCase "PSMBasedQuantificationTIMsWaveletLabeled" "QuantificationTIMsWaveletLabeledParams.json" "/waveletLabeled" "minimalWaveletLabeledReference.quant" |> testSequenced
             
 
         testCase "QuantBasedAlignment" <| fun _ ->
             let relToDirectory = getRelativePath baseDir
-            let target = relToDirectory "../../../data/QuantBasedAlignment/in"
-            let sources = relToDirectory "../../../data/QuantBasedAlignment/in"
-            let outDirectory = relToDirectory "../../../data/QuantBasedAlignment/out"
-            let relQuantPath =
-                if System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.Linux) then
-                    toolDll "QuantBasedAlignment_linux-x64"
-                elif System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.Windows) then
-                    toolDll "QuantBasedAlignment_win-x64"
-                else    
-                    failwith "not supported OS to test QuantBasedAlignment"                
-            let quantExe = relQuantPath
-            // cleanup
-            try
-                File.Delete (relToDirectory "../../../data/QuantBasedAlignment/out/trunc1.align")
-                File.Delete (relToDirectory "../../../data/QuantBasedAlignment/out/trunc1.alignmetric")
-                File.Delete (relToDirectory "../../../data/QuantBasedAlignment/out/trunc1_log.txt")
-                File.Delete (relToDirectory "../../../data/QuantBasedAlignment/out/QuantBasedAlignment_log.txt")
-                File.Delete (relToDirectory "../../../data/QuantBasedAlignment/out/trunc1_Metrics.html")   
-                
-                File.Delete (relToDirectory "../../../data/QuantBasedAlignment/out/trunc2.align")
-                File.Delete (relToDirectory "../../../data/QuantBasedAlignment/out/trunc2.alignmetric")
-                File.Delete (relToDirectory "../../../data/QuantBasedAlignment/out/trunc2_log.txt")
-                File.Delete (relToDirectory "../../../data/QuantBasedAlignment/out/trunc2_Metrics.html")   
+            let quantFiles = relToDirectory "../../../data/QuantBasedAlignment/in"
+            // its own folder
+            let outDirectory = relToDirectory "../../../data/QuantBasedAlignment/out/test/"
+            let alignExe = toolDll "QuantBasedAlignment"
+            runDotNet (sprintf "%s -i %s -ii %s -o %s" alignExe quantFiles quantFiles outDirectory) baseDir
+            let compare =
+                tsvFilesEqual 1e-6
+                    (relToDirectory "../../../data/QuantBasedAlignment/out/trunc1_Reference.align")
+                    (relToDirectory "../../../data/QuantBasedAlignment/out/test/trunc1.align")
+            Directory.Delete(outDirectory, true)
+            Expect.isTrue compare "Alignments are different"
 
-                File.Delete (relToDirectory "../../../data/QuantBasedAlignment/out/trunc3.align")
-                File.Delete (relToDirectory "../../../data/QuantBasedAlignment/out/trunc3.alignmetric")
-                File.Delete (relToDirectory "../../../data/QuantBasedAlignment/out/trunc3_log.txt")
-                File.Delete (relToDirectory "../../../data/QuantBasedAlignment/out/trunc3_Metrics.html")   
-            with
-            | _ -> ()
-            // run tool
-            runDotNet (sprintf "%s -i %s -ii %s -o %s" quantExe target sources outDirectory) baseDir
-            let referenceAlign =
-                let quantPath = relToDirectory "../../../data/QuantBasedAlignment/out/trunc1_Reference.align"
-                FSharpAux.IO.SchemaReader.Csv.CsvReader<ProteomIQon.Dto.AlignmentResult>().ReadFile(quantPath,'\t',false,1)
-                |> Array.ofSeq
-            let testAlign =
-                let quantPath = relToDirectory "../../../data/QuantBasedAlignment/out/trunc1.align"
-                FSharpAux.IO.SchemaReader.Csv.CsvReader<ProteomIQon.Dto.AlignmentResult>().ReadFile(quantPath,'\t',false,1)
-                |> Array.ofSeq
-            let compare = 
-                    referenceAlign
-                    |> Array.filter (fun (reference: ProteomIQon.Dto.AlignmentResult) ->
-                            testAlign
-                            |> Array.exists (fun (test: ProteomIQon.Dto.AlignmentResult) ->
-                                test.StringSequence = reference.StringSequence
-                                test.GlobalMod = reference.GlobalMod
-                                test.Charge = reference.Charge
-                                test.PepSequenceID = reference.PepSequenceID
-                                test.ModSequenceID = reference.ModSequenceID
-                            )
-                    )  
-                    |> Array.length
-                    |> (=) referenceAlign.Length           
-            Expect.isTrue compare (sprintf "Quants are different in the following fields")
+        testCase "MzMLToMzLiteIonMobility" <| fun _ ->
+            // the first 40 spectra (11 MS1, 29 MS2) of a timsTOF DDA run converted by msconvert: m/z, intensity and ion mobility as zlib
+            // compressed 64 bit floats, the layout the raw reader of MzIO reads; spectrum 5 is stored uncompressed and spectrum 12 as
+            // 32 bit floats, so the XML reader reads them
+            let relToDirectory = getRelativePath baseDir
+            let mzML = relToDirectory "../../../data/MzMLToMzLiteIonMobility/in/minimal.mzML"
+            let convParams = relToDirectory "../../../data/MzMLToMzLiteIonMobility/in/mzMLToMzLiteParams.json"
+            let outDirectory = relToDirectory "../../../data/MzMLToMzLiteIonMobility/out/"
+            if Directory.Exists outDirectory then Directory.Delete(outDirectory, true)
+            runDotNet (sprintf "%s -i %s -o %s -p %s" (toolDll "MzMLToMzLiteIonMobility") mzML outDirectory convParams) baseDir
+            let expected = readMzMLSpectra mzML
+            let converted = readMzliteSpectra (Path.Combine(outDirectory, "minimal.mzlite"))
+            deleteDirectory outDirectory
+            Expect.equal expected.Length 40 "the mzML holds 40 spectra"
+            Expect.equal (converted |> Map.keys |> Set.ofSeq) (expected |> Array.map (fun s -> s.ID) |> Set.ofArray) "the mzlite holds the spectra of the mzML"
+            for s in expected do
+                let msLevel, scanTime, scanTimeUnit, precursorMz, peaks = converted.[s.ID]
+                Expect.equal msLevel s.MsLevel (sprintf "%s: MS level" s.ID)
+                Expect.equal s.ScanTimeUnit "UO:0000010" (sprintf "%s: the scan time of the mzML is in seconds" s.ID)
+                Expect.equal scanTimeUnit (Some "UO:0000031") (sprintf "%s: the scan time of the mzlite is in minutes" s.ID)
+                Expect.floatClose Accuracy.veryHigh scanTime (s.ScanTime / 60.) (sprintf "%s: scan time" s.ID)
+                if s.MsLevel = 2 then Expect.equal precursorMz s.SelectedIonMz (sprintf "%s: precursor m/z" s.ID)
+                // the peaks in the order of the file, values unchanged
+                Expect.equal (peaks |> Array.map (fun p -> p.Mz)) s.Mz (sprintf "%s: m/z" s.ID)
+                Expect.equal (peaks |> Array.map (fun p -> p.Intensity)) s.Intensity (sprintf "%s: intensities" s.ID)
+                Expect.equal (peaks |> Array.map (fun p -> p.IonMobility)) (s.IonMobility |> Array.map Some) (sprintf "%s: ion mobilities" s.ID)
 
+        testCase "AlignmentBasedQuantification" <| fun _ ->
+            // label-free runs without ion mobility and with fewer than 200 clean overlap ions each, so the fixed score chooses the candidates
+            let first, second = alignmentChainOutputs.Force()
+            for run in alignmentRuns do
+                let ownIons = alignmentInputIons run
+                let otherIons = alignmentRuns |> Array.filter ((<>) run) |> Array.map alignmentInputIons |> Set.unionMany
+                for file in [ sprintf "align/%s.align" run; sprintf "abq/%s.quant" run; sprintf "abq/%s.alignfeatures" run; sprintf "abq/%s.aligndecoy" run ] do
+                    Expect.isTrue (first.ContainsKey file) (sprintf "%s is written" file)
+                    Expect.isTrue (first.[file] = second.[file]) (sprintf "%s is the same in both runs" file)
+                let align = alignmentOutputRows first (sprintf "align/%s.align" run)
+                let quant = alignmentOutputRows first (sprintf "abq/%s.quant" run)
+                let features = alignmentOutputRows first (sprintf "abq/%s.alignfeatures" run)
+                let decoys = alignmentOutputRows first (sprintf "abq/%s.aligndecoy" run)
+                let predicted = align |> Array.map (fun row -> ionKey row, parseFloat row.["PredictedScanTime"]) |> Map.ofArray
+                // QuantBasedAlignment
+                Expect.isGreaterThan align.Length 100 (sprintf "%s: ions are transferred" run)
+                for row in align do
+                    Expect.isTrue (otherIons.Contains (ionKey row)) (sprintf "%s: %A comes from another run" run (ionKey row))
+                    Expect.isTrue (Double.IsFinite (parseFloat row.["PredictedScanTime"]) && parseFloat row.["PredictedScanTimeSd"] > 0.) (sprintf "%s: %A has a predicted scan time" run (ionKey row))
+                // AlignmentBasedQuantification: the PSM based rows, then the transferred ones
+                let psmRows = quant |> Array.takeWhile (fun row -> row.["QuantificationSource"] = "PSM")
+                let alignmentRows = quant.[psmRows.Length ..]
+                Expect.equal (psmRows |> Array.map ionKey |> Set.ofArray) ownIons (sprintf "%s: every ion of the PSM based .quant is kept" run)
+                Expect.equal psmRows.Length ownIons.Count (sprintf "%s: one PSM based row per ion" run)
+                Expect.all alignmentRows (fun row -> row.["QuantificationSource"] = "Alignment") (sprintf "%s: the rows after the PSM based ones are transferred" run)
+                Expect.equal (features |> Array.map ionKey) (align |> Array.map ionKey) (sprintf "%s: one .alignfeatures row per .align row" run)
+                let quantified = features |> Array.filter (fun row -> row.["Status"] = "quantified") |> Array.map ionKey
+                Expect.isGreaterThan (float quantified.Length) (0.9 * float align.Length) (sprintf "%s: most transferred ions are quantified" run)
+                Expect.equal (alignmentRows |> Array.map ionKey) quantified (sprintf "%s: one transferred row per quantified ion" run)
+                Expect.all features (fun row -> row.["SelectionModel"] = "FixedScore") (sprintf "%s: the fixed score chooses the candidates" run)
+                for row in alignmentRows do
+                    Expect.isTrue (Double.IsNaN (parseFloat row.["AlignmentScore"]) && Double.IsNaN (parseFloat row.["AlignmentQValue"])) (sprintf "%s: %A is not scored yet" run (ionKey row))
+                    Expect.isGreaterThan (parseFloat row.["Quant_Light"]) 0. (sprintf "%s: %A has a quantity" run (ionKey row))
+                    // Difference_SearchRT_FittedRT is the predicted minus the fitted scan time; the candidate window is at most +-2 min
+                    Expect.isLessThanOrEqual (abs (parseFloat row.["Difference_SearchRT_FittedRT_Light"])) 2.5 (sprintf "%s: %A is fitted near its prediction" run (ionKey row))
+                // decoys: new ions with the predicted scan time shifted by 4 to 6 min
+                Expect.isNonEmpty decoys (sprintf "%s: decoy transfers are written" run)
+                for row in decoys do
+                    Expect.isFalse (ownIons.Contains (ionKey row)) (sprintf "%s: the decoy %A is a new ion" run (ionKey row))
+                    let shift = abs (parseFloat row.["PredictedScanTime"] - predicted.[ionKey row])
+                    Expect.isTrue (shift >= 4. - 1e-9 && shift <= 6. + 1e-9) (sprintf "%s: the decoy %A is shifted by %f min" run (ionKey row) shift)
+
+        testCase "AlignmentBasedQuantStatistics" <| fun _ ->
+            // FastTree on the overlap ions of the three runs with the decoys as extra negatives; fewer than 200 decoys per run, so the
+            // absent-analyte rate of every run is estimated from the decoys of all runs
+            let first, second = alignmentChainOutputs.Force()
+            let mutable passing = 0
+            for run in alignmentRuns do
+                let ownIons = alignmentInputIons run
+                let file = sprintf "stats/%s.quant" run
+                Expect.isTrue (first.ContainsKey file) (sprintf "%s is written" file)
+                Expect.isTrue (first.[file] = second.[file]) (sprintf "%s is the same in both runs" file)
+                let log = Text.Encoding.UTF8.GetString first.[sprintf "stats/%s_log.txt" run]
+                Expect.stringContains log "absent analytes: " (sprintf "%s: the decoys estimate the rate of absent analytes" run)
+                Expect.stringContains log "decoys of all runs are used" (sprintf "%s: the decoys of all runs are used" run)
+                let scored = alignmentOutputRows first file
+                let aligned = alignmentOutputRows first (sprintf "abq/%s.quant" run)
+                let psmRows = scored |> Array.filter (fun row -> row.["QuantificationSource"] = "PSM")
+                let alignmentRows = scored |> Array.filter (fun row -> row.["QuantificationSource"] = "Alignment")
+                Expect.equal (psmRows.Length + alignmentRows.Length) scored.Length (sprintf "%s: every row is PSM based or transferred" run)
+                Expect.equal (psmRows |> Array.map ionKey |> Set.ofArray) ownIons (sprintf "%s: every ion of the PSM based .quant is kept" run)
+                // every PSM based row has a fitted peak, so only the new ions are scored, each with its row of AlignmentBasedQuantification
+                let newRows = aligned |> Array.filter (fun row -> row.["QuantificationSource"] = "Alignment" && not (ownIons.Contains (ionKey row)))
+                Expect.equal (alignmentRows |> Array.map ionKey |> Set.ofArray) (newRows |> Array.map ionKey |> Set.ofArray) (sprintf "%s: the new ions are scored" run)
+                Expect.equal alignmentRows.Length newRows.Length (sprintf "%s: one row per new ion" run)
+                let unchanged = newRows |> Array.map (fun row -> ionKey row, row |> Map.remove "AlignmentScore" |> Map.remove "AlignmentQValue") |> Map.ofArray
+                for row in alignmentRows do
+                    Expect.equal (row |> Map.remove "AlignmentScore" |> Map.remove "AlignmentQValue") unchanged.[ionKey row] (sprintf "%s: %A keeps its quantification" run (ionKey row))
+                let scores = alignmentRows |> Array.map (fun row -> parseFloat row.["AlignmentScore"], parseFloat row.["AlignmentQValue"])
+                for score, qValue in scores do
+                    Expect.isTrue (score >= 0. && score <= 1.) (sprintf "%s: AlignmentScore %f in [0, 1]" run score)
+                    Expect.isTrue (qValue >= 0. && qValue <= 1.) (sprintf "%s: AlignmentQValue %f in [0, 1]" run qValue)
+                // the q-value does not fall as the score falls, equal scores have equal q-values
+                for (highScore, highQ), (lowScore, lowQ) in scores |> Array.sortByDescending fst |> Array.pairwise do
+                    Expect.isTrue (if lowScore = highScore then lowQ = highQ else lowQ >= highQ) (sprintf "%s: q-value %f at score %f, %f at score %f" run highQ highScore lowQ lowScore)
+                passing <- passing + (scores |> Array.filter (fun (_, q) -> q <= 0.05) |> Array.length)
+            Expect.isGreaterThan passing 0 "new ions pass q <= 0.05"
+
+        testCase "AlignmentBasedQuantification and AlignmentBasedQuantStatistics labeled" <| fun _ ->
+            // 14N/15N runs: ions whose labeled partner the run quantified through its PSM based row are not transferred
+            let first, second = labeledAlignmentChainOutputs.Force()
+            let mutable passing = 0
+            for run in labeledAlignmentRuns do
+                for file in [ sprintf "align/%s.align" run; sprintf "abq/%s.quant" run; sprintf "abq/%s.alignfeatures" run; sprintf "abq/%s.aligndecoy" run; sprintf "stats/%s.quant" run ] do
+                    Expect.isTrue (first.ContainsKey file) (sprintf "%s is written" file)
+                    Expect.isTrue (first.[file] = second.[file]) (sprintf "%s is the same in both runs" file)
+                let abqLog = Text.Encoding.UTF8.GetString first.[sprintf "abq/%s_log.txt" run]
+                let statsLog = Text.Encoding.UTF8.GetString first.[sprintf "stats/%s_log.txt" run]
+                let align = alignmentOutputRows first (sprintf "align/%s.align" run)
+                let features = alignmentOutputRows first (sprintf "abq/%s.alignfeatures" run)
+                let quant = alignmentOutputRows first (sprintf "abq/%s.quant" run)
+                let skipped = features |> Array.filter (fun row -> row.["Status"] = ProteomIQon.Dto.LabeledPartnerQuantifiedStatus)
+                Expect.equal (features |> Array.map ionKey) (align |> Array.map ionKey) (sprintf "%s: one .alignfeatures row per .align row" run)
+                Expect.isGreaterThan skipped.Length 0 (sprintf "%s: ions are not transferred because their labeled partner is PSM based" run)
+                // the entry of the reason in the list of not quantified ions: "not quantified: a: 1, b: 2 (time)"
+                let entry = Text.RegularExpressions.Regex(sprintf "(not quantified: |, )%s: %i(,| \(|\r?$)" (Text.RegularExpressions.Regex.Escape ProteomIQon.Dto.LabeledPartnerQuantifiedStatus) skipped.Length, Text.RegularExpressions.RegexOptions.Multiline)
+                Expect.isTrue (entry.IsMatch abqLog) (sprintf "%s: ABQ logs the ions of the labeled partner" run)
+                Expect.stringContains statsLog (sprintf "(left out: %i ions quantified through their labeled partner's PSM based row)" skipped.Length) (sprintf "%s: Stats leaves the ions out" run)
+                // the rule: no PSM row of its own with a fitted peak, and the PSM row of the partner has a fitted peak and a quantity of the label of the ion
+                let psmHeader, psmCells = readTable (getRelativePath baseDir (sprintf "../../../data/AlignmentLabeled/in/quant/%s.quant" run))
+                let cell (cells: string[]) (name: string) = cells.[psmHeader.[name]]
+                let psmKey (cells: string[]) = cell cells "StringSequence", cell cells "GlobalMod", cell cells "Charge"
+                let psmIons = psmCells |> Array.map psmKey |> Set.ofArray
+                // a fitted peak as AlignmentBasedQuantification reads it: a finite mean and a positive sigma at positions 1 and 2 of the parameters of the label of the row (the apex and the total width are then finite and positive too)
+                let hasFittedPeak (cells: string[]) =
+                    let parameters = (cell cells (if cell cells "GlobalMod" = "0" then "Params_Light" else "Params_Heavy")).Split ';'
+                    parameters.Length > 2 && Double.IsFinite (parseFloat parameters.[1]) && parseFloat parameters.[2] > 0.
+                // the ions with a PSM row that has a fitted own peak
+                let ownFitted = psmCells |> Array.filter hasFittedPeak |> Array.map psmKey |> Set.ofArray
+                // (sequence, global modification, charge) of the ions whose partner row has a fitted peak and a quantity of the label of the ion
+                let partnerQuantified =
+                    psmCells
+                    |> Array.filter (fun cells ->
+                        let ionLabel = if cell cells "GlobalMod" = "0" then "Heavy" else "Light"
+                        hasFittedPeak cells
+                        && (let q = parseFloat (cell cells ("Quant_" + ionLabel)) in Double.IsFinite q && q > 0.))
+                    |> Array.map (fun cells -> cell cells "StringSequence", (if cell cells "GlobalMod" = "0" then "1" else "0"), cell cells "Charge")
+                    |> Set.ofArray
+                for row in features do
+                    let expected = not (ownFitted.Contains (ionKey row)) && partnerQuantified.Contains (ionKey row)
+                    Expect.equal (row.["Status"] = ProteomIQon.Dto.LabeledPartnerQuantifiedStatus) expected (sprintf "%s: %A is skipped exactly by the rule" run (ionKey row))
+                // none of them has a transferred row
+                let alignmentRows = quant |> Array.filter (fun row -> row.["QuantificationSource"] = "Alignment")
+                let transferred = alignmentRows |> Array.map ionKey |> Set.ofArray
+                for row in skipped do
+                    Expect.isFalse (transferred.Contains (ionKey row)) (sprintf "%s: %A has no transferred row" run (ionKey row))
+                // the transferred ions have a quantity of their own label
+                Expect.isNonEmpty alignmentRows (sprintf "%s: ions are transferred" run)
+                for row in alignmentRows do
+                    let own = if row.["GlobalMod"] = "0" then "Quant_Light" else "Quant_Heavy"
+                    Expect.isGreaterThan (parseFloat row.[own]) 0. (sprintf "%s: %A has a quantity" run (ionKey row))
+                // the new ions are scored
+                let scored = alignmentOutputRows first (sprintf "stats/%s.quant" run) |> Array.filter (fun row -> row.["QuantificationSource"] = "Alignment")
+                Expect.equal (scored |> Array.map ionKey |> Set.ofArray) (alignmentRows |> Array.filter (fun row -> not (psmIons.Contains (ionKey row))) |> Array.map ionKey |> Set.ofArray) (sprintf "%s: the new ions are scored" run)
+                for row in scored do
+                    let score, qValue = parseFloat row.["AlignmentScore"], parseFloat row.["AlignmentQValue"]
+                    Expect.isTrue (score >= 0. && score <= 1. && qValue >= 0. && qValue <= 1.) (sprintf "%s: %A has a score %f and q-value %f in [0, 1]" run (ionKey row) score qValue)
+                passing <- passing + (scored |> Array.filter (fun row -> parseFloat row.["AlignmentQValue"] <= 0.05) |> Array.length)
+            Expect.isGreaterThan passing 0 "new ions pass q <= 0.05"
+
+        partnerPeakAtScanTimeCase "AlignmentBasedQuantificationPartnerPeakAtScanTime" |> testSequenced
 
         testCase "ProteinInference" <| fun _ ->
             let relToDirectory = getRelativePath baseDir
@@ -702,6 +1350,115 @@ let pipelineTests =
             File.Delete (relToDirectory "../../../data/LabelFreeProteinQuantification/out/transformFilterSum/LabelFreeQuant.txt")
             File.Delete (relToDirectory "../../../data/LabelFreeProteinQuantification/out/transformFilterSum/ProteinAggregation.txt")
             Expect.isTrue compare "Output files are not identical"
+
+        testCase "ProteinQuantificationPresetsFilterAlignmentQValue" <| fun _ ->
+            let presets = Path.Combine(repoRoot, "src", "ProteomIQon", "defaultParams")
+            let testCopies (tool: string) = Path.Combine(repoRoot, "tests", "data", tool, "in")
+            let files (directory: string) pattern = Directory.GetFiles(directory, pattern)
+            let labeled = Array.append (files presets "LabeledQuantificationParams*.json") (files (testCopies "LabeledProteinQuantification") "LabeledQuantificationParams*.json")
+            let labelFree = Array.append (files presets "LabelFreeQuantificationParams*.json") (files (testCopies "LabelFreeProteinQuantification") "LabelFreeQuantificationParams*.json")
+            Expect.equal labeled.Length 10 "five labeled presets and four test copies"
+            Expect.equal labelFree.Length 8 "four label free presets and four test copies"
+            for file in labeled do
+                let p = ProteomIQon.Json.deserialize<ProteomIQon.Dto.LabeledQuantificationParams> (File.ReadAllText file)
+                Expect.equal p.Alignment_QValue (Some 0.05) (sprintf "%s sets Alignment_QValue" (Path.GetFileName file))
+            for file in labelFree do
+                let p = ProteomIQon.Json.deserialize<ProteomIQon.Dto.LabelFreeQuantificationParams> (File.ReadAllText file)
+                Expect.equal p.Alignment_QValue (Some 0.05) (sprintf "%s sets Alignment_QValue" (Path.GetFileName file))
+
+        testCase "LabeledProteinQuantificationAlignmentQValue" <| fun _ ->
+            let relToDirectory = getRelativePath baseDir
+            let work = Path.Combine(Path.GetTempPath(), sprintf "labeledAlignmentQValue_%s" (Guid.NewGuid().ToString "N"))
+            Directory.CreateDirectory work |> ignore
+            // APTMFTVR has no alignment q-value, ASDPFAK 0.5 and DWYDIK 0.01 in both of its global modifications; every other ion has 0
+            let lines = File.ReadAllLines (relToDirectory "../../../data/LabeledProteinQuantification/in/minimal.quantAndProt")
+            let column = lines.[0].Split('\t') |> Array.findIndex ((=) "AlignmentQValue")
+            let qValueOf = function
+                | "APTMFTVR" -> Some "NaN"
+                | "ASDPFAK" -> Some "0.5"
+                | "DWYDIK" -> Some "0.01"
+                | _ -> None
+            let edited =
+                lines
+                |> Array.mapi (fun i line ->
+                    let cells = line.Split '\t'
+                    if i > 0 then
+                        qValueOf cells.[3] |> Option.iter (fun q -> cells.[column] <- q)
+                    String.Join("\t", cells))
+            let quantAndProt = Path.Combine(work, "edited.quantAndProt")
+            File.WriteAllLines(quantAndProt, edited)
+            let defaultParams = File.ReadAllText (relToDirectory "../../../data/LabeledProteinQuantification/in/LabeledQuantificationParams.json")
+            let someParams = "\"Alignment_QValue\":{\"Case\":\"Some\",\"Fields\":[0.05]}"
+            Expect.stringContains defaultParams someParams "the preset filters on the alignment q-value"
+            let withFilter, noFilter, strictFilter =
+                try
+                    let run name (paramsText: string) =
+                        let paramsFile = Path.Combine(work, name + ".json")
+                        File.WriteAllText(paramsFile, paramsText)
+                        let outDirectory = Path.Combine(work, name)
+                        runDotNet (sprintf "%s -i %s -o %s -p %s" (toolDll "LabeledProteinQuantification") quantAndProt outDirectory paramsFile) baseDir
+                        File.ReadAllLines (Path.Combine(outDirectory, "GlobModAggregation.txt"))
+                        |> Array.skip 1
+                        |> Array.map (fun line -> line.Split('\t').[2])
+                        |> Set.ofArray
+                    let withFilter = run "some" defaultParams
+                    let noFilter = run "none" (defaultParams.Replace(someParams, "\"Alignment_QValue\":null"))
+                    let strictFilter = run "strict" (defaultParams.Replace("[0.05]", "[0.005]"))
+                    withFilter, noFilter, strictFilter
+                finally
+                    Directory.Delete(work, true)
+            Expect.isTrue (noFilter.Contains "ASDPFAK") "None keeps the ion with q-value 0.5"
+            Expect.isTrue (noFilter.Contains "APTMFTVR") "None keeps the ion without an alignment q-value"
+            Expect.isTrue (noFilter.Contains "DWYDIK") "None keeps the ion with q-value 0.01"
+            Expect.isFalse (withFilter.Contains "ASDPFAK") "0.05 drops the ion with q-value 0.5"
+            Expect.isTrue (withFilter.Contains "APTMFTVR") "0.05 keeps the ion without an alignment q-value"
+            Expect.isTrue (withFilter.Contains "DWYDIK") "0.05 keeps the ion with q-value 0.01"
+            Expect.isFalse (strictFilter.Contains "DWYDIK") "0.005 drops the ion with q-value 0.01"
+            Expect.equal (Set.difference noFilter withFilter) (Set.ofList ["ASDPFAK"]) "only the ion above the threshold is lost"
+
+        testCase "LabelFreeProteinQuantificationAlignmentQValue" <| fun _ ->
+            let relToDirectory = getRelativePath baseDir
+            let work = Path.Combine(Path.GetTempPath(), sprintf "labelFreeAlignmentQValue_%s" (Guid.NewGuid().ToString "N"))
+            Directory.CreateDirectory work |> ignore
+            try
+                // the file has no AlignmentScore and AlignmentQValue columns (the reader matches columns by position, so both are appended): ADGINPEELLGNSSAAAPR gets NaN, EFSIDVLEEMLEK 0.5, ISTWLELMK 0.01 and every other ion 0
+                let lines = File.ReadAllLines (relToDirectory "../../../data/LabelFreeProteinQuantification/in/minimal.quantAndProt")
+                let qValueOf = function
+                    | "ADGINPEELLGNSSAAAPR" -> "NaN"
+                    | "EFSIDVLEEMLEK" -> "0.5"
+                    | "ISTWLELMK" -> "0.01"
+                    | _ -> "0"
+                let edited =
+                    lines
+                    |> Array.mapi (fun i line ->
+                        let cells = line.Split '\t'
+                        String.Join("\t", Array.append cells (if i = 0 then [| "AlignmentScore"; "AlignmentQValue" |] else [| "NaN"; qValueOf cells.[3] |])))
+                let quantAndProt = Path.Combine(work, "edited.quantAndProt")
+                File.WriteAllLines(quantAndProt, edited)
+                let defaultParams = File.ReadAllText (relToDirectory "../../../data/LabelFreeProteinQuantification/in/LabelFreeQuantificationParams_ChargeAgg.json")
+                let someParams = "\"Alignment_QValue\":{\"Case\":\"Some\",\"Fields\":[0.05]}"
+                Expect.stringContains defaultParams someParams "the preset filters on the alignment q-value"
+                let run name (paramsText: string) =
+                    let paramsFile = Path.Combine(work, name + ".json")
+                    File.WriteAllText(paramsFile, paramsText)
+                    let outDirectory = Path.Combine(work, name)
+                    runDotNet (sprintf "%s -i %s -o %s -p %s" (toolDll "LabelFreeProteinQuantification") quantAndProt outDirectory paramsFile) baseDir
+                    File.ReadAllLines (Path.Combine(outDirectory, "ChargeAggregation.txt"))
+                    |> Array.skip 1
+                    |> Array.map (fun line -> line.Split('\t').[2])
+                    |> Set.ofArray
+                let withFilter = run "some" defaultParams
+                let noFilter = run "none" (defaultParams.Replace(someParams, "\"Alignment_QValue\":null"))
+                let strictFilter = run "strict" (defaultParams.Replace("[0.05]", "[0.005]"))
+                Expect.isTrue (noFilter.Contains "EFSIDVLEEMLEK") "None keeps the ion with q-value 0.5"
+                Expect.isTrue (noFilter.Contains "ADGINPEELLGNSSAAAPR") "None keeps the ion with NaN"
+                Expect.isFalse (withFilter.Contains "EFSIDVLEEMLEK") "0.05 drops the ion with q-value 0.5"
+                Expect.isTrue (withFilter.Contains "ADGINPEELLGNSSAAAPR") "0.05 keeps the ion without an alignment q-value"
+                Expect.isTrue (withFilter.Contains "ISTWLELMK") "0.05 keeps the ion with q-value 0.01"
+                Expect.isFalse (strictFilter.Contains "ISTWLELMK") "0.005 drops the ion with q-value 0.01"
+                Expect.equal (Set.difference noFilter withFilter) (Set.ofList ["EFSIDVLEEMLEK"]) "only the ion above the threshold is lost"
+            finally
+                Directory.Delete(work, true)
 
         testCase "LabeledProteinQuantification" <| fun _ ->
             let relToDirectory = getRelativePath baseDir

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-<TargetFrameworks>net10.0</TargetFrameworks>
+    <TargetFrameworks>net10.0</TargetFrameworks>
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>proteomiqon-alignmentbasedquantstatistics</ToolCommandName>
     <RootNamespace>AlignmentBasedQuantStatistics</RootNamespace>
@@ -11,7 +11,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <ServerGarbageCollection>true</ServerGarbageCollection>
-	<InvariantGlobalization>true</InvariantGlobalization>
+    <InvariantGlobalization>true</InvariantGlobalization>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
   <PropertyGroup>
@@ -28,21 +28,21 @@
     <FsDocsReleaseNotesLink>https://github.com/CSBiology/ProteomIQon/blob/master/RELEASE_NOTES.md</FsDocsReleaseNotesLink>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="AlignmentBasedQuantStatistics.fs" />
     <Compile Include="CLIArgumentParsing.fs" />
+    <Compile Include="AlignmentBasedQuantStatistics.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\ProteomIQon\ProteomIQon.fsproj" />
   </ItemGroup>
   <ItemGroup>
-	<PackageReference Include="Argu" Version="6.1.1" />
-	<PackageReference Include="Microsoft.ML" Version="1.7.1" />
-	<PackageReference Include="Microsoft.ML.FastTree" Version="1.7.1" />
-	<PackageReference Include="FSharpAux" Version="2.1.0" />
-	<PackageReference Include="FSharpAux.IO" Version="2.1.0" />
-	<PackageReference Include="FSharp.Stats" Version="0.6.0" />
-	<PackageReference Include="Deedle" Version="3.0.0-beta.1" />
-	<PackageReference Include="Plotly.NET" Version="6.0.0-preview.2" />
+    <PackageReference Include="Argu" Version="6.1.1" />
+    <PackageReference Include="NLog" Version="4.7.11" />
+    <PackageReference Include="Microsoft.ML" Version="1.7.1" />
+    <PackageReference Include="Microsoft.ML.FastTree" Version="1.7.1" />
+    <PackageReference Include="Microsoft.ML.LightGbm" Version="1.7.1" />
+    <PackageReference Include="FSharpAux" Version="2.1.0" />
+    <PackageReference Include="FSharpAux.IO" Version="2.1.0" />
+    <PackageReference Include="Plotly.NET" Version="6.0.0-preview.2" />
   </ItemGroup>
 </Project>

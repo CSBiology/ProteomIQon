@@ -1,6 +1,6 @@
 /// Tests of the search: the candidate order and the cut, the slice merge, the ceiling of the
 /// index, the bin admission shared by the slice boundaries and the index build, the histogram
-/// form of the expectation model, the streaming header parser, and the two library functions
+/// form of the expectation model, and the two library functions
 /// BioFSharp.Mz 0.2.2 rewrote against copies of their originals.
 module ProteomIQon.UnitTestsPeptideSpectrumMatchingTIMsSearch
 
@@ -238,41 +238,6 @@ let histogramTests =
                     Expect.equal (sliced score) (onePass score) "same expectation"
     ]
 
-let headerTests =
-    let sample = IO.File.ReadAllText(IO.Path.Combine(AppContext.BaseDirectory, "sample_description.json"))
-    testList "streaming header parser" [
-        testCase "a real description" <| fun _ ->
-            let h = SpectrumDescription.tryParse sample
-            Expect.isNull h.Error "no error"
-            Expect.equal h.ID "merged=253418 frame=35072 scanStart=763 scanEnd=787" "id"
-            Expect.equal h.MsLevel (Some 2) "ms level"
-            Expect.equal h.ChargeState (Some 3) "charge"
-            Expect.equal h.PrecursorMz (Some 419.215935113248) "selected ion m/z, MS:1000744"
-            Expect.equal h.IonMobility (Some 0.737820952224) "mobility"
-            Expect.equal h.ScanTime (Some 62.17991573) "scan time"
-        testCase "the isolation target MS:1002234 wins over the selected ion m/z" <| fun _ ->
-            let marker = "\"MS:1000041\":{\"$id\":\"1\",\"CvAccession\":\"MS:1000041\""
-            Expect.equal (sample.Split(marker).Length) 2 "the sample carries the charge once"
-            let json = sample.Replace(marker, "\"MS:1002234\":{\"$id\":\"1\",\"CvAccession\":\"MS:1002234\",\"Type\":\"WithCvUnitAccession\",\"Values\":[\"420.5\",\"MS:1000040\"]}," + marker)
-            let h = SpectrumDescription.tryParse json
-            Expect.isNull h.Error "no error"
-            Expect.equal h.PrecursorMz (Some 420.5) "target"
-            Expect.equal h.ChargeState (Some 3) "charge still read"
-        testCase "missing scan, precursor and charge give None and no error" <| fun _ ->
-            let h = SpectrumDescription.tryParse """{"$id":"1","properties":{"$id":"2","MS:1000511":{"CvAccession":"MS:1000511","Type":"CvValue","Values":["1"]}},"ID":"x"}"""
-            Expect.isNull h.Error "no error"
-            Expect.equal h.MsLevel (Some 1) "ms level"
-            Expect.equal h.ScanTime None "scan time"
-            Expect.equal h.PrecursorMz None "precursor"
-            Expect.equal h.ChargeState None "charge"
-            Expect.equal h.IonMobility None "mobility"
-        testCase "a malformed description names the failure and carries nothing else" <| fun _ ->
-            let h = SpectrumDescription.tryParse (sample.Substring(0, sample.Length / 2))
-            Expect.isNotNull h.Error "error"
-            Expect.isNull h.ID "no id"
-            Expect.equal h.MsLevel None "no level"
-    ]
-
 /// The autocorrelation of the released library, copied from BioFSharp.Mz 0.2.1.
 let private originalAutoCorrelation (plusMinusMaxDelay: int) (vector: FSharp.Stats.Vector<float>) =
     let shifted (vector: FSharp.Stats.Vector<float>) (tau: int) =
@@ -334,4 +299,4 @@ let libraryTests =
 
 [<Tests>]
 let all =
-    testList "PeptideSpectrumMatchingTIMs search" [ orderTests; cutTests; mergeTests; ceilingTests; sliceTests; histogramTests; headerTests; libraryTests ]
+    testList "PeptideSpectrumMatchingTIMs search" [ orderTests; cutTests; mergeTests; ceilingTests; sliceTests; histogramTests; libraryTests ]

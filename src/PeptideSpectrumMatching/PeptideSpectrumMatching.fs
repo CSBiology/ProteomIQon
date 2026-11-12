@@ -37,102 +37,34 @@ module PeptideSpectrumMatching =
             |> Array.mapi (fun i name -> sprintf "%s %.1f s" name (seconds ticks.[i]))
             |> String.concat ", "
 
-    /// The values of a spectrum description the search needs.
-    type SpectrumHeader =
-        {
-            ID          : string
-            MsLevel     : int
-            ScanTime    : float
-            /// -1 for an MS1 spectrum.
-            PrecursorMz : float
-        }
-
-    /// The MS1 and MS2 headers of a run in file order. A spectrum whose description cannot be read
-    /// or lacks the ID, the scan time or, for an MS2 spectrum, the precursor m/z is logged and left
-    /// out. An mzlite file is read from the description text one spectrum at a time, other readers
-    /// go through the object model.
-    let readHeaders (reader: IMzIODataReader) (runID: string) (warn: string -> unit) =
-        let raw =
-            match reader with
-            | :? MzSQL as sql ->
-                seq {
-                    use cmd = new System.Data.SQLite.SQLiteCommand("SELECT Description FROM Spectrum WHERE RunID = @runID ORDER BY rowid", sql.Connection)
-                    cmd.Parameters.AddWithValue("@runID", runID) |> ignore
-                    use rows = cmd.ExecuteReader()
-                    while rows.Read() do
-                        let h = SpectrumDescription.tryParse (rows.GetString 0)
-                        if isNull h.Error then
-                            yield Ok (h.ID, defaultArg h.MsLevel -1, defaultArg h.ScanTime nan, defaultArg h.PrecursorMz nan)
-                        else yield Error h.Error
-                }
-            | _ ->
-                reader.ReadMassSpectra(runID)
-                |> Seq.map (fun ms ->
-                    let msLevel = MassSpectrum.getMsLevel ms
-                    Ok (ms.ID, msLevel, MassSpectrum.getScanTime ms, (if msLevel = 2 then MassSpectrum.getPrecursorMZ ms else nan)))
-        let headers = ResizeArray<SpectrumHeader>()
-        let mutable position = 0
-        for spectrum in raw do
-            match spectrum with
-            | Error message -> warn (sprintf "Spectrum at position %i cannot be read and is skipped: %s" position message)
-            | Ok (id, msLevel, scanTime, precursorMz) when msLevel = 1 || msLevel = 2 ->
-                let validTime = Double.IsFinite scanTime && scanTime >= 0.
-                let validPrecursor = msLevel = 1 || (Double.IsFinite precursorMz && precursorMz > 0.)
-                if String.IsNullOrWhiteSpace id || not validTime || not validPrecursor then
-                    warn (sprintf "MS%i spectrum at position %i lacks its ID, scan time or precursor m/z and is skipped." msLevel position)
-                else
-                    headers.Add { ID = id; MsLevel = msLevel; ScanTime = scanTime; PrecursorMz = (if msLevel = 1 then -1. else precursorMz) }
-            | Ok _ -> ()
-            position <- position + 1
-        headers.ToArray()
-
-    /// Index of the last element of a sorted array that is at most the value, -1 if none.
-    let private lastAtMost (sorted: float[]) (value: float) =
-        let mutable lo = 0
-        let mutable hi = sorted.Length
-        while lo < hi do
-            let m = lo + ((hi - lo) >>> 1)
-            if sorted.[m] <= value then lo <- m + 1 else hi <- m
-        lo - 1
-
-    let getPrecursorCharge (chParams:ChargeState.ChargeDetermParams) rnd (ticks: int64[]) (headers: SpectrumHeader[]) (inReader: IMzIODataReader) =
-        // Spectra with equal scan times keep their file order through the stable sorts.
-        let massSpectra = headers
-        let ms1SortedByScanTime =
-            massSpectra
-            |> Seq.filter (fun ms -> ms.MsLevel = 1)
-            |> Seq.sortBy (fun ms -> ms.ScanTime)
-            |> Array.ofSeq
-        let ms2SortedByScanTime =
-            massSpectra
-            |> Seq.filter (fun ms -> ms.MsLevel = 2)
-            |> Seq.sortBy (fun ms -> ms.ScanTime)
-            |> Array.ofSeq
-        let ms1ScanTimes = ms1SortedByScanTime |> Array.map (fun ms -> ms.ScanTime)
+    /// Charge state candidates of the MS2 spectra, each assigned to the last MS1 at or before its scan time.
+    /// ms1s are (scan time, ID) sorted by scan time and ms2s sorted by scan time (SpectrumIndex.readMs1AndMs2).
+    let getPrecursorCharge (chParams:ChargeState.ChargeDetermParams) rnd (ticks: int64[]) (ms1s: (float * string)[]) (ms2s: SpectrumIndex.Ms2Header[]) (inReader: IMzIODataReader) =
+        let ms1ScanTimes = ms1s |> Array.map fst
         let ms2AssignedToMS1 =
-            ms2SortedByScanTime
+            ms2s
             |> Array.choose (fun ms2 ->
                 // the last MS1 at or before the MS2
-                match lastAtMost ms1ScanTimes ms2.ScanTime with
+                match SortedSearch.upperBound ms1ScanTimes ms2.ScanTime - 1 with
                 | -1 -> None
                 | ms1 -> Some (ms1, ms2))
             |> Array.groupBy fst
-            |> Array.map (fun (ms1, ms1And2) -> ms1SortedByScanTime.[ms1], ms1And2 |> Array.map snd)
+            |> Array.map (fun (ms1, ms1And2) -> ms1s.[ms1], ms1And2 |> Array.map snd)
         let ms2PossibleChargestates =
             ms2AssignedToMS1
-            |> Array.map (fun (ms1, ms2s) ->
+            |> Array.map (fun ((_, ms1Id), ms2s) ->
                 let t = Diagnostics.Stopwatch.GetTimestamp()
-                let mzdata, intensityData = MzIO.Peaks.unzipIMzliteArray (inReader.ReadSpectrumPeaks(ms1.ID).Peaks)
+                let mzdata, intensityData = MzIO.Peaks.unzipIMzliteArray (inReader.ReadSpectrumPeaks(ms1Id).Peaks)
                 Profile.add ticks 1 t
                 ms2s
                 |> Array.filter (fun ms2 ->
                     let t = Diagnostics.Stopwatch.GetTimestamp()
-                    let hasPeaks = inReader.ReadSpectrumPeaks(ms2.ID).Peaks |> Seq.isEmpty = false
+                    let hasPeaks = inReader.ReadSpectrumPeaks(ms2.Id).Peaks |> Seq.isEmpty = false
                     Profile.add ticks 2 t
                     hasPeaks)
                 |> Array.map (fun ms2 ->
                     let t = Diagnostics.Stopwatch.GetTimestamp()
-                    let assignedCharges = ChargeState.putativePrecursorChargeStatesBy chParams mzdata intensityData ms1.ID ms2.ID ms2.PrecursorMz
+                    let assignedCharges = ChargeState.putativePrecursorChargeStatesBy chParams mzdata intensityData ms1Id ms2.Id ms2.PrecursorMz
                     Profile.add ticks 3 t
                     match assignedCharges with
                     | [] ->
@@ -141,7 +73,7 @@ module PeptideSpectrumMatching =
                                 let precursorMz = ms2.PrecursorMz
                                 let mass = Mass.ofMZ precursorMz (float i)
                                 let score = getScore 10 1 100.
-                                yield createAssignedCharge ms1.ID ms2.ID precursorMz i mass 100. score [0.] 0 0. (Set[]) (Some 1.)
+                                yield createAssignedCharge ms1Id ms2.Id precursorMz i mass 100. score [0.] 0 0. (Set[]) (Some 1.)
                         ]
                     | _ -> assignedCharges))
             |> Array.filter (fun x -> Array.isEmpty x |> not)
@@ -155,7 +87,7 @@ module PeptideSpectrumMatching =
             |> ChargeState.peakPosStdDevBy
         let precursorMzOf =
             let byId = Dictionary<string, float>()
-            for ms2 in ms2SortedByScanTime do byId.[ms2.ID] <- ms2.PrecursorMz
+            for ms2 in ms2s do byId.[ms2.Id] <- ms2.PrecursorMz
             fun (id: string) -> byId.[id]
         let init = ChargeState.initMzDevOfRndSpec rnd {chParams with ExpectedMaximumCharge=8} peakPosStdDev
         let t = Diagnostics.Stopwatch.GetTimestamp()
@@ -507,16 +439,18 @@ module PeptideSpectrumMatching =
             logger.Trace (sprintf "Run ID: %s" inRunID)
 
             let t = Diagnostics.Stopwatch.GetTimestamp()
-            let headers = readHeaders inReader inRunID (fun msg -> logger.Warn msg)
+            let ms1s, ms2s = SpectrumIndex.readMs1AndMs2 inReader inRunID (fun msg -> logger.Warn msg) (fun msg -> logger.Warn msg)
             Profile.add ticks 0 t
-            logger.Trace (sprintf "%i spectrum headers read, %.1f s." headers.Length stopwatch.Elapsed.TotalSeconds)
+            logger.Trace (sprintf "%i MS1 and %i MS2 spectrum headers read, %.1f s." ms1s.Length ms2s.Length stopwatch.Elapsed.TotalSeconds)
+            if ms1s.Length = 0 then
+                logger.Warn "The run has no MS1 spectrum with an ID and a finite scan time, so no charge state is determined and no spectrum is searched."
             let scanTimeOf =
                 let byId = Dictionary<string, float>()
-                for h in headers do byId.[h.ID] <- h.ScanTime
+                for h in ms2s do byId.[h.Id] <- h.ScanTime
                 fun (id: string) -> byId.[id]
 
             logger.Trace "Starting charge state determination."
-            let ms2sAndAssignedCharges, peakPosStdDev = getPrecursorCharge chargeParams rnd ticks headers inReader
+            let ms2sAndAssignedCharges, peakPosStdDev = getPrecursorCharge chargeParams rnd ticks ms1s ms2s inReader
             logger.Trace (sprintf "Finished charge state determination, %.1f s." stopwatch.Elapsed.TotalSeconds)
             logger.Trace (sprintf "peak position standard deviation: %f" peakPosStdDev)
 

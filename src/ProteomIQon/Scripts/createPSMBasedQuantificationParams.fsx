@@ -22,7 +22,7 @@ let defaultPreprocessingParams :Dto.QuantificationParams =
             InternalPaddingMethod   = Padding.InternalPaddingMethod.LinearInterpolation 
             HugeGapPaddingMethod    = Padding.HugeGapPaddingMethod.Zero
             HugeGapPaddingDistance  = 100.
-            MinPeakDistance         = None
+            MinPeakDistance         = Some 0.1
             MinPeakLength           = Some 0.1
             MaxPeakLength           = 1.5 
             NoiseQuantile           = 0.01 
@@ -32,6 +32,7 @@ let defaultPreprocessingParams :Dto.QuantificationParams =
     let XicExtraction = 
         {
             TopKPSMs                     = None
+            IonMobilityWindow            = Domain.Window.Fixed 0.05
             ScanTimeWindow               = 2.
             MzWindow_Da                  = Domain.Window.Estimate
             XicProcessing                = Wavelet waveletParams
@@ -48,6 +49,9 @@ let defaultPreprocessingParams :Dto.QuantificationParams =
         PerformLabeledQuantification = Labeling.N15Labeling
         XicExtraction                = XicExtraction
         BaseLineCorrection           = Some BaseLineCorrection
+        QualityFilterLog2Limit       = 2.
+        CentrePSMs                   = 3
+        RequirePeakAtScanTime        = true
     }
 
 
