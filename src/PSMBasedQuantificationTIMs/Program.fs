@@ -27,6 +27,7 @@ module console1 =
         let mf = results.Contains MatchFiles
         let dc = results.Contains DiagnosticCharts
         let z = results.Contains ZipCharts
+        Core.Charts.useReferenceEqualityForJson ()
         Logging.generateConfig o
         let logger = Logging.createLogger "PSMBasedQuantification"
         logger.Info (sprintf "InputFilePath -i = %A" i)
@@ -38,6 +39,14 @@ module console1 =
         let p =
             Json.ReadAndDeserialize<Dto.QuantificationParams> p
             |> Dto.QuantificationParams.toDomain
+        if p.CentrePSMs < 1 then
+            failwith "CentrePSMs must be at least 1."
+        if not (p.QualityFilterLog2Limit > 0.) then
+            failwith "QualityFilterLog2Limit must be greater than 0."
+        match p.XicExtraction.IonMobilityWindow with
+        | Domain.Window.Fixed v when not (v > 0.) -> failwith "IonMobilityWindow Fixed needs a value greater than 0."
+        | Domain.Window.Estimate -> failwith "IonMobilityWindow Estimate is only available in AlignmentBasedQuantification; use Fixed."
+        | _ -> ()
         let dbConnection =
             if File.Exists d then
                 logger.Trace (sprintf "Database found at given location (%s)" d)

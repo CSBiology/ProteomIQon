@@ -32,13 +32,21 @@
     <Compile Include="BioFSharp.Mz_Temp.fs" />
     <Compile Include="pepValueCalculation.fs" />
     <Compile Include="Logging.fs" />
+    <Compile Include="PeakShape.fs" />
     <Compile Include="Domain.fs" />
     <Compile Include="DTO.fs" />
     <Compile Include="Json.fs" />
     <Compile Include="Core.fs" />
-    <Compile Include="SpectrumDescription.fs" />
+    <Compile Include="IsotopePatterns.fs" />
+    <Compile Include="SpectrumIndex.fs" />
+    <Compile Include="BaselineAls.fs" />
+    <Compile Include="SortedPeaks.fs" />
+    <Compile Include="Numerics.fs" />
+    <Compile Include="Xic.fs" />
+    <Compile Include="MzCalibration.fs" />
+    <Compile Include="PeakQuantification.fs" />
+    <Compile Include="PSMQuantification.fs" />
     <None Include="Scripts\createTIMsMzMLtoMzLiteParams.fsx" />
-    <None Include="Scripts\createAlignmentBasedQuantStatisticsParams.fsx" />
     <None Include="Scripts\createLabeledQuantificationParams.fsx" />
     <None Include="Scripts\createLabeledQuantificationParams_CorrFilter_ChargeAgg.fsx" />
     <None Include="Scripts\createLabeledQuantificationParams_CorrFilter_ChargeAgg_ModAgg.fsx" />
@@ -54,7 +62,6 @@
     <None Include="Scripts\createTableSortParams.fsx" />
     <None Include="Scripts\createSWATHAnalysisParams.fsx" />
     <None Include="Scripts\createConsensusSpectralLibraryParams.fsx" />
-    <None Include="Scripts\createAlignmentBasedQuantificationParams.fsx" />
     <None Include="Scripts\createPSMBasedQuantificationParams.fsx" />
     <None Include="Scripts\createPreprocessingParamsThermo.fsx" />
     <None Include="Scripts\createSpectralLibraryParams.fsx" />
@@ -69,10 +76,10 @@
   <ItemGroup>
     <PackageReference Include="Argu" Version="6.1.1" />
     <PackageReference Include="NLog" Version="4.7.11" />
-	<PackageReference Include="MzIO" Version="[0.1.7]" />
-	<PackageReference Include="MzIO.Processing" Version="[0.1.7]" />
-	<PackageReference Include="MzIO.SQL" Version="[0.1.9]" />
-	<PackageReference Include="MzIO.MzML" Version="[0.1.10]" />
+	<PackageReference Include="MzIO" Version="[0.1.8]" />
+	<PackageReference Include="MzIO.Processing" Version="[0.1.8]" />
+	<PackageReference Include="MzIO.SQL" Version="[0.1.10]" />
+	<PackageReference Include="MzIO.MzML" Version="[0.1.11]" />
     <PackageReference Include="Deedle" Version="2.3.0" />
     <PackageReference Include="BioFSharp" Version="2.0.0" />
     <PackageReference Include="BioFSharp.Mz" Version="0.2.3" />

@@ -1,4 +1,5 @@
 #### Unreleased
+* Add the parameter StoreIsotopePatterns (default true): after all files are scored, the isotope patterns of the ions in the .qpsm files (both global modifications if the peptide data base has isotopic modifications) are added to the table IsotopePattern of the peptide data base (-d). The quantification tools read them instead of computing them. A data base that cannot be written gives a warning. The file given with -d changes, so on a network file system with unreliable locking run one process at a time or set the parameter to false
 * Use CrossValidation and no PEP cutoff (PepValueThreshold 1.0) in the default parameters; with pseudo-reversed decoys and cross-validation, q < 0.01 alone keeps about 1 % real FDP
 * Add the parameter CrossValidation (default false): each scan is scored by the model trained on the other two of three scan folds, the scores are normalised per fold, and q-values and PEPs are computed on the pooled scores
 * Give a decoy the pseudo-reversed sequence that PeptideSpectrumMatching and PeptideSpectrumMatchingTIMs score, without terminator tokens and with the flanking residues of its target, in the Peptide column of the training data instead of the reversed sequence. The column is not a model feature, so the results do not change
@@ -7,6 +8,9 @@
 * With CrossValidation, retrain each fold on the targets with q < 0.01 and accept a retrained model by its targets with q <= 0.01, independent of QValueThreshold and PepValueThreshold, which then only filter the output
 * Train FastTree on one thread, so that the results no longer depend on the number of cores of the machine
 * Write only the header instead of failing when no PSM passes the thresholds
+* Add the parameter RetentionTimeFeature (default true): predict the scan time of a peptide from its sequence with a model trained on the confident peptides of the file in folds of peptide groups, and add the deviation of the scan time from the prediction in robust standard deviations and its absolute value (RtDeviation, AbsRtDeviation) as model features; the feature is not used, with a warning, when the file has fewer than 500 confident unique peptides or the out-of-fold R2 is below 0.3
+* With Threshold Fixed, write the SequestScore as ModelScore, which was NaN
+* Score the PSMs faster with the same results
 
 #### 0.0.11 - Monday, September 28, 2026
 * Use Hyperscore and Expectscore as features and seed the training with the expectation value when the input carries them

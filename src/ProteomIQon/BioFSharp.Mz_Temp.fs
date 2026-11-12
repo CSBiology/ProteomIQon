@@ -5,206 +5,6 @@ open FSharpAux
 open System
 open FSharp.Stats.Signal
 
-// TODO upstream to FSharp.Stats (generic dynamic time warping; not BioFSharp.Mz domain)
-module DTW' =
-                       
-    type warpingPaths = {
-        Distance: float
-        Paths   : Matrix<float>
-        }
-    
-    //window: see   : Only allow for shifts up to this amount away from the two diagonals.
-    //maxDist: see  : Stop if the returned distance measure will be larger than this value.
-    //maxStep: see  : Do not allow steps larger than this value.
-    //maxLengthDiff : Return infinity if difference in length of two series is larger.
-    //penalty       : Penalty to add if compression or expansion is applied (on top of the distance).
-    //psi           : Relaxation to ignore begin and/or end of sequences (for cylical sequencies)
-    ///Dynamic Time Warping.
-    ///The full matrix of all warping paths is build.
-    ///x: First sequence
-    ///y: Second sequence
-    ///returns: (DTW distance, DTW matrix)
-    let warp window maxDist maxStep maxLengthDiff penalty psi (x:array<float>) (y:array<float>) = 
-        let r,c = x.Length, y.Length
-        match maxLengthDiff with
-        | Some x when abs(r-c) > x -> None 
-        | _  -> 
-        let window = 
-            match window with
-            | Some x -> x
-            | None   -> max r c             
-        let maxStep = 
-            match maxStep with
-            | Some x -> Some (x**2.)
-            | None   -> None 
-        let maxDist = 
-            match maxDist with
-            | Some x -> Some (x**2.)
-            | None   -> None
-        let penalty = 
-            match penalty with
-            | Some x -> (x**2.)
-            | None   -> 0. 
-        let psi = 
-            match psi with
-            | Some x -> x
-            | None   -> 0    
-        let dtw = 
-            let tmp = Matrix.create (r+1) (c+1) infinity 
-            for i = 0 to psi do 
-                tmp.[0,i] <- 0.
-                tmp.[i,0] <- 0.
-            tmp
-        ///
-        let rec innerLoop upper prevLastUnderMaxDist lastUnderMaxDis i0 i1 i j = 
-            if j = upper then 
-                i+1, lastUnderMaxDis
-            else 
-                let d = (x.[i] - y.[j])**2.
-                match maxStep with 
-                | Some x when d > x -> 
-                    innerLoop upper prevLastUnderMaxDist lastUnderMaxDis i0 i1 i (j+1)
-                | _ ->                   
-                    dtw.[i1,j+1] <- d + (List.min [ dtw.[i0, j];dtw.[i0, j + 1] + penalty;dtw.[i1, j] + penalty]) 
-                    match maxDist with 
-                    | Some x when dtw.[i1, j + 1] <= x ->
-                        innerLoop upper prevLastUnderMaxDist (j) i0 i1 i (j+1)
-                    | Some x -> 
-                        dtw.[i1, j + 1] <- infinity 
-                        if prevLastUnderMaxDist < (j+1) then 
-                            (i+1, lastUnderMaxDis)
-                        else 
-                        innerLoop upper prevLastUnderMaxDist lastUnderMaxDis i0 i1 i (j+1)
-                    | None  -> 
-                        innerLoop upper prevLastUnderMaxDist lastUnderMaxDis i0 i1 i (j+1)
-        ///
-        let rec outerLoop lastUnderMaxDist i = 
-            if i = r then Some (dtw,i)
-            else 
-                let prevLastUnderMaxDist = 
-                    if lastUnderMaxDist = -1 then
-                        infinity |> int |> (*) -1
-                    else
-                       lastUnderMaxDist
-                let last_under_max_dist, i0, i1 = -1, i, i+1
-                let lower = 
-                    let tmp = i - (max 0 (r - c)) - window + 1
-                    max 0 tmp
-                let upper = 
-                    let tmp = i + (max 0 (c - r)) + window
-                    min c tmp
-                let nextIdx,prevLastUnderMaxDist = innerLoop upper prevLastUnderMaxDist lastUnderMaxDist i0 i1 i lower
-                match maxDist with 
-                | Some x when lastUnderMaxDist = -1 ->
-                    None 
-                | Some x -> 
-                    outerLoop lastUnderMaxDist (i+1)
-                | None ->
-                    outerLoop lastUnderMaxDist (i+1)
-        let (dtw') = outerLoop 0 0
-        match dtw' with 
-        | None -> 
-            Some ({Distance=infinity;Paths=dtw}) 
-        | Some (dtw',i1) ->
-            Matrix.inplace_mapi (fun m n x -> sqrt x) dtw' |> ignore
-            let d = 
-                //if psi = 0 then 
-                     dtw.[i1, (min c (c + window - 1))]  
-            //    else 
-            //        let ir = i1
-            //        let ic = min (c + window - 1)
-            //        vr = dtw.get[ir-psi:ir+1, ic]
-            //        vc = dtw[ir, ic-psi:ic+1]
-            //        mir = np.argmin(vr)
-            //        mic = np.argmin(vc)
-            //        if vr[mir] < vc[mic]:
-            //            dtw[ir-psi+mir+1:ir+1, ic] = -1
-            //            d = vr[mir]
-            //        else:
-            //            dtw[ir, ic - psi + mic + 1:ic+1] = -1
-            //            d = vc[mic]
-            Some ({Distance=d;Paths=dtw}) 
-    
-    open FSharpAux
-    
-    
-    /// Returns the best warping path.
-    let bestPath (paths:Matrix<float>) =
-        let m,n = 
-            let m',n' = paths.Dimensions
-            m'-1,n'-1
-        let pInit = if paths.[m,n] <> -1. then [m-1,n-1] else []
-        let rec loop m n path =
-            if m <= 0 || n <= 0 then
-                match path with 
-                | h::t -> t
-                | []   -> []
-            else 
-            let pos = [|paths.[m - 1, n - 1]; paths.[m - 1, n]; paths.[m, n - 1]|]    
-            let c = Array.foldi (fun i acc x -> if x < pos.[acc] then i else acc ) 0 pos
-            let m',n' = 
-                if c = 0 then
-                    (m-1),(n-1)
-                elif c = 1 then 
-                    (m-1),(n)
-                else
-                    (m),(n-1)
-            if paths.[m',n'] <> -1. then 
-                loop m' n' ((m'-1,n'-1)::path)
-            else loop m' n' (path)
-        loop m n pInit        
-    
-    ///
-    let warping_Path window maxDist maxStep maxLengthDiff penalty psi (x:array<float>) (y:array<float>) = 
-        let res = warp window maxDist maxStep maxLengthDiff penalty psi x y
-        match res with 
-        | Some x -> bestPath x.Paths
-        | None -> failwith "Warping not possible."
-        
-    ///
-    let distance window maxDist maxStep maxLengthDiff penalty psi (x:array<float>) (y:array<float>) = 
-        let res = warp window maxDist maxStep maxLengthDiff penalty psi x y
-        match res with 
-        | Some x -> x.Distance
-        | None -> failwith "Warping not possible."
-       
-    // Aligns source to target. Given a sourceX it returns the mapping of the xVal closest to
-    // sourceX to its targetX counterPart after alignment.
-    let align (target:(float*float)[]) (source:(float*float)[]) =
-        let xt,yt = target |> Array.unzip
-        let xs,ys = source |> Array.unzip
-        let optimalPath = warping_Path None None None None None None yt ys
-        List.map (fun (ytIdx,ysIdx) -> xt.[ytIdx],ys.[ysIdx]) optimalPath 
-
-    // Aligns source to target. Given a sourceX it returns the mapping of the xVal closest to
-    // sourceX to its targetX counterPart after alignment.
-    let align' (target:(float*float)[]) (source:(float*float)[]) sourceX =
-        let xt,yt = target |> Array.unzip
-        let xs,ys = source |> Array.unzip
-        let optimalPath = warping_Path None None None None None None yt ys
-        List.map (fun (ytIdx,ysIdx) -> xs.[ysIdx],xt.[ytIdx]) optimalPath 
-        |> List.minBy (fun (xs,xt) -> abs(xs-sourceX))
-    
-    let s1 = 
-        [|0.;1.;2.;3.;2.;1.;0.;0.;0.;0.;0.;0.;0.;0.;0.;0.;0.;0.;1.;2.;1.;0.|] 
-        |> Array.mapi (fun i x -> float i,x)
-    
-    let s2 = 
-        [|0.;0.;0.;0.;0.;1.;2.;2.5;2.;1.;0.;0.;0.;0.;0.;0.;0.;0.;0.;0.;0.1;0.2;0.1;0.;0.;0.5;1.;0.5;0.|] 
-        |> Array.mapi (fun i x -> float i + 20.,x)
-    
-    let s2' = 
-        align s1 s2
-
-    
-    let zNorm (y:float []) = 
-        let m = Seq.mean y
-        let s = Seq.stDev y 
-        y
-        |> Array.map (fun x -> (x-m)/s)
-    
-    
-
 // TODO upstream to FSharpAux.IO (generic CSV writer incl. empty-result header fix)
 module SeqIO' = 
     open FSharpAux.IO.SeqIO
@@ -356,6 +156,117 @@ module FSharpStats' =
         let private aic n nParams likelihood = 
             (float n * Math.Log(likelihood / float n)) + 2. * (float nParams) 
     
+        /// Same values as ContinuousWavelet.transform with (-) as getDiff, where that one does not throw; beyond the padded trace the
+        /// kernel sees zeros. The constants of the Ricker function are hoisted and the
+        /// kernel value of a pair of points is evaluated once, the right side of the left point and the left side of the right point
+        /// share it (the same difference of the same two x values, the kernel is even). The sums run in the same order. A kernel value
+        /// is a factor of the intensities of its two points only, with both intensities zero (or not an output point) it is not evaluated.
+        let private transformFast (kernelValues: float [] ref) (paddedData: (float*float)[]) (borderpadding: int) (wavelet: Wavelet.Ricker) =
+            let n = paddedData.Length
+            let xs = paddedData |> Array.map fst
+            let ys = paddedData |> Array.map snd
+            let padd = wavelet.PaddingArea
+            let scale = wavelet.Scale
+            let ss = pown scale 2
+            let twoSs = 2. * ss
+            let fakA = 2. / (sqrt(3. * scale) * 1.331335364)
+            let ricker (x: float) =
+                let xx = x * x
+                fakA * (1. - (xx/ss)) * exp (-xx / twoSs)
+            let stepSize = xs.[1] - xs.[0]
+            let last = n - borderpadding - 1
+            // kernel values of all computed rows in one buffer, which the scales of a trace share
+            let used = ref 0
+            let rowOff : int [] = Array.zeroCreate n
+            let rowStart : int [] = Array.zeroCreate n
+            let rowLen : int [] = Array.zeroCreate n
+            let computeRow i start =
+                rowOff.[i] <- used.Value
+                rowStart.[i] <- start
+                let xi = xs.[i]
+                let iOut = i >= borderpadding && i <= last
+                let mutable j = start
+                let mutable go = true
+                while go do
+                    // the kernel stops at the end of the padded trace, which is shorter than the kernel for short traces
+                    if j >= n then go <- false
+                    else
+                    let diff = xs.[j] - xi
+                    if diff > padd then go <- false
+                    else
+                        if used.Value = kernelValues.Value.Length then
+                            let bigger = Array.zeroCreate (2 * kernelValues.Value.Length)
+                            Array.blit kernelValues.Value 0 bigger 0 used.Value
+                            kernelValues.Value <- bigger
+                        let jOut = j >= borderpadding && j <= last
+                        kernelValues.Value.[used.Value] <- if (iOut && ys.[j] <> 0.) || (jOut && ys.[i] <> 0.) then ricker diff else 0.
+                        used.Value <- used.Value + 1
+                        j <- j + 1
+                rowLen.[i] <- j - start
+            // the points left of the first output point that have it within the kernel
+            let mutable i0 = borderpadding - 1
+            while i0 >= 0 && xs.[borderpadding] - xs.[i0] <= padd do
+                computeRow i0 borderpadding
+                i0 <- i0 - 1
+            let center = ricker 0.
+            for j in borderpadding .. last do
+                computeRow j (j + 1)
+            let buf = kernelValues.Value
+            Array.init (last - borderpadding + 1) (fun o ->
+                let j = borderpadding + o
+                let mutable right = 0.
+                let off = rowOff.[j]
+                for k in 0 .. rowLen.[j] - 1 do
+                    right <- right + buf.[off + k] * ys.[j + 1 + k]
+                let mutable left = 0.
+                let mutable i = j - 1
+                let mutable go = true
+                while go do
+                    if i < 0 then go <- false
+                    else
+                    let diff = xs.[j] - xs.[i]
+                    if diff > padd then go <- false
+                    else
+                        left <- left + buf.[rowOff.[i] + j - rowStart.[i]] * ys.[i]
+                        i <- i - 1
+                let correlationValue = right + left + center * ys.[j]
+                xs.[j], correlationValue / (Math.Sqrt (Math.Abs scale)) * stepSize
+                )
+
+        /// Bit mask (bit j = j-th peak) of the subset of the peaks with the smallest AIC, the subset List.minBy chooses of
+        /// FSharpAux.List.powerSetOf: the first of equal values, and the first subset if it has no AIC (nan). The sums of the fits
+        /// are added in the order of the peaks, as Vector.sum does, along a depth first walk over the subsets that reuses the sum
+        /// of the prefix.
+        let private bestSubsetFast (y: float []) (yHats: float [] []) =
+            let k = yHats.Length
+            let cols = y.Length
+            let buffers = Array.init (k + 1) (fun _ -> Array.zeroCreate<float> cols)
+            let best = ref 0
+            let bestAic = ref nan
+            let firstIsNan = ref false
+            let rec visit (start: int) (sum: float []) (mask: int) (count: int) =
+                for j in start .. k - 1 do
+                    let row = yHats.[j]
+                    let mask' = mask ||| (1 <<< j)
+                    let sum' =
+                        if count = 0 then row
+                        else
+                            let target = buffers.[count]
+                            for c in 0 .. cols - 1 do
+                                target.[c] <- sum.[c] + row.[c]
+                            target
+                    let mutable rss = 0.
+                    for c in 0 .. cols - 1 do
+                        rss <- rss + (y.[c] - sum'.[c]) ** 2.
+                    let a = aic cols ((count + 1) * 3) rss
+                    if mask' = 1 && Double.IsNaN a then firstIsNan.Value <- true
+                    if (a < bestAic.Value) || (a = bestAic.Value && mask' < best.Value) || (best.Value = 0 && not (Double.IsNaN a)) then
+                        best.Value <- mask'
+                        bestAic.Value <- a
+                    visit (j + 1) sum' mask' (count + 1)
+            visit 0 null 0 0
+            if firstIsNan.Value then 1 else best.Value
+
         ///
         let private optimizeWaveletFits (origData:(float*float) []) (groupedPeaks:(WaveletPeak*Gaussian)list) = 
             match groupedPeaks with 
@@ -371,19 +282,10 @@ module FSharpStats' =
                 let xy = origData |> Array.filter (fun (x,y) -> x >= min && x <= max) 
                 let x,y = xy |> Array.unzip        
                 let bestGroup = 
-                    groupedPeaks
-                    |> List.map (fun (wp,g) -> 
-                        let yHat = x |> Array.map g.Function
-                        g,yHat
-                    )
-                    |> FSharpAux.List.powerSetOf
-                    |> List.minBy (fun groupedPeaks ->    
-                        let m = Matrix.ofJaggedArray (groupedPeaks |> List.map snd |> Array.ofList)
-                        let yHat'= m |> Matrix.mapiCols (fun i v -> v |> Vector.sum)
-                        let rss = Seq.map2 (fun x y -> (x-y)**2. ) y yHat' |> Seq.sum
-                        aic m.NumCols (m.NumRows*3) rss
-                    )
-                    |> List.map fst
+                    let withHats = groupedPeaks |> List.map (fun (wp,g) -> g, x |> Array.map g.Function)
+                    // the groups hold at most 15 peaks (List.chunkBySize 15 in identifyPeaksBy), within the 30 peaks that fit the bit mask of bestSubsetFast
+                    let subset = bestSubsetFast y (withHats |> List.map snd |> Array.ofList)
+                    withHats |> List.mapi (fun j (g,_) -> j,g) |> List.filter (fun (j,_) -> (subset >>> j) &&& 1 = 1) |> List.map snd
                 let sumTrace = 
                     let m = Matrix.ofJaggedArray (bestGroup |> List.map (fun g ->  origData |> Array.map (fst >> g.Function)) |> Array.ofList )
                     let yHat' = m |> Matrix.mapiCols (fun i v -> v |> Vector.sum)
@@ -416,10 +318,11 @@ module FSharpStats' =
                 | Option.Some v -> Math.Max(v,minDistancePadding*3.)
                 | Option.None -> minDistancePadding*3.
             let scales = getScales minScale maxScale minDistancePadding
+            let kernelValues = ref (Array.zeroCreate<float> (1 <<< 12))
             let transformations = 
                 scales
                 |> Array.map Wavelet.createRicker
-                |> Array.map (fun x -> ContinuousWavelet.transform paddedData (-) borderpadding x |> Array.unzip)
+                |> Array.map (fun x -> transformFast kernelValues paddedData borderpadding x |> Array.unzip)
             let xVals = fst transformations.[0]
             let corrMatrix = 
                 transformations
@@ -653,7 +556,7 @@ module FSharpStats' =
         ///
         let identify parameters (x:float[]) (y:float[]) =
             let trace = (Array.zip x y)
-            identifyPeaks p trace
+            identifyPeaks parameters trace
             |> List.choose id 
             |> List.map toIdentifiedPeak
             |> Array.ofList

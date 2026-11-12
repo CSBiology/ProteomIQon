@@ -708,6 +708,7 @@ module Dto =
             Threshold                   : Domain.Threshold 
             ParseProteinIDRegexPattern  : string 
             KeepTemporaryFiles          : bool
+            StoreIsotopePatterns        : bool
         }
 
 
@@ -718,45 +719,8 @@ module Dto =
                 Threshold           = dtoPSMStatisticsParams.Threshold
                 FastaHeaderToName   = parseProteinIdUsing dtoPSMStatisticsParams.ParseProteinIDRegexPattern
                 KeepTemporaryFiles  = dtoPSMStatisticsParams.KeepTemporaryFiles
+                StoreIsotopePatterns = dtoPSMStatisticsParams.StoreIsotopePatterns
             }
-
-    type PSMStatisticsResultFragpipe = {
-        // a combination of the spectrum ID in the rawFile, the ascending ms2 id and the chargeState in the search space separated by '_'
-        [<FieldAttribute(0)>]
-        PSMId                        : string
-        [<FieldAttribute(1)>]
-        PepSequenceID                : int
-        [<FieldAttribute(2)>]
-        ModSequenceID                : int
-        [<FieldAttribute(3)>]
-        ScanTime                     : float
-        [<FieldAttribute(4)>]
-        Charge                       : int
-        [<FieldAttribute(5)>]
-        PrecursorMZ                  : float
-        [<FieldAttribute(6)>]
-        TheoMass                     : float
-        [<FieldAttribute(7)>]
-        AbsDeltaMass                 : float
-        [<FieldAttribute(8)>]
-        IonMobility                  : float
-        [<FieldAttribute(9)>]
-        PeptideLength                : int
-        [<FieldAttribute(10)>]
-        MissCleavages                : int
-        [<FieldAttribute(11)>]
-        Expectscore                  : float
-        [<FieldAttribute(12)>]
-        Hyperscore                   : float
-        [<FieldAttribute(13)>]
-        Probability                  : float
-        [<FieldAttribute(14)>]
-        StringSequence               : string
-        [<FieldAttribute(15)>]
-        ProteinNames                 : string
-        [<FieldAttribute(16)>]
-        GlobalMod                    : int
-    }
 
     type PSMStatisticsResult = {
         // a combination of the spectrum ID in the rawFile, the ascending ms2 id and the chargeState in the search space seperated by '_'
@@ -820,10 +784,12 @@ module Dto =
     type QuantificationParams =
         {
             PerformLabeledQuantification : Labeling
-            FragPipe                     : bool
             XicExtraction                : XicExtraction
             //10 6 0.05
             BaseLineCorrection           : BaseLineCorrection option
+            QualityFilterLog2Limit       : float
+            CentrePSMs                   : int
+            RequirePeakAtScanTime        : bool
         }
 
     module QuantificationParams =
@@ -833,6 +799,9 @@ module Dto =
                 PerformLabeledQuantification = dtoQuantificationParams.PerformLabeledQuantification
                 XicExtraction                = dtoQuantificationParams.XicExtraction
                 BaseLineCorrection           = dtoQuantificationParams.BaseLineCorrection
+                QualityFilterLog2Limit       = dtoQuantificationParams.QualityFilterLog2Limit
+                CentrePSMs                   = dtoQuantificationParams.CentrePSMs
+                RequirePeakAtScanTime        = dtoQuantificationParams.RequirePeakAtScanTime
             }
 
     ///
@@ -955,6 +924,9 @@ module Dto =
         AlignmentQValue                             : float
         [<FieldAttribute(45)>]
         IonMobility                                 : float
+        /// The ion mobility the XIC of the row is summed around; NaN for a row without an XIC summed in an ion mobility window.
+        [<FieldAttribute(46)>]
+        IonMobilityCentre                           : float
         }
 
     module QuantificationResult = 
@@ -997,6 +969,37 @@ module Dto =
                 qp.Difference_SearchRT_FittedRT_Heavy
             with
             | _ -> nan
+
+        /// The fitted parameters of the target label (HULQ output), empty if there are none.
+        let private getTargetParams (qp:QuantificationResult) =
+            try
+            if qp.GlobalMod = 0 then
+                qp.Params_Light
+            else
+                qp.Params_Heavy
+            with
+            | _ -> [||]
+
+        /// Scan time of the apex of the fitted peak model of the target label (PeakShape.apex).
+        let getTargetPeakApex (qp:QuantificationResult) =
+            match getTargetParams qp with
+            | null -> nan
+            | peakParams -> PeakShape.apex peakParams
+
+        /// Standard deviation of the fitted peak model of the target label (PeakShape.width).
+        let getTargetPeakWidth (qp:QuantificationResult) =
+            match getTargetParams qp with
+            | null -> nan
+            | peakParams -> PeakShape.width peakParams
+
+        /// Search (or predicted) scan time minus the given apex of the fitted peak model of the target label (the apex of getTargetPeakApex):
+        /// the difference of the row, which refers to the first fitted parameter, corrected by the distance of that parameter to the apex.
+        let getTargetApexDifferenceAt (apex:float) (qp:QuantificationResult) =
+            getTargetScanTimeDifference qp - (apex - getTargetScanTime qp)
+
+        /// Search (or predicted) scan time minus the apex of the fitted peak model of the target label (getTargetApexDifferenceAt).
+        let getTargetApexDifference (qp:QuantificationResult) =
+            getTargetApexDifferenceAt (getTargetPeakApex qp) qp
 
         /// Retrieves the scan time based on the fitted parameter values (HULQ output).
         let tryTargetGetScanTime (qp:QuantificationResult) = 
@@ -1108,8 +1111,8 @@ module Dto =
         Placeholder : bool 
         }
 
-    ///
-    type AlignmentResult = 
+    /// Output of QuantBasedAlignment.
+    type AlignmentResult =
         {
             [<FieldAttribute(0)>]
             StringSequence               : string
@@ -1141,32 +1144,31 @@ module Dto =
             IsotopicPatternMz_SourceFile                    : float []
             [<FieldAttribute(14)>][<TraceConverter>]
             IsotopicPatternIntensity_Observed_SourceFile    : float []
+            /// Ion mobility centre of the source ion: the IonMobilityCentre of its row in the source run.
             [<FieldAttribute(15)>]
             IonMobility                  : float
-        } 
+            /// Local robust error scale of the scan time prediction (minutes).
+            [<FieldAttribute(16)>]
+            PredictedScanTimeSd          : float
+            /// Name of the source run (without extension) the ion was transferred from.
+            [<FieldAttribute(17)>]
+            SourceFileName               : string
+            /// Median absolute cross-validation error of the source to target scan time model (minutes).
+            [<FieldAttribute(18)>]
+            SourceModelError             : float
+            /// nan without ion mobility.
+            [<FieldAttribute(19)>]
+            PredictedIonMobility         : float
+            /// Local robust error scale of the ion mobility prediction, nan without ion mobility.
+            [<FieldAttribute(20)>]
+            PredictedIonMobilitySd       : float
+        }
 
-    /////
-    //type AlignmentModelMetrics<'Metrics> = 
-    //    {
-    //    Metrics                             : 'Metrics
-    //    Sequence                            : string []
-    //    GlobalMod                           : int []
-    //    Charge                              : int []
-    //    PepSequenceID                       : int []
-    //    ModSequenceID                       : int []
-    //    X_Intensities                       : float []
-    //    X_Stabw                             : float []        
-    //    X_Test                              : float []
-    //    X_IsotopicPatternMz                 : float [][]
-    //    X_IsotopicPatternIntensity_Observed : float [][]    
-    //    Y_Test                              : float []
-    //    YHat_Test                           : float []
-    //    YHat_Refined_Test                   : float []
-    //    Y_IsotopicPatternMz                 : float [][]
-    //    Y_IsotopicPatternIntensity_Observed : float [][]       
-    //    DtwDistanceBefore                   : float []
-    //    DtwDistanceAfter                    : float []
-    //    }
+    /// Status of an ion in the .alignfeatures file of AlignmentBasedQuantification that is not transferred because its labeled partner
+    /// was quantified through the PSM based row of the run. AlignmentBasedQuantStatistics does not count these ions as missing.
+    [<Literal>]
+    let LabeledPartnerQuantifiedStatus = "labeled partner quantified by its PSM based row"
+
 
     ///
     type AlignmentMetricsDTO = 
@@ -1221,11 +1223,14 @@ module Dto =
 
     type AlignmentBasedQuantificationParams =
         {
-            PerformLabeledQuantification : bool
-            PerformLocalWarp             : bool
+            PerformLabeledQuantification : Labeling
             XicExtraction                : XicExtraction
-            //10 6 0.05
             BaseLineCorrection           : BaseLineCorrection option
+            MinScanTimeWindow            : float
+            ScanTimeWindowSdFactor       : float
+            DecoyFraction                : float
+            Seed                         : int
+            RequirePeakAtScanTime        : bool
         }
 
     module AlignmentBasedQuantificationParams =
@@ -1233,9 +1238,13 @@ module Dto =
         let toDomain (dtoQuantificationParams: AlignmentBasedQuantificationParams ): Domain.AlignmentBasedQuantificationParams =
             {
                 PerformLabeledQuantification = dtoQuantificationParams.PerformLabeledQuantification
-                PerformLocalWarp             = dtoQuantificationParams.PerformLocalWarp
                 XicExtraction                = dtoQuantificationParams.XicExtraction
                 BaseLineCorrection           = dtoQuantificationParams.BaseLineCorrection
+                MinScanTimeWindow            = dtoQuantificationParams.MinScanTimeWindow
+                ScanTimeWindowSdFactor       = dtoQuantificationParams.ScanTimeWindowSdFactor
+                DecoyFraction                = dtoQuantificationParams.DecoyFraction
+                Seed                         = dtoQuantificationParams.Seed
+                RequirePeakAtScanTime        = dtoQuantificationParams.RequirePeakAtScanTime
             }
 
     ///
@@ -1477,24 +1486,64 @@ module Dto =
                 AggregateToProteinGroupsParams          = dtoTableSortParams.AggregateToProteinGroupsParams     |> Common.LabelFreeQuantification.AggregationParams.toDomain 
             }
 
+    /// Tree parameters that are null take the default of the trainer.
     type AlignmentBasedQuantStatisticsParams =
         {
-            PositiveQuantMzCutoff: float
-            NegativeQuantMzCutoff: float
-            PositiveQuantCutoff: float
-            NegativeQuantCutoff: float
+            PositiveRtSdFactor          : float
+            NegativeRtSdFactor          : float
+            MaxAbsLog2QuantRatio        : float
+            UseIntensityRatioFeatures   : bool
+            UseIonMobility              : bool
+            NumberOfFolds               : int
+            /// FastTree or LightGbm.
+            Trainer                     : string
+            NumberOfLeaves              : System.Nullable<int>
+            NumberOfTrees               : System.Nullable<int>
+            MinimumExampleCountPerLeaf  : System.Nullable<int>
+            LearningRate                : System.Nullable<float>
+            /// Off, Estimated or Conservative.
+            AbsentAnalyteFdr            : string
+            Seed                        : int
         }
-        
+
     module AlignmentBasedQuantStatisticsParams =
-        
-        let inline toDomain (dtoAlignmentBasedQuantStatisticsParams) : Domain.AlignmentBasedQuantStatisticsParams =
+
+        /// Tree parameters (leaves, trees, minimum examples per leaf, learning rate) of a trainer.
+        let treeDefaults (trainer: Domain.AlignmentScoreTrainer) =
+            match trainer with
+            | Domain.AlignmentScoreTrainer.LightGbm -> 31, 100, 20, 0.1
+            | Domain.AlignmentScoreTrainer.FastTree -> 20, 100, 10, 0.2
+
+        let toDomain (dtoParams: AlignmentBasedQuantStatisticsParams) : Domain.AlignmentBasedQuantStatisticsParams =
+            let trainer =
+                match dtoParams.Trainer with
+                | "FastTree" -> Domain.AlignmentScoreTrainer.FastTree
+                | "LightGbm" -> Domain.AlignmentScoreTrainer.LightGbm
+                | other -> failwithf "Trainer %s is unknown, use FastTree or LightGbm." other
+            let absentAnalyteFdr =
+                match dtoParams.AbsentAnalyteFdr with
+                | "Off" -> Domain.AbsentAnalyteFdr.Off
+                | "Estimated" -> Domain.AbsentAnalyteFdr.Estimated
+                | "Conservative" -> Domain.AbsentAnalyteFdr.Conservative
+                | other -> failwithf "AbsentAnalyteFdr %s is unknown, use Off, Estimated or Conservative." other
+            let leaves, trees, minLeaf, learningRate = treeDefaults trainer
+            let orDefault (value: System.Nullable<'T>) (defaultValue: 'T) = if value.HasValue then value.Value else defaultValue
             {
-                PositiveQuantMzCutoff = dtoAlignmentBasedQuantStatisticsParams.PositiveQuantMzCutoff
-                NegativeQuantMzCutoff = dtoAlignmentBasedQuantStatisticsParams.NegativeQuantMzCutoff
-                PositiveQuantCutoff = dtoAlignmentBasedQuantStatisticsParams.PositiveQuantCutoff
-                NegativeQuantCutoff = dtoAlignmentBasedQuantStatisticsParams.NegativeQuantCutoff
+                PositiveRtSdFactor          = dtoParams.PositiveRtSdFactor
+                NegativeRtSdFactor          = dtoParams.NegativeRtSdFactor
+                MaxAbsLog2QuantRatio        = dtoParams.MaxAbsLog2QuantRatio
+                UseIntensityRatioFeatures   = dtoParams.UseIntensityRatioFeatures
+                UseIonMobility              = dtoParams.UseIonMobility
+                NumberOfFolds               = dtoParams.NumberOfFolds
+                Trainer                     = trainer
+                NumberOfLeaves              = orDefault dtoParams.NumberOfLeaves leaves
+                NumberOfTrees               = orDefault dtoParams.NumberOfTrees trees
+                MinimumExampleCountPerLeaf  = orDefault dtoParams.MinimumExampleCountPerLeaf minLeaf
+                LearningRate                = orDefault dtoParams.LearningRate learningRate
+                AbsentAnalyteFdr            = absentAnalyteFdr
+                Seed                        = dtoParams.Seed
             }
-            
+
     type SpectralLibraryParams =
         {
             MatchingTolerancePPM: float

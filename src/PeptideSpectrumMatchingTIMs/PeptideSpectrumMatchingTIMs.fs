@@ -16,6 +16,7 @@ open MzIO.Processing
 open FSharpAux.IO
 open ProteomIQon.Domain
 open ProteomIQon.Core
+open ProteomIQon.SpectrumIndex
 open PeptideIndex
 open SpectrumSearch
 
@@ -152,65 +153,16 @@ module PeptideSpectrumMatchingTIMs =
             |> Array.mapi (fun i name -> sprintf "%s %.1f s" name (seconds ticks.[i]))
             |> String.concat ", "
 
-    /// The few values the search needs from a spectrum description. Only these are kept, one
-    /// description at a time is read, and Position is the place of the spectrum in the file, which
-    /// orders spectra that share a scan time.
-    type Ms2Header =
-        {
-            Id          : string
-            Position    : int
-            ScanTime    : float
-            PrecursorMz : float
-            Charge      : int
-            IonMobility : float
-        }
-
-    /// The MS2 headers of a run in scan time order, equal scan times in file order, which the
-    /// reader delivers by row id. The descriptions are deserialized one at a time, so the metadata
-    /// of the run never exists as a whole. A description that cannot be read is logged and skipped.
-    let private readMs2HeadersOf (reader: IMzIODataReader) (runId: string) (log: string -> unit) =
+    /// The MS2 headers of the run in scan time order, equal scan times in file order. ScanNr is the position in that
+    /// order. Only the headers are read, the peaks are not. A description that cannot be read is logged and skipped.
+    let readMs2Headers (reader: IMzIODataReader) (runId: string) (log: string -> unit) =
         let started = Diagnostics.Stopwatch.GetTimestamp()
-        let descriptions =
+        let headers =
             match reader with
-            | :? MzSQL as sql ->
-                seq {
-                    use cmd = new System.Data.SQLite.SQLiteCommand("SELECT Description FROM Spectrum WHERE RunID = @runID ORDER BY rowid", sql.Connection)
-                    cmd.Parameters.AddWithValue("@runID", runId) |> ignore
-                    use rows = cmd.ExecuteReader()
-                    while rows.Read() do yield SpectrumDescription.tryParse (rows.GetString 0)
-                }
+            | :? MzSQL as sql -> SpectrumIndex.readMs2Headers sql runId log
             | _ -> failwith "PeptideSpectrumMatchingTIMs reads mzlite files, which MzIO serves one spectrum at a time."
-        let headers = ResizeArray<Ms2Header>()
-        let mutable position = 0
-        for h in descriptions do
-            if not (isNull h.Error) then
-                log (sprintf "spectrum at position %i cannot be read: %s" position h.Error)
-            elif h.MsLevel = Some 2 &&
-                 (String.IsNullOrWhiteSpace h.ID ||
-                  not (h.ScanTime |> Option.exists (fun x -> Double.IsFinite x && x >= 0.)) ||
-                  not (h.PrecursorMz |> Option.exists (fun x -> Double.IsFinite x && x > protonMass)) ||
-                  (h.ChargeState |> Option.exists (fun x -> x < 0))) then
-                log (sprintf "spectrum at position %i has missing or invalid search metadata; skipped." position)
-            elif h.MsLevel = Some 2 then
-                headers.Add
-                    {
-                        Id = h.ID
-                        Position = position
-                        ScanTime = defaultArg h.ScanTime -1.
-                        PrecursorMz = defaultArg h.PrecursorMz -1.
-                        Charge = defaultArg h.ChargeState 0
-                        IonMobility = defaultArg h.IonMobility nan
-                    }
-            position <- position + 1
-        let ordered = headers.ToArray()
-        Array.sortInPlaceWith (fun a b -> compare (a.ScanTime, a.Position) (b.ScanTime, b.Position)) ordered
         Profile.add 0 started
-        ordered
-
-    /// MS2 spectra of the run in scan time order. ScanNr is the position in that order. The peaks
-    /// of a spectrum are read when the sequence reaches it and are dropped again afterwards. A
-    /// spectrum whose peaks cannot be read is logged and skipped.
-    let readMs2Headers (reader: IMzIODataReader) (runId: string) (log: string -> unit) = readMs2HeadersOf reader runId log
+        headers
 
     let validateMobilityMergePpm ppm =
         if not (Double.IsFinite ppm) || ppm < 0. then

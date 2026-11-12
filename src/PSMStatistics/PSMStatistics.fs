@@ -71,6 +71,12 @@ module PSMStatistics =
         /// Negative log10 of the expectation value of PeptideSpectrumMatchingTIMs, 0 when the input has none.
         [<ColumnName("LogExpectscore")>]
         LogExpectscore               : float32
+        /// Scan time minus the predicted scan time of the peptide, in robust standard deviations, 0 without RetentionTimeFeature.
+        [<ColumnName("RtDeviation")>]
+        RtDeviation                  : float32
+        /// Absolute value of RtDeviation.
+        [<ColumnName("AbsRtDeviation")>]
+        AbsRtDeviation               : float32
         [<ColumnName("Peptide")>]
         Peptide                      : string
         [<ColumnName("Protein")>]
@@ -128,18 +134,232 @@ module PSMStatistics =
         let CTerminal = if missClvEnd = protSequence.Length-1 then "-" else  protSequence.[missClvEnd+1].ToString()
         Nterminal,CTerminal
 
+    /// The residues of a sequence, each with the modification tokens written before it, such as "[ox]M". The terminator "*" and the gap "-" are dropped.
+    let sequenceTokens (sequence: string) =
+        Text.RegularExpressions.Regex.Matches(sequence, @"(\[[^\]]*\])*[^\[\]]")
+        |> Seq.map (fun m -> m.Value)
+        |> List.ofSeq
+        |> List.filter (fun token -> token <> "*" && token <> "-")
+
     /// The decoy of a peptide sequence as the searches build it with
     /// Fragmentation.Series.pseudoReverse: the C-terminal residue stays in place and the rest is
     /// reversed, or the whole sequence if that gives the sequence itself. The terminator "*" and the
     /// gap "-" are dropped first, as the searches drop them. A residue keeps the
     /// modification tokens written before it, such as "[ox]M".
     let decoySequence (sequence: string) =
-        Text.RegularExpressions.Regex.Matches(sequence, @"(\[[^\]]*\])*[^\[\]]")
-        |> Seq.map (fun m -> m.Value)
-        |> List.ofSeq
-        |> List.filter (fun token -> token <> "*" && token <> "-")
+        sequenceTokens sequence
         |> Fragmentation.Series.pseudoReverse
         |> String.concat ""
+
+    /// The score that starts the training: the negative log10 of the expectation value if the input has it, otherwise the SEQUEST-like score.
+    let seedScoreOf useTimsScores (logExpectscore: float32) (sequestScore: float32) =
+        if useTimsScores then logExpectscore else sequestScore
+
+    /// Negative log10 of the expectation value of PeptideSpectrumMatchingTIMs, 0 when the input has none.
+    let logExpectscoreOf (psm: Dto.PeptideSpectrumMatchingResult) =
+        if Double.IsFinite psm.Expectscore && psm.Expectscore > 0. then float32 (-log10 psm.Expectscore) else 0.f
+
+    /// Predicts the scan time of a peptide from its sequence. psmStats adds the deviation of the observed from the predicted time as model feature.
+    module RetentionTime =
+
+        let nFolds = 5
+        /// Fewer aggregated peptides than this, or a lower out-of-fold R2, and the feature is not used.
+        let minPeptides = 500
+        let minR2 = 0.3
+
+        let private residueIndex = "ACDEFGHIKLMNPQRSTVWY" |> Seq.mapi (fun i c -> c, i) |> dict
+        let private nPairs = 210
+
+        /// Index of the unordered pair of two residue indices.
+        let private pairIndex a b =
+            let lo, hi = min a b, max a b
+            20 * lo - lo * (lo - 1) / 2 + hi - lo
+
+        let private residueOf (token: string) = token.[token.Length - 1]
+
+        let private modificationsOf (token: string) =
+            if token.Length = 1 then [||]
+            else Text.RegularExpressions.Regex.Matches(token, @"\[[^\]]*\]") |> Seq.map (fun m -> m.Value) |> Array.ofSeq
+
+        /// Names the peptide group of a sequence: the smaller of the sequence without modifications and its pseudo-reversal.
+        /// A target, its decoy and all their modified forms share the group.
+        let canonicalSequence (sequence: string) =
+            let residues = sequenceTokens sequence |> List.map residueOf
+            let toString (residues: char list) = residues |> Array.ofList |> System.String
+            let own = toString residues
+            let reversed = toString (Fragmentation.Series.pseudoReverse residues)
+            if String.CompareOrdinal(own, reversed) <= 0 then own else reversed
+
+        /// The modifications of the sequences, numbered in order.
+        let modificationIndex (sequences: seq<string>) =
+            sequences
+            |> Seq.collect (fun sequence -> sequenceTokens sequence |> Seq.collect modificationsOf)
+            |> Seq.distinct
+            |> Seq.sort
+            |> Seq.mapi (fun i modification -> modification, i)
+            |> dict
+
+        let featureWidth (modIndex: Collections.Generic.IDictionary<string,int>) = 21 + modIndex.Count + 2 * nPairs + 20
+
+        /// Amino acid counts, length, count per modification, the unordered residue pairs at the positions 1 and n-1 and at 2 and n-2,
+        /// and the C-terminal residue. A sequence and its pseudo-reversal give the same vector.
+        let featureVector (modIndex: Collections.Generic.IDictionary<string,int>) (sequence: string) =
+            let tokens = sequenceTokens sequence
+            let features = Array.zeroCreate<float32> (featureWidth modIndex)
+            let residues = tokens |> List.map residueOf |> Array.ofList
+            let n = residues.Length
+            let index residue = match residueIndex.TryGetValue residue with | true, i -> i | _ -> -1
+            for token in tokens do
+                let i = index (residueOf token)
+                if i >= 0 then features.[i] <- features.[i] + 1.f
+                for modification in modificationsOf token do
+                    match modIndex.TryGetValue modification with
+                    | true, j -> features.[21 + j] <- features.[21 + j] + 1.f
+                    | _ -> ()
+            features.[20] <- float32 n
+            let pairs1 = 21 + modIndex.Count
+            let pairs2 = pairs1 + nPairs
+            let cTerminal = pairs2 + nPairs
+            let setPair offset a b =
+                if a >= 0 && b >= 0 then features.[offset + pairIndex a b] <- 1.f
+            if n >= 3 then
+                setPair pairs1 (index residues.[0]) (index residues.[n - 2])
+                setPair pairs2 (index residues.[1]) (index residues.[n - 3])
+            if n >= 1 && index residues.[n - 1] >= 0 then features.[cTerminal + index residues.[n - 1]] <- 1.f
+            features
+
+        [<CLIMutable>]
+        type Example = { Features: float32 []; Label: float32 }
+
+        [<CLIMutable>]
+        type Scored = { Score: float32 }
+        type Predictor =
+            {
+                /// 1.4826 times the median absolute deviation of the out-of-fold residuals of the training rows
+                Sigma          : float
+                R2             : float
+                MedianAbsError : float
+                /// Predicts sequences with the predictor of the fold of their peptide group, which was trained without that fold
+                Predict        : string [] -> float32 []
+            }
+
+        /// Fold of a peptide group: a seeded FNV-1a hash of the canonical sequence, finished with the murmur3 mixer. It is stable between runs,
+        /// and a group needs no table.
+        let foldOfGroup (seed: int) (group: string) =
+            let mutable hash = 2166136261u ^^^ uint32 seed
+            for c in group do
+                hash <- (hash ^^^ uint32 c) * 16777619u
+            hash <- hash ^^^ (hash >>> 16)
+            hash <- hash * 0x85ebca6bu
+            hash <- hash ^^^ (hash >>> 13)
+            hash <- hash * 0xc2b2ae35u
+            hash <- hash ^^^ (hash >>> 16)
+            int (hash % uint32 nFolds)
+
+        let private median (values: float []) = FSharp.Stats.Array.median values
+
+        /// Fits one FastTree regression per fold on the rows (sequence, scan time) of the other folds. The folds are groups of peptides,
+        /// so every sequence is predicted by a predictor that has not seen its group.
+        let fit (seed: int) (rows: (string * float) []) =
+            // an own context keeps the random stream of the classifier untouched
+            let ctx = new MLContext(seed)
+            let modIndex = modificationIndex (rows |> Seq.map fst)
+            let schema =
+                let schema = SchemaDefinition.Create(typeof<Example>)
+                schema.["Features"].ColumnType <- VectorDataViewType(NumberDataViewType.Single, featureWidth modIndex)
+                schema
+            let load (examples: seq<Example>) = ctx.Data.LoadFromEnumerable(examples, schema)
+            let foldOf = canonicalSequence >> foldOfGroup seed
+            let rowFolds = rows |> Array.map (fst >> foldOf)
+            let trainer =
+                ctx.Regression.Trainers.FastTree(
+                    Trainers.FastTree.FastTreeRegressionTrainer.Options(
+                        LabelColumnName = "Label",
+                        FeatureColumnName = "Features",
+                        NumberOfTrees = 200,
+                        NumberOfLeaves = 64,
+                        MinimumExampleCountPerLeaf = 20,
+                        LearningRate = 0.1,
+                        NumberOfThreads = 1
+                    )
+                )
+            let models =
+                Array.init nFolds (fun k ->
+                    rows
+                    |> Seq.indexed
+                    |> Seq.filter (fun (i, _) -> rowFolds.[i] <> k)
+                    |> Seq.map (fun (_, (sequence, time)) -> { Features = featureVector modIndex sequence; Label = float32 time })
+                    |> load
+                    |> trainer.Fit
+                )
+            let predict (sequences: string []) =
+                let folds = sequences |> Array.map foldOf
+                let predictions = Array.zeroCreate<float32> sequences.Length
+                for k in 0 .. nFolds - 1 do
+                    let indices = [| 0 .. sequences.Length - 1 |] |> Array.filter (fun i -> folds.[i] = k)
+                    if indices.Length > 0 then
+                        let scores =
+                            indices
+                            |> Seq.map (fun i -> { Features = featureVector modIndex sequences.[i]; Label = 0.f })
+                            |> load
+                            |> models.[k].Transform
+                            |> fun scored -> ctx.Data.CreateEnumerable<Scored>(scored, reuseRowObject = false)
+                            |> Seq.map (fun x -> x.Score)
+                            |> Array.ofSeq
+                        indices |> Array.iteri (fun j i -> predictions.[i] <- scores.[j])
+                predictions
+            let outOfFold = predict (rows |> Array.map fst)
+            let times = rows |> Array.map snd
+            let residuals = Array.map2 (fun time (prediction: float32) -> time - float prediction) times outOfFold
+            let medianResidual = median residuals
+            let mean = Array.average times
+            {
+                Sigma          = 1.4826 * median (residuals |> Array.map (fun r -> abs (r - medianResidual))) + 1e-9
+                R2             = 1. - (residuals |> Array.sumBy (fun r -> r * r)) / (times |> Array.sumBy (fun t -> (t - mean) * (t - mean)))
+                MedianAbsError = median (residuals |> Array.map abs)
+                Predict        = predict
+            }
+
+        /// The deviation of the scan time of a PSM from the time predicted for its peptide, in robust standard deviations, or None if the
+        /// file has too few confident peptides or the predictor is too inaccurate. The predictor is trained on the targets with q < 0.01
+        /// among the best candidates per scan by the starting score, one row per modified sequence and global modification with the median scan time.
+        /// Each ModSequenceID is predicted once.
+        let tryInitDeviation (logger: NLog.Logger) (seed: int) (seedScore: Dto.PeptideSpectrumMatchingResult -> float32) (psms: Dto.PeptideSpectrumMatchingResult []) =
+            let watch = Diagnostics.Stopwatch.StartNew()
+            let bestPSMPerScan =
+                psms
+                |> Array.groupBy (fun x -> x.ScanNr)
+                |> Array.map (fun (_, scan) -> scan |> Array.maxBy seedScore)
+            let q = BioFSharp.Mz.FDRControl.calculateQValueStorey bestPSMPerScan (fun x -> x.Label <> 1) (fun x -> float (seedScore x)) (fun x -> float (seedScore x))
+            let confident = bestPSMPerScan |> Array.filter (fun x -> x.Label = 1 && q (float (seedScore x)) < 0.01)
+            let rows =
+                confident
+                |> Array.groupBy (fun x -> x.ModSequenceID, x.GlobalMod)
+                |> Array.sortBy fst
+                |> Array.map (fun (_, group) -> group.[0].StringSequence, group |> Array.map (fun x -> x.ScanTime) |> median)
+            let skip reason =
+                logger.Warn (sprintf "Retention time feature not used (%s): %i confident PSMs, %i unique peptides, %.1f s" reason confident.Length rows.Length watch.Elapsed.TotalSeconds)
+                None
+            if rows.Length < minPeptides then
+                skip (sprintf "fewer than %i confident unique peptides" minPeptides)
+            else
+                let predictor = fit seed rows
+                // written as a negated comparison so that a missing R2 skips as well
+                if not (predictor.R2 >= minR2) then
+                    skip (sprintf "out-of-fold R2 %.3f below %.1f, median absolute error %.2f min, sigma %.2f min" predictor.R2 minR2 predictor.MedianAbsError predictor.Sigma)
+                else
+                    let predictions = Collections.Generic.Dictionary<int, float32>()
+                    // The features are the same for a sequence and its pseudo-reversal, so a decoy is predicted from the sequence of its target.
+                    psms
+                    |> Array.distinctBy (fun x -> x.ModSequenceID)
+                    |> Array.chunkBySize 50000
+                    |> Array.iter (fun chunk ->
+                        let predicted = predictor.Predict (chunk |> Array.map (fun x -> x.StringSequence))
+                        Array.iter2 (fun (x: Dto.PeptideSpectrumMatchingResult) p -> predictions.[x.ModSequenceID] <- p) chunk predicted
+                        )
+                    logger.Trace (sprintf "Retention time feature used: %i confident PSMs, %i unique peptides, out-of-fold R2 %.3f, median absolute error %.2f min, sigma %.2f min, %.1f s"
+                                    confident.Length rows.Length predictor.R2 predictor.MedianAbsError predictor.Sigma watch.Elapsed.TotalSeconds)
+                    Some (fun (x: Dto.PeptideSpectrumMatchingResult) -> float32 ((x.ScanTime - float predictions.[x.ModSequenceID]) / predictor.Sigma))
 
     let restorePSMID psmID =
         FSharpAux.String.split '_' psmID  
@@ -148,7 +368,7 @@ module PSMStatistics =
         |> String.concat " "
 
     ///
-    let initToPSMToLearn maxCharge fastaHeaderToName proteinAndClvIdxLookUp (psm:Dto.PeptideSpectrumMatchingResult) =
+    let initToPSMToLearn maxCharge fastaHeaderToName proteinAndClvIdxLookUp (rtDeviation: Dto.PeptideSpectrumMatchingResult -> float32) (psm:Dto.PeptideSpectrumMatchingResult) =
         let lookUp = proteinAndClvIdxLookUp psm.PepSequenceID
         let missCleavages,nTerminal,cTerminal =
             match lookUp with
@@ -171,9 +391,10 @@ module PSMStatistics =
         let flankedPepSequence =
             let sequence = if psm.Label = 1 then psm.StringSequence else decoySequence psm.StringSequence
             nTerminal + sequence + cTerminal
+        let deviation = rtDeviation psm
         {
             PSMId                        = psm.PSMId
-            Label                        = if psm.Label = 1 then true else false 
+            Label                        = if psm.Label = 1 then true else false
             ScanNr                       = psm.ScanNr
             Charge                       = psm.Charge 
             PrecursorMZ                  = float32 psm.PrecursorMZ
@@ -191,7 +412,9 @@ module PSMStatistics =
             XtandemNormDeltaBestToRest   = float32 psm.XtandemNormDeltaBestToRest
             XtandemNormDeltaNext         = float32 psm.XtandemNormDeltaNext
             Hyperscore                   = if Double.IsFinite psm.Hyperscore then float32 psm.Hyperscore else 0.f
-            LogExpectscore               = if Double.IsFinite psm.Expectscore && psm.Expectscore > 0. then float32 (-log10 psm.Expectscore) else 0.f
+            LogExpectscore               = logExpectscoreOf psm
+            RtDeviation                  = deviation
+            AbsRtDeviation               = abs deviation
             Peptide                      = flankedPepSequence
             Protein                      = proteinNames
         }
@@ -208,6 +431,13 @@ module PSMStatistics =
             result
             |> FSharpAux.IO.SeqIO.Seq.CSV "\t" true true
             |> FSharpAux.IO.FileIO.writeToFile false outFilePath
+
+    /// The distinct (sequence, global modification, charge) ions of a file of results.
+    let readIons (qpsmPath: string) =
+        FSharpAux.IO.SchemaReader.Csv.CsvReader<Dto.PSMStatisticsResult>(SchemaMode=FSharpAux.IO.SchemaReader.Csv.Fill).ReadFile(qpsmPath,'\t',false,1)
+        |> Seq.map (fun x -> x.StringSequence, x.GlobalMod, x.Charge)
+        |> Seq.distinct
+        |> Array.ofSeq
 
     ///
     let psmStats diagCharts (processParams:PSMStatisticsParams) (outputDir:string) (cn:SQLiteConnection) (psms:string) =
@@ -248,7 +478,7 @@ module PSMStatistics =
         // With finite values the two become features and the expectation value seeds the training.
         let useTimsScores = psms |> Array.forall (fun x -> Double.IsFinite x.Hyperscore && Double.IsFinite x.Expectscore)
         logger.Trace (sprintf "Hyperscore and expectation value present: %b" useTimsScores)
-        let seedScore (x: PSMToLearn) = if useTimsScores then x.LogExpectscore else x.SequestScore
+        let seedScore (x: PSMToLearn) = seedScoreOf useTimsScores x.LogExpectscore x.SequestScore
         let maxCharge = psms |> Array.map (fun x -> x.Charge) |> Array.max
         let proteinAndClvIdxLookUp = initProteinAndClvIdxLookUp memoryDB pepDBTr
         let toPSMToLearn = initToPSMToLearn maxCharge processParams.FastaHeaderToName proteinAndClvIdxLookUp
@@ -257,6 +487,14 @@ module PSMStatistics =
         match processParams.Threshold with 
         | Threshold.Estimate estParams -> 
             try
+            // The predictor is fitted once per file, before any model is trained.
+            let rtDeviation =
+                if estParams.RetentionTimeFeature then
+                    RetentionTime.tryInitDeviation logger 1024 (fun x -> seedScoreOf useTimsScores (logExpectscoreOf x) (float32 x.SequestScore)) psms
+                else
+                    None
+            let useRtFeature = rtDeviation.IsSome
+            let toPSMToLearn = toPSMToLearn (defaultArg rtDeviation (fun _ -> 0.f))
             logger.Trace "Prepare training pipeline"
             let ctx = new ML.MLContext(1024)
             // prefix: "" or "Fold<k>_" with cross-validation, added to log lines and chart names
@@ -283,6 +521,9 @@ module PSMStatistics =
                         if useTimsScores then
                             "Hyperscore"
                             "LogExpectscore"
+                        if useRtFeature then
+                            "RtDeviation"
+                            "AbsRtDeviation"
                     |]
                 // A leaf output of up to 100 (the default) lets a few leaves push near-empty spectra and decoys to the top.
                 let fastTreeOptions =
@@ -318,10 +559,15 @@ module PSMStatistics =
                 with
                 | ex -> logger.Warn (sprintf "%sMetrics on the test split not available: %s" prefix ex.Message)
                 let predF = ctx.Model.CreatePredictionEngine<PSMToLearn,PSMPrediction>(model)
-                let predict psm = 
-                    psm 
-                    |> predF.Predict
-                predict 
+                let cache = System.Collections.Generic.Dictionary<PSMToLearn,PSMPrediction>(HashIdentity.Reference)
+                let predict (psm: PSMToLearn) =
+                    match cache.TryGetValue psm with
+                    | true, prediction -> prediction
+                    | _ ->
+                        let prediction = predF.Predict psm
+                        cache.[psm] <- prediction
+                        prediction
+                predict
             logger.Trace "Prepare training pipeline:finished"
             logger.Trace "Converting psms to PSMToLearn format."
             let psmsToLearn =
@@ -643,7 +889,7 @@ module PSMStatistics =
         | Threshold.Fixed cutoff -> 
             let pepSequenceIDToMissCleavagesAndProt =
                 psms
-                |> Array.map toPSMToLearn
+                |> Array.map (toPSMToLearn (fun _ -> 0.f))
                 |> Array.filter (fun candidatePSM -> candidatePSM.Label )
                 |> Array.map (fun candidatePSM -> candidatePSM.PSMId,(candidatePSM.Protein,candidatePSM.MissCleavages))
                 |> Map.ofArray
@@ -684,7 +930,7 @@ module PSMStatistics =
                                             XtandemScore                = candidatePSM.XtandemScore
                                             XtandemNormDeltaBestToRest  = candidatePSM.XtandemNormDeltaBestToRest
                                             XtandemNormDeltaNext        = candidatePSM.XtandemNormDeltaNext
-                                            ModelScore                  = nan
+                                            ModelScore                  = candidatePSM.SequestScore
                                             QValue                      = nan
                                             PEPValue                    = nan
                                             StringSequence              = candidatePSM.StringSequence
