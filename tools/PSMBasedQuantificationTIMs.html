@@ -184,8 +184,9 @@
 <a href="https://csbiology.github.io/ProteomIQon/tools/PSMBasedQuantificationTIMs.fsx"><img src="https://csbiology.github.io/ProteomIQon/img/badge-script.svg" alt="Script" /></a>&emsp;
 <a href="https://csbiology.github.io/ProteomIQon/tools/PSMBasedQuantificationTIMs.ipynb"><img src="https://csbiology.github.io/ProteomIQon/img/badge-notebook.svg" alt="Notebook" /></a></p>
 <h1><a name="PSMBasedQuantificationTIMs" class="anchor" href="#PSMBasedQuantificationTIMs">PSMBasedQuantificationTIMs</a></h1>
-<p>PSMBasedQuantificationTIMs is the <a href="https://csbiology.github.io/ProteomIQon/tools/PSMBasedQuantification.html">PSMBasedQuantification</a> variant for timsTOF runs. On these instruments a peptide ion is a peak in two dimensions, retention time and ion mobility, so the tool extracts an intensity grid over that plane around every identification instead of a one dimensional <a href="https://www.biofsharp.com/BioFSharp.Mz/03_01_quantification.html#Building-an-XIC-trace">ion chromatogram</a>.
-By default it locates the peak on the grid with a Gabor filter (a Gaussian envelope multiplied with a cosine wave, tuned in size, width, frequency and angle), then <a href="https://www.biofsharp.com/BioFSharp.Mz/03_01_quantification.html#Fitting-and-integrating-the-main-peak">fits and integrates</a> it. The output has the same layout as the output of PSMBasedQuantification, so the downstream tools do not care which of the two produced it.</p>
+<p>PSMBasedQuantificationTIMs is the <a href="https://csbiology.github.io/ProteomIQon/tools/PSMBasedQuantification.html">PSMBasedQuantification</a> variant for timsTOF runs. On these instruments a peptide ion is a peak in two dimensions, retention time and ion mobility, so the tool extracts the signal around every identification in both dimensions.</p>
+<p>An XIC point is the sum of the intensity of all peaks inside the m/z window (<code>MzWindow_Da</code>) and inside the ion mobility window (<code>IonMobilityWindow</code>), so both widths are part of the quantity. With <code>IonMobilityWindow</code> set to <code>Window.Fixed v</code>, the ion mobility window is ±v around the ion mobility centre of the ion. The centre is the intensity weighted ion mobility of the signal within v of the weighted ion mobility of the identifications, around their weighted scan time (see <code>CentrePSMs</code>). Without such signal it is the weighted ion mobility of the identifications.</p>
+<p>The points form a retention time <a href="https://www.biofsharp.com/BioFSharp.Mz/03_01_quantification.html#Building-an-XIC-trace">ion chromatogram</a>. As PSMBasedQuantification does, the tool detects the peaks on the trace and <a href="https://www.biofsharp.com/BioFSharp.Mz/03_01_quantification.html#Fitting-and-integrating-the-main-peak">fits and integrates</a> the peak that contains the weighted scan time of the identifications. The measured isotope pattern of a row (the <code>KLDiv</code> and <code>IsotopicPattern</code> columns) is read with the same windows, on the spectrum closest to the fitted scan time. The output has the layout of PSMBasedQuantification.</p>
 <h2><a name="Inputs-and-outputs" class="anchor" href="#Inputs-and-outputs">Inputs and outputs</a></h2>
 <table>
 <thead>
@@ -203,8 +204,8 @@ By default it locates the peak on the grid with a Gabor filter (a Gaussian envel
 </tr>
 <tr class="even">
 <td><p><code>-ii</code></p></td>
-<td><p>one or more <code>.qpsm</code> files in the FragPipe column layout, or a directory that is searched for <code>*.qpsm</code></p></td>
-<td><p><a href="https://csbiology.github.io/ProteomIQon/tools/MsFraggerToPSM.html">MsFraggerToPSM</a></p></td>
+<td><p>one or more <code>.qpsm</code> files, or a directory that is searched for <code>*.qpsm</code></p></td>
+<td><p><a href="https://csbiology.github.io/ProteomIQon/tools/PSMStatistics.html">PSMStatistics</a> or <a href="https://csbiology.github.io/ProteomIQon/tools/MsFraggerToPSM.html">MsFraggerToPSM</a></p></td>
 </tr>
 <tr class="odd">
 <td><p><code>-d</code></p></td>
@@ -244,9 +245,9 @@ By default it locates the peak on the grid with a Gabor filter (a Gaussian envel
 </tbody>
 </table>
 
-<p>The tool refuses any instrument file whose name does not end in <code>.mzlite</code>. It always reads the qpsm files as the FragPipe layout written by MsFraggerToPSM (with <code>Hyperscore</code> and <code>IonMobility</code> columns), so the files from <a href="https://csbiology.github.io/ProteomIQon/tools/PSMStatistics.html">PSMStatistics</a> do not fit here.
+<p>The tool refuses any instrument file whose name does not end in <code>.mzlite</code>. It reads the qpsm files in the column layout of PSMStatistics, which MsFraggerToPSM writes too, and stops with the missing columns when a file has another layout. The qpsm carries no ion mobility, so the tool reads the ion mobility of every identification from its MS2 spectrum in the mzlite, the spectrum whose id is the <code>PSMId</code>. The tool warns about identifications whose spectrum is missing or has no ion mobility. These identifications do not locate the trace. An ion without any identification with ion mobility gets no row, and the tool stops when no identification of the file has an ion mobility.
 With one file per flag the pair is used as given. With lists, the n-th mzlite file is paired with the n-th qpsm file unless you pass <code>-mf</code>, which pairs files by their base name and skips mzlite files without a partner.</p>
-<p>For every run the tool writes <code>run.quant</code>, tab separated with a header and the columns described on the <a href="https://csbiology.github.io/ProteomIQon/tools/PSMBasedQuantification.html">PSMBasedQuantification</a> page.
+<p>For every run the tool writes <code>run.quant</code>, tab separated with a header and the columns described on the <a href="https://csbiology.github.io/ProteomIQon/tools/PSMBasedQuantification.html">PSMBasedQuantification</a> page. The <code>IonMobilityCentre</code> column holds the ion mobility centre the XIC of the row is summed around.
 <a href="https://csbiology.github.io/ProteomIQon/tools/QuantBasedAlignment.html">QuantBasedAlignment</a>, <a href="https://csbiology.github.io/ProteomIQon/tools/AlignmentBasedQuantification.html">AlignmentBasedQuantification</a>, <a href="https://csbiology.github.io/ProteomIQon/tools/AlignmentBasedQuantStatistics.html">AlignmentBasedQuantStatistics</a> and <a href="https://csbiology.github.io/ProteomIQon/tools/JoinQuantPepIonsWithProteins.html">JoinQuantPepIonsWithProteins</a> read <code>.quant</code> files.</p>
 <p>With <code>-dc</code> the tool writes charts into <code>run_plots</code>, and <code>-z</code> packs that directory into <code>run_plots.zip</code> and deletes it. Delete an existing <code>run.quant</code> in the output directory before a rerun, the tool appends to it. Logs go to <code>PSMBasedQuantification_log.txt</code> and <code>run_log.txt</code> in the output directory.</p>
 <h2><a name="Parameters" class="anchor" href="#Parameters">Parameters</a></h2>
@@ -266,39 +267,54 @@ With one file per flag the pair is used as given. With lists, the n-th mzlite fi
 <td><p>Label free quantification of the identified ion. The three labeled cases work as in PSMBasedQuantification and quantify the partner ion too.</p></td>
 </tr>
 <tr class="even">
-<td><p><code>FragPipe</code></p></td>
-<td><p><code>true</code></p></td>
-<td><p>Marks that the qpsm input has the FragPipe layout written by MsFraggerToPSM. Keep it at <code>true</code> for this tool.</p></td>
-</tr>
-<tr class="odd">
 <td><p><code>XicExtraction.ScanTimeWindow</code></p></td>
 <td><p><code>2.0</code></p></td>
 <td><p>Half width of the retention time range around the identification that is extracted, in the scan time unit of the run.</p></td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><p><code>XicExtraction.MzWindow_Da</code></p></td>
-<td><p><code>Window.Estimate</code></p></td>
-<td><p>Half width of the m/z window, in Da. <code>Estimate</code> uses four times the MS1 mass error measured on the identifications. <code>Window.Fixed 0.07</code> sets it to 0.07 Da.</p></td>
+<td><p><code>Window.Fixed 0.008</code></p></td>
+<td><p>Half width of the m/z window, in Da. Every peak inside it counts in an XIC point. The m/z correction and <code>Window.Estimate</code> work as in PSMBasedQuantification.</p></td>
+</tr>
+<tr class="even">
+<td><p><code>XicExtraction.XicProcessing</code></p></td>
+<td><p><code>XicProcessing.Wavelet waveletParams</code></p></td>
+<td><p>Peak detection on the retention time trace, summed over the ion mobility window. The wavelet parameters are listed below. <code>SecondDerivative</code> is the other supported case. <code>Gabor3D</code> is in development and does not work currently.</p></td>
 </tr>
 <tr class="odd">
-<td><p><code>XicExtraction.XicProcessing</code></p></td>
-<td><p><code>XicProcessing.Gabor3D gaborParams</code></p></td>
-<td><p>Peak detection on the retention time and mobility grid. The Gabor parameters are listed below. <code>Wavelet</code> and <code>SecondDerivative</code> fall back to the one dimensional processing of PSMBasedQuantification.</p></td>
-</tr>
-<tr class="even">
 <td><p><code>XicExtraction.TopKPSMs</code></p></td>
 <td><p><code>None</code></p></td>
-<td><p><code>Some k</code> keeps only the k identifications with the highest <code>Hyperscore</code> per peptide ion when placing the peak.</p></td>
+<td><p><code>Some k</code> keeps only the k identifications with the highest <code>ModelScore</code> per peptide ion when placing the peak.</p></td>
+</tr>
+<tr class="even">
+<td><p><code>XicExtraction.IonMobilityWindow</code></p></td>
+<td><p><code>Window.Fixed 0.025</code></p></td>
+<td><p>Half width v of the ion mobility window around the ion mobility centre of the ion, in 1/K0. <code>Window.Estimate</code> is not available here and stops the tool with an error that asks for <code>Fixed</code>.</p></td>
 </tr>
 <tr class="odd">
 <td><p><code>BaseLineCorrection</code></p></td>
-<td><p><code>None</code></p></td>
-<td><p>No baseline subtraction. <code>Some { MaxIterations = 10; Lambda = 6; P = 0.05 }</code> enables the asymmetric least squares baseline.</p></td>
+<td><p><code>Some { MaxIterations = 10; Lambda = 6; P = 0.05 }</code></p></td>
+<td><p>Asymmetric least squares baseline subtraction before peak detection. <code>None</code> skips it.</p></td>
+</tr>
+<tr class="even">
+<td><p><code>QualityFilterLog2Limit</code></p></td>
+<td><p><code>2.0</code></p></td>
+<td><p>The quality filter keeps rows with -limit &lt; log2 ((area / median area) / (apex / median apex)) &lt; limit. Rows with a non-finite or non-positive area, apex or ratio are dropped.</p></td>
+</tr>
+<tr class="odd">
+<td><p><code>CentrePSMs</code></p></td>
+<td><p><code>3</code></p></td>
+<td><p>Number of identifications per peptide ion with an ion mobility, ranked by the summed intensity of their matched fragment ions, whose intensity weighted scan time and ion mobility locate the trace. It is applied after <code>TopKPSMs</code>, which ranks by <code>ModelScore</code>. At least 1.</p></td>
+</tr>
+<tr class="even">
+<td><p><code>RequirePeakAtScanTime</code></p></td>
+<td><p><code>true</code></p></td>
+<td><p><code>true</code> quantifies only a peak that contains the weighted scan time of the identifications, so an ion without such a peak gets no row. <code>false</code> takes the peak with the closest apex when no peak contains it.</p></td>
 </tr>
 </tbody>
 </table>
 
-<p>The Gabor parameters. The tool rejects a kernel size at or below zero and any width, frequency or angle that is not finite (widths must also be positive).</p>
+<p>The wavelet parameters:</p>
 <table>
 <thead>
 <tr class="header">
@@ -309,71 +325,99 @@ With one file per flag the pair is used as given. With lists, the n-th mzlite fi
 </thead>
 <tbody>
 <tr class="odd">
-<td><p><code>sizeX</code></p></td>
-<td><p><code>41</code></p></td>
-<td><p>Kernel size along retention time, in grid bins. Half of it is the kernel radius, which widens the search window around the expected position.</p></td>
+<td><p><code>Borderpadding</code></p></td>
+<td><p><code>None</code></p></td>
+<td><p>Number of points padded at both ends of the trace. <code>None</code> derives it from the data.</p></td>
 </tr>
 <tr class="even">
-<td><p><code>sizeY</code></p></td>
-<td><p><code>41</code></p></td>
-<td><p>Kernel size along ion mobility, in grid bins.</p></td>
+<td><p><code>BorderPadMethod</code></p></td>
+<td><p><code>Padding.BorderPaddingMethod.Random</code></p></td>
+<td><p>How the border points are filled (<code>Random</code> or <code>Zero</code>).</p></td>
 </tr>
 <tr class="odd">
-<td><p><code>sigmaX</code></p></td>
-<td><p><code>8.0</code></p></td>
-<td><p>Width of the Gaussian envelope along the first kernel axis, in bins.</p></td>
+<td><p><code>InternalPaddingMethod</code></p></td>
+<td><p><code>Padding.InternalPaddingMethod.LinearInterpolation</code></p></td>
+<td><p>How small gaps inside the trace are filled.</p></td>
 </tr>
 <tr class="even">
-<td><p><code>sigmaY</code></p></td>
-<td><p><code>8.0</code></p></td>
-<td><p>Width of the Gaussian envelope along the second kernel axis, in bins.</p></td>
+<td><p><code>HugeGapPaddingMethod</code></p></td>
+<td><p><code>Padding.HugeGapPaddingMethod.Zero</code></p></td>
+<td><p>How gaps longer than <code>HugeGapPaddingDistance</code> are filled.</p></td>
 </tr>
 <tr class="odd">
-<td><p><code>frequency</code></p></td>
-<td><p><code>2.0</code></p></td>
-<td><p>Frequency of the cosine wave inside the kernel.</p></td>
+<td><p><code>HugeGapPaddingDistance</code></p></td>
+<td><p><code>100.</code></p></td>
+<td><p>Gap length from which a gap counts as huge.</p></td>
 </tr>
 <tr class="even">
-<td><p><code>theta</code></p></td>
-<td><p><code>0.06</code></p></td>
-<td><p>Rotation of the kernel in the plane, in radians.</p></td>
+<td><p><code>MinPeakDistance</code></p></td>
+<td><p><code>Some 0.1</code></p></td>
+<td><p>Peaks closer than this (in minutes) are merged. The distance is at least 1.5 times the median point spacing of the trace, which is also what <code>None</code> uses.</p></td>
+</tr>
+<tr class="odd">
+<td><p><code>MinPeakLength</code></p></td>
+<td><p><code>Some 0.1</code></p></td>
+<td><p>Smallest peak width the wavelet scales start at.</p></td>
+</tr>
+<tr class="even">
+<td><p><code>MaxPeakLength</code></p></td>
+<td><p><code>1.5</code></p></td>
+<td><p>Largest peak width the wavelet scales go up to.</p></td>
+</tr>
+<tr class="odd">
+<td><p><code>NoiseQuantile</code></p></td>
+<td><p><code>0.01</code></p></td>
+<td><p>Quantile of the wavelet correlation used as noise level.</p></td>
+</tr>
+<tr class="even">
+<td><p><code>MinSNR</code></p></td>
+<td><p><code>0.01</code></p></td>
+<td><p>A peak needs a correlation above <code>MinSNR</code> times the noise level.</p></td>
 </tr>
 </tbody>
 </table>
 
-<p>The default file is <a href="https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/QuantificationTIMsParams.json">QuantificationTIMsParams.json</a>.</p>
+<p>The default file is <a href="https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/QuantificationTIMsParams.json">QuantificationTIMsParams.json</a>. Use the same <code>Fixed</code> values here and in <a href="https://csbiology.github.io/ProteomIQon/tools/AlignmentBasedQuantification.html">AlignmentBasedQuantification</a> for one data set. Suitable values depend on the instrument and the method.</p>
 <h2><a name="Writing-a-parameter-file" class="anchor" href="#Writing-a-parameter-file">Writing a parameter file</a></h2>
 <pre class="fssnip highlighted"><code lang="fsharp"><span class="k">open</span> <span onmouseout="hideTip(event, 'fs1', 1)" onmouseover="showTip(event, 'fs1', 1)" class="id">ProteomIQon</span>
 <span class="k">open</span> <span onmouseout="hideTip(event, 'fs1', 2)" onmouseover="showTip(event, 'fs1', 2)" class="id">ProteomIQon</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs2', 3)" onmouseover="showTip(event, 'fs2', 3)" class="m">Domain</span>
+<span class="k">open</span> <span onmouseout="hideTip(event, 'fs3', 4)" onmouseover="showTip(event, 'fs3', 4)" class="id">FSharp</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs4', 5)" onmouseover="showTip(event, 'fs4', 5)" class="id">Stats</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs5', 6)" onmouseover="showTip(event, 'fs5', 6)" class="id">Signal</span>
 
-<span class="k">let</span> <span onmouseout="hideTip(event, 'fs3', 4)" onmouseover="showTip(event, 'fs3', 4)" class="id">gaborParams</span> <span class="pn">:</span> <span onmouseout="hideTip(event, 'fs4', 5)" onmouseover="showTip(event, 'fs4', 5)" class="rt">Gabor3DParams</span> <span class="o">=</span>
+<span class="k">let</span> <span onmouseout="hideTip(event, 'fs6', 7)" onmouseover="showTip(event, 'fs6', 7)" class="id">waveletParams</span> <span class="pn">:</span> <span onmouseout="hideTip(event, 'fs7', 8)" onmouseover="showTip(event, 'fs7', 8)" class="rt">WaveletParameters</span> <span class="o">=</span>
     <span class="pn">{</span>
-        <span class="prop">sizeX</span>     <span class="o">=</span> <span class="n">41</span>
-        <span class="prop">sizeY</span>     <span class="o">=</span> <span class="n">41</span>
-        <span class="prop">sigmaX</span>    <span class="o">=</span> <span class="n">8.0</span>
-        <span class="prop">sigmaY</span>    <span class="o">=</span> <span class="n">8.0</span>
-        <span class="prop">frequency</span> <span class="o">=</span> <span class="n">2.0</span>
-        <span class="prop">theta</span>     <span class="o">=</span> <span class="n">0.06</span>
+        <span class="prop">Borderpadding</span>          <span class="o">=</span> <span onmouseout="hideTip(event, 'fs8', 9)" onmouseover="showTip(event, 'fs8', 9)" class="uc">None</span>
+        <span class="prop">BorderPadMethod</span>        <span class="o">=</span> <span onmouseout="hideTip(event, 'fs9', 10)" onmouseover="showTip(event, 'fs9', 10)" class="m">Padding</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs10', 11)" onmouseover="showTip(event, 'fs10', 11)" class="rt">BorderPaddingMethod</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs11', 12)" onmouseover="showTip(event, 'fs11', 12)" class="id">Random</span>
+        <span class="prop">InternalPaddingMethod</span>  <span class="o">=</span> <span onmouseout="hideTip(event, 'fs9', 13)" onmouseover="showTip(event, 'fs9', 13)" class="m">Padding</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs12', 14)" onmouseover="showTip(event, 'fs12', 14)" class="rt">InternalPaddingMethod</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs13', 15)" onmouseover="showTip(event, 'fs13', 15)" class="id">LinearInterpolation</span>
+        <span class="prop">HugeGapPaddingMethod</span>   <span class="o">=</span> <span onmouseout="hideTip(event, 'fs9', 16)" onmouseover="showTip(event, 'fs9', 16)" class="m">Padding</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs14', 17)" onmouseover="showTip(event, 'fs14', 17)" class="rt">HugeGapPaddingMethod</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs15', 18)" onmouseover="showTip(event, 'fs15', 18)" class="id">Zero</span>
+        <span class="prop">HugeGapPaddingDistance</span> <span class="o">=</span> <span class="n">100.</span>
+        <span class="prop">MinPeakDistance</span>        <span class="o">=</span> <span onmouseout="hideTip(event, 'fs16', 19)" onmouseover="showTip(event, 'fs16', 19)" class="uc">Some</span> <span class="n">0.1</span>
+        <span class="prop">MinPeakLength</span>          <span class="o">=</span> <span onmouseout="hideTip(event, 'fs16', 20)" onmouseover="showTip(event, 'fs16', 20)" class="uc">Some</span> <span class="n">0.1</span>
+        <span class="prop">MaxPeakLength</span>          <span class="o">=</span> <span class="n">1.5</span>
+        <span class="prop">NoiseQuantile</span>          <span class="o">=</span> <span class="n">0.01</span>
+        <span class="prop">MinSNR</span>                 <span class="o">=</span> <span class="n">0.01</span>
     <span class="pn">}</span>
 
-<span class="k">let</span> <span onmouseout="hideTip(event, 'fs5', 6)" onmouseover="showTip(event, 'fs5', 6)" class="id">quantificationTIMsParams</span> <span class="pn">:</span> <span onmouseout="hideTip(event, 'fs6', 7)" onmouseover="showTip(event, 'fs6', 7)" class="m">Dto</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs7', 8)" onmouseover="showTip(event, 'fs7', 8)" class="id">QuantificationParams</span> <span class="o">=</span>
+<span class="k">let</span> <span onmouseout="hideTip(event, 'fs17', 21)" onmouseover="showTip(event, 'fs17', 21)" class="id">quantificationTIMsParams</span> <span class="pn">:</span> <span onmouseout="hideTip(event, 'fs18', 22)" onmouseover="showTip(event, 'fs18', 22)" class="m">Dto</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs19', 23)" onmouseover="showTip(event, 'fs19', 23)" class="id">QuantificationParams</span> <span class="o">=</span>
     <span class="pn">{</span>
-        <span class="prop">PerformLabeledQuantification</span> <span class="o">=</span> <span onmouseout="hideTip(event, 'fs8', 9)" onmouseover="showTip(event, 'fs8', 9)" class="rt">Labeling</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs9', 10)" onmouseover="showTip(event, 'fs9', 10)" class="id">Unlabeled</span>
-        <span class="prop">FragPipe</span>                     <span class="o">=</span> <span class="k">true</span>
-        <span onmouseout="hideTip(event, 'fs10', 11)" onmouseover="showTip(event, 'fs10', 11)" class="prop">XicExtraction</span> <span class="o">=</span>
+        <span class="prop">PerformLabeledQuantification</span> <span class="o">=</span> <span onmouseout="hideTip(event, 'fs20', 24)" onmouseover="showTip(event, 'fs20', 24)" class="rt">Labeling</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs21', 25)" onmouseover="showTip(event, 'fs21', 25)" class="id">Unlabeled</span>
+        <span onmouseout="hideTip(event, 'fs22', 26)" onmouseover="showTip(event, 'fs22', 26)" class="prop">XicExtraction</span> <span class="o">=</span>
             <span class="pn">{</span>
                 <span class="prop">ScanTimeWindow</span> <span class="o">=</span> <span class="n">2.</span>
-                <span class="prop">MzWindow_Da</span>    <span class="o">=</span> <span onmouseout="hideTip(event, 'fs11', 12)" onmouseover="showTip(event, 'fs11', 12)" class="rt">Window</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs12', 13)" onmouseover="showTip(event, 'fs12', 13)" class="id">Estimate</span>
-                <span onmouseout="hideTip(event, 'fs13', 14)" onmouseover="showTip(event, 'fs13', 14)" class="prop">XicProcessing</span>  <span class="o">=</span> <span onmouseout="hideTip(event, 'fs13', 15)" onmouseover="showTip(event, 'fs13', 15)" class="rt">XicProcessing</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs14', 16)" onmouseover="showTip(event, 'fs14', 16)" class="id">Gabor3D</span> <span onmouseout="hideTip(event, 'fs3', 17)" onmouseover="showTip(event, 'fs3', 17)" class="id">gaborParams</span>
-                <span class="prop">TopKPSMs</span>       <span class="o">=</span> <span onmouseout="hideTip(event, 'fs15', 18)" onmouseover="showTip(event, 'fs15', 18)" class="uc">None</span>
+                <span class="prop">MzWindow_Da</span>    <span class="o">=</span> <span onmouseout="hideTip(event, 'fs23', 27)" onmouseover="showTip(event, 'fs23', 27)" class="rt">Window</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs24', 28)" onmouseover="showTip(event, 'fs24', 28)" class="id">Fixed</span> <span class="n">0.008</span>
+                <span onmouseout="hideTip(event, 'fs25', 29)" onmouseover="showTip(event, 'fs25', 29)" class="prop">XicProcessing</span>  <span class="o">=</span> <span onmouseout="hideTip(event, 'fs25', 30)" onmouseover="showTip(event, 'fs25', 30)" class="rt">XicProcessing</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs26', 31)" onmouseover="showTip(event, 'fs26', 31)" class="id">Wavelet</span> <span onmouseout="hideTip(event, 'fs6', 32)" onmouseover="showTip(event, 'fs6', 32)" class="id">waveletParams</span>
+                <span class="prop">TopKPSMs</span>       <span class="o">=</span> <span onmouseout="hideTip(event, 'fs8', 33)" onmouseover="showTip(event, 'fs8', 33)" class="uc">None</span>
+                <span class="prop">IonMobilityWindow</span> <span class="o">=</span> <span onmouseout="hideTip(event, 'fs23', 34)" onmouseover="showTip(event, 'fs23', 34)" class="rt">Window</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs24', 35)" onmouseover="showTip(event, 'fs24', 35)" class="id">Fixed</span> <span class="n">0.025</span>
             <span class="pn">}</span>
-        <span onmouseout="hideTip(event, 'fs16', 19)" onmouseover="showTip(event, 'fs16', 19)" class="prop">BaseLineCorrection</span> <span class="o">=</span> <span onmouseout="hideTip(event, 'fs15', 20)" onmouseover="showTip(event, 'fs15', 20)" class="uc">None</span>
+        <span onmouseout="hideTip(event, 'fs27', 36)" onmouseover="showTip(event, 'fs27', 36)" class="prop">BaseLineCorrection</span> <span class="o">=</span> <span onmouseout="hideTip(event, 'fs16', 37)" onmouseover="showTip(event, 'fs16', 37)" class="uc">Some</span> <span class="pn">{</span> <span class="prop">MaxIterations</span> <span class="o">=</span> <span class="n">10</span><span class="pn">;</span> <span class="prop">Lambda</span> <span class="o">=</span> <span class="n">6</span><span class="pn">;</span> <span onmouseout="hideTip(event, 'fs28', 38)" onmouseover="showTip(event, 'fs28', 38)" class="prop">P</span> <span class="o">=</span> <span class="n">0.05</span> <span class="pn">}</span>
+        <span class="prop">QualityFilterLog2Limit</span> <span class="o">=</span> <span class="n">2.</span>
+        <span class="prop">CentrePSMs</span> <span class="o">=</span> <span class="n">3</span>
+        <span class="prop">RequirePeakAtScanTime</span> <span class="o">=</span> <span class="k">true</span>
     <span class="pn">}</span>
 
 <span class="c">// Replace the temp folder with your project folder.</span>
-<span class="k">let</span> <span onmouseout="hideTip(event, 'fs17', 21)" onmouseover="showTip(event, 'fs17', 21)" class="id">outputPath</span> <span class="o">=</span> <span onmouseout="hideTip(event, 'fs18', 22)" onmouseover="showTip(event, 'fs18', 22)" class="id">System</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs19', 23)" onmouseover="showTip(event, 'fs19', 23)" class="id">IO</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs20', 24)" onmouseover="showTip(event, 'fs20', 24)" class="rt">Path</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs21', 25)" onmouseover="showTip(event, 'fs21', 25)" class="id">Combine</span><span class="pn">(</span><span onmouseout="hideTip(event, 'fs18', 26)" onmouseover="showTip(event, 'fs18', 26)" class="id">System</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs19', 27)" onmouseover="showTip(event, 'fs19', 27)" class="id">IO</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs20', 28)" onmouseover="showTip(event, 'fs20', 28)" class="rt">Path</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs22', 29)" onmouseover="showTip(event, 'fs22', 29)" class="id">GetTempPath</span><span class="pn">(</span><span class="pn">)</span><span class="pn">,</span> <span class="s">&quot;QuantificationTIMsParams.json&quot;</span><span class="pn">)</span>
+<span class="k">let</span> <span onmouseout="hideTip(event, 'fs29', 39)" onmouseover="showTip(event, 'fs29', 39)" class="id">outputPath</span> <span class="o">=</span> <span onmouseout="hideTip(event, 'fs30', 40)" onmouseover="showTip(event, 'fs30', 40)" class="id">System</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs31', 41)" onmouseover="showTip(event, 'fs31', 41)" class="id">IO</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs32', 42)" onmouseover="showTip(event, 'fs32', 42)" class="rt">Path</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs33', 43)" onmouseover="showTip(event, 'fs33', 43)" class="id">Combine</span><span class="pn">(</span><span onmouseout="hideTip(event, 'fs30', 44)" onmouseover="showTip(event, 'fs30', 44)" class="id">System</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs31', 45)" onmouseover="showTip(event, 'fs31', 45)" class="id">IO</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs32', 46)" onmouseover="showTip(event, 'fs32', 46)" class="rt">Path</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs34', 47)" onmouseover="showTip(event, 'fs34', 47)" class="id">GetTempPath</span><span class="pn">(</span><span class="pn">)</span><span class="pn">,</span> <span class="s">&quot;QuantificationTIMsParams.json&quot;</span><span class="pn">)</span>
 
-<span onmouseout="hideTip(event, 'fs23', 30)" onmouseover="showTip(event, 'fs23', 30)" class="m">Json</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs24', 31)" onmouseover="showTip(event, 'fs24', 31)" class="id">serializeAndWrite</span> <span onmouseout="hideTip(event, 'fs17', 32)" onmouseover="showTip(event, 'fs17', 32)" class="id">outputPath</span> <span onmouseout="hideTip(event, 'fs5', 33)" onmouseover="showTip(event, 'fs5', 33)" class="id">quantificationTIMsParams</span>
+<span onmouseout="hideTip(event, 'fs35', 48)" onmouseover="showTip(event, 'fs35', 48)" class="m">Json</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs36', 49)" onmouseover="showTip(event, 'fs36', 49)" class="id">serializeAndWrite</span> <span onmouseout="hideTip(event, 'fs29', 50)" onmouseover="showTip(event, 'fs29', 50)" class="id">outputPath</span> <span onmouseout="hideTip(event, 'fs17', 51)" onmouseover="showTip(event, 'fs17', 51)" class="id">quantificationTIMsParams</span>
 </code></pre>
 <h2><a name="Running-the-tool" class="anchor" href="#Running-the-tool">Running the tool</a></h2>
 <p>Install with <code>dotnet tool install --global ProteomIQon.PSMBasedQuantificationTIMs</code>, then quantify one run:</p>
@@ -396,32 +440,65 @@ With one file per flag the pair is used as given. With lists, the n-th mzlite fi
 <div class="fsdocs-tip" id="fs2">module Domain
 
 from ProteomIQon</div>
-<div class="fsdocs-tip" id="fs3">val gaborParams: Gabor3DParams</div>
-<div class="fsdocs-tip" id="fs4">type Gabor3DParams =
-  {
-    sizeX: int
-    sizeY: int
-    sigmaX: float
-    sigmaY: float
-    frequency: float
-    theta: float
-  }
-  member Equals: Gabor3DParams * IEqualityComparer -&gt; bool</div>
-<div class="fsdocs-tip" id="fs5">val quantificationTIMsParams: Dto.QuantificationParams</div>
-<div class="fsdocs-tip" id="fs6">module Dto
+<div class="fsdocs-tip" id="fs3">Multiple items<br />namespace FSharp<br /><br />--------------------<br />namespace Microsoft.FSharp</div>
+<div class="fsdocs-tip" id="fs4">namespace FSharp.Stats</div>
+<div class="fsdocs-tip" id="fs5">namespace FSharp.Stats.Signal</div>
+<div class="fsdocs-tip" id="fs6">val waveletParams: WaveletParameters</div>
+<div class="fsdocs-tip" id="fs7">type WaveletParameters = FSharpStats&#39;.Wavelet.Parameters</div>
+<div class="fsdocs-tip" id="fs8">union case Option.None: Option&lt;&#39;T&gt;</div>
+<div class="fsdocs-tip" id="fs9">module Padding
+
+from FSharp.Stats.Signal<br /><em>&lt;summary&gt;
+padds data points to the beginning, the end and on internal intervals of the data
+&lt;/summary&gt;</em></div>
+<div class="fsdocs-tip" id="fs10">type BorderPaddingMethod =
+  | Random
+  | Zero<br /><em>&lt;summary&gt;
+padds data point at signals start and end
+&lt;/summary&gt;</em></div>
+<div class="fsdocs-tip" id="fs11">union case Padding.BorderPaddingMethod.Random: Padding.BorderPaddingMethod<br /><em>&lt;summary&gt;
+inserts random data points taken from the original data set
+&lt;/summary&gt;</em></div>
+<div class="fsdocs-tip" id="fs12">type InternalPaddingMethod =
+  | Random
+  | NaN
+  | Delete
+  | Zero
+  | LinearInterpolation<br /><em>&lt;summary&gt;
+padds data point in small gaps (e.g. a missing data point or small ranges with no data)
+&lt;/summary&gt;</em></div>
+<div class="fsdocs-tip" id="fs13">union case Padding.InternalPaddingMethod.LinearInterpolation: Padding.InternalPaddingMethod<br /><em>&lt;summary&gt;
+inserts points lying on the linear interpolation of the two adjacent knots
+&lt;/summary&gt;</em></div>
+<div class="fsdocs-tip" id="fs14">type HugeGapPaddingMethod =
+  | Random
+  | NaN
+  | Delete
+  | Zero
+  | LinearInterpolation<br /><em>&lt;summary&gt;
+padds data point in huge gaps (e.g. big ranges with no data)
+&lt;/summary&gt;</em></div>
+<div class="fsdocs-tip" id="fs15">union case Padding.HugeGapPaddingMethod.Zero: Padding.HugeGapPaddingMethod<br /><em>&lt;summary&gt;
+inserts 0.0 as y_Value
+&lt;/summary&gt;</em></div>
+<div class="fsdocs-tip" id="fs16">union case Option.Some: Value: &#39;T -&gt; Option&lt;&#39;T&gt;</div>
+<div class="fsdocs-tip" id="fs17">val quantificationTIMsParams: Dto.QuantificationParams</div>
+<div class="fsdocs-tip" id="fs18">module Dto
 
 from ProteomIQon</div>
-<div class="fsdocs-tip" id="fs7">Multiple items<br />module QuantificationParams
+<div class="fsdocs-tip" id="fs19">Multiple items<br />module QuantificationParams
 
 from ProteomIQon.Dto<br /><br />--------------------<br />type QuantificationParams =
   {
     PerformLabeledQuantification: Labeling
-    FragPipe: bool
     XicExtraction: XicExtraction
     BaseLineCorrection: BaseLineCorrection option
+    QualityFilterLog2Limit: float
+    CentrePSMs: int
+    RequirePeakAtScanTime: bool
   }
   member Equals: QuantificationParams * IEqualityComparer -&gt; bool</div>
-<div class="fsdocs-tip" id="fs8">type Labeling =
+<div class="fsdocs-tip" id="fs20">type Labeling =
   | Labelshift
   | Unlabeled
   | N15Labeling
@@ -431,23 +508,24 @@ from ProteomIQon.Dto<br /><br />--------------------<br />type QuantificationPar
   member IsN15Labeling: bool
   member IsN15LabelingOnly: bool
   member IsUnlabeled: bool</div>
-<div class="fsdocs-tip" id="fs9">union case Labeling.Unlabeled: Labeling</div>
-<div class="fsdocs-tip" id="fs10">type XicExtraction =
+<div class="fsdocs-tip" id="fs21">union case Labeling.Unlabeled: Labeling</div>
+<div class="fsdocs-tip" id="fs22">type XicExtraction =
   {
     ScanTimeWindow: float
     MzWindow_Da: Window
     XicProcessing: XicProcessing
     TopKPSMs: int option
+    IonMobilityWindow: Window
   }
   member Equals: XicExtraction * IEqualityComparer -&gt; bool</div>
-<div class="fsdocs-tip" id="fs11">type Window =
+<div class="fsdocs-tip" id="fs23">type Window =
   | Fixed of float
   | Estimate
   member Equals: Window * IEqualityComparer -&gt; bool
   member IsEstimate: bool
   member IsFixed: bool</div>
-<div class="fsdocs-tip" id="fs12">union case Window.Estimate: Window</div>
-<div class="fsdocs-tip" id="fs13">type XicProcessing =
+<div class="fsdocs-tip" id="fs24">union case Window.Fixed: float -&gt; Window</div>
+<div class="fsdocs-tip" id="fs25">type XicProcessing =
   | SecondDerivative of SecondDerivativeParams
   | Wavelet of WaveletParameters
   | Gabor3D of Gabor3DParams
@@ -455,19 +533,19 @@ from ProteomIQon.Dto<br /><br />--------------------<br />type QuantificationPar
   member IsGabor3D: bool
   member IsSecondDerivative: bool
   member IsWavelet: bool</div>
-<div class="fsdocs-tip" id="fs14">union case XicProcessing.Gabor3D: Gabor3DParams -&gt; XicProcessing</div>
-<div class="fsdocs-tip" id="fs15">union case Option.None: Option&lt;&#39;T&gt;</div>
-<div class="fsdocs-tip" id="fs16">type BaseLineCorrection =
+<div class="fsdocs-tip" id="fs26">union case XicProcessing.Wavelet: WaveletParameters -&gt; XicProcessing</div>
+<div class="fsdocs-tip" id="fs27">type BaseLineCorrection =
   {
     MaxIterations: int
     Lambda: int
     P: float
   }
   member Equals: BaseLineCorrection * IEqualityComparer -&gt; bool</div>
-<div class="fsdocs-tip" id="fs17">val outputPath: string</div>
-<div class="fsdocs-tip" id="fs18">namespace System</div>
-<div class="fsdocs-tip" id="fs19">namespace System.IO</div>
-<div class="fsdocs-tip" id="fs20">type Path =
+<div class="fsdocs-tip" id="fs28">BaseLineCorrection.P: float</div>
+<div class="fsdocs-tip" id="fs29">val outputPath: string</div>
+<div class="fsdocs-tip" id="fs30">namespace System</div>
+<div class="fsdocs-tip" id="fs31">namespace System.IO</div>
+<div class="fsdocs-tip" id="fs32">type Path =
   static member ChangeExtension: path: string * extension: string -&gt; string
   static member Combine: path1: string * path2: string -&gt; string + 4 overloads
   static member EndsInDirectorySeparator: path: ReadOnlySpan&lt;char&gt; -&gt; bool + 1 overload
@@ -479,12 +557,12 @@ from ProteomIQon.Dto<br /><br />--------------------<br />type QuantificationPar
   static member GetFullPath: path: string -&gt; string + 1 overload
   static member GetInvalidFileNameChars: unit -&gt; char array
   ...<br /><em>&lt;summary&gt;Performs operations on &lt;see cref=&quot;T:System.String&quot; /&gt; instances that contain file or directory path information. These operations are performed in a cross-platform manner.&lt;/summary&gt;</em></div>
-<div class="fsdocs-tip" id="fs21">System.IO.Path.Combine(paths: System.ReadOnlySpan&lt;string&gt;) : string<br />System.IO.Path.Combine([&lt;System.ParamArray&gt;] paths: string array) : string<br />System.IO.Path.Combine(path1: string, path2: string) : string<br />System.IO.Path.Combine(path1: string, path2: string, path3: string) : string<br />System.IO.Path.Combine(path1: string, path2: string, path3: string, path4: string) : string</div>
-<div class="fsdocs-tip" id="fs22">System.IO.Path.GetTempPath() : string</div>
-<div class="fsdocs-tip" id="fs23">module Json
+<div class="fsdocs-tip" id="fs33">System.IO.Path.Combine(paths: System.ReadOnlySpan&lt;string&gt;) : string<br />System.IO.Path.Combine([&lt;System.ParamArray&gt;] paths: string array) : string<br />System.IO.Path.Combine(path1: string, path2: string) : string<br />System.IO.Path.Combine(path1: string, path2: string, path3: string) : string<br />System.IO.Path.Combine(path1: string, path2: string, path3: string, path4: string) : string</div>
+<div class="fsdocs-tip" id="fs34">System.IO.Path.GetTempPath() : string</div>
+<div class="fsdocs-tip" id="fs35">module Json
 
 from ProteomIQon</div>
-<div class="fsdocs-tip" id="fs24">val serializeAndWrite: path: string -&gt; obj: &#39;a -&gt; unit</div>
+<div class="fsdocs-tip" id="fs36">val serializeAndWrite: path: string -&gt; obj: &#39;a -&gt; unit</div>
 
     </div>
 

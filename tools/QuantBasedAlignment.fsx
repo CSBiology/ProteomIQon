@@ -5,63 +5,114 @@
 
 # QuantBasedAlignment
 
-In data dependent acquisition the instrument picks the ions it fragments more or less at random. A peptide identified and quantified in one run is
-therefore often present in another run without ever having been fragmented there, so that run has no identification and no quantification for it.
-Run alignment maps the scan time of one run onto another, so that a later tool can look for the peptide where it should elute.
-QuantBasedAlignment reads the quantified peptide ions of a target run (`-i`) and of one or more source runs (`-ii`). On the peptide ions a source run
-shares with the target it fits a smoothing spline from source scan times to target scan times, and with that spline it predicts the scan time of
-every source peptide ion in the target run. [AlignmentBasedQuantification](https://csbiology.github.io/ProteomIQon/tools/AlignmentBasedQuantification.html) then extracts and quantifies the
-peptide ions at the predicted scan times.
+In data dependent acquisition a peptide ion quantified in one run is often present in another run without having been fragmented there.
+QuantBasedAlignment predicts where such an ion elutes in the run that lacks it. For every target run (`-i`) it learns, from the peptide
+ions the target shares with each source run (`-ii`), how scan times shift between the two runs. With that model it predicts the scan time
+of every source ion in the target, together with an error estimate for each prediction. For timsTOF runs it also predicts the ion mobility.
 
-The tool links Intel MKL, so its package is platform specific: install ProteomIQon.QuantBasedAlignment_win_x64 on Windows or
-ProteomIQon.QuantBasedAlignment_linux_x64 on Linux. Both install the command proteomiqon-quantbasedalignment. The package
-ProteomIQon.QuantBasedAlignment on nuget.org is the library both wrap and installs no command.
+The tool is the first of three that transfer quantifications between runs. It reads the `.quant` files of
+[PSMBasedQuantification](https://csbiology.github.io/ProteomIQon/tools/PSMBasedQuantification.html) or [PSMBasedQuantificationTIMs](https://csbiology.github.io/ProteomIQon/tools/PSMBasedQuantificationTIMs.html).
+[AlignmentBasedQuantification](https://csbiology.github.io/ProteomIQon/tools/AlignmentBasedQuantification.html) then looks for the peak of each transferred ion, and
+[AlignmentBasedQuantStatistics](https://csbiology.github.io/ProteomIQon/tools/AlignmentBasedQuantStatistics.html) scores the result.
+
+<img src="https://csbiology.github.io/ProteomIQon/img/AlignmentPipeline.png" width="1000" />
+## How the scan time model works
+
+The tool works on each pair of target and source run separately.
+
+0 The model uses the ions (sequence, modifications, charge) that both runs quantified with a successful peak fit whose identification
+scan time lies within two standard deviations of the apex of the fitted peak. A pair needs at least 20 shared ions.
+
+1 It describes the shift **target scan time − source scan time** as a function of the source scan time. Each point of the curve is the
+median shift of the k shared ions nearest in source scan time. Between ions the curve is interpolated linearly, beyond the first and last
+ion it is constant.
+
+2 Some shared ions have a wrong peak in one of the two runs and lie far from the true shift. Before the final fit, up to three rounds
+remove ions whose residual exceeds max(3 · 1.4826 · MAD, 0.05 min), where MAD is the median absolute deviation of the
+residuals.
+
+3 k is chosen from 5, 7, 11, 15, 21, 31, 41, 51, 71 and 101 by 5-fold cross-validation on the median absolute error, with folds by peptide sequence. `-s` seeds the folds.
+
+4 The sources of a target are ranked by their median absolute out-of-fold error. Each ion is transferred from the best ranked
+source that has it.
+
+5 `PredictedScanTimeSd` is 1.4826 times the median absolute out-of-fold error of the shared ions within ±5 min of the ion's
+source scan time, and at least 0.01 min. With fewer than 10 ions in the window the scale of the whole pair is used. It is small where the runs
+agree and large where they do not, for example at the end of the gradient.
+
+Only source ions that pass the filter of step 1 are transferred.
+Ions the target quantified itself, called overlap ions, are transferred too, because the two following tools learn from them. They get the prediction of the fold
+that did not contain them, so their errors are comparable to those of new ions.
+
+<img src="https://csbiology.github.io/ProteomIQon/img/QuantBasedAlignment_RtShift.png" width="850" />
+The figure shows the scan time shift of a pair of runs. Grey points are shared ions, orange points are the shared ions that the tool trimmed.
+The blue line is the running median and the band is ± `PredictedScanTimeSd`.
+
+## Ion mobility
+
+The tool aligns the `IonMobilityCentre` of the `.quant` rows. When both runs of a pair have finite values on the shared ions, it fits the same model to the ion mobility shift over the source
+ion mobility. Its trimming floor is 0.005 1/K0, its error scale uses the shared ions within ±0.05 1/K0 and is at least 0.001.
+The results go into `PredictedIonMobility` and `PredictedIonMobilitySd`. Without ion mobility both columns hold `nan`. There is no switch.
 
 ## Inputs and outputs
 
 Flag | Meaning | Comes from
 --- | --- | ---
 `-i` | one or more `.quant` files of the target runs, or a directory that is searched for `*.quant` | [PSMBasedQuantification](https://csbiology.github.io/ProteomIQon/tools/PSMBasedQuantification.html) or [PSMBasedQuantificationTIMs](https://csbiology.github.io/ProteomIQon/tools/PSMBasedQuantificationTIMs.html)
-`-ii` | one or more `.quant` files of the source runs, or a directory that is searched for `*.quant` | [PSMBasedQuantification](https://csbiology.github.io/ProteomIQon/tools/PSMBasedQuantification.html) or [PSMBasedQuantificationTIMs](https://csbiology.github.io/ProteomIQon/tools/PSMBasedQuantificationTIMs.html)
+`-ii` | one or more `.quant` files of the source runs, or a directory that is searched for `*.quant` | same
 `-o` | the output directory, created when missing | &#32;
-`-dc` | switch: write alignment fit charts | &#32;
-`-c` | number of targets processed in parallel, default 1, only matters with several targets or a target directory | &#32;
+`-s` | seed of the cross-validation folds, default 1 | &#32;
+`-dc` | switch: write `<run>_ScanTimeModels.html` with the shifts, curves and out-of-fold errors per source | &#32;
+`-c` | number of targets aligned in parallel, one core each, default 1 | &#32;
 
 
-There is no parameter file. Before fitting, the tool keeps only peptide ions with a successful peak fit whose fitted scan time lies within two
-standard deviations of the scan time of the identification.
+There is no parameter file. A target is never its own source, so the same directory can be passed to `-i` and `-ii`.
+The tool stops when an input path does not exist, when the paths of `-i` or those of `-ii` hold no `.quant` file at all, and when two input files from different directories have the same name.
 
-For every target the tool writes two tab separated files into the output directory. `<target>.align` has one row per peptide ion taken from a
-source run: the peptide ion, its m/z, the predicted scan time in the target run (PredictedScanTime) and the scan time, apex intensity,
-quantification and traces the ion had in the source run. The file covers every peptide ion any source run quantified, including ions the target
-itself has already quantified. [AlignmentBasedQuantStatistics](https://csbiology.github.io/ProteomIQon/tools/AlignmentBasedQuantStatistics.html) uses that overlap as training
-material. When several source runs contain the same peptide ion, the source with the best fit (highest R squared) supplies the row.
-`<target>.alignmetric` collects the quality metrics of the fit against each source run, one block per source. AlignmentBasedQuantification reads
-both files. With `-dc` the tool also writes `<target>_Metrics.html`, a chart of the fits. Delete existing `.align` and `.alignmetric` files of
-the target in the output directory before a rerun, the tool appends to them. Logs go to `QuantBasedAlignment_log.txt` and one
-`<target>_log.txt` per target.
+For every target the tool writes `<run>.align`, tab separated, one row per transferred ion. The first 16 columns hold the ion, its m/z, `PredictedScanTime`, and the scan time, intensities, traces and `IonMobility` of the ion in its source run, where `IonMobility` is the ion mobility centre of the ion in that run.
+Five columns follow.
 
-With a single target the tool aligns it against all source files. With several targets, or a target directory, every target is aligned against
-every source file except itself, so the same directory can be passed to `-i` and `-ii`.
+Column | Meaning
+--- | ---
+PredictedScanTimeSd | local error scale of `PredictedScanTime`, in minutes
+SourceFileName | source run of the ion, without extension
+SourceModelError | median absolute out-of-fold error of the model of this source, in minutes
+PredictedIonMobility | predicted ion mobility in the target, `nan` without ion mobility
+PredictedIonMobilitySd | local error scale of `PredictedIonMobility`, `nan` without ion mobility
+
+
+`<run>.alignmetric` holds the out-of-fold predictions of one fold. No later tool reads it. Logs go to `QuantBasedAlignment_log.txt` and one `<run>_log.txt` per target. Per pair they give the numbers of shared and removed
+ions, the chosen k and the out-of-fold errors. A target without any source that shares 20 ions with it gets a warning.
 
 ## Running the tool
 
-Align one target run against two source runs.
+Install the tool with `dotnet tool install --global ProteomIQon.QuantBasedAlignment`.
+Align every run of an experiment against all others, four at a time:
 
 ```text
-proteomiqon-quantbasedalignment -i path/to/target.quant -ii path/to/source1.quant path/to/source2.quant -o path/to/output
+proteomiqon-quantbasedalignment -i path/to/quant -ii path/to/quant -o path/to/align -c 4
 ```
 
-Align every run of an experiment against all others, four at a time.
+Align one target against two sources:
 
 ```text
-proteomiqon-quantbasedalignment -i path/to/quant -ii path/to/quant -o path/to/output -c 4
+proteomiqon-quantbasedalignment -i path/to/target.quant -ii path/to/source1.quant path/to/source2.quant -o path/to/align
 ```
 
-Print the description of every argument.
+Print the description of every argument:
 
 ```text
 proteomiqon-quantbasedalignment --help
 ```
+
+## Limitations
+
+* The trimming floor (0.05 min) and the error scale window (±5 min) are fixed.
+
+* Pairs with fewer than 20 shared ions are skipped. Runs with few identifications get few or no sources.
+
+* Every target is fitted against every source, so the run time grows with the square of the number of runs.
+
+* The tool is meant for runs of one organism on one LC setup. Fractionated samples and DIA data are not supported.
 
 *)

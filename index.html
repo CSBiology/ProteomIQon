@@ -192,9 +192,7 @@ quantification, retention time alignment between runs and protein inference.</p>
 library most tools build on. The tool pages here link to it where a concept needs more than a sentence.</p>
 <h2><a name="Installing-a-tool" class="anchor" href="#Installing-a-tool">Installing a tool</a></h2>
 <p>Every tool is a .NET tool on <a href="https://www.nuget.org/profiles/CSBiology">nuget.org</a>, package <code>ProteomIQon.&lt;ToolName&gt;</code>,
-command <code>proteomiqon-&lt;toolname&gt;</code>. The one exception is QuantBasedAlignment, which ships as
-<code>ProteomIQon.QuantBasedAlignment_win_x64</code> and <code>ProteomIQon.QuantBasedAlignment_linux_x64</code>. The package
-<code>ProteomIQon.QuantBasedAlignment</code> is the library both wrap and installs no command.</p>
+command <code>proteomiqon-&lt;toolname&gt;</code>.</p>
 <table class="pre"><tr><td class="snippet"><pre class="fssnip"><code lang="text">dotnet tool install --global ProteomIQon.PeptideDB
 proteomiqon-peptidedb --help
 </code></pre></td></tr></table>
@@ -235,7 +233,7 @@ column, and the next tool reads them.</p>
 <td><p>Control the FDR</p></td>
 <td><p><a href="https://csbiology.github.io/ProteomIQon/tools/PSMStatistics.html">PSMStatistics</a></p></td>
 <td><p>.psm, .db</p></td>
-<td><p>.qpsm</p></td>
+<td><p>.qpsm, isotope patterns into the .db</p></td>
 </tr>
 <tr class="odd">
 <td><p>Quantify identified peptide ions</p></td>
@@ -265,7 +263,7 @@ column, and the next tool reads them.</p>
 </table>
 
 <p>With several runs, the alignment tools transfer identifications between runs before the join. They sit between
-PSMBasedQuantification and JoinQuantPepIonsWithProteins:</p>
+PSMBasedQuantification or PSMBasedQuantificationTIMs and JoinQuantPepIonsWithProteins:</p>
 <table>
 <thead>
 <tr class="header">
@@ -285,13 +283,13 @@ PSMBasedQuantification and JoinQuantPepIonsWithProteins:</p>
 <tr class="even">
 <td><p>Quantify transferred peptide ions</p></td>
 <td><p><a href="https://csbiology.github.io/ProteomIQon/tools/AlignmentBasedQuantification.html">AlignmentBasedQuantification</a></p></td>
-<td><p>.mzlite, .align, .alignmetric, .quant, .db</p></td>
-<td><p>.quant</p></td>
+<td><p>.mzlite, .align, .quant, .db</p></td>
+<td><p>.quant, .alignfeatures, .aligndecoy</p></td>
 </tr>
 <tr class="odd">
 <td><p>Score the transfers</p></td>
 <td><p><a href="https://csbiology.github.io/ProteomIQon/tools/AlignmentBasedQuantStatistics.html">AlignmentBasedQuantStatistics</a></p></td>
-<td><p>.quant, .align</p></td>
+<td><p>PSM based and aligned .quant, .align, .alignfeatures, .aligndecoy</p></td>
 <td><p>.quant</p></td>
 </tr>
 <tr class="even">
@@ -309,8 +307,7 @@ light to heavy ratios in LabeledQuant.txt into one intensity per run and protein
 <a href="https://csbiology.github.io/ProteomIQon/tools/MsFraggerToPSM.html">MsFraggerToPSM</a> imports an MSFragger search. <a href="https://csbiology.github.io/ProteomIQon/tools/PeptideSpectrumMatchingTIMs.html">PeptideSpectrumMatchingTIMs</a> identifies the spectra of an ion
 mobility run without MSFragger and writes the <code>.psm</code> that <a href="https://csbiology.github.io/ProteomIQon/tools/PSMStatistics.html">PSMStatistics</a> reads.
 <a href="https://csbiology.github.io/ProteomIQon/tools/PSMBasedQuantificationTIMs.html">PSMBasedQuantificationTIMs</a> quantifies in retention time and ion
-mobility from the FragPipe layout of MsFraggerToPSM. The <code>.qpsm</code> of PSMStatistics carries no ion mobility yet, so that
-link from PeptideSpectrumMatchingTIMs to the quantification is still open.</p>
+mobility from the <code>.qpsm</code> of PSMStatistics or MsFraggerToPSM.</p>
 <h2><a name="The-core-project" class="anchor" href="#The-core-project">The core project</a></h2>
 <p>The ProteomIQon core is referenced by all tools. It contains mainly serializable data transfer objects such as tool results and tool parameters, as well as their mapping to domain specific types.
 This is also the place for any kind of code reusable across tools such as thin wrappers around data readers, logging or CLI formatting.</p>

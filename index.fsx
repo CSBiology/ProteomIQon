@@ -17,9 +17,7 @@ library most tools build on. The tool pages here link to it where a concept need
 ## Installing a tool
 
 Every tool is a .NET tool on [nuget.org](https://www.nuget.org/profiles/CSBiology), package `ProteomIQon.<ToolName>`,
-command `proteomiqon-<toolname>`. The one exception is QuantBasedAlignment, which ships as
-`ProteomIQon.QuantBasedAlignment_win_x64` and `ProteomIQon.QuantBasedAlignment_linux_x64`. The package
-`ProteomIQon.QuantBasedAlignment` is the library both wrap and installs no command.
+command `proteomiqon-<toolname>`.
 
 ```text
 dotnet tool install --global ProteomIQon.PeptideDB
@@ -39,7 +37,7 @@ Step | Tool | Reads | Writes
 Convert raw data | [MzMLToMzLite](https://csbiology.github.io/ProteomIQon/tools/MzMLToMzLite.html) | .mzML (from msconvert) | .mzlite
 Build the search space | [PeptideDB](https://csbiology.github.io/ProteomIQon/tools/PeptideDB.html) | FASTA | .db (SQLite)
 Identify spectra | [PeptideSpectrumMatching](https://csbiology.github.io/ProteomIQon/tools/PeptideSpectrumMatching.html) | .mzlite, .db | .psm
-Control the FDR | [PSMStatistics](https://csbiology.github.io/ProteomIQon/tools/PSMStatistics.html) | .psm, .db | .qpsm
+Control the FDR | [PSMStatistics](https://csbiology.github.io/ProteomIQon/tools/PSMStatistics.html) | .psm, .db | .qpsm, isotope patterns into the .db
 Quantify identified peptide ions | [PSMBasedQuantification](https://csbiology.github.io/ProteomIQon/tools/PSMBasedQuantification.html) | .mzlite, .qpsm, .db | .quant
 Infer proteins | [ProteinInference](https://csbiology.github.io/ProteomIQon/tools/ProteinInference.html) | .qpsm, .db | .prot
 Join peptides and proteins | [JoinQuantPepIonsWithProteins](https://csbiology.github.io/ProteomIQon/tools/JoinQuantPepIonsWithProteins.html) | .quant, .prot | .quantAndProt
@@ -47,13 +45,13 @@ Aggregate to proteins | [LabelFreeProteinQuantification](https://csbiology.githu
 
 
 With several runs, the alignment tools transfer identifications between runs before the join. They sit between
-PSMBasedQuantification and JoinQuantPepIonsWithProteins:
+PSMBasedQuantification or PSMBasedQuantificationTIMs and JoinQuantPepIonsWithProteins:
 
 Step | Tool | Reads | Writes
 --- | --- | --- | ---
 Map scan times between runs | [QuantBasedAlignment](https://csbiology.github.io/ProteomIQon/tools/QuantBasedAlignment.html) | .quant of all runs | .align, .alignmetric
-Quantify transferred peptide ions | [AlignmentBasedQuantification](https://csbiology.github.io/ProteomIQon/tools/AlignmentBasedQuantification.html) | .mzlite, .align, .alignmetric, .quant, .db | .quant
-Score the transfers | [AlignmentBasedQuantStatistics](https://csbiology.github.io/ProteomIQon/tools/AlignmentBasedQuantStatistics.html) | .quant, .align | .quant
+Quantify transferred peptide ions | [AlignmentBasedQuantification](https://csbiology.github.io/ProteomIQon/tools/AlignmentBasedQuantification.html) | .mzlite, .align, .quant, .db | .quant, .alignfeatures, .aligndecoy
+Score the transfers | [AlignmentBasedQuantStatistics](https://csbiology.github.io/ProteomIQon/tools/AlignmentBasedQuantStatistics.html) | PSM based and aligned .quant, .align, .alignfeatures, .aligndecoy | .quant
 Reassign protein groups | [AddDeducedPeptides](https://csbiology.github.io/ProteomIQon/tools/AddDeducedPeptides.html) | .quant, .prot | .prot
 
 
@@ -63,8 +61,7 @@ light to heavy ratios in LabeledQuant.txt into one intensity per run and protein
 [MsFraggerToPSM](https://csbiology.github.io/ProteomIQon/tools/MsFraggerToPSM.html) imports an MSFragger search. [PeptideSpectrumMatchingTIMs](https://csbiology.github.io/ProteomIQon/tools/PeptideSpectrumMatchingTIMs.html) identifies the spectra of an ion
 mobility run without MSFragger and writes the `.psm` that [PSMStatistics](https://csbiology.github.io/ProteomIQon/tools/PSMStatistics.html) reads.
 [PSMBasedQuantificationTIMs](https://csbiology.github.io/ProteomIQon/tools/PSMBasedQuantificationTIMs.html) quantifies in retention time and ion
-mobility from the FragPipe layout of MsFraggerToPSM. The `.qpsm` of PSMStatistics carries no ion mobility yet, so that
-link from PeptideSpectrumMatchingTIMs to the quantification is still open.
+mobility from the `.qpsm` of PSMStatistics or MsFraggerToPSM.
 
 ## The core project
 

@@ -185,7 +185,7 @@
 <a href="https://csbiology.github.io/ProteomIQon/tools/PSMBasedQuantification.ipynb"><img src="https://csbiology.github.io/ProteomIQon/img/badge-notebook.svg" alt="Notebook" /></a></p>
 <h1><a name="PSMBasedQuantification" class="anchor" href="#PSMBasedQuantification">PSMBasedQuantification</a></h1>
 <p>PSMBasedQuantification turns the identifications from <a href="https://csbiology.github.io/ProteomIQon/tools/PSMStatistics.html">PSMStatistics</a> into peptide ion intensities.
-For every identified peptide ion (sequence, modification state and charge) it takes the scan times of its MS/MS identifications, extracts an <a href="https://www.biofsharp.com/BioFSharp.Mz/03_01_quantification.html#Building-an-XIC-trace">ion chromatogram</a> of the monoisotopic m/z in a window around them, detects the peaks in that trace and <a href="https://www.biofsharp.com/BioFSharp.Mz/03_01_quantification.html#Fitting-and-integrating-the-main-peak">fits the peak</a> closest to the identification. The fitted area is the reported quantity.
+For every identified peptide ion (sequence, modification state and charge) it takes the scan times of its MS/MS identifications, extracts an <a href="https://www.biofsharp.com/BioFSharp.Mz/03_01_quantification.html#Building-an-XIC-trace">ion chromatogram</a> of the monoisotopic m/z in a window around them, detects the peaks in that trace and <a href="https://www.biofsharp.com/BioFSharp.Mz/03_01_quantification.html#Fitting-and-integrating-the-main-peak">fits the peak</a> that contains the weighted scan time of its identifications (see <code>CentrePSMs</code> and <code>RequirePeakAtScanTime</code>). The fitted area is the reported quantity.
 For metabolically labeled samples the tool computes the m/z of the partner ion (the heavy form of a light identification, or the other way round) and quantifies that trace as well, so every row can carry a light and a heavy value.</p>
 <img src="https://csbiology.github.io/ProteomIQon/img/LabeledQuant.png" width="1000" height="750" />
 <h2><a name="Inputs-and-outputs" class="anchor" href="#Inputs-and-outputs">Inputs and outputs</a></h2>
@@ -250,7 +250,7 @@ For metabolically labeled samples the tool computes the m/z of the partner ion (
 With one file per flag the pair is used as given. With lists, the n-th mzlite file is paired with the n-th qpsm file unless you pass <code>-mf</code>, which pairs files by their base name (<code>run1.mzlite</code> with <code>run1.qpsm</code>) and skips mzlite files without a partner.</p>
 <p>For every run the tool writes <code>run.quant</code>, tab separated with a header and one row per quantified peptide ion. Next to the identifiers and the best q-value and PEP value of the ion it reports the fitted quantity (<code>Quant_Light</code>, <code>Quant_Heavy</code>), the apex intensity, the fit parameters, the difference between identification and fitted scan time, the extracted traces and the isotope pattern for both channels.
 <a href="https://csbiology.github.io/ProteomIQon/tools/QuantBasedAlignment.html">QuantBasedAlignment</a>, <a href="https://csbiology.github.io/ProteomIQon/tools/AlignmentBasedQuantification.html">AlignmentBasedQuantification</a>, <a href="https://csbiology.github.io/ProteomIQon/tools/AlignmentBasedQuantStatistics.html">AlignmentBasedQuantStatistics</a> and <a href="https://csbiology.github.io/ProteomIQon/tools/JoinQuantPepIonsWithProteins.html">JoinQuantPepIonsWithProteins</a> read <code>.quant</code> files.</p>
-<p>With <code>-dc</code> the tool writes one chart per peptide ion into <code>run_plots</code>, plus <code>mzErrorAndCorrection.html</code> and <code>precMzCorrected.html</code> for the m/z calibration it derives from the identifications. <code>-z</code> packs that directory into <code>run_plots.zip</code> and deletes it. Delete an existing <code>run.quant</code> in the output directory before a rerun, the tool appends to it. Logs go to <code>PSMBasedQuantification_log.txt</code> and <code>run_log.txt</code> in the output directory.</p>
+<p>With <code>-dc</code> the tool writes one chart per peptide ion into <code>run_plots</code>, plus <code>mzErrorAndCorrection.html</code> for the m/z calibration it derives from the identifications. <code>-z</code> packs that directory into <code>run_plots.zip</code> and deletes it. Delete an existing <code>run.quant</code> in the output directory before a rerun, the tool appends to it. Logs go to <code>PSMBasedQuantification_log.txt</code> and <code>run_log.txt</code> in the output directory.</p>
 <h2><a name="Parameters" class="anchor" href="#Parameters">Parameters</a></h2>
 <table>
 <thead>
@@ -267,34 +267,49 @@ With one file per flag the pair is used as given. With lists, the n-th mzlite fi
 <td><p><code>Unlabeled</code> quantifies only the identified ion. <code>N15Labeling</code> quantifies the partner ion too and keeps rows where both fits pass the quality filter. <code>N15LabelingOnly</code> applies the filter to the heavy channel alone. <code>Labelshift</code> quantifies both and skips the filter.</p></td>
 </tr>
 <tr class="even">
-<td><p><code>FragPipe</code></p></td>
-<td><p><code>false</code></p></td>
-<td><p>Marks qpsm input in the FragPipe layout, which <a href="https://csbiology.github.io/ProteomIQon/tools/PSMBasedQuantificationTIMs.html">PSMBasedQuantificationTIMs</a> reads. Keep it at <code>false</code> for this tool.</p></td>
-</tr>
-<tr class="odd">
 <td><p><code>XicExtraction.ScanTimeWindow</code></p></td>
 <td><p><code>2.0</code></p></td>
 <td><p>Half width of the scan time window around the identification that is extracted and searched for the peak, in the scan time unit of the run.</p></td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><p><code>XicExtraction.MzWindow_Da</code></p></td>
 <td><p><code>Window.Estimate</code></p></td>
-<td><p>Half width of the m/z window of the trace, in Da. <code>Estimate</code> uses four times the MS1 mass error the tool measures on the precursor m/z of the identifications. <code>Window.Fixed 0.07</code> sets it to 0.07 Da.</p></td>
-</tr>
-<tr class="odd">
-<td><p><code>XicExtraction.XicProcessing</code></p></td>
-<td><p><code>XicProcessing.Wavelet waveletParams</code></p></td>
-<td><p>Peak detection on the trace. The wavelet parameters are listed below. <code>SecondDerivative</code> is the other supported case. <code>Gabor3D</code> belongs to the TIMs tool and makes this tool fail.</p></td>
+<td><p>Half width of the m/z window of the trace, in Da, the same at every m/z. The trace is centred on the m/z corrected by an offset that the tool fits on the precursor m/z of the identifications, in ppm over retention time and m/z. <code>Estimate</code> uses four times the standard deviation of the difference between the measured and theoretical precursor m/z of the identifications, leaving out outliers. <code>Window.Fixed 0.07</code> sets 0.07 Da.</p></td>
 </tr>
 <tr class="even">
+<td><p><code>XicExtraction.XicProcessing</code></p></td>
+<td><p><code>XicProcessing.Wavelet waveletParams</code></p></td>
+<td><p>Peak detection on the trace. The wavelet parameters are listed below. <code>SecondDerivative</code> is the other supported case. <code>Gabor3D</code> is in development and does not work currently.</p></td>
+</tr>
+<tr class="odd">
 <td><p><code>XicExtraction.TopKPSMs</code></p></td>
 <td><p><code>None</code></p></td>
-<td><p><code>Some k</code> keeps only the k identifications with the highest <code>SequestScore</code> per peptide ion when placing the scan time.</p></td>
+<td><p><code>Some k</code> keeps only the k identifications with the highest <code>ModelScore</code> per peptide ion when placing the scan time.</p></td>
+</tr>
+<tr class="even">
+<td><p><code>XicExtraction.IonMobilityWindow</code></p></td>
+<td><p><code>Window.Fixed 0.05</code></p></td>
+<td><p>Not used, the tool does not read ion mobility.</p></td>
 </tr>
 <tr class="odd">
 <td><p><code>BaseLineCorrection</code></p></td>
 <td><p><code>Some { MaxIterations = 10; Lambda = 6; P = 0.05 }</code></p></td>
 <td><p>Asymmetric least squares baseline subtraction on the trace before peak detection. <code>None</code> skips it.</p></td>
+</tr>
+<tr class="even">
+<td><p><code>QualityFilterLog2Limit</code></p></td>
+<td><p><code>2.0</code></p></td>
+<td><p>The quality filter keeps rows with -limit &lt; log2 ((area / median area) / (apex / median apex)) &lt; limit. Rows with a non-finite or non-positive area, apex or ratio are dropped.</p></td>
+</tr>
+<tr class="odd">
+<td><p><code>CentrePSMs</code></p></td>
+<td><p><code>3</code></p></td>
+<td><p>Number of identifications per peptide ion, ranked by the summed intensity of their matched fragment ions, whose intensity weighted scan time centres the trace. It is applied after <code>TopKPSMs</code>, which ranks by <code>ModelScore</code>. At least 1.</p></td>
+</tr>
+<tr class="even">
+<td><p><code>RequirePeakAtScanTime</code></p></td>
+<td><p><code>true</code></p></td>
+<td><p><code>true</code> quantifies only a peak that contains the weighted scan time of the identifications, so an ion without such a peak gets no row. The labeled partner needs a peak of its own trace that contains the fitted scan time of the ion. Without one it is not quantified, and the quality filter then drops the row with <code>N15Labeling</code>, and with <code>N15LabelingOnly</code> when the missing partner is heavy. <code>false</code> takes the peak with the closest apex when no peak contains the scan time.</p></td>
 </tr>
 </tbody>
 </table>
@@ -336,8 +351,8 @@ With one file per flag the pair is used as given. With lists, the n-th mzlite fi
 </tr>
 <tr class="even">
 <td><p><code>MinPeakDistance</code></p></td>
-<td><p><code>None</code></p></td>
-<td><p>Peaks closer than this are merged. <code>None</code> uses the point spacing of the trace.</p></td>
+<td><p><code>Some 0.1</code></p></td>
+<td><p>Peaks closer than this (in minutes) are merged. The distance is at least 1.5 times the median point spacing of the trace, which is also what <code>None</code> uses.</p></td>
 </tr>
 <tr class="odd">
 <td><p><code>MinPeakLength</code></p></td>
@@ -375,7 +390,7 @@ With one file per flag the pair is used as given. With lists, the n-th mzlite fi
         <span class="prop">InternalPaddingMethod</span>  <span class="o">=</span> <span onmouseout="hideTip(event, 'fs9', 13)" onmouseover="showTip(event, 'fs9', 13)" class="m">Padding</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs12', 14)" onmouseover="showTip(event, 'fs12', 14)" class="rt">InternalPaddingMethod</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs13', 15)" onmouseover="showTip(event, 'fs13', 15)" class="id">LinearInterpolation</span>
         <span class="prop">HugeGapPaddingMethod</span>   <span class="o">=</span> <span onmouseout="hideTip(event, 'fs9', 16)" onmouseover="showTip(event, 'fs9', 16)" class="m">Padding</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs14', 17)" onmouseover="showTip(event, 'fs14', 17)" class="rt">HugeGapPaddingMethod</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs15', 18)" onmouseover="showTip(event, 'fs15', 18)" class="id">Zero</span>
         <span class="prop">HugeGapPaddingDistance</span> <span class="o">=</span> <span class="n">100.</span>
-        <span class="prop">MinPeakDistance</span>        <span class="o">=</span> <span onmouseout="hideTip(event, 'fs8', 19)" onmouseover="showTip(event, 'fs8', 19)" class="uc">None</span>
+        <span class="prop">MinPeakDistance</span>        <span class="o">=</span> <span onmouseout="hideTip(event, 'fs16', 19)" onmouseover="showTip(event, 'fs16', 19)" class="uc">Some</span> <span class="n">0.1</span>
         <span class="prop">MinPeakLength</span>          <span class="o">=</span> <span onmouseout="hideTip(event, 'fs16', 20)" onmouseover="showTip(event, 'fs16', 20)" class="uc">Some</span> <span class="n">0.1</span>
         <span class="prop">MaxPeakLength</span>          <span class="o">=</span> <span class="n">1.5</span>
         <span class="prop">NoiseQuantile</span>          <span class="o">=</span> <span class="n">0.01</span>
@@ -385,25 +400,27 @@ With one file per flag the pair is used as given. With lists, the n-th mzlite fi
 <span class="k">let</span> <span onmouseout="hideTip(event, 'fs17', 21)" onmouseover="showTip(event, 'fs17', 21)" class="id">quantificationParams</span> <span class="pn">:</span> <span onmouseout="hideTip(event, 'fs18', 22)" onmouseover="showTip(event, 'fs18', 22)" class="m">Dto</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs19', 23)" onmouseover="showTip(event, 'fs19', 23)" class="id">QuantificationParams</span> <span class="o">=</span>
     <span class="pn">{</span>
         <span class="prop">PerformLabeledQuantification</span> <span class="o">=</span> <span onmouseout="hideTip(event, 'fs20', 24)" onmouseover="showTip(event, 'fs20', 24)" class="rt">Labeling</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs21', 25)" onmouseover="showTip(event, 'fs21', 25)" class="id">N15Labeling</span>
-        <span class="prop">FragPipe</span>                     <span class="o">=</span> <span class="k">false</span>
         <span onmouseout="hideTip(event, 'fs22', 26)" onmouseover="showTip(event, 'fs22', 26)" class="prop">XicExtraction</span> <span class="o">=</span>
             <span class="pn">{</span>
                 <span class="prop">ScanTimeWindow</span> <span class="o">=</span> <span class="n">2.</span>
                 <span class="prop">MzWindow_Da</span>    <span class="o">=</span> <span onmouseout="hideTip(event, 'fs23', 27)" onmouseover="showTip(event, 'fs23', 27)" class="rt">Window</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs24', 28)" onmouseover="showTip(event, 'fs24', 28)" class="id">Estimate</span>
                 <span onmouseout="hideTip(event, 'fs25', 29)" onmouseover="showTip(event, 'fs25', 29)" class="prop">XicProcessing</span>  <span class="o">=</span> <span onmouseout="hideTip(event, 'fs25', 30)" onmouseover="showTip(event, 'fs25', 30)" class="rt">XicProcessing</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs26', 31)" onmouseover="showTip(event, 'fs26', 31)" class="id">Wavelet</span> <span onmouseout="hideTip(event, 'fs6', 32)" onmouseover="showTip(event, 'fs6', 32)" class="id">waveletParams</span>
                 <span class="prop">TopKPSMs</span>       <span class="o">=</span> <span onmouseout="hideTip(event, 'fs8', 33)" onmouseover="showTip(event, 'fs8', 33)" class="uc">None</span>
+                <span class="prop">IonMobilityWindow</span> <span class="o">=</span> <span onmouseout="hideTip(event, 'fs23', 34)" onmouseover="showTip(event, 'fs23', 34)" class="rt">Window</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs27', 35)" onmouseover="showTip(event, 'fs27', 35)" class="id">Fixed</span> <span class="n">0.05</span>
             <span class="pn">}</span>
-        <span onmouseout="hideTip(event, 'fs27', 34)" onmouseover="showTip(event, 'fs27', 34)" class="prop">BaseLineCorrection</span> <span class="o">=</span> <span onmouseout="hideTip(event, 'fs16', 35)" onmouseover="showTip(event, 'fs16', 35)" class="uc">Some</span> <span class="pn">{</span> <span class="prop">MaxIterations</span> <span class="o">=</span> <span class="n">10</span><span class="pn">;</span> <span class="prop">Lambda</span> <span class="o">=</span> <span class="n">6</span><span class="pn">;</span> <span onmouseout="hideTip(event, 'fs28', 36)" onmouseover="showTip(event, 'fs28', 36)" class="prop">P</span> <span class="o">=</span> <span class="n">0.05</span> <span class="pn">}</span>
+        <span onmouseout="hideTip(event, 'fs28', 36)" onmouseover="showTip(event, 'fs28', 36)" class="prop">BaseLineCorrection</span> <span class="o">=</span> <span onmouseout="hideTip(event, 'fs16', 37)" onmouseover="showTip(event, 'fs16', 37)" class="uc">Some</span> <span class="pn">{</span> <span class="prop">MaxIterations</span> <span class="o">=</span> <span class="n">10</span><span class="pn">;</span> <span class="prop">Lambda</span> <span class="o">=</span> <span class="n">6</span><span class="pn">;</span> <span onmouseout="hideTip(event, 'fs29', 38)" onmouseover="showTip(event, 'fs29', 38)" class="prop">P</span> <span class="o">=</span> <span class="n">0.05</span> <span class="pn">}</span>
+        <span class="prop">QualityFilterLog2Limit</span> <span class="o">=</span> <span class="n">2.</span>
+        <span class="prop">CentrePSMs</span> <span class="o">=</span> <span class="n">3</span>
+        <span class="prop">RequirePeakAtScanTime</span> <span class="o">=</span> <span class="k">true</span>
     <span class="pn">}</span>
 
 <span class="c">// Replace the temp folder with your project folder.</span>
-<span class="k">let</span> <span onmouseout="hideTip(event, 'fs29', 37)" onmouseover="showTip(event, 'fs29', 37)" class="id">outputPath</span> <span class="o">=</span> <span onmouseout="hideTip(event, 'fs30', 38)" onmouseover="showTip(event, 'fs30', 38)" class="id">System</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs31', 39)" onmouseover="showTip(event, 'fs31', 39)" class="id">IO</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs32', 40)" onmouseover="showTip(event, 'fs32', 40)" class="rt">Path</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs33', 41)" onmouseover="showTip(event, 'fs33', 41)" class="id">Combine</span><span class="pn">(</span><span onmouseout="hideTip(event, 'fs30', 42)" onmouseover="showTip(event, 'fs30', 42)" class="id">System</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs31', 43)" onmouseover="showTip(event, 'fs31', 43)" class="id">IO</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs32', 44)" onmouseover="showTip(event, 'fs32', 44)" class="rt">Path</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs34', 45)" onmouseover="showTip(event, 'fs34', 45)" class="id">GetTempPath</span><span class="pn">(</span><span class="pn">)</span><span class="pn">,</span> <span class="s">&quot;QuantificationParams.json&quot;</span><span class="pn">)</span>
+<span class="k">let</span> <span onmouseout="hideTip(event, 'fs30', 39)" onmouseover="showTip(event, 'fs30', 39)" class="id">outputPath</span> <span class="o">=</span> <span onmouseout="hideTip(event, 'fs31', 40)" onmouseover="showTip(event, 'fs31', 40)" class="id">System</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs32', 41)" onmouseover="showTip(event, 'fs32', 41)" class="id">IO</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs33', 42)" onmouseover="showTip(event, 'fs33', 42)" class="rt">Path</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs34', 43)" onmouseover="showTip(event, 'fs34', 43)" class="id">Combine</span><span class="pn">(</span><span onmouseout="hideTip(event, 'fs31', 44)" onmouseover="showTip(event, 'fs31', 44)" class="id">System</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs32', 45)" onmouseover="showTip(event, 'fs32', 45)" class="id">IO</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs33', 46)" onmouseover="showTip(event, 'fs33', 46)" class="rt">Path</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs35', 47)" onmouseover="showTip(event, 'fs35', 47)" class="id">GetTempPath</span><span class="pn">(</span><span class="pn">)</span><span class="pn">,</span> <span class="s">&quot;QuantificationParams.json&quot;</span><span class="pn">)</span>
 
-<span onmouseout="hideTip(event, 'fs35', 46)" onmouseover="showTip(event, 'fs35', 46)" class="m">Json</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs36', 47)" onmouseover="showTip(event, 'fs36', 47)" class="id">serializeAndWrite</span> <span onmouseout="hideTip(event, 'fs29', 48)" onmouseover="showTip(event, 'fs29', 48)" class="id">outputPath</span> <span onmouseout="hideTip(event, 'fs17', 49)" onmouseover="showTip(event, 'fs17', 49)" class="id">quantificationParams</span>
+<span onmouseout="hideTip(event, 'fs36', 48)" onmouseover="showTip(event, 'fs36', 48)" class="m">Json</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs37', 49)" onmouseover="showTip(event, 'fs37', 49)" class="id">serializeAndWrite</span> <span onmouseout="hideTip(event, 'fs30', 50)" onmouseover="showTip(event, 'fs30', 50)" class="id">outputPath</span> <span onmouseout="hideTip(event, 'fs17', 51)" onmouseover="showTip(event, 'fs17', 51)" class="id">quantificationParams</span>
 </code></pre>
 <h2><a name="Outputs" class="anchor" href="#Outputs">Outputs</a></h2>
-<p>The resulting <code>.quant</code> file is generated as a tab-delimited text file.
-These columns can be inspected individually to examine specific search results, scoring metrics, and identification parameters.</p>
+<p>The columns of the <code>.quant</code> file:</p>
 <table>
 <thead>
 <tr class="header">
@@ -434,11 +451,11 @@ These columns can be inspected individually to examine specific search results, 
 </tr>
 <tr class="even">
 <td><p>PrecursorMZ</p></td>
-<td><p>Precursor ion mass-to-charge ratio (m/z)</p></td>
+<td><p>Theoretical m/z of the ion plus the m/z correction, the m/z the XIC is centred on</p></td>
 </tr>
 <tr class="odd">
 <td><p>MeasuredMass</p></td>
-<td><p>Measured mass of precursor ions in Dalton</p></td>
+<td><p>Mass that corresponds to PrecursorMZ, in Dalton</p></td>
 </tr>
 <tr class="even">
 <td><p>TheoMass</p></td>
@@ -446,11 +463,11 @@ These columns can be inspected individually to examine specific search results, 
 </tr>
 <tr class="odd">
 <td><p>AbsDeltaMass</p></td>
-<td><p>Absolute mass deviation between theoretical and measured mass (mass error)</p></td>
+<td><p>Absolute difference between MeasuredMass and TheoMass</p></td>
 </tr>
 <tr class="even">
 <td><p>MeanPercolatorScore</p></td>
-<td><p>The peptide spectrum matches (PSMs) are re-scored based on several parameters. This value corresponds to the average consensus score determined in the process</p></td>
+<td><p>Mean ModelScore of the identifications of the ion</p></td>
 </tr>
 <tr class="odd">
 <td><p>QValue</p></td>
@@ -465,7 +482,7 @@ These columns can be inspected individually to examine specific search results, 
 <td><p>Protein Names out of the PeptideDB</p></td>
 </tr>
 <tr class="even">
-<td><p>QuantMZ_Light</p></td>
+<td><p>QuantMz_Light</p></td>
 <td><p>Mass-to-charge ratio from the extracted XIC of the unlabeled peptide ion</p></td>
 </tr>
 <tr class="odd">
@@ -485,7 +502,7 @@ These columns can be inspected individually to examine specific search results, 
 <td><p>Describes the shape of the fitted peak for the unlabeled version of a peptide. Contains information about peak height, estimated peak time, and peak width.</p></td>
 </tr>
 <tr class="odd">
-<td><p>Diffrence_SearchRT_FittedRT_Light</p></td>
+<td><p>Difference_SearchRT_FittedRT_Light</p></td>
 <td><p>Difference between the retention time originally determined using PSMs and the retention time calculated from the measured peak</p></td>
 </tr>
 <tr class="even">
@@ -493,11 +510,11 @@ These columns can be inspected individually to examine specific search results, 
 <td><p>Describes how well the measured unlabeled isotope pattern matches the theoretically expected pattern.</p></td>
 </tr>
 <tr class="odd">
-<td><p>KLDiv_CorrectObserved_Theoretical_Light</p></td>
+<td><p>KLDiv_CorrectedObserved_Theoretical_Light</p></td>
 <td><p>Corrected Kullback-Leiber divergence of isotopic pattern of unlabeled peptide ion versus the measured pattern</p></td>
 </tr>
 <tr class="even">
-<td><p>QuantMZ_Heavy</p></td>
+<td><p>QuantMz_Heavy</p></td>
 <td><p>Mass-to-charge ratio from the extracted XIC of the labeled peptide ion</p></td>
 </tr>
 <tr class="odd">
@@ -517,7 +534,7 @@ These columns can be inspected individually to examine specific search results, 
 <td><p>Describes the shape of the fitted peak for the labeled version of a peptide. Contains information about peak height, estimated peak time, and peak width.</p></td>
 </tr>
 <tr class="odd">
-<td><p>Diffrence_SearchRT_FittedRT_Heavy</p></td>
+<td><p>Difference_SearchRT_FittedRT_Heavy</p></td>
 <td><p>Difference between the retention time originally determined using PSMs and the retention time calculated from the measured peak</p></td>
 </tr>
 <tr class="even">
@@ -525,7 +542,7 @@ These columns can be inspected individually to examine specific search results, 
 <td><p>Describes how well the measured labeled isotope pattern matches the theoretically expected pattern.</p></td>
 </tr>
 <tr class="odd">
-<td><p>KLDiv_CorrectObserved_Theoretical_Heavy</p></td>
+<td><p>KLDiv_CorrectedObserved_Theoretical_Heavy</p></td>
 <td><p>Corrected Kullback-Leiber divergence of isotopic pattern of labeled peptide ion versus the measured pattern</p></td>
 </tr>
 <tr class="even">
@@ -561,7 +578,7 @@ These columns can be inspected individually to examine specific search results, 
 <td><p>Corrected intensity trace between an unlabeled peak and a measured isotopic peak cluster</p></td>
 </tr>
 <tr class="even">
-<td><p>IsotopicPatternMZ_Heavy</p></td>
+<td><p>IsotopicPatternMz_Heavy</p></td>
 <td><p>M/z-distribution of isotope cluster in spectra for labeled peaks</p></td>
 </tr>
 <tr class="odd">
@@ -586,11 +603,19 @@ These columns can be inspected individually to examine specific search results, 
 </tr>
 <tr class="even">
 <td><p>AlignmentScore</p></td>
-<td><p>Actual known alignments compared with the observed alignments</p></td>
+<td><p>NaN in PSM based rows. In transferred rows the probability from AlignmentBasedQuantStatistics that the quantified peak is the ion's peak</p></td>
 </tr>
 <tr class="odd">
 <td><p>AlignmentQValue</p></td>
-<td><p>Q-value, which is calculated based on the alignment score</p></td>
+<td><p>0 in PSM based rows. In transferred rows the q-value from AlignmentBasedQuantStatistics</p></td>
+</tr>
+<tr class="even">
+<td><p>IonMobility</p></td>
+<td><p>Ion mobility of the identifications, weighted by their matched fragment intensity, NaN without ion mobility</p></td>
+</tr>
+<tr class="odd">
+<td><p>IonMobilityCentre</p></td>
+<td><p>Ion mobility the XIC of the row is summed around, NaN without an ion mobility window</p></td>
 </tr>
 </tbody>
 </table>
@@ -667,9 +692,11 @@ from ProteomIQon</div>
 from ProteomIQon.Dto<br /><br />--------------------<br />type QuantificationParams =
   {
     PerformLabeledQuantification: Labeling
-    FragPipe: bool
     XicExtraction: XicExtraction
     BaseLineCorrection: BaseLineCorrection option
+    QualityFilterLog2Limit: float
+    CentrePSMs: int
+    RequirePeakAtScanTime: bool
   }
   member Equals: QuantificationParams * IEqualityComparer -&gt; bool</div>
 <div class="fsdocs-tip" id="fs20">type Labeling =
@@ -689,6 +716,7 @@ from ProteomIQon.Dto<br /><br />--------------------<br />type QuantificationPar
     MzWindow_Da: Window
     XicProcessing: XicProcessing
     TopKPSMs: int option
+    IonMobilityWindow: Window
   }
   member Equals: XicExtraction * IEqualityComparer -&gt; bool</div>
 <div class="fsdocs-tip" id="fs23">type Window =
@@ -707,18 +735,19 @@ from ProteomIQon.Dto<br /><br />--------------------<br />type QuantificationPar
   member IsSecondDerivative: bool
   member IsWavelet: bool</div>
 <div class="fsdocs-tip" id="fs26">union case XicProcessing.Wavelet: WaveletParameters -&gt; XicProcessing</div>
-<div class="fsdocs-tip" id="fs27">type BaseLineCorrection =
+<div class="fsdocs-tip" id="fs27">union case Window.Fixed: float -&gt; Window</div>
+<div class="fsdocs-tip" id="fs28">type BaseLineCorrection =
   {
     MaxIterations: int
     Lambda: int
     P: float
   }
   member Equals: BaseLineCorrection * IEqualityComparer -&gt; bool</div>
-<div class="fsdocs-tip" id="fs28">BaseLineCorrection.P: float</div>
-<div class="fsdocs-tip" id="fs29">val outputPath: string</div>
-<div class="fsdocs-tip" id="fs30">namespace System</div>
-<div class="fsdocs-tip" id="fs31">namespace System.IO</div>
-<div class="fsdocs-tip" id="fs32">type Path =
+<div class="fsdocs-tip" id="fs29">BaseLineCorrection.P: float</div>
+<div class="fsdocs-tip" id="fs30">val outputPath: string</div>
+<div class="fsdocs-tip" id="fs31">namespace System</div>
+<div class="fsdocs-tip" id="fs32">namespace System.IO</div>
+<div class="fsdocs-tip" id="fs33">type Path =
   static member ChangeExtension: path: string * extension: string -&gt; string
   static member Combine: path1: string * path2: string -&gt; string + 4 overloads
   static member EndsInDirectorySeparator: path: ReadOnlySpan&lt;char&gt; -&gt; bool + 1 overload
@@ -730,12 +759,12 @@ from ProteomIQon.Dto<br /><br />--------------------<br />type QuantificationPar
   static member GetFullPath: path: string -&gt; string + 1 overload
   static member GetInvalidFileNameChars: unit -&gt; char array
   ...<br /><em>&lt;summary&gt;Performs operations on &lt;see cref=&quot;T:System.String&quot; /&gt; instances that contain file or directory path information. These operations are performed in a cross-platform manner.&lt;/summary&gt;</em></div>
-<div class="fsdocs-tip" id="fs33">System.IO.Path.Combine(paths: System.ReadOnlySpan&lt;string&gt;) : string<br />System.IO.Path.Combine([&lt;System.ParamArray&gt;] paths: string array) : string<br />System.IO.Path.Combine(path1: string, path2: string) : string<br />System.IO.Path.Combine(path1: string, path2: string, path3: string) : string<br />System.IO.Path.Combine(path1: string, path2: string, path3: string, path4: string) : string</div>
-<div class="fsdocs-tip" id="fs34">System.IO.Path.GetTempPath() : string</div>
-<div class="fsdocs-tip" id="fs35">module Json
+<div class="fsdocs-tip" id="fs34">System.IO.Path.Combine(paths: System.ReadOnlySpan&lt;string&gt;) : string<br />System.IO.Path.Combine([&lt;System.ParamArray&gt;] paths: string array) : string<br />System.IO.Path.Combine(path1: string, path2: string) : string<br />System.IO.Path.Combine(path1: string, path2: string, path3: string) : string<br />System.IO.Path.Combine(path1: string, path2: string, path3: string, path4: string) : string</div>
+<div class="fsdocs-tip" id="fs35">System.IO.Path.GetTempPath() : string</div>
+<div class="fsdocs-tip" id="fs36">module Json
 
 from ProteomIQon</div>
-<div class="fsdocs-tip" id="fs36">val serializeAndWrite: path: string -&gt; obj: &#39;a -&gt; unit</div>
+<div class="fsdocs-tip" id="fs37">val serializeAndWrite: path: string -&gt; obj: &#39;a -&gt; unit</div>
 
     </div>
 

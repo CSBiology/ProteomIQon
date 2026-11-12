@@ -184,14 +184,138 @@
 <a href="https://csbiology.github.io/ProteomIQon/tools/AlignmentBasedQuantStatistics.fsx"><img src="https://csbiology.github.io/ProteomIQon/img/badge-script.svg" alt="Script" /></a>&emsp;
 <a href="https://csbiology.github.io/ProteomIQon/tools/AlignmentBasedQuantStatistics.ipynb"><img src="https://csbiology.github.io/ProteomIQon/img/badge-notebook.svg" alt="Notebook" /></a></p>
 <h1><a name="AlignmentBasedQuantStatistics" class="anchor" href="#AlignmentBasedQuantStatistics">AlignmentBasedQuantStatistics</a></h1>
-<p>A peptide ion transferred by <a href="https://csbiology.github.io/ProteomIQon/tools/QuantBasedAlignment.html">alignment</a> and quantified by
-<a href="https://csbiology.github.io/ProteomIQon/tools/AlignmentBasedQuantification.html">AlignmentBasedQuantification</a> has no identification behind it, so nothing says yet whether
-the peak found at the predicted scan time is the peptide. AlignmentBasedQuantStatistics gives every transferred quantification an alignment
-score and an alignment q-value, so downstream tools can filter transferred quantifications the way identifications are filtered by q-value.
-It learns from peptide ions where the truth is known: the .align file also predicts ions the run had identified itself, and for those the
-transferred quantification can be compared with the quantification of the identified ion. Ions where m/z and intensity agree closely are
-positive training examples, ions where they disagree are negative ones. A gradient boosted tree classifier trained on them scores every
-transferred ion, and the q-value follows from the score distribution of the negative examples.</p>
+<p>A peptide ion transferred by <a href="https://csbiology.github.io/ProteomIQon/tools/QuantBasedAlignment.html">QuantBasedAlignment</a> and quantified by
+<a href="https://csbiology.github.io/ProteomIQon/tools/AlignmentBasedQuantification.html">AlignmentBasedQuantification</a> has no identification in the run, so nothing yet says
+whether the quantified peak is the ion. AlignmentBasedQuantStatistics gives every such ion two values:</p>
+<ul>
+<li><code>AlignmentScore</code>: the probability that the quantified peak is the ion's peak, given that the analyte is present in the run.</li>
+<li>
+<code>AlignmentQValue</code>: the estimated share of false quantifications among the new ions of the run that score at least as well. A quantification is
+false when the chosen peak is not the ion's peak or, unless <code>AbsentAnalyteFdr</code> is <code>Off</code>, when the analyte is absent from the run.
+</li>
+</ul>
+<p>New ions are the transferred ions without a PSM based quantification in the run.</p>
+<p><a href="https://csbiology.github.io/ProteomIQon/tools/JoinQuantPepIonsWithProteins.html">JoinQuantPepIonsWithProteins</a> reads the output.
+<a href="https://csbiology.github.io/ProteomIQon/tools/LabelFreeProteinQuantification.html">LabelFreeProteinQuantification</a> and
+<a href="https://csbiology.github.io/ProteomIQon/tools/LabeledProteinQuantification.html">LabeledProteinQuantification</a> filter on the q-value only if their <code>Alignment_QValue</code> parameter
+is set. They then drop transferred rows with a q-value at or above it. All their default files set it to <code>Some 0.05</code>, and <code>None</code> keeps every transferred row.</p>
+<img src="https://csbiology.github.io/ProteomIQon/img/AlignmentPipeline.png" width="1000" />
+<h2><a name="Training-data-and-label" class="anchor" href="#Training-data-and-label">Training data and label</a></h2>
+<p>The tool learns from overlap ions: ions that a run identified and quantified itself and that were also transferred to it. For them the run's
+own PSM based peak is the reference. Let z be the distance between the transferred peak and the own peak, in units of the own peak's standard
+deviation.</p>
+<table>
+<thead>
+<tr class="header">
+<th><p>Label</p></th>
+<th><p>Condition</p></th>
+<th><p>Use</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><p>right</p></td>
+<td><p>z ≤ <code>PositiveRtSdFactor</code> (1) and &#124;log2 (transferred / own quantity)&#124; ≤ <code>MaxAbsLog2QuantRatio</code> (1)</p></td>
+<td><p>training</p></td>
+</tr>
+<tr class="even">
+<td><p>ambiguous</p></td>
+<td><p><code>PositiveRtSdFactor</code> &lt; z ≤ <code>NegativeRtSdFactor</code> (3), same quantity bound</p></td>
+<td><p>left out of training</p></td>
+</tr>
+<tr class="odd">
+<td><p>wrong</p></td>
+<td><p>everything else</p></td>
+<td><p>training</p></td>
+</tr>
+</tbody>
+</table>
+
+<p>Overlap ions whose own peak cannot serve as reference (no fitted peak, or a width or quantity that is not positive) get no label.</p>
+<h2><a name="Features" class="anchor" href="#Features">Features</a></h2>
+<p>All features come from the transferred row of AlignmentBasedQuantification and the <code>.align</code> row. None uses the ion's own PSM row, so the
+features of an overlap ion look like those of a new ion.</p>
+<table>
+<thead>
+<tr class="header">
+<th><p>Group</p></th>
+<th><p>Features</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><p>scan time</p></td>
+<td><p>residual to <code>PredictedScanTime</code> (signed, absolute, per peak sd, per local alignment error), the local alignment error, peak width and its ratio to the source peak</p></td>
+</tr>
+<tr class="even">
+<td><p>mass and isotopes</p></td>
+<td><p>&#124;ppm&#124; of the monoisotopic peak, intensity weighted &#124;ppm&#124; over the isotope peaks, number of isotope peaks, similarity of the isotope pattern to the source, KL divergences to the theoretical pattern</p></td>
+</tr>
+<tr class="odd">
+<td><p>chromatogram</p></td>
+<td><p>correlation with the source trace (around the peak and over the whole XIC), DTW distance to the source trace, competing peaks in the XIC, share of the XIC maximum at the apex, XIC length, relative SEO</p></td>
+</tr>
+<tr class="even">
+<td><p>ion</p></td>
+<td><p>source quantity and apex intensity, source scan time, m/z, charge</p></td>
+</tr>
+<tr class="odd">
+<td><p>selection</p></td>
+<td><p>from <code>&lt;run&gt;.alignfeatures</code>: <code>Sel_NCandidates</code>, <code>Sel_IsoCorr</code>, <code>Sel_IsoRatioLog2</code>, <code>Sel_ShapeCorr</code>, <code>Sel_RtZ</code>, <code>Sel_ImZ</code>, <code>Sel_LogRelHeight</code>, <code>Sel_AbsLog2FwhmRatio</code>, and <code>Sel_CandidateProbability</code>, <code>Sel_CandidateMargin</code> when all runs used the same selection model</p></td>
+</tr>
+<tr class="even">
+<td><p>ion mobility</p></td>
+<td><p>&#124;<code>IonMobility</code> − <code>PredictedIonMobility</code>&#124; / <code>PredictedIonMobilitySd</code> (timsTOF only)</p></td>
+</tr>
+</tbody>
+</table>
+
+<p>The local alignment error of an ion is the median |own PSM scan time − <code>PredictedScanTime</code>| of the run's overlap ions predicted within ±2 min.
+Every run needs <code>&lt;run&gt;.alignfeatures</code> next to its aligned <code>.quant</code>.</p>
+<p><code>UseIntensityRatioFeatures</code> adds four features: the ratios of target to source quantity and apex intensity, and the target quantity and apex
+intensity. They are off by default: a model that prefers a ratio near 1 penalises peptides that really changed between the samples.</p>
+<h2><a name="Model-calibration-and-q-values" class="anchor" href="#Model-calibration-and-q-values">Model, calibration and q-values</a></h2>
+<ol>
+<li>The overlap ions of all learning runs are pooled and split into 5 folds by peptide sequence, so the forms of a peptide stay together.</li>
+<li>
+Per fold, a gradient boosted tree model (ML.NET FastTree) is trained on the right and wrong ions of the other four folds. Unless
+<code>AbsentAnalyteFdr</code> is <code>Off</code>, the decoys of the learning runs join this training as wrong examples, in the fold of their peptide.
+</li>
+<li>
+Per fold, an isotonic calibration (the share of right ions as a non-decreasing function of the raw score) is fitted on the right and
+wrong overlap ions of the held-out fold. It turns scores into probabilities. Below the lowest fitted score the probability follows a logistic
+fit of the label on the raw score. A fold with fewer than 200 such ions, or with one label only, is calibrated on the held-out ions of all folds.
+If those are too few or of one label as well, the logistic fit alone is used.
+</li>
+<li>The <code>AlignmentScore</code> p of a new ion is the mean of the calibrated probabilities of the 5 fold models.</li>
+<li>
+The posterior error probability of a new ion is 1 − p. Per run, the new ions are sorted by p in descending order. The <code>AlignmentQValue</code> of
+an ion is the mean posterior error probability of all new ions with at least its p, made monotone.
+</li>
+<li>
+Unless <code>AbsentAnalyteFdr</code> is <code>Off</code>, the absent-analyte rate at the ion's score (see Absent analytes) is added to the q-value, which is made
+monotone again.
+</li>
+</ol>
+<p>The highest probability the isotonic calibration can give grows with the number of right and wrong overlap ions it is fitted on: about
+0.99 up to 2,000 ions, 0.999 from 20,000. With few overlap ions a cutoff of q ≤ 0.01 can therefore keep few or no transferred ions.</p>
+<p>The log reports an out-of-fold check. Each overlap ion is scored by the fold model that did not see it and calibrated on the held-out
+ions of the other folds (by the logistic fit alone if those are too few or of one label). The true share of wrong peaks is given at
+q ≤ 0.01, 0.05 and 0.1, once with the ambiguous ions counted as wrong and once without them.</p>
+<h2><a name="Absent-analytes" class="anchor" href="#Absent-analytes">Absent analytes</a></h2>
+<p>The overlap ions are present in the run, so they cannot show how the model scores an ion whose analyte is absent. The decoy transfers
+of AlignmentBasedQuantification (<code>&lt;run&gt;.aligndecoy</code>) are used for that. Per run, the absent-analyte rate at score t is</p>
+<p>FDR_absent(t) = π · (decoys with p ≥ t / all decoys) · N_new / N_new(p ≥ t)</p>
+<p>with N_new the number of new ions of the run and π the fraction of new ions whose analyte is absent. <code>Estimated</code> estimates π per run as
+Storey does, with λ = 0.5. <code>Conservative</code> sets π to 1.</p>
+<ul>
+<li>A run with fewer than 200 decoys uses the decoys of all runs to score.</li>
+<li>Decoys without a fitted peak and new ions without an alignment row count as p = 0.</li>
+<li>
+When a run to score or to learn from has no <code>&lt;run&gt;.aligndecoy</code> next to its aligned <code>.quant</code> (AlignmentBasedQuantification writes none
+with <code>DecoyFraction</code> 0), or no decoy has a fitted peak, the tool warns and works as <code>Off</code>.
+</li>
+</ul>
 <h2><a name="Inputs-and-outputs" class="anchor" href="#Inputs-and-outputs">Inputs and outputs</a></h2>
 <table>
 <thead>
@@ -204,33 +328,33 @@ transferred ion, and the q-value follows from the score distribution of the nega
 <tbody>
 <tr class="odd">
 <td><p><code>-i</code></p></td>
-<td><p>.quant of the run, before alignment</p></td>
-<td><p><a href="https://csbiology.github.io/ProteomIQon/tools/PSMBasedQuantification.html">PSMBasedQuantification</a></p></td>
+<td><p>PSM based <code>.quant</code> of the runs to score</p></td>
+<td><p><a href="https://csbiology.github.io/ProteomIQon/tools/PSMBasedQuantification.html">PSMBasedQuantification</a> or <a href="https://csbiology.github.io/ProteomIQon/tools/PSMBasedQuantificationTIMs.html">PSMBasedQuantificationTIMs</a></p></td>
 </tr>
 <tr class="even">
 <td><p><code>-ii</code></p></td>
-<td><p>.align of the run</p></td>
+<td><p><code>.align</code> of the runs to score</p></td>
 <td><p><a href="https://csbiology.github.io/ProteomIQon/tools/QuantBasedAlignment.html">QuantBasedAlignment</a></p></td>
 </tr>
 <tr class="odd">
 <td><p><code>-iii</code></p></td>
-<td><p>.quant of the run, after alignment</p></td>
+<td><p>aligned <code>.quant</code> of the runs to score</p></td>
 <td><p><a href="https://csbiology.github.io/ProteomIQon/tools/AlignmentBasedQuantification.html">AlignmentBasedQuantification</a></p></td>
 </tr>
 <tr class="even">
 <td><p><code>-l</code></p></td>
-<td><p>.quant files of the runs used for training</p></td>
-<td><p><a href="https://csbiology.github.io/ProteomIQon/tools/PSMBasedQuantification.html">PSMBasedQuantification</a></p></td>
+<td><p>PSM based <code>.quant</code> of the runs to learn from</p></td>
+<td><p>as <code>-i</code></p></td>
 </tr>
 <tr class="odd">
 <td><p><code>-ll</code></p></td>
-<td><p>.align files of the runs used for training</p></td>
-<td><p><a href="https://csbiology.github.io/ProteomIQon/tools/QuantBasedAlignment.html">QuantBasedAlignment</a></p></td>
+<td><p><code>.align</code> of the runs to learn from</p></td>
+<td><p>as <code>-ii</code></p></td>
 </tr>
 <tr class="even">
 <td><p><code>-lll</code></p></td>
-<td><p>.quant files after alignment for the runs used for training</p></td>
-<td><p><a href="https://csbiology.github.io/ProteomIQon/tools/AlignmentBasedQuantification.html">AlignmentBasedQuantification</a></p></td>
+<td><p>aligned <code>.quant</code> of the runs to learn from</p></td>
+<td><p>as <code>-iii</code></p></td>
 </tr>
 <tr class="odd">
 <td><p><code>-o</code></p></td>
@@ -243,43 +367,36 @@ transferred ion, and the q-value follows from the score distribution of the nega
 <td><p>this page</p></td>
 </tr>
 <tr class="odd">
-<td><p><code>-c</code></p></td>
-<td><p>number of runs scored in parallel, default 1</p></td>
+<td><p><code>-mf</code></p></td>
+<td><p>switch: pair the files by name instead of by position</p></td>
 <td></td>
 </tr>
 <tr class="even">
-<td><p><code>-ts</code></p></td>
-<td><p>switch: write the training examples selected from each run</p></td>
+<td><p><code>-c</code></p></td>
+<td><p>number of runs read and written in parallel, one core each, default 1</p></td>
 <td></td>
 </tr>
 <tr class="odd">
-<td><p><code>-dc</code></p></td>
-<td><p>switch: write diagnostic charts</p></td>
+<td><p><code>-ts</code></p></td>
+<td><p>switch: write the training ions of each learning run</p></td>
 <td></td>
 </tr>
 <tr class="even">
-<td><p><code>-mf</code></p></td>
-<td><p>switch: pair input files by name instead of position</p></td>
+<td><p><code>-dc</code></p></td>
+<td><p>switch: write <code>AlignmentScoreHistogram.html</code></p></td>
 <td></td>
 </tr>
 </tbody>
 </table>
 
-<p><code>-i</code> to <code>-iii</code> name the runs to score, <code>-l</code> to <code>-lll</code> the runs to learn from. The runs to learn from can be the same runs. Every one
-of the six flags takes one file, several files, or a directory that is searched for *.quant or *.align. Without <code>-mf</code> the quant, align and
-aligned quant files are paired by position. With <code>-mf</code> they are paired by file name without extension. Every scored run trains a classifier on
-the pooled examples of all training runs.</p>
-<p>The tool writes a file with the same name as the <code>-i</code> .quant file into the output directory. It holds the rows of that file with
-AlignmentScore and AlignmentQValue filled for the rows whose QuantificationSource is Alignment.
-<a href="https://csbiology.github.io/ProteomIQon/tools/JoinQuantPepIonsWithProteins.html">JoinQuantPepIonsWithProteins</a> reads it, and
-<a href="https://csbiology.github.io/ProteomIQon/tools/LabelFreeProteinQuantification.html">LabelFreeProteinQuantification</a> and
-<a href="https://csbiology.github.io/ProteomIQon/tools/LabeledProteinQuantification.html">LabeledProteinQuantification</a> filter on the q-value column through their Alignment_QValue
-parameter. With <code>-ts</code> the tool also writes <code>&lt;quant file name&gt;testset</code>, the training examples taken from the run of the same name with
-their aligned quantification columns, AlignmentScore, AlignmentQValue and the label column WasPositiveSet. With <code>-dc</code> it writes ProbabilityHistogram.html and QValueDistribution.html into a directory
-named after the run. Logs go to <code>AlignmentBasedQuantStatistics_log.txt</code> and one <code>&lt;run&gt;_log.txt</code> per scored run in the output directory.</p>
+<p>Each flag takes one file, several files, or a directory. The runs to learn from are usually the runs to score. Without <code>-mf</code> the files are
+paired by position, the files of a directory sorted by name, and the numbers of files must agree.</p>
+<p>For every scored run the tool writes <code>&lt;run&gt;.quant</code> with the layout of the input <code>.quant</code> files: the PSM based rows of <code>-i</code> and one row per new
+ion with <code>AlignmentScore</code> and <code>AlignmentQValue</code>. When the PSM row of an overlap ion has no fitted peak, the transferred row replaces it and is
+scored like a new ion. <code>-ts</code> writes <code>&lt;run&gt;.quanttestset</code> per learning run, with the overlap ions, their label, fold, raw and calibrated
+out-of-fold score, out-of-fold q-value and features. Logs go to <code>AlignmentBasedQuantStatistics_log.txt</code>, with the features, the out-of-fold
+check and the calibration per score bin and per source intensity quartile, and to one <code>&lt;run&gt;_log.txt</code> per run.</p>
 <h2><a name="Parameters" class="anchor" href="#Parameters">Parameters</a></h2>
-<p>The four cutoffs decide which training ions count as positive and which as negative. Each compares a transferred value with the value of the
-identified ion (light or heavy, matching the ion's GlobalMod) and expresses the allowed difference as a fraction of the identified value.</p>
 <table>
 <thead>
 <tr class="header">
@@ -290,60 +407,102 @@ identified ion (light or heavy, matching the ion's GlobalMod) and expresses the 
 </thead>
 <tbody>
 <tr class="odd">
-<td><p>PositiveQuantMzCutoff</p></td>
-<td><p>0.01</p></td>
-<td><p>Positive when the m/z difference is below this fraction of the identified m/z and the intensity condition holds too.</p></td>
+<td><p>PositiveRtSdFactor</p></td>
+<td><p>1.0</p></td>
+<td><p>A peak within this many own peak sd is right.</p></td>
 </tr>
 <tr class="even">
-<td><p>NegativeQuantMzCutoff</p></td>
-<td><p>0.99</p></td>
-<td><p>Negative when the m/z difference is above (1 - NegativeQuantMzCutoff) times the identified m/z, so above 1 percent with the default.</p></td>
+<td><p>NegativeRtSdFactor</p></td>
+<td><p>3.0</p></td>
+<td><p>Up to this many sd a peak is ambiguous, beyond it wrong.</p></td>
 </tr>
 <tr class="odd">
-<td><p>PositiveQuantCutoff</p></td>
-<td><p>0.1</p></td>
-<td><p>Positive when the intensity difference is below this fraction of the identified intensity and the m/z condition holds too.</p></td>
+<td><p>MaxAbsLog2QuantRatio</p></td>
+<td><p>1.0</p></td>
+<td><p>Right and ambiguous peaks need &#124;log2 (transferred / own quantity)&#124; at most this.</p></td>
 </tr>
 <tr class="even">
-<td><p>NegativeQuantCutoff</p></td>
-<td><p>0.9</p></td>
-<td><p>Negative when the intensity difference is above (1 - NegativeQuantCutoff) times the identified intensity, so above 10 percent with the default.</p></td>
+<td><p>UseIntensityRatioFeatures</p></td>
+<td><p>false</p></td>
+<td><p>Add target to source intensity ratios as features.</p></td>
+</tr>
+<tr class="odd">
+<td><p>UseIonMobility</p></td>
+<td><p>true</p></td>
+<td><p>Add the ion mobility feature when the rows have a finite <code>IonMobility</code> and the <code>.align</code> file a <code>PredictedIonMobilitySd</code> above 0.</p></td>
+</tr>
+<tr class="even">
+<td><p>NumberOfFolds</p></td>
+<td><p>5</p></td>
+<td><p>Cross-validation folds.</p></td>
+</tr>
+<tr class="odd">
+<td><p>Trainer</p></td>
+<td><p>FastTree</p></td>
+<td><p><code>FastTree</code> or <code>LightGbm</code>. LightGbm needs the native library lib_lightgbm, which the package ships for win-x64, linux-x64 and osx-x64.</p></td>
+</tr>
+<tr class="even">
+<td><p>NumberOfLeaves, NumberOfTrees, MinimumExampleCountPerLeaf, LearningRate</p></td>
+<td><p>null</p></td>
+<td><p>null takes the trainer's defaults: 20, 100, 10, 0.2 for FastTree; 31, 100, 20, 0.1 for LightGbm.</p></td>
+</tr>
+<tr class="odd">
+<td><p>AbsentAnalyteFdr</p></td>
+<td><p>Estimated</p></td>
+<td><p><code>Off</code>, <code>Estimated</code> or <code>Conservative</code>: whether and how the absent-analyte rate enters the q-value (see Absent analytes).</p></td>
+</tr>
+<tr class="even">
+<td><p>Seed</p></td>
+<td><p>1</p></td>
+<td><p>Seed of the folds and of the trainer.</p></td>
 </tr>
 </tbody>
 </table>
 
-<p>The positive test runs first. An ion that fails it is negative, whether or not it passes one of the negative conditions. The default file is
-<a href="https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/AlignmentBasedQuantStatisticsParams.json">AlignmentBasedQuantStatisticsParams.json</a>.</p>
+<p>See <a href="https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/AlignmentBasedQuantStatisticsParams.json">the default parameter file</a>.</p>
 <h2><a name="Writing-a-parameter-file" class="anchor" href="#Writing-a-parameter-file">Writing a parameter file</a></h2>
 <pre class="fssnip highlighted"><code lang="fsharp"><span class="k">open</span> <span onmouseout="hideTip(event, 'fs1', 1)" onmouseover="showTip(event, 'fs1', 1)" class="id">ProteomIQon</span>
 
 <span class="k">let</span> <span onmouseout="hideTip(event, 'fs2', 2)" onmouseover="showTip(event, 'fs2', 2)" class="id">alignmentBasedQuantStatisticsParams</span> <span class="pn">:</span> <span onmouseout="hideTip(event, 'fs3', 3)" onmouseover="showTip(event, 'fs3', 3)" class="m">Dto</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs4', 4)" onmouseover="showTip(event, 'fs4', 4)" class="id">AlignmentBasedQuantStatisticsParams</span> <span class="o">=</span>
     <span class="pn">{</span>
-        <span class="prop">PositiveQuantMzCutoff</span> <span class="o">=</span> <span class="n">0.01</span>
-        <span class="prop">NegativeQuantMzCutoff</span> <span class="o">=</span> <span class="n">0.99</span>
-        <span class="prop">PositiveQuantCutoff</span>   <span class="o">=</span> <span class="n">0.1</span>
-        <span class="prop">NegativeQuantCutoff</span>   <span class="o">=</span> <span class="n">0.9</span>
+        <span class="prop">PositiveRtSdFactor</span>         <span class="o">=</span> <span class="n">1.</span>
+        <span class="prop">NegativeRtSdFactor</span>         <span class="o">=</span> <span class="n">3.</span>
+        <span class="prop">MaxAbsLog2QuantRatio</span>       <span class="o">=</span> <span class="n">1.</span>
+        <span class="prop">UseIntensityRatioFeatures</span>  <span class="o">=</span> <span class="k">false</span>
+        <span class="prop">UseIonMobility</span>             <span class="o">=</span> <span class="k">true</span>
+        <span class="prop">NumberOfFolds</span>              <span class="o">=</span> <span class="n">5</span>
+        <span class="prop">Trainer</span>                    <span class="o">=</span> <span class="s">&quot;FastTree&quot;</span>
+        <span class="c">// empty: the defaults of the trainer</span>
+        <span class="prop">NumberOfLeaves</span>             <span class="o">=</span> <span onmouseout="hideTip(event, 'fs5', 5)" onmouseover="showTip(event, 'fs5', 5)" class="id">System</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs6', 6)" onmouseover="showTip(event, 'fs6', 6)" class="id">Nullable</span><span class="pn">(</span><span class="pn">)</span>
+        <span class="prop">NumberOfTrees</span>              <span class="o">=</span> <span onmouseout="hideTip(event, 'fs5', 7)" onmouseover="showTip(event, 'fs5', 7)" class="id">System</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs6', 8)" onmouseover="showTip(event, 'fs6', 8)" class="id">Nullable</span><span class="pn">(</span><span class="pn">)</span>
+        <span class="prop">MinimumExampleCountPerLeaf</span> <span class="o">=</span> <span onmouseout="hideTip(event, 'fs5', 9)" onmouseover="showTip(event, 'fs5', 9)" class="id">System</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs6', 10)" onmouseover="showTip(event, 'fs6', 10)" class="id">Nullable</span><span class="pn">(</span><span class="pn">)</span>
+        <span class="prop">LearningRate</span>               <span class="o">=</span> <span onmouseout="hideTip(event, 'fs5', 11)" onmouseover="showTip(event, 'fs5', 11)" class="id">System</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs6', 12)" onmouseover="showTip(event, 'fs6', 12)" class="id">Nullable</span><span class="pn">(</span><span class="pn">)</span>
+        <span class="prop">AbsentAnalyteFdr</span>           <span class="o">=</span> <span class="s">&quot;Estimated&quot;</span>
+        <span class="prop">Seed</span>                       <span class="o">=</span> <span class="n">1</span>
     <span class="pn">}</span>
 
 <span class="c">// Replace the temp folder with your project folder.</span>
-<span class="k">let</span> <span onmouseout="hideTip(event, 'fs5', 5)" onmouseover="showTip(event, 'fs5', 5)" class="id">outputPath</span> <span class="o">=</span>
-    <span onmouseout="hideTip(event, 'fs6', 6)" onmouseover="showTip(event, 'fs6', 6)" class="id">System</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs7', 7)" onmouseover="showTip(event, 'fs7', 7)" class="id">IO</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs8', 8)" onmouseover="showTip(event, 'fs8', 8)" class="rt">Path</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs9', 9)" onmouseover="showTip(event, 'fs9', 9)" class="id">Combine</span><span class="pn">(</span><span onmouseout="hideTip(event, 'fs6', 10)" onmouseover="showTip(event, 'fs6', 10)" class="id">System</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs7', 11)" onmouseover="showTip(event, 'fs7', 11)" class="id">IO</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs8', 12)" onmouseover="showTip(event, 'fs8', 12)" class="rt">Path</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs10', 13)" onmouseover="showTip(event, 'fs10', 13)" class="id">GetTempPath</span><span class="pn">(</span><span class="pn">)</span><span class="pn">,</span> <span class="s">&quot;AlignmentBasedQuantStatisticsParams.json&quot;</span><span class="pn">)</span>
+<span class="k">let</span> <span onmouseout="hideTip(event, 'fs7', 13)" onmouseover="showTip(event, 'fs7', 13)" class="id">outputPath</span> <span class="o">=</span>
+    <span onmouseout="hideTip(event, 'fs5', 14)" onmouseover="showTip(event, 'fs5', 14)" class="id">System</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs8', 15)" onmouseover="showTip(event, 'fs8', 15)" class="id">IO</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs9', 16)" onmouseover="showTip(event, 'fs9', 16)" class="rt">Path</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs10', 17)" onmouseover="showTip(event, 'fs10', 17)" class="id">Combine</span><span class="pn">(</span><span onmouseout="hideTip(event, 'fs5', 18)" onmouseover="showTip(event, 'fs5', 18)" class="id">System</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs8', 19)" onmouseover="showTip(event, 'fs8', 19)" class="id">IO</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs9', 20)" onmouseover="showTip(event, 'fs9', 20)" class="rt">Path</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs11', 21)" onmouseover="showTip(event, 'fs11', 21)" class="id">GetTempPath</span><span class="pn">(</span><span class="pn">)</span><span class="pn">,</span> <span class="s">&quot;AlignmentBasedQuantStatisticsParams.json&quot;</span><span class="pn">)</span>
 
-<span onmouseout="hideTip(event, 'fs11', 14)" onmouseover="showTip(event, 'fs11', 14)" class="m">Json</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs12', 15)" onmouseover="showTip(event, 'fs12', 15)" class="id">serializeAndWrite</span> <span onmouseout="hideTip(event, 'fs5', 16)" onmouseover="showTip(event, 'fs5', 16)" class="id">outputPath</span> <span onmouseout="hideTip(event, 'fs2', 17)" onmouseover="showTip(event, 'fs2', 17)" class="id">alignmentBasedQuantStatisticsParams</span>
+<span onmouseout="hideTip(event, 'fs12', 22)" onmouseover="showTip(event, 'fs12', 22)" class="m">Json</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs13', 23)" onmouseover="showTip(event, 'fs13', 23)" class="id">serializeAndWrite</span> <span onmouseout="hideTip(event, 'fs7', 24)" onmouseover="showTip(event, 'fs7', 24)" class="id">outputPath</span> <span onmouseout="hideTip(event, 'fs2', 25)" onmouseover="showTip(event, 'fs2', 25)" class="id">alignmentBasedQuantStatisticsParams</span>
 </code></pre>
 <h2><a name="Running-the-tool" class="anchor" href="#Running-the-tool">Running the tool</a></h2>
-<p>Install the tool with <code>dotnet tool install --global ProteomIQon.AlignmentBasedQuantStatistics</code>. Score one run and learn from the same run.</p>
-<table class="pre"><tr><td class="snippet"><pre class="fssnip"><code lang="text">proteomiqon-alignmentbasedquantstatistics -i path/to/run.quant -ii path/to/run.align -iii path/to/aligned/run.quant -l path/to/run.quant -ll path/to/run.align -lll path/to/aligned/run.quant -o path/to/output -p path/to/AlignmentBasedQuantStatisticsParams.json
-</code></pre></td></tr></table>
-<p>Score every run in the directories, learn from all of them, pair the files by name, and work on four runs at a time.</p>
+<p>Install the tool with <code>dotnet tool install --global ProteomIQon.AlignmentBasedQuantStatistics</code>.
+Score every run, learn from all of them, pair the files by name, and work on four runs at a time:</p>
 <table class="pre"><tr><td class="snippet"><pre class="fssnip"><code lang="text">proteomiqon-alignmentbasedquantstatistics -i path/to/quant -ii path/to/align -iii path/to/aligned -l path/to/quant -ll path/to/align -lll path/to/aligned -o path/to/output -p path/to/AlignmentBasedQuantStatisticsParams.json -mf -c 4
 </code></pre></td></tr></table>
-<p>Add <code>-ts</code> to keep the training examples and <code>-dc</code> to get the charts.</p>
-<table class="pre"><tr><td class="snippet"><pre class="fssnip"><code lang="text">proteomiqon-alignmentbasedquantstatistics -i path/to/quant -ii path/to/align -iii path/to/aligned -l path/to/quant -ll path/to/align -lll path/to/aligned -o path/to/output -p path/to/AlignmentBasedQuantStatisticsParams.json -mf -ts -dc
-</code></pre></td></tr></table>
-<p>Print the description of every argument.</p>
+<p>Add <code>-ts</code> to keep the training ions and <code>-dc</code> for the score histogram. Print the description of every argument:</p>
 <table class="pre"><tr><td class="snippet"><pre class="fssnip"><code lang="text">proteomiqon-alignmentbasedquantstatistics --help
 </code></pre></td></tr></table>
+<h2><a name="Limitations" class="anchor" href="#Limitations">Limitations</a></h2>
+<ul>
+<li>
+The false discovery rate of absent analytes is an estimate from decoys at a shifted scan time. Analytes near the detection limit are not
+modelled.
+</li>
+<li>The model needs overlap ions. With few identifications per run, or runs that share few ions, there is little to learn from.</li>
+</ul>
 
                 </div>
             </div>
@@ -357,16 +516,40 @@ from ProteomIQon</div>
 
 from ProteomIQon.Dto<br /><br />--------------------<br />type AlignmentBasedQuantStatisticsParams =
   {
-    PositiveQuantMzCutoff: float
-    NegativeQuantMzCutoff: float
-    PositiveQuantCutoff: float
-    NegativeQuantCutoff: float
+    PositiveRtSdFactor: float
+    NegativeRtSdFactor: float
+    MaxAbsLog2QuantRatio: float
+    UseIntensityRatioFeatures: bool
+    UseIonMobility: bool
+    NumberOfFolds: int
+    Trainer: string
+    NumberOfLeaves: Nullable&lt;int&gt;
+    NumberOfTrees: Nullable&lt;int&gt;
+    MinimumExampleCountPerLeaf: Nullable&lt;int&gt;
+    ...
   }
-  member Equals: AlignmentBasedQuantStatisticsParams * IEqualityComparer -&gt; bool</div>
-<div class="fsdocs-tip" id="fs5">val outputPath: string</div>
-<div class="fsdocs-tip" id="fs6">namespace System</div>
-<div class="fsdocs-tip" id="fs7">namespace System.IO</div>
-<div class="fsdocs-tip" id="fs8">type Path =
+  member Equals: AlignmentBasedQuantStatisticsParams * IEqualityComparer -&gt; bool<br /><em>&lt;summary&gt;
+ Tree parameters that are null take the default of the trainer.
+&lt;/summary&gt;</em></div>
+<div class="fsdocs-tip" id="fs5">namespace System</div>
+<div class="fsdocs-tip" id="fs6">Multiple items<br />[&lt;Struct&gt;]
+type Nullable&lt;&#39;T (requires default constructor and value type and &#39;T :&gt; ValueType)&gt; =
+  new: value: &#39;T -&gt; unit
+  member Equals: other: obj -&gt; bool
+  member GetHashCode: unit -&gt; int
+  member GetValueOrDefault: unit -&gt; &#39;T + 1 overload
+  member ToString: unit -&gt; string
+  static member op_Explicit: value: Nullable&lt;&#39;T&gt; -&gt; &#39;T
+  static member op_Implicit: value: &#39;T -&gt; Nullable&lt;&#39;T&gt;
+  member HasValue: bool
+  member Value: &#39;T<br /><em>&lt;summary&gt;Represents a value type that can be assigned &lt;see langword=&quot;null&quot; /&gt;.&lt;/summary&gt;<br />&lt;typeparam name=&quot;T&quot;&gt;The underlying value type of the &lt;see cref=&quot;T:System.Nullable`1&quot; /&gt; generic type.&lt;/typeparam&gt;</em><br /><br />--------------------<br />type Nullable =
+  static member Compare&lt;&#39;T (requires default constructor and value type and &#39;T :&gt; ValueType)&gt; : n1: Nullable&lt;&#39;T&gt; * n2: Nullable&lt;&#39;T&gt; -&gt; int
+  static member Equals&lt;&#39;T (requires default constructor and value type and &#39;T :&gt; ValueType)&gt; : n1: Nullable&lt;&#39;T&gt; * n2: Nullable&lt;&#39;T&gt; -&gt; bool
+  static member GetUnderlyingType: nullableType: Type -&gt; Type
+  static member GetValueRefOrDefaultRef&lt;&#39;T (requires default constructor and value type and &#39;T :&gt; ValueType)&gt; : nullable: byref&lt;Nullable&lt;&#39;T&gt;&gt; -&gt; inref&lt;&#39;T&gt;<br /><em>&lt;summary&gt;Supports a value type that can be assigned &lt;see langword=&quot;null&quot; /&gt;. This class cannot be inherited.&lt;/summary&gt;</em><br /><br />--------------------<br />System.Nullable ()<br />System.Nullable(value: &#39;T) : System.Nullable&lt;&#39;T&gt;</div>
+<div class="fsdocs-tip" id="fs7">val outputPath: string</div>
+<div class="fsdocs-tip" id="fs8">namespace System.IO</div>
+<div class="fsdocs-tip" id="fs9">type Path =
   static member ChangeExtension: path: string * extension: string -&gt; string
   static member Combine: path1: string * path2: string -&gt; string + 4 overloads
   static member EndsInDirectorySeparator: path: ReadOnlySpan&lt;char&gt; -&gt; bool + 1 overload
@@ -378,12 +561,12 @@ from ProteomIQon.Dto<br /><br />--------------------<br />type AlignmentBasedQua
   static member GetFullPath: path: string -&gt; string + 1 overload
   static member GetInvalidFileNameChars: unit -&gt; char array
   ...<br /><em>&lt;summary&gt;Performs operations on &lt;see cref=&quot;T:System.String&quot; /&gt; instances that contain file or directory path information. These operations are performed in a cross-platform manner.&lt;/summary&gt;</em></div>
-<div class="fsdocs-tip" id="fs9">System.IO.Path.Combine(paths: System.ReadOnlySpan&lt;string&gt;) : string<br />System.IO.Path.Combine([&lt;System.ParamArray&gt;] paths: string array) : string<br />System.IO.Path.Combine(path1: string, path2: string) : string<br />System.IO.Path.Combine(path1: string, path2: string, path3: string) : string<br />System.IO.Path.Combine(path1: string, path2: string, path3: string, path4: string) : string</div>
-<div class="fsdocs-tip" id="fs10">System.IO.Path.GetTempPath() : string</div>
-<div class="fsdocs-tip" id="fs11">module Json
+<div class="fsdocs-tip" id="fs10">System.IO.Path.Combine(paths: System.ReadOnlySpan&lt;string&gt;) : string<br />System.IO.Path.Combine([&lt;System.ParamArray&gt;] paths: string array) : string<br />System.IO.Path.Combine(path1: string, path2: string) : string<br />System.IO.Path.Combine(path1: string, path2: string, path3: string) : string<br />System.IO.Path.Combine(path1: string, path2: string, path3: string, path4: string) : string</div>
+<div class="fsdocs-tip" id="fs11">System.IO.Path.GetTempPath() : string</div>
+<div class="fsdocs-tip" id="fs12">module Json
 
 from ProteomIQon</div>
-<div class="fsdocs-tip" id="fs12">val serializeAndWrite: path: string -&gt; obj: &#39;a -&gt; unit</div>
+<div class="fsdocs-tip" id="fs13">val serializeAndWrite: path: string -&gt; obj: &#39;a -&gt; unit</div>
 
     </div>
 

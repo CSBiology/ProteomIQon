@@ -233,8 +233,8 @@
 </tr>
 <tr class="even">
 <td><p>Alignment_QValue</p></td>
-<td><p>None</p></td>
-<td><p>Rows that came from alignment and have an alignment q-value at or above this value are dropped, None keeps everything.</p></td>
+<td><p>Some 0.05</p></td>
+<td><p>Rows that came from alignment and have an alignment q-value at or above this value are dropped. PSM based quantifications carry the q-value 0, and rows without an alignment q-value are kept. None keeps every row.</p></td>
 </tr>
 <tr class="odd">
 <td><p>ModificationFilter</p></td>
@@ -297,7 +297,7 @@
 </tbody>
 </table>
 
-<p>Five default files exist. <a href="https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/LabeledQuantificationParams.json">LabeledQuantificationParams.json</a> is the table above. <a href="https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/LabeledQuantificationParams_withCorrFilter.json">LabeledQuantificationParams_withCorrFilter.json</a> sets Correlation_Light_Heavy_Threshold to Some 0.9. <a href="https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/LabeledQuantificationParams_CorrFilter_ChargeAgg.json">LabeledQuantificationParams_CorrFilter_ChargeAgg.json</a> sets the threshold to Some 0.0 and adds the charge step with Mean. <a href="https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/LabeledQuantificationParams_CorrFilter_ChargeAgg_ModAgg.json">LabeledQuantificationParams_CorrFilter_ChargeAgg_ModAgg.json</a> sets the threshold to Some 0.0 and adds the charge and the modification step, both with Mean. <a href="https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/LabeledQuantificationParams_Transform_Filter_Sum.json">LabeledQuantificationParams_Transform_Filter_Sum.json</a> log2 transforms light, heavy and ratio in the first step, keeps only log2 ratios below 0.0 there, and sums light and heavy in the protein step while the ratio is still averaged.</p>
+<p>Five default files exist, all with Alignment_QValue set to Some 0.05. <a href="https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/LabeledQuantificationParams.json">LabeledQuantificationParams.json</a> is the table above. <a href="https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/LabeledQuantificationParams_withCorrFilter.json">LabeledQuantificationParams_withCorrFilter.json</a> sets Correlation_Light_Heavy_Threshold to Some 0.9. <a href="https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/LabeledQuantificationParams_CorrFilter_ChargeAgg.json">LabeledQuantificationParams_CorrFilter_ChargeAgg.json</a> sets the threshold to Some 0.0 and adds the charge step with Mean. <a href="https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/LabeledQuantificationParams_CorrFilter_ChargeAgg_ModAgg.json">LabeledQuantificationParams_CorrFilter_ChargeAgg_ModAgg.json</a> sets the threshold to Some 0.0 and adds the charge and the modification step, both with Mean. <a href="https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/LabeledQuantificationParams_Transform_Filter_Sum.json">LabeledQuantificationParams_Transform_Filter_Sum.json</a> log2 transforms light, heavy and ratio in the first step, keeps only log2 ratios below 0.0 there, and sums light and heavy in the protein step while the ratio is still averaged.</p>
 <h2><a name="Writing-a-parameter-file" class="anchor" href="#Writing-a-parameter-file">Writing a parameter file</a></h2>
 <pre class="fssnip highlighted"><code lang="fsharp"><span class="k">open</span> <span onmouseout="hideTip(event, 'fs1', 1)" onmouseover="showTip(event, 'fs1', 1)" class="id">System</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs2', 2)" onmouseover="showTip(event, 'fs2', 2)" class="id">IO</span>
 <span class="k">open</span> <span onmouseout="hideTip(event, 'fs3', 3)" onmouseover="showTip(event, 'fs3', 3)" class="id">ProteomIQon</span>
@@ -319,8 +319,8 @@
 <span class="k">let</span> <span onmouseout="hideTip(event, 'fs11', 17)" onmouseover="showTip(event, 'fs11', 17)" class="id">labeledQuantificationParams</span> <span class="pn">:</span> <span onmouseout="hideTip(event, 'fs12', 18)" onmouseover="showTip(event, 'fs12', 18)" class="m">Dto</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs13', 19)" onmouseover="showTip(event, 'fs13', 19)" class="id">LabeledQuantificationParams</span> <span class="o">=</span>
     <span class="pn">{</span>
         <span class="prop">Correlation_Light_Heavy_Threshold</span>  <span class="o">=</span> <span onmouseout="hideTip(event, 'fs8', 20)" onmouseover="showTip(event, 'fs8', 20)" class="uc">None</span>
-        <span class="prop">Alignment_QValue</span>                   <span class="o">=</span> <span onmouseout="hideTip(event, 'fs8', 21)" onmouseover="showTip(event, 'fs8', 21)" class="uc">None</span>
-        <span class="prop">ModificationFilter</span>                 <span class="o">=</span> <span onmouseout="hideTip(event, 'fs14', 22)" onmouseover="showTip(event, 'fs14', 22)" class="m">UseModifiedPeptides</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs15', 23)" onmouseover="showTip(event, 'fs15', 23)" class="id">All</span>
+        <span class="prop">Alignment_QValue</span>                   <span class="o">=</span> <span onmouseout="hideTip(event, 'fs14', 21)" onmouseover="showTip(event, 'fs14', 21)" class="uc">Some</span> <span class="n">0.05</span>
+        <span class="prop">ModificationFilter</span>                 <span class="o">=</span> <span onmouseout="hideTip(event, 'fs15', 22)" onmouseover="showTip(event, 'fs15', 22)" class="m">UseModifiedPeptides</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs16', 23)" onmouseover="showTip(event, 'fs16', 23)" class="id">All</span>
         <span class="prop">AggregateGlobalModificationsParams</span> <span class="o">=</span> <span onmouseout="hideTip(event, 'fs4', 24)" onmouseover="showTip(event, 'fs4', 24)" class="id">meanOfAll</span>
         <span class="prop">AggregatePeptideChargeStatesParams</span> <span class="o">=</span> <span onmouseout="hideTip(event, 'fs8', 25)" onmouseover="showTip(event, 'fs8', 25)" class="uc">None</span>
         <span class="prop">AggregateModifiedPeptidesParams</span>    <span class="o">=</span> <span onmouseout="hideTip(event, 'fs8', 26)" onmouseover="showTip(event, 'fs8', 26)" class="uc">None</span>
@@ -328,9 +328,9 @@
     <span class="pn">}</span>
 
 <span class="c">// Replace the temp folder with your project folder.</span>
-<span class="k">let</span> <span onmouseout="hideTip(event, 'fs16', 28)" onmouseover="showTip(event, 'fs16', 28)" class="id">outputPath</span> <span class="o">=</span> <span onmouseout="hideTip(event, 'fs17', 29)" onmouseover="showTip(event, 'fs17', 29)" class="rt">Path</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs18', 30)" onmouseover="showTip(event, 'fs18', 30)" class="id">Combine</span><span class="pn">(</span><span onmouseout="hideTip(event, 'fs17', 31)" onmouseover="showTip(event, 'fs17', 31)" class="rt">Path</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs19', 32)" onmouseover="showTip(event, 'fs19', 32)" class="id">GetTempPath</span><span class="pn">(</span><span class="pn">)</span><span class="pn">,</span> <span class="s">&quot;LabeledQuantificationParams.json&quot;</span><span class="pn">)</span>
+<span class="k">let</span> <span onmouseout="hideTip(event, 'fs17', 28)" onmouseover="showTip(event, 'fs17', 28)" class="id">outputPath</span> <span class="o">=</span> <span onmouseout="hideTip(event, 'fs18', 29)" onmouseover="showTip(event, 'fs18', 29)" class="rt">Path</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs19', 30)" onmouseover="showTip(event, 'fs19', 30)" class="id">Combine</span><span class="pn">(</span><span onmouseout="hideTip(event, 'fs18', 31)" onmouseover="showTip(event, 'fs18', 31)" class="rt">Path</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs20', 32)" onmouseover="showTip(event, 'fs20', 32)" class="id">GetTempPath</span><span class="pn">(</span><span class="pn">)</span><span class="pn">,</span> <span class="s">&quot;LabeledQuantificationParams.json&quot;</span><span class="pn">)</span>
 
-<span onmouseout="hideTip(event, 'fs20', 33)" onmouseover="showTip(event, 'fs20', 33)" class="m">Json</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs21', 34)" onmouseover="showTip(event, 'fs21', 34)" class="id">serializeAndWrite</span> <span onmouseout="hideTip(event, 'fs16', 35)" onmouseover="showTip(event, 'fs16', 35)" class="id">outputPath</span> <span onmouseout="hideTip(event, 'fs11', 36)" onmouseover="showTip(event, 'fs11', 36)" class="id">labeledQuantificationParams</span>
+<span onmouseout="hideTip(event, 'fs21', 33)" onmouseover="showTip(event, 'fs21', 33)" class="m">Json</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs22', 34)" onmouseover="showTip(event, 'fs22', 34)" class="id">serializeAndWrite</span> <span onmouseout="hideTip(event, 'fs17', 35)" onmouseover="showTip(event, 'fs17', 35)" class="id">outputPath</span> <span onmouseout="hideTip(event, 'fs11', 36)" onmouseover="showTip(event, 'fs11', 36)" class="id">labeledQuantificationParams</span>
 </code></pre>
 <h2><a name="Running-the-tool" class="anchor" href="#Running-the-tool">Running the tool</a></h2>
 <p>The tool installs with <code>dotnet tool install --global ProteomIQon.LabeledProteinQuantification</code>. A single run:</p>
@@ -396,7 +396,8 @@ from ProteomIQon.Dto<br /><br />--------------------<br />type LabeledQuantifica
     AggregateToProteinGroupsParams: AggregationParams
   }
   member Equals: LabeledQuantificationParams * IEqualityComparer -&gt; bool</div>
-<div class="fsdocs-tip" id="fs14">Multiple items<br />module UseModifiedPeptides
+<div class="fsdocs-tip" id="fs14">union case Option.Some: Value: &#39;T -&gt; Option&lt;&#39;T&gt;</div>
+<div class="fsdocs-tip" id="fs15">Multiple items<br />module UseModifiedPeptides
 
 from ProteomIQon.Common<br /><br />--------------------<br />type UseModifiedPeptides =
   | All
@@ -406,9 +407,9 @@ from ProteomIQon.Common<br /><br />--------------------<br />type UseModifiedPep
   member IsAll: bool
   member IsNo: bool
   member IsUseOnly: bool</div>
-<div class="fsdocs-tip" id="fs15">union case UseModifiedPeptides.All: UseModifiedPeptides</div>
-<div class="fsdocs-tip" id="fs16">val outputPath: string</div>
-<div class="fsdocs-tip" id="fs17">type Path =
+<div class="fsdocs-tip" id="fs16">union case UseModifiedPeptides.All: UseModifiedPeptides</div>
+<div class="fsdocs-tip" id="fs17">val outputPath: string</div>
+<div class="fsdocs-tip" id="fs18">type Path =
   static member ChangeExtension: path: string * extension: string -&gt; string
   static member Combine: path1: string * path2: string -&gt; string + 4 overloads
   static member EndsInDirectorySeparator: path: ReadOnlySpan&lt;char&gt; -&gt; bool + 1 overload
@@ -420,12 +421,12 @@ from ProteomIQon.Common<br /><br />--------------------<br />type UseModifiedPep
   static member GetFullPath: path: string -&gt; string + 1 overload
   static member GetInvalidFileNameChars: unit -&gt; char array
   ...<br /><em>&lt;summary&gt;Performs operations on &lt;see cref=&quot;T:System.String&quot; /&gt; instances that contain file or directory path information. These operations are performed in a cross-platform manner.&lt;/summary&gt;</em></div>
-<div class="fsdocs-tip" id="fs18">Path.Combine(paths: System.ReadOnlySpan&lt;string&gt;) : string<br />Path.Combine([&lt;System.ParamArray&gt;] paths: string array) : string<br />Path.Combine(path1: string, path2: string) : string<br />Path.Combine(path1: string, path2: string, path3: string) : string<br />Path.Combine(path1: string, path2: string, path3: string, path4: string) : string</div>
-<div class="fsdocs-tip" id="fs19">Path.GetTempPath() : string</div>
-<div class="fsdocs-tip" id="fs20">module Json
+<div class="fsdocs-tip" id="fs19">Path.Combine(paths: System.ReadOnlySpan&lt;string&gt;) : string<br />Path.Combine([&lt;System.ParamArray&gt;] paths: string array) : string<br />Path.Combine(path1: string, path2: string) : string<br />Path.Combine(path1: string, path2: string, path3: string) : string<br />Path.Combine(path1: string, path2: string, path3: string, path4: string) : string</div>
+<div class="fsdocs-tip" id="fs20">Path.GetTempPath() : string</div>
+<div class="fsdocs-tip" id="fs21">module Json
 
 from ProteomIQon</div>
-<div class="fsdocs-tip" id="fs21">val serializeAndWrite: path: string -&gt; obj: &#39;a -&gt; unit</div>
+<div class="fsdocs-tip" id="fs22">val serializeAndWrite: path: string -&gt; obj: &#39;a -&gt; unit</div>
 
     </div>
 

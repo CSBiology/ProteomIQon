@@ -184,11 +184,15 @@
 <a href="https://csbiology.github.io/ProteomIQon/tools/PSMStatistics.fsx"><img src="https://csbiology.github.io/ProteomIQon/img/badge-script.svg" alt="Script" /></a>&emsp;
 <a href="https://csbiology.github.io/ProteomIQon/tools/PSMStatistics.ipynb"><img src="https://csbiology.github.io/ProteomIQon/img/badge-notebook.svg" alt="Notebook" /></a></p>
 <h1><a name="PSMStatistics" class="anchor" href="#PSMStatistics">PSMStatistics</a></h1>
-<p><a href="https://csbiology.github.io/ProteomIQon/tools/PeptideSpectrumMatching.html">PeptideSpectrumMatching</a> reports several scores for every spectrum (SEQUEST-like, Andromeda-like, X!Tandem-like, plus mass error, peptide length and how far the best candidate is ahead of the next one).
-PSMStatistics learns one combined score from these columns. It uses the target and decoy labels of the matches as training signal, retrains in iterations while the set of confident targets grows (semi supervised), and stops when an iteration adds too few new positives or the iteration limit is reached.
-From the combined score it computes a <a href="https://www.biofsharp.com/BioFSharp.Mz/04_01_fdr_control.html#Computing-q-values-by-counting-decoys">q-value</a> and a <a href="https://www.biofsharp.com/BioFSharp.Mz/04_01_fdr_control.html#From-list-level-q-to-single-PSM-PEP">PEP value</a> per match and keeps the PSMs under both thresholds.</p>
-<p>PSMStatistics also reads the output of <a href="https://csbiology.github.io/ProteomIQon/tools/PeptideSpectrumMatchingTIMs.html">PeptideSpectrumMatchingTIMs</a>. Both tools write the 28 column layout of this release, and <code>.psm</code> files written by earlier releases (23 columns) have to be regenerated before this release of PSMStatistics reads them. When every row carries finite <code>Hyperscore</code> and <code>Expectscore</code> values, it uses both as model features, with <code>Expectscore</code> represented by its negative log10, and seeds the first training round with the expectation value. Without them the SEQUEST-like score seeds it, as before.</p>
+<p><a href="https://csbiology.github.io/ProteomIQon/tools/PeptideSpectrumMatching.html">PeptideSpectrumMatching</a> and <a href="https://csbiology.github.io/ProteomIQon/tools/PeptideSpectrumMatchingTIMs.html">PeptideSpectrumMatchingTIMs</a> report several target and decoy candidates per spectrum, each with a SEQUEST-like, an Andromeda-like and an X!Tandem-like score.
+PSMStatistics combines these columns into one score with a FastTree classifier (ML.NET) trained to separate targets from decoys. It keeps the best candidate per scan by this score, computes its <a href="https://www.biofsharp.com/BioFSharp.Mz/04_01_fdr_control.html#Computing-q-values-by-counting-decoys">q-value</a> and <a href="https://www.biofsharp.com/BioFSharp.Mz/04_01_fdr_control.html#From-list-level-q-to-single-PSM-PEP">PEP value</a>, and writes the targets that pass both thresholds.</p>
+<p>The model features are the charge (one-hot encoded), the precursor m/z, the theoretical mass, the absolute mass error, the peptide length, the number of missed cleavages (looked up in the peptide database), and the three scores with their <code>NormDeltaBestToRest</code> and <code>NormDeltaNext</code> columns. When every row of the input has finite <code>Hyperscore</code> and <code>Expectscore</code> values, as PeptideSpectrumMatchingTIMs writes them, the <code>Hyperscore</code> and the negative log10 of the <code>Expectscore</code> are added. The tool reads the 28-column <code>.psm</code> layout; <code>.psm</code> files with the older 23-column layout have to be regenerated.</p>
+<p>The training is semi-supervised. The first model starts from a single score: the negative log10 of the <code>Expectscore</code> when the input carries it, otherwise the SEQUEST-like score. Among the best candidates per scan by this score, the targets with q &lt; 0.001 are the positives, and all decoy candidates of the other scans are the negatives. Each model is fitted on a random 90 % of these candidates; the other 10 % give the accuracy, AUC and F1 in the log. FastTree runs on one thread with the leaf output capped at 10. The tool then scores all candidates with the model, takes the best candidate per scan again and retrains on the new positives: the targets with q &lt; 0.01 with <code>CrossValidation</code>, otherwise those with a q-value below a tenth of <code>QValueThreshold</code> and a PEP below <code>PepValueThreshold</code>. After each retraining it counts the passing scans as described for <code>MinimumIncreaseBetweenIterations</code>. If the count drops, or the retraining fails, the training ends with the previous model. If the count grows by less than <code>MinimumIncreaseBetweenIterations</code>, it ends with the new model. Otherwise it continues, for at most <code>MaxIterations</code> retrainings. ML.NET and the assignment of scans to folds use the seed 1024.</p>
 <img src="https://csbiology.github.io/ProteomIQon/img/SemiSupervisedScoring.png" width="1000" height="750" />
+<p>With <code>CrossValidation</code>, the scans are shuffled and split into three folds whose scan counts differ by at most one. The training runs three times, each time on the candidates of two folds, and the resulting model scores the remaining fold, so no scan is scored by a model that was trained on it. As in Percolator, the scores of each fold are then shifted and scaled so that the lowest scoring target with q &lt;= 0.01 of that fold gets 0 and the median decoy gets -1. The q-values and PEPs are computed on the pooled scores of the three folds. Without <code>CrossValidation</code>, one model is trained on all scans and scores them.</p>
+<p>With <code>RetentionTimeFeature</code>, the tool predicts the scan time of every candidate from its sequence before the first model is trained and adds two features: <code>RtDeviation</code>, the observed minus the predicted scan time in robust standard deviations, and its absolute value. The predictor is a FastTree regression (200 trees, 64 leaves), fitted per file on the targets with q &lt; 0.01 among the best candidates per scan by the starting score, with one row per modified sequence and global modification (median scan time). Its inputs are the amino acid counts, the length, the counts of each modification, the unordered residue pairs at positions 1 and n-1 and at positions 2 and n-2, and the C-terminal residue, which give a peptide and its pseudo-reversed decoy the same prediction. The peptides are split into five folds by sequence, a peptide and its pseudo-reversal in the same fold, and each fold is predicted by the predictor trained on the other four. The robust standard deviation is 1.4826 times the median absolute deviation of these held-out residuals. If the file has fewer than 500 such peptides or the held-out R2 is below 0.3, the tool logs a warning and trains without the two features.</p>
+<p>The q-values and PEPs are computed on the best candidate per scan, targets and decoys. The q-value of a score is the number of decoys divided by the number of targets among the best candidates that score at least as high, made monotone (<code>FDRControl.calculateQValueStorey</code> of BioFSharp.Mz, without a π0 estimate). For the PEP, the scores are binned with a width of one unit of the FastTree score (with <code>CrossValidation</code>, that unit converted to the normalized scale and averaged over the three folds), and the logit of the decoy share per bin is fitted with a smoothing spline by iteratively reweighted least squares, as in Percolator. The PEP of a target is the fitted decoy to target ratio at its score, capped at 1 and made non-increasing with the score.</p>
+<p>The tool writes the best candidate of a scan when it is a target with a q-value below <code>QValueThreshold</code> and a PEP below <code>PepValueThreshold</code>. If no candidate passes, the <code>.qpsm</code> file holds only the header. If the estimation throws, the file also holds only the header and <code>run_log.txt</code> holds the exception.</p>
 <h2><a name="Inputs-and-outputs" class="anchor" href="#Inputs-and-outputs">Inputs and outputs</a></h2>
 <table>
 <thead>
@@ -202,11 +206,11 @@ From the combined score it computes a <a href="https://www.biofsharp.com/BioFSha
 <tr class="odd">
 <td><p><code>-i</code></p></td>
 <td><p>one or more <code>.psm</code> files, or a directory that is searched for <code>*.psm</code> (not recursive)</p></td>
-<td><p><a href="https://csbiology.github.io/ProteomIQon/tools/PeptideSpectrumMatching.html">PeptideSpectrumMatching</a></p></td>
+<td><p><a href="https://csbiology.github.io/ProteomIQon/tools/PeptideSpectrumMatching.html">PeptideSpectrumMatching</a>, <a href="https://csbiology.github.io/ProteomIQon/tools/PeptideSpectrumMatchingTIMs.html">PeptideSpectrumMatchingTIMs</a></p></td>
 </tr>
 <tr class="even">
 <td><p><code>-d</code></p></td>
-<td><p>the SQLite peptide database</p></td>
+<td><p>the SQLite peptide database, written to when <code>StoreIsotopePatterns</code> is on</p></td>
 <td><p><a href="https://csbiology.github.io/ProteomIQon/tools/PeptideDB.html">PeptideDB</a></p></td>
 </tr>
 <tr class="odd">
@@ -226,15 +230,16 @@ From the combined score it computes a <a href="https://www.biofsharp.com/BioFSha
 </tr>
 <tr class="even">
 <td><p><code>-c</code></p></td>
-<td><p>number of files scored at the same time, default 1</p></td>
+<td><p>number of files scored at the same time and the number of cores used to compute the isotope patterns, default 1</p></td>
 <td></td>
 </tr>
 </tbody>
 </table>
 
 <p>For every input <code>run.psm</code> the tool writes <code>run.qpsm</code> to the output directory. The file is tab separated with a header and holds one row per scan: the identifiers of the peptide and its modification state, the search scores, the combined <code>ModelScore</code>, <code>QValue</code>, <code>PEPValue</code>, the sequence and the protein names.
-<a href="https://csbiology.github.io/ProteomIQon/tools/ProteinInference.html">ProteinInference</a> and <a href="https://csbiology.github.io/ProteomIQon/tools/PSMBasedQuantification.html">PSMBasedQuantification</a> read <code>.qpsm</code> files.</p>
-<p>The tool also creates a <code>run_plots</code> directory per input. It stays empty unless you pass <code>-dc</code>, which adds <code>Metrics.html</code> and <code>InitialSeparation.html</code>, plus one <code>separationAtIteration_&lt;n&gt;.html</code> per training iteration. Charts exist only for the estimated threshold. Log output goes to <code>PSMStatistics_log.txt</code> and <code>run_log.txt</code> in the output directory.</p>
+<a href="https://csbiology.github.io/ProteomIQon/tools/ProteinInference.html">ProteinInference</a>, <a href="https://csbiology.github.io/ProteomIQon/tools/PSMBasedQuantification.html">PSMBasedQuantification</a> and <a href="https://csbiology.github.io/ProteomIQon/tools/PSMBasedQuantificationTIMs.html">PSMBasedQuantificationTIMs</a> read <code>.qpsm</code> files.</p>
+<p>With <code>StoreIsotopePatterns</code>, the tool adds the isotope patterns of the ions in the <code>.qpsm</code> files (sequence, global modification, charge) to the peptide database after the last file is scored, for both global modifications if the database has isotopic modifications. A quantification tool reads a stored pattern if the database holds one for its versions of BioFSharp and BioFSharp.Mz, and computes it otherwise. A database that cannot be written only gives a warning. PSMStatistics changes the file given with <code>-d</code>, so on a network file system with unreliable file locking run one process at a time or set <code>StoreIsotopePatterns</code> to <code>false</code>, because concurrent writes can corrupt the database.</p>
+<p>The tool also creates a <code>run_plots</code> directory per input. It stays empty unless you pass <code>-dc</code>. Each training then writes <code>InitialSeparation.html</code> (target and decoy histograms of the starting score with its q-values), <code>Metrics.html</code> (the metrics on the 10 % test split of the last model fitted) and one <code>separationAtIteration_&lt;n&gt;.html</code> per retraining, counted from 0 (the chart of the first model is overwritten by retraining 0; target and decoy histograms of the model score with the q-value and PEP curves). With <code>CrossValidation</code> the names start with <code>Fold1_</code> to <code>Fold3_</code>, and the charts show the two training folds of that model. <code>Threshold.Fixed</code> writes no charts. Log output goes to <code>PSMStatistics_log.txt</code> and <code>run_log.txt</code> in the output directory.</p>
 <h2><a name="Parameters" class="anchor" href="#Parameters">Parameters</a></h2>
 <table>
 <thead>
@@ -253,17 +258,22 @@ From the combined score it computes a <a href="https://www.biofsharp.com/BioFSha
 <tr class="even">
 <td><p><code>Threshold</code> (alternative)</p></td>
 <td><p><code>Threshold.Fixed { SequestLike = 0.; Andromeda = 0. }</code></p></td>
-<td><p>Skip the learning. Keep the best match per scan among those whose <code>SequestScore</code> exceeds <code>SequestLike</code> and whose <code>AndroScore</code> exceeds <code>Andromeda</code>, and drop it when it is a decoy. <code>ModelScore</code>, <code>QValue</code> and <code>PEPValue</code> are written as <code>nan</code>. Pick your own cutoffs, the values here are placeholders.</p></td>
+<td><p>Skip the learning. Among the matches whose <code>SequestScore</code> exceeds <code>SequestLike</code> and whose <code>AndroScore</code> exceeds <code>Andromeda</code>, keep the one with the highest <code>SequestScore</code> per scan, and drop it when it is a decoy. <code>ModelScore</code> holds the <code>SequestScore</code>, and <code>QValue</code> and <code>PEPValue</code> are <code>NaN</code>. Pick your own cutoffs; these values are placeholders.</p></td>
 </tr>
 <tr class="odd">
 <td><p><code>ParseProteinIDRegexPattern</code></p></td>
 <td><p><code>"id"</code></p></td>
-<td><p>Regex applied to the FASTA headers of the database to produce the <code>ProteinNames</code> column. Use the same pattern as in PeptideDB.</p></td>
+<td><p>Regex applied to the protein names of the database to produce the <code>ProteinNames</code> column. <code>"id"</code> keeps them unchanged. The database holds the names as PeptideDB cut them, so keep <code>"id"</code>. Another pattern is applied to those stored names and keeps the matched part (empty when it does not match).</p></td>
 </tr>
 <tr class="even">
 <td><p><code>KeepTemporaryFiles</code></p></td>
 <td><p><code>true</code></p></td>
-<td><p>Part of the parameter record. Keep it at <code>true</code>.</p></td>
+<td><p>Not used by PSMStatistics.</p></td>
+</tr>
+<tr class="odd">
+<td><p><code>StoreIsotopePatterns</code></p></td>
+<td><p><code>true</code></p></td>
+<td><p>Store the theoretical isotope patterns of the ions in the <code>.qpsm</code> files in the table <code>IsotopePattern</code> of the peptide database (<code>-d</code>), where the quantification tools read them.</p></td>
 </tr>
 </tbody>
 </table>
@@ -281,27 +291,37 @@ From the combined score it computes a <a href="https://www.biofsharp.com/BioFSha
 <tr class="odd">
 <td><p><code>QValueThreshold</code></p></td>
 <td><p><code>0.01</code></p></td>
-<td><p>Keep PSMs with a q-value below this value.</p></td>
+<td><p>Write PSMs with a q-value below this value. Without <code>CrossValidation</code>, the positives of each retraining are the targets with a q-value below a tenth of this value and a PEP below <code>PepValueThreshold</code>.</p></td>
 </tr>
 <tr class="even">
 <td><p><code>PepValueThreshold</code></p></td>
-<td><p><code>0.05</code></p></td>
-<td><p>Keep PSMs with a PEP value below this value.</p></td>
+<td><p><code>1.0</code></p></td>
+<td><p>Write PSMs with a PEP below this value. The default removes only PSMs with a PEP of 1.</p></td>
 </tr>
 <tr class="odd">
 <td><p><code>MaxIterations</code></p></td>
 <td><p><code>15</code></p></td>
-<td><p>Upper limit for the retraining iterations.</p></td>
+<td><p>Upper limit for the retrainings after the first model, per fold with <code>CrossValidation</code>.</p></td>
 </tr>
 <tr class="even">
 <td><p><code>MinimumIncreaseBetweenIterations</code></p></td>
 <td><p><code>0.005</code></p></td>
-<td><p>Stop when the number of positives at the q-value threshold grows by less than this fraction from one iteration to the next.</p></td>
+<td><p>Stop when a retraining raises the number of passing scans by less than this fraction of the new number. With <code>CrossValidation</code> this number counts the targets with q &lt;= 0.01. Without it, it is the smaller of the numbers of best candidates per scan with q &lt;= <code>QValueThreshold</code> and with PEP &lt;= <code>PepValueThreshold</code>.</p></td>
 </tr>
 <tr class="odd">
 <td><p><code>PepValueFittingMethod</code></p></td>
 <td><p><code>PepValueFittingMethod.IRLS</code></p></td>
 <td><p>How the PEP curve is fitted. <code>IRLS</code> (iteratively reweighted least squares) is the only case.</p></td>
+</tr>
+<tr class="even">
+<td><p><code>CrossValidation</code></p></td>
+<td><p><code>true</code></p></td>
+<td><p>Score each scan with the model trained on the other two of three scan folds, and normalize the scores per fold. Each fold retrains on the targets with q &lt; 0.01, independent of <code>QValueThreshold</code> and <code>PepValueThreshold</code>, which then only filter the output. The training runs three times per file, each time on two thirds of the scans, so a run takes about two to three times as long as without <code>CrossValidation</code>. Parameter files without this field use <code>false</code>.</p></td>
+</tr>
+<tr class="odd">
+<td><p><code>RetentionTimeFeature</code></p></td>
+<td><p><code>true</code></p></td>
+<td><p>Add the features <code>RtDeviation</code> and <code>AbsRtDeviation</code>, the deviation of the scan time from the time predicted from the sequence. Parameter files without this field use <code>false</code>.</p></td>
 </tr>
 </tbody>
 </table>
@@ -317,13 +337,16 @@ From the combined score it computes a <a href="https://www.biofsharp.com/BioFSha
             <span onmouseout="hideTip(event, 'fs6', 8)" onmouseover="showTip(event, 'fs6', 8)" class="rt">Threshold</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs7', 9)" onmouseover="showTip(event, 'fs7', 9)" class="id">Estimate</span>
                 <span class="pn">{</span>
                     <span class="prop">QValueThreshold</span>                  <span class="o">=</span> <span class="n">0.01</span>
-                    <span class="prop">PepValueThreshold</span>                <span class="o">=</span> <span class="n">0.05</span>
+                    <span class="prop">PepValueThreshold</span>                <span class="o">=</span> <span class="n">1.0</span>
                     <span class="prop">MaxIterations</span>                    <span class="o">=</span> <span class="n">15</span>
                     <span class="prop">MinimumIncreaseBetweenIterations</span> <span class="o">=</span> <span class="n">0.005</span>
                     <span onmouseout="hideTip(event, 'fs8', 10)" onmouseover="showTip(event, 'fs8', 10)" class="prop">PepValueFittingMethod</span>            <span class="o">=</span> <span onmouseout="hideTip(event, 'fs8', 11)" onmouseover="showTip(event, 'fs8', 11)" class="rt">PepValueFittingMethod</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs9', 12)" onmouseover="showTip(event, 'fs9', 12)" class="id">IRLS</span>
+                    <span class="prop">CrossValidation</span>                  <span class="o">=</span> <span class="k">true</span>
+                    <span class="prop">RetentionTimeFeature</span>             <span class="o">=</span> <span class="k">true</span>
                 <span class="pn">}</span>
         <span class="prop">ParseProteinIDRegexPattern</span> <span class="o">=</span> <span class="s">&quot;id&quot;</span>
         <span class="prop">KeepTemporaryFiles</span>         <span class="o">=</span> <span class="k">true</span>
+        <span class="prop">StoreIsotopePatterns</span>       <span class="o">=</span> <span class="k">true</span>
     <span class="pn">}</span>
 
 <span class="c">// Replace the temp folder with your project folder.</span>
@@ -332,8 +355,7 @@ From the combined score it computes a <a href="https://www.biofsharp.com/BioFSha
 <span onmouseout="hideTip(event, 'fs16', 22)" onmouseover="showTip(event, 'fs16', 22)" class="m">Json</span><span class="pn">.</span><span onmouseout="hideTip(event, 'fs17', 23)" onmouseover="showTip(event, 'fs17', 23)" class="id">serializeAndWrite</span> <span onmouseout="hideTip(event, 'fs10', 24)" onmouseover="showTip(event, 'fs10', 24)" class="id">outputPath</span> <span onmouseout="hideTip(event, 'fs3', 25)" onmouseover="showTip(event, 'fs3', 25)" class="id">psmStatisticsParams</span>
 </code></pre>
 <h2><a name="Outputs" class="anchor" href="#Outputs">Outputs</a></h2>
-<p>The resulting <code>.qpsm</code> file is generated as a tab-delimited text file.
-These columns can be inspected individually to examine specific search results, scoring metrics, and identification parameters.</p>
+<p>Columns of the <code>.qpsm</code> file:</p>
 <table>
 <thead>
 <tr class="header">
@@ -348,107 +370,107 @@ These columns can be inspected individually to examine specific search results, 
 </tr>
 <tr class="even">
 <td><p>GlobalMod</p></td>
-<td><p>Indicator, if a peptide ion species is labeled or unlabeled</p></td>
+<td><p>0 for an unlabeled, 1 for a labeled peptide ion species</p></td>
 </tr>
 <tr class="odd">
 <td><p>PepSequenceID</p></td>
-<td><p>Unique identifier of the unmodified peptide sequence, which points to PeptideDB</p></td>
+<td><p>Identifier of the unmodified peptide sequence in the peptide database</p></td>
 </tr>
 <tr class="even">
 <td><p>ModSequenceID</p></td>
-<td><p>Unique identifier of the modified peptide sequence (including PTMs, e.g., methylation), which points to PeptideDB</p></td>
+<td><p>Identifier of the modified peptide sequence in the peptide database</p></td>
 </tr>
 <tr class="odd">
 <td><p>Label</p></td>
-<td><p>Target/decoy label: 1 = target, −1 = decoy</p></td>
+<td><p>1 (target); decoys are not written</p></td>
 </tr>
 <tr class="even">
 <td><p>ScanNr</p></td>
-<td><p>Scan identifier, combining the spectrum ID in the raw file with an ascending MS2 ID</p></td>
+<td><p>Number of the MS2 spectrum within the run</p></td>
 </tr>
 <tr class="odd">
 <td><p>ScanTime</p></td>
-<td><p>Retention time (RT) in minutes of the MS/MS scan</p></td>
+<td><p>Retention time of the MS/MS scan in minutes</p></td>
 </tr>
 <tr class="even">
 <td><p>Charge</p></td>
-<td><p>Precursor ion charge state</p></td>
+<td><p>Precursor charge</p></td>
 </tr>
 <tr class="odd">
 <td><p>PrecursorMZ</p></td>
-<td><p>Precursor ion mass-to-charge ratio (m/z)</p></td>
+<td><p>Precursor m/z</p></td>
 </tr>
 <tr class="even">
 <td><p>TheoMass</p></td>
-<td><p>Theoretical peptide mass in the spectrum (based on amino acid composition) in Dalton</p></td>
+<td><p>Theoretical mass of the peptide in Da</p></td>
 </tr>
 <tr class="odd">
 <td><p>AbsDeltaMass</p></td>
-<td><p>Absolute mass deviation between theoretical and measured mass (mass error)</p></td>
+<td><p>Absolute difference between theoretical and measured mass</p></td>
 </tr>
 <tr class="even">
 <td><p>PeptideLength</p></td>
-<td><p>Peptide length in Amino Acid count</p></td>
+<td><p>Number of amino acids</p></td>
 </tr>
 <tr class="odd">
 <td><p>MissCleavages</p></td>
-<td><p>Number of missed cleavages</p></td>
+<td><p>Number of missed cleavages, looked up in the peptide database</p></td>
 </tr>
 <tr class="even">
 <td><p>SequestScore</p></td>
-<td><p>SEQUEST similarity score (e.g., XCorr) quantifying agreement between theoretical and experimental spectra</p></td>
+<td><p>SEQUEST-like score</p></td>
 </tr>
 <tr class="odd">
 <td><p>SequestNormDeltaBestToRest</p></td>
-<td><p>Normalized separation of the best SEQUEST score from the remaining candidate scores</p></td>
+<td><p>(best SEQUEST score of the spectrum - this score) / best score; 0 for the top candidate</p></td>
 </tr>
 <tr class="even">
 <td><p>SequestNormDeltaNext</p></td>
-<td><p>Normalized separation between the best and second-best SEQUEST scores</p></td>
+<td><p>(this SEQUEST score - next lower SEQUEST score of the spectrum) / best score</p></td>
 </tr>
 <tr class="odd">
 <td><p>AndroScore</p></td>
-<td><p>Andromeda score quantifying the match between theoretical and experimental spectra</p></td>
+<td><p>Andromeda-like score</p></td>
 </tr>
 <tr class="even">
 <td><p>AndroNormDeltaBestToRest</p></td>
-<td><p>Normalized separation of the best Andromeda score from the remaining candidate scores</p></td>
+<td><p>(best Andromeda score of the spectrum - this score) / best score; 0 for the top candidate</p></td>
 </tr>
 <tr class="odd">
 <td><p>AndroNormDeltaNext</p></td>
-<td><p>Normalized separation between the best and second-best Andromeda scores</p></td>
+<td><p>(this Andromeda score - next lower Andromeda score of the spectrum) / best score</p></td>
 </tr>
 <tr class="even">
-<td><p>XTandemScore</p></td>
-<td><p>XTandem score quantifying the match between theoretical and experimental spectra</p></td>
+<td><p>XtandemScore</p></td>
+<td><p>X!Tandem-like score</p></td>
 </tr>
 <tr class="odd">
 <td><p>XtandemNormDeltaBestToRest</p></td>
-<td><p>Normalized separation of the best XTandem score from the remaining candidate scores</p></td>
+<td><p>(best X!Tandem score of the spectrum - this score) / best score; 0 for the top candidate</p></td>
 </tr>
 <tr class="even">
 <td><p>XtandemNormDeltaNext</p></td>
-<td><p>Normalized separation between the best and second-best XTandem scores</p></td>
+<td><p>(this X!Tandem score - next lower X!Tandem score of the spectrum) / best score</p></td>
 </tr>
 <tr class="odd">
 <td><p>ModelScore</p></td>
-<td><p>Best score value achieved by iterative model to distinguish between target &amp; decoy</p></td>
+<td><p>Score of the learned model; with <code>CrossValidation</code> the fold-normalized score (0 at the lowest-scoring target with q &lt;= 0.01 of its fold, -1 at the median decoy of the fold); without it the FastTree score. With <code>Threshold.Fixed</code> it is the <code>SequestScore</code></p></td>
 </tr>
 <tr class="even">
 <td><p>QValue</p></td>
-<td><p>Q-value (False-Discovery-Rate) based on combined model scores</p></td>
+<td><p>q-value of the <code>ModelScore</code>, NaN with <code>Threshold.Fixed</code></p></td>
 </tr>
 <tr class="odd">
 <td><p>PEPValue</p></td>
-<td><p>Posterior Error Probability</p></td>
+<td><p>Posterior error probability of the <code>ModelScore</code>, NaN with <code>Threshold.Fixed</code></p></td>
 </tr>
 <tr class="even">
 <td><p>StringSequence</p></td>
-<td><p>Amino Acid sequence (one-letter code) from PeptideDB which matches the psm candidate</p></td>
+<td><p>Peptide sequence of the match, as in the <code>.psm</code> input</p></td>
 </tr>
 <tr class="odd">
 <td><p>ProteinNames</p></td>
-<td><p>Protein Names out of the PeptideDB</p></td>
+<td><p>Names of the proteins that contain the peptide, separated by <code>;</code></p></td>
 </tr>
 </tbody>
 </table>
@@ -485,6 +507,7 @@ from ProteomIQon.Dto<br /><br />--------------------<br />type PSMStatisticsPara
     Threshold: Threshold
     ParseProteinIDRegexPattern: string
     KeepTemporaryFiles: bool
+    StoreIsotopePatterns: bool
   }
   member Equals: PSMStatisticsParams * IEqualityComparer -&gt; bool</div>
 <div class="fsdocs-tip" id="fs6">type Threshold =
