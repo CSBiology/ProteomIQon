@@ -1,3 +1,6 @@
+#### 0.1.0 - Monday, November 16, 2026
+* Keep the IonMobilityCentre column of the .quant files
+
 #### 0.0.4 - Wednesday, September 2, 2026
 * Update to .NET 10
 * Update FSharpAux to 2.1.0

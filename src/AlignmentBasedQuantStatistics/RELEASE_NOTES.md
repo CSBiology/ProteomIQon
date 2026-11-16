@@ -1,4 +1,4 @@
-#### Unreleased
+#### 0.1.0 - Monday, November 16, 2026
 * Label overlap ions by their peak: positive within PositiveRtSdFactor sd of the own PSM peak and within MaxAbsLog2QuantRatio of its quant, ambiguous up to NegativeRtSdFactor sd (left out of training), else negative; overlap ions without truth are left out of training; their alignment row replaces the PSM row if that has no fitted scan time and is scored like a new ion, else it is not written
 * Score with 26 features from the alignment row and the .align row: scan time residuals, isotope errors and pattern similarity, trace correlations with the source, competing peaks, source intensity; optional intensity ratio features and ion mobility residual
 * Add the selection features of a <run>.alignfeatures file next to the aligned .quant as Sel_ features; CandidateProbability and CandidateMargin only when all runs used the same selection model

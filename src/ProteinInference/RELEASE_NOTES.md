@@ -1,4 +1,4 @@
-#### Unreleased
+#### 0.1.0 - Monday, November 16, 2026
 * Update BioFSharp.Mz to 0.2.2
 * Update BioFSharp.Mz to 0.2.3
 

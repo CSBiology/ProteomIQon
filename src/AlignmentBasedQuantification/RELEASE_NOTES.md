@@ -1,4 +1,4 @@
-#### Unreleased
+#### 0.1.0 - Monday, November 16, 2026
 * Fixed bug when using single file option caused by switched parameterss
 * Read the .align files of QuantBasedAlignment with the local error scale of the predicted scan time, the source run, the source model error and the predicted ion mobility
 * Choose the peak among all detected peaks near the predicted scan time with a logistic model trained per run on the ions the run quantified itself (scan time distance in units of the local error scale, shape correlation with the source trace, relative height, width ratio, number of candidates, M+1 co-elution and ratio, m/z error); a fixed score when fewer than 200 ions can be used for training; cross-fitted over 5 seeded folds of peptides (PepSequenceID) so that the ions the run quantified itself are scored out-of-fold
