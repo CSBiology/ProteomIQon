@@ -1,4 +1,4 @@
-#### Unreleased
+#### 0.1.0 - Monday, November 16, 2026
 * Add the parameter StoreIsotopePatterns (default true): after all files are scored, the isotope patterns of the ions in the .qpsm files (both global modifications if the peptide data base has isotopic modifications) are added to the table IsotopePattern of the peptide data base (-d). The quantification tools read them instead of computing them. A data base that cannot be written gives a warning. The file given with -d changes, so on a network file system with unreliable locking run one process at a time or set the parameter to false
 * Use CrossValidation and no PEP cutoff (PepValueThreshold 1.0) in the default parameters; with pseudo-reversed decoys and cross-validation, q < 0.01 alone keeps about 1 % real FDP
 * Add the parameter CrossValidation (default false): each scan is scored by the model trained on the other two of three scan folds, the scores are normalised per fold, and q-values and PEPs are computed on the pooled scores

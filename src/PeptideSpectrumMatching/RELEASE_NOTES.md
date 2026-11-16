@@ -1,4 +1,4 @@
-#### Unreleased
+#### 0.1.0 - Monday, November 16, 2026
 * About twice as fast and with a third of the memory
 * Read the spectrum headers of mzlite files from the description text, one spectrum at a time, instead of deserializing every spectrum
 * Find the MS1 spectrum of every MS2 spectrum by binary search
