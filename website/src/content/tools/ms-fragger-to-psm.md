@@ -1,0 +1,102 @@
+---
+name: "MSFragger to PSM"
+phase: peptide-identification
+subgroup: MSFragger import
+order: 4
+summary: "MsFraggerToPSM turns the psm.tsv result of an MSFragger search, as written by FragPipe, into the .qpsm files that PSMBasedQuantificationTIMs reads."
+inputsFrom: [mzml-to-mzlite-ion-mobility, peptide-db]
+---
+
+## Tool Description
+
+MsFraggerToPSM turns the `psm.tsv` result of an MSFragger search, as written by FragPipe, into the `.qpsm` files that PSMBasedQuantificationTIMs reads.
+
+## How does MSFragger work?
+
+1. **The advantage**
+
+   With this tool, an ion mobility run can be identified in FragPipe and quantified in ProteomIQon, in place of the PeptideSpectrumMatching and PSMStatistics pair.
+
+2. **How does this work?**
+
+   For each row of the tsv the tool rebuilds the modified peptide sequence in ProteomIQon notation, looks it up in the [PeptideDB](./peptide-db.md) database to get the peptide and modified sequence identifiers, and assigns the row to the MS2 spectrum of the mzlite whose scan time and precursor m/z lie closest to the values in the tsv.
+
+## Inputs
+
+These inputs are needed to execute the tool:
+
+### Input flags
+
+| Flag | Meaning | Comes from |
+| --- | --- | --- |
+| `-i` | one or more `psm.tsv` files, or a directory that is searched for `*.tsv` | MSFragger (FragPipe) |
+| `-ii` | the matching `.mzlite` files, or a directory that is searched for `*.mzlite` | - |
+| `-o` | the output directory, created when missing | - |
+| `-d` | The Peptide Database | [PeptideDB](./peptide-db.md) |
+| `-c` | number of pairs converted at the same time, default 1 | - |
+
+All four flags are mandatory.
+
+### Required TSV columns
+
+The tsv needs the columns:
+
+- `Assigned Modifications`
+- `Peptide`
+- `Spectrum`
+- `Retention`
+- `Charge`
+- `Calibrated Observed M/Z`
+- `Calculated Peptide Mass`
+- `Delta Mass`
+- `Ion Mobility`
+- `Peptide Length`
+- `Number of Missed Cleavages`
+- `Expectation`
+- `Hyperscore`
+- `Probability`
+- `PROTEIN`
+
+Retention is read in seconds and stored in minutes. The files are paired by position, the first tsv with the first mzlite and so on.
+
+### File pairing and database requirements
+
+Give both lists in the same order and with the same length, otherwise the tool converts nothing. The tool stops when the database file does not exist. The lookup uses the unlabeled sequences of the database. Rows whose modified sequence has no entry in the database are dropped, so the database has to be built with the same modifications as the FragPipe search.
+
+### Supported modifications
+
+From the Assigned Modifications column the tool understands oxidized methionine and carbamidomethylated cysteine, plus N-terminal acetylation. A row with any other modification is printed to the console and dropped.
+
+### Generated files and logs
+
+The tool writes one `run.qpsm` per mzlite into the output directory, named after the mzlite. It is a tab separated table with a header and one row per identified spectrum.
+
+An existing `.qpsm` of the same name is appended to. Delete the old file before a rerun. The output directory also receives `MSFraggerToPSM_log.txt.`
+
+## Installing and executing the tool
+
+### Installing
+
+Install the Tool with the following command inside the choosen Command-Line
+
+```sh
+dotnet tool install --global ProteomIQon.MsFraggerToPSM
+```
+
+### Convert one run
+
+```sh
+proteomiqon-msfraggertopsm -i path/to/run/psm.tsv -ii path/to/run.mzlite -d path/to/AraTest.db -o path/to/output
+```
+
+### Convert multiple runs
+
+```sh
+proteomiqon-msfraggertopsm -i path/to/run1/psm.tsv path/to/run2/psm.tsv path/to/run3/psm.tsv -ii path/to/run1.mzlite path/to/run2.mzlite path/to/run3.mzlite -d path/to/AraTest.db -o path/to/output -c 3
+```
+
+### All flags
+
+```sh
+proteomiqon-msfraggertopsm --help
+```

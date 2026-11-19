@@ -1,0 +1,10 @@
+---
+interface Props {
+	class?: string;
+}
+const { class: className } = Astro.props;
+---
+
+<div class:list={['mt-[18px] rounded-sm border border-l-4 border-[#e7d4b3] border-l-[#d5ad6d] bg-[#fbf0df] px-[18px] py-3 text-center font-mono text-[.72rem] leading-[1.4] tracking-[.04em] text-[#6d5433]', className]} role="status">
+	<slot />
+</div>

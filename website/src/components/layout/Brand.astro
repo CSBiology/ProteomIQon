@@ -1,0 +1,17 @@
+---
+import { baseUrl } from '../../lib/site';
+
+interface Props {
+	class?: string;
+}
+const { class: className } = Astro.props;
+---
+
+<a class:list={['inline-flex items-center gap-[11px] text-[1.16rem] font-bold tracking-[-.04em] no-underline', className]} href={baseUrl} aria-label="ProteomIQon home">
+	<span class="inline-flex h-[21px] items-end gap-0.5" aria-hidden="true">
+		<span class="block h-3 w-[5px] rounded-t-[1px] bg-sky"></span>
+		<span class="block h-5 w-[5px] rounded-t-[1px] bg-orange"></span>
+		<span class="block h-[15px] w-[5px] rounded-t-[1px] bg-teal"></span>
+	</span>
+	<span>Proteom<span class="text-orange">IQ</span>on</span>
+</a>

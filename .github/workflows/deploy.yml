@@ -1,17 +1,20 @@
-name: Deploy Docs
+name: Build and Deploy Astro Docs
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
     paths:
-      - 'docs/**'
-      - 'build/**'
-      - 'build.sh'
-      - 'src/ProteomIQon/**'
-      - 'global.json'
-      - 'nuget.config'
-      - '.config/dotnet-tools.json'
+      - 'website/**'
       - '.github/workflows/deploy.yml'
+
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'website/**'
+      - '.github/workflows/deploy.yml'
+
   workflow_dispatch:
 
 permissions:
@@ -22,24 +25,35 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  deploy:
+  build-and-deploy:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
-      - name: Make build script executable
-        run: chmod u+x build.sh
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          global-json-file: global.json
-      - name: Restore tools
-        run: dotnet tool restore
-      - name: Build docs
-        run: ./build.sh builddocs
-      - name: Deploy
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: 'website/package-lock.json'
+
+      - name: Install dependencies
+        working-directory: website
+        run: npm ci
+
+      - name: Build Astro website
+        working-directory: website
+        run: npm run build
+
+      - name: Disable Jekyll processing
+        run: touch website/dist/.nojekyll
+
+      - name: Deploy to GitHub Pages
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
         uses: JamesIves/github-pages-deploy-action@v4
         with:
-          folder: output
+          folder: website/dist
           branch: gh-pages
           clean: true
