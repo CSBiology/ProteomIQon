@@ -1,0 +1,28 @@
+---
+import '../../styles/global.css';
+import Ferredoxin from '../../components/ferredoxin.astro';
+---
+
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>3D ferredoxin structure</title>
+	</head>
+	<body>
+		<Ferredoxin />
+	</body>
+</html>
+
+<style>
+	html, body {
+		height: 100%;
+		margin: 0;
+		overflow: hidden;
+	}
+
+	:global(astro-dev-toolbar) {
+		display: none;
+	}
+</style>

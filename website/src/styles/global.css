@@ -1,0 +1,144 @@
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+
+@custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
+
+:root {
+	--paper: #f3efe6;
+	--surface: #ffffff;
+	--surface-muted: #eef2f5;
+	--ink: #042c58;
+	--muted: #507289;
+	--line: #d0d6dd;
+	--color-violet: #9278b6;
+}
+
+:root[data-theme="dark"] {
+	--paper: #07182c;
+	--surface: #0c2240;
+	--surface-muted: #12294a;
+	--ink: #e8eef5;
+	--muted: #9db4c6;
+	--line: #23405f;
+}
+
+@theme {
+	--color-navy: #042c58;
+	--color-steel: #507289;
+	--color-sky: #6ab2e7;
+	--color-orange: #ffa252;
+	--color-red: #e31b4c;
+	--color-green: #26d07c;
+	--color-teal: #77b6ba;
+	--color-mist: #d0d6dd;
+
+	--font-sans: 'IBM Plex Sans', 'Segoe UI', sans-serif;
+	--font-mono: 'IBM Plex Mono', 'Cascadia Code', monospace;
+
+	--shadow-offset: 5px 5px 0 var(--color-orange);
+	--shadow-offset-muted: 5px 5px 0 var(--color-mist);
+}
+
+@theme inline {
+	--color-paper: var(--paper);
+	--color-surface: var(--surface);
+	--color-surface-muted: var(--surface-muted);
+	--color-ink: var(--ink);
+	--color-muted: var(--muted);
+	--color-line: var(--line);
+}
+
+@layer base {
+	html { scroll-behavior: smooth; }
+	body { @apply bg-paper text-ink font-sans leading-relaxed; }
+	::selection { color: var(--surface); background: var(--color-red); }
+	h1, h2, h3, h4 { @apply font-semibold; letter-spacing: -0.045em; line-height: 1.08; }
+}
+
+/* Brand customisation of the typography plugin. Unlayered on purpose: the legacy
+   `h1,h2,h3,h4,p { margin-top: 0 }` and `a { color: inherit }` rules are unlayered too. */
+.prose {
+	--tw-prose-body: var(--color-ink);
+	--tw-prose-headings: var(--color-navy);
+	--tw-prose-lead: var(--color-ink);
+	--tw-prose-links: var(--color-red);
+	--tw-prose-bold: var(--color-ink);
+	--tw-prose-counters: var(--color-steel);
+	--tw-prose-bullets: var(--color-steel);
+	--tw-prose-hr: var(--color-line);
+	--tw-prose-quotes: var(--color-ink);
+	--tw-prose-quote-borders: var(--color-line);
+	--tw-prose-captions: var(--color-muted);
+	--tw-prose-code: var(--color-ink);
+	--tw-prose-th-borders: var(--color-line);
+	--tw-prose-td-borders: var(--color-line);
+}
+.prose a { color: var(--tw-prose-links); text-decoration: underline; }
+.prose h1, .prose h2, .prose h3, .prose h4 { color: var(--tw-prose-headings); }
+.prose h2 { margin-top: 2em; }
+.prose h3 { margin-top: 1.6em; }
+.prose p { margin-top: 1.25em; }
+.prose table { display: block; overflow-x: auto; }
+.prose td:first-child code { font-family: var(--font-mono); }
+
+.copy-command-block {
+	--command-bg: color-mix(in srgb, var(--line) 58%, var(--paper));
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) 50px;
+	align-items: stretch;
+	width: 100%;
+	margin: .9rem 0;
+	border: 1px solid color-mix(in srgb, var(--line) 78%, var(--paper));
+	border-radius: 8px;
+	background: var(--command-bg);
+	overflow: hidden;
+}
+.copy-command-block > pre {
+	min-width: 0;
+	max-width: 100%;
+	margin: 0;
+	padding-right: 1rem;
+	border-radius: 0;
+	overflow-x: auto;
+	background-color: transparent !important;
+	color: var(--ink) !important;
+}
+.copy-command-block > pre code span[style*="#E1E4E8"] { color: var(--ink) !important; }
+.copy-command-block > pre code span[style*="#B392F0"],
+.copy-command-block > pre[data-language="fsharp"] code span[style*="#E1E4E8"] { color: #70469c !important; }
+.copy-command-block > pre code span[style*="#9ECBFF"] { color: #275f8c !important; }
+.copy-command-block > pre code span[style*="#79B8FF"] { color: #17699e !important; }
+.copy-command-button {
+	display: inline-flex;
+	width: 36px;
+	height: 36px;
+	min-height: 0;
+	align-self: center;
+	justify-self: center;
+	align-items: center;
+	justify-content: center;
+	padding: 8px;
+	border: 1px solid color-mix(in srgb, var(--line) 82%, var(--muted));
+	border-radius: 8px;
+	background: var(--surface-muted);
+	color: var(--ink);
+	opacity: .94;
+	cursor: pointer;
+	transition: opacity .16s ease, border-color .16s ease, background-color .16s ease;
+}
+.copy-command-button svg {
+	display: block;
+	width: 18px;
+	height: 18px;
+}
+.copy-command-button:hover,
+.copy-command-button:focus-visible {
+	border-color: color-mix(in srgb, var(--line) 72%, var(--muted));
+	background: var(--line);
+	opacity: 1;
+}
+
+@media (max-width: 600px) {
+	.copy-command-block { grid-template-columns: minmax(0, 1fr) 46px; }
+	.copy-command-button { width: 34px; height: 34px; padding: 6px; }
+}
