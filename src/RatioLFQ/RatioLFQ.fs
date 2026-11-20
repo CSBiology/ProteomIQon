@@ -84,7 +84,8 @@ module RatioLFQ =
         let mutable rowsIgnored = 0
         for row in Csv.CsvReader<Dto.GlobModAggregationResult>(SchemaMode=Csv.Fill).ReadFile(path,'\t',true) do
             rowsRead <- rowsRead + 1
-            let file, proteinGroup = row.FileName, row.ProteinGroup
+            // LabeledProteinQuantification quotes run names with a space and protein groups with a semicolon
+            let file, proteinGroup = row.FileName.Trim '"', row.ProteinGroup.Trim '"'
             let run = if file = "" then -1 else indexOf runs file
             let group = if proteinGroup = "" then -1 else indexOf proteinGroups proteinGroup
             if group = measurements.Count then
