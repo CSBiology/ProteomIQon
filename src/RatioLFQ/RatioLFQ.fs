@@ -253,9 +253,18 @@ module RatioLFQ =
         logger.Trace (sprintf "Parameters: %A" parameters)
         let table = readIonTable ionTable
         logger.Trace (sprintf "Rows read: %i, rows ignored: %i, runs: %i" table.RowsRead table.RowsIgnored table.Runs.Length)
-        let validCount = table.Measurements |> Array.sumBy Array.length
+        let mutable validCount = 0
+        let mutable largestLight = 0.
+        let mutable largestHeavy = 0.
+        for group in table.Measurements do
+            for m in group do
+                validCount <- validCount + 1
+                largestLight <- max largestLight m.Light
+                largestHeavy <- max largestHeavy m.Heavy
         if validCount = 0 then
             warn "The ion table has no valid row. The output file holds the header only."
+        elif largestLight < 100. || largestHeavy < 100. then
+            failwithf "The largest Quant_Light is %g and the largest Quant_Heavy is %g. The table looks transformed (for example log2). RatioLFQ needs untransformed intensities." largestLight largestHeavy
         let results = compute parameters table
         let cellText (v: float) = if Double.IsNaN v then "" else v.ToString(CultureInfo.InvariantCulture)
         Directory.CreateDirectory outputDirectory |> ignore

@@ -196,6 +196,18 @@ let ratioLFQTests =
             let value i = Double.Parse(cells.[i], Globalization.CultureInfo.InvariantCulture)
             expectClose linearTolerance [| 2.; 2000.; 4.; 4000. |] [| value 1; value 2; value 5; value 6 |] "R1 and R3"
 
+        testCase "a table with log2 light and linear heavy intensities is rejected as transformed" <| fun _ ->
+            let work = Path.Combine(Path.GetTempPath(), sprintf "ratioLFQUnit_%s" (Guid.NewGuid().ToString "N"))
+            Directory.CreateDirectory work |> ignore
+            try
+                let table = Path.Combine(work, "ionTable.txt")
+                File.WriteAllLines(table, ionTable [ "R1\tP\ta\t12.5\t5000"; "R2\tP\ta\t13.1\t6000" ])
+                let message = (try RatioLFQ.ratioLFQ (parameters ReferenceChannel.Heavy 1 false) (Path.Combine(work, "out")) table; "" with e -> e.Message)
+                Expect.stringContains message "transformed" "the message says transformed"
+                Expect.isFalse (File.Exists(Path.Combine(work, "out", "RatioLFQ.txt"))) "no output file"
+            finally
+                Directory.Delete(work, true)
+
         testCase "compute rejects MinSharedIons 0" <| fun _ ->
             Expect.throws (fun () -> RatioLFQ.compute (parameters ReferenceChannel.Heavy 0 false) workedExample |> ignore) "MinSharedIons = 0"
 
