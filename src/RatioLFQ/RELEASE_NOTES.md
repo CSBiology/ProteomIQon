@@ -5,6 +5,7 @@
 * Add a parameter file with the reference channel, the minimum number of shared ions and the centring of runs
 * Read quoted run names and protein groups without their quotes, as LabeledProteinQuantification quotes run names with a space and protein groups with a semicolon
 * Stop with a message when the largest intensity of a channel is below 100, since the table then looks log transformed
+* Update NLog to 4.7.11
 
 #### 0.0.2 - Wednesday, September 2, 2026
 * Update to .NET 10
