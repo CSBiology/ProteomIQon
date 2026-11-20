@@ -1458,20 +1458,22 @@ module Dto =
 
     type RatioLFQParams =
         {
-            Reference     : Domain.ReferenceChannel
-            MinSharedIons : int
-            CentreRuns    : bool
-            PairWeighting : Domain.PairWeighting
+            Reference      : Domain.ReferenceChannel
+            MinSharedIons  : int
+            CentreRuns     : bool
+            PairWeighting  : Domain.PairWeighting
+            ReferenceLevel : Domain.ReferenceLevel
         }
 
     module RatioLFQParams =
 
         let toDomain (dtoRatioLFQParams: RatioLFQParams): Domain.RatioLFQParams =
             {
-                Reference     = dtoRatioLFQParams.Reference
-                MinSharedIons = dtoRatioLFQParams.MinSharedIons
-                CentreRuns    = dtoRatioLFQParams.CentreRuns
-                PairWeighting = dtoRatioLFQParams.PairWeighting
+                Reference      = dtoRatioLFQParams.Reference
+                MinSharedIons  = dtoRatioLFQParams.MinSharedIons
+                CentreRuns     = dtoRatioLFQParams.CentreRuns
+                PairWeighting  = dtoRatioLFQParams.PairWeighting
+                ReferenceLevel = dtoRatioLFQParams.ReferenceLevel
             }
                        
 

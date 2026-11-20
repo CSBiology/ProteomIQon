@@ -29,7 +29,13 @@ let private readLines (lines: string list) =
 let private parse (rows: string list) = readLines (ionTable rows)
 
 let private parameters reference minShared center : RatioLFQParams =
-    { Reference = reference; MinSharedIons = minShared; CentreRuns = center; PairWeighting = PairWeighting.SharedIonCount }
+    {
+        Reference      = reference
+        MinSharedIons  = minShared
+        CentreRuns     = center
+        PairWeighting  = PairWeighting.SharedIonCount
+        ReferenceLevel = ReferenceLevel.MeanOfIonMedians
+    }
 
 /// Checks equal length, equal nan positions and close values.
 let private expectClose (tolerance: Accuracy) (expected: float []) (actual: float []) message =
@@ -151,12 +157,32 @@ let ratioLFQTests =
                 let med = results |> Array.map (fun r -> Math.Log2 r.Ratio.[run]) |> Numerics.median
                 Expect.floatClose logTolerance med 0. (sprintf "median of run %i" run)
 
-        testCase "referenceLevel is the mean of the three largest ion medians" <| fun _ ->
+        testCase "referenceLevel applies both rules to the ion medians" <| fun _ ->
             let reference = [| [| 10.; 30.; nan |]; [| 100.; nan; 300. |]; [| 5.; 5.; 5. |]; [| 1000.; 2000.; nan |]; [| nan; nan; nan |] |]
-            // ion medians 20, 200, 5, 1500: the three largest are 1500, 200 and 20
-            Expect.floatClose linearTolerance (RatioLFQ.referenceLevel reference) ((1500. + 200. + 20.) / 3.) "three largest"
-            Expect.floatClose linearTolerance (RatioLFQ.referenceLevel [| [| 10.; 30. |]; [| 100.; nan |] |]) 60. "two ions"
-            Expect.floatClose linearTolerance (RatioLFQ.referenceLevel [| [| 7.; nan |] |]) 7. "one ion"
+            // ion medians 20, 200, 5, 1500: mean 1725 / 4 = 431.25, the three largest are 1500, 200 and 20 with mean 1720 / 3
+            let level rule = RatioLFQ.referenceLevel rule reference
+            Expect.floatClose linearTolerance (level ReferenceLevel.MeanOfIonMedians) 431.25 "mean"
+            Expect.floatClose linearTolerance (level ReferenceLevel.TopThreeIonMedians) (1720. / 3.) "top three"
+            Expect.floatClose linearTolerance (RatioLFQ.referenceLevel ReferenceLevel.TopThreeIonMedians [| [| 10.; 30. |]; [| 100.; nan |] |]) 60. "two ions"
+            Expect.floatClose linearTolerance (RatioLFQ.referenceLevel ReferenceLevel.MeanOfIonMedians [| [| 7.; nan |] |]) 7. "one ion"
+
+        testCase "the reference level rule changes the intensities and not the ratios" <| fun _ ->
+            // the worked example plus ion d with heavy 5000 in R1 and R3: heavy ion medians 1000, 500, 250 and 5000,
+            // so the mean is 1687.5 and the three largest give 6500 / 3
+            let table =
+                parse [
+                    "R1\tP\ta\t2000\t1000"; "R2\tP\ta\t4000\t1000"; "R3\tP\ta\t8000\t1000"
+                    "R1\tP\tb\t400\t400";   "R2\tP\tb\t1200\t600"
+                    "R1\tP\tc\t1600\t200";  "R3\tP\tc\t1200\t300"
+                    "R1\tP\td\t5000\t5000"; "R3\tP\td\t10000\t5000"
+                ]
+            let result rule = (RatioLFQ.compute { parameters ReferenceChannel.Heavy 1 false with ReferenceLevel = rule } table).[0]
+            let mean, top = result ReferenceLevel.MeanOfIonMedians, result ReferenceLevel.TopThreeIonMedians
+            expectClose logTolerance mean.Ratio top.Ratio "ratio"
+            let differs = Array.exists2 (fun (m: float) (t: float) -> abs (m - t) > 1e-6 * abs m) mean.Intensity top.Intensity
+            Expect.isTrue differs "the intensities differ"
+            Array.iteri2 (fun i (r: float) (v: float) -> Expect.floatClose linearTolerance v (r * 1687.5) (sprintf "mean intensity run %i" i)) mean.Ratio mean.Intensity
+            Array.iteri2 (fun i (r: float) (v: float) -> Expect.floatClose linearTolerance v (r * 6500. / 3.) (sprintf "top three intensity run %i" i)) top.Ratio top.Intensity
 
         testCase "readIonTable reads and rejects as specified" <| fun _ ->
             Expect.throws (fun () -> readLines [ "FileName\tProteinGroup\tStringSequence\tQuant_Light"; "R1\tP\ta\t1" ] |> ignore) "missing column"

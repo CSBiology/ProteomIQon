@@ -2,8 +2,7 @@
 * Breaking: the tool reads the ion table of LabeledProteinQuantification with -i, writes RatioLFQ.txt and a log file into the directory given with -o and takes a parameter file with -p. The flags -pc, -rac and -rfc are removed.
 * Compute the ratios from the peptide ion table of LabeledProteinQuantification by comparing the runs pairwise over shared ions
 * Write a light to heavy ratio and an intensity per protein group and run
-* Add a parameter file with the reference channel, the minimum number of shared ions and the centring of runs
-* Add the parameter PairWeighting (SharedIonCount or Unweighted) for the weight of a run pair in the fit
+* Add a parameter file with the reference channel, the minimum number of shared ions, the centring of runs, the weighting of run pairs (PairWeighting) and the rule for the reference intensity (ReferenceLevel)
 * Read quoted run names and protein groups without their quotes, as LabeledProteinQuantification quotes run names with a space and protein groups with a semicolon
 * Stop with a message when the largest intensity of a channel is below 100, since the table then looks log transformed
 * Update NLog to 4.7.11

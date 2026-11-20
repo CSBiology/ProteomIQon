@@ -9,10 +9,11 @@ open ProteomIQon.Domain
 
 let defaultRatioLFQParams : Dto.RatioLFQParams =
     {
-        Reference     = ReferenceChannel.Heavy
-        MinSharedIons = 1
-        CentreRuns    = false
-        PairWeighting = PairWeighting.SharedIonCount
+        Reference      = ReferenceChannel.Heavy
+        MinSharedIons  = 1
+        CentreRuns     = false
+        PairWeighting  = PairWeighting.SharedIonCount
+        ReferenceLevel = ReferenceLevel.MeanOfIonMedians
     }
 
 let serialized =

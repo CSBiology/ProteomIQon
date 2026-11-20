@@ -359,12 +359,19 @@ module Domain =
         | SharedIonCount
         | Unweighted
 
+    /// How the per-ion medians of the reference channel give the reference intensity of a protein group.
+    [<RequireQualifiedAccess>]
+    type ReferenceLevel =
+        | MeanOfIonMedians
+        | TopThreeIonMedians
+
     type RatioLFQParams =
         {
-            Reference     : ReferenceChannel
-            MinSharedIons : int
-            CentreRuns    : bool
-            PairWeighting : PairWeighting
+            Reference      : ReferenceChannel
+            MinSharedIons  : int
+            CentreRuns     : bool
+            PairWeighting  : PairWeighting
+            ReferenceLevel : ReferenceLevel
         }
 
     module LabeledProteinQuantification = 
