@@ -155,7 +155,7 @@ The tool writes **three mandatory** and **up to two optional** tab-separated res
 | `ProteinAggregation.txt` | One row per protein group and run, with aggregated light, heavy and ratio values. Includes the number of observations used, coefficient of variation (CV), standard deviation and standard error of the mean (SEM) for each series. | Always |
 | `LabeledQuant.txt` | Protein-group results in a wide table: one row per protein group and a set of columns for each input run. Column names follow patterns such as `<run>.Ratio_LightByHeavy` and `<run>.Quant_Heavy`. | Always |
 
-**Next step:** [RatioLFQ](./ratio-lfq.md) uses `LabeledQuant.txt` to derive comparable run-level intensities from the ratios.
+**Next step:** [RatioLFQ](./ratio-lfq.md) reads `GlobModAggregation.txt`, written without a transform, and computes a ratio and an intensity per protein group and run.
 
 ### Log files
 
