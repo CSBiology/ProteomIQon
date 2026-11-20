@@ -41,7 +41,7 @@ The table needs the columns `FileName`, `ProteinGroup`, `StringSequence`, `Charg
 
 The intensities have to be linear, so the LabeledProteinQuantification parameter file must not set a `LabeledTransform`. The table also has to be written with a light-to-heavy correlation filter in LabeledProteinQuantification. Without the filter, ions whose light and heavy peaks do not belong together enter the comparison of runs. [LabeledQuantificationParams_withCorrFilter.json](https://github.com/CSBiology/ProteomIQon/blob/main/src/ProteomIQon/defaultParams/LabeledQuantificationParams_withCorrFilter.json) is an example that has one and no transform.
 
-Rows without two positive intensities are ignored. The tool stops with a message when the table has more than one row for the same ion and run or when a required column is missing.
+Rows without two positive intensities are ignored. The tool stops with a message when the table has more than one row for the same ion and run or when a required column is missing. It also stops when the intensities look log transformed, which it detects when the largest intensity of a channel (light or heavy) is below 100.
 
 ## Parameter file
 

@@ -1654,4 +1654,22 @@ let pipelineTests =
                 | Some message -> Expect.stringContains message "Quant_Heavy" "the error names the missing column"
             finally
                 Directory.Delete(work, true)
+
+        testCase "RatioLFQTransformedTable" <| fun _ ->
+            let data = Path.Combine(repoRoot, "tests", "data", "RatioLFQ")
+            let work = Path.Combine(baseDir, sprintf "ratioLFQTransformed_%s" (Guid.NewGuid().ToString "N"))
+            Directory.CreateDirectory work |> ignore
+            try
+                let outDirectory = Path.Combine(work, "out")
+                let failure =
+                    try
+                        runDotNet (sprintf "%s -i %s -o %s -p %s" (toolDll "RatioLFQ") (Path.Combine(data, "in", "ionTable_log2.txt")) outDirectory (Path.Combine(data, "in", "RatioLFQParams.json"))) baseDir
+                        None
+                    with e -> Some e.Message
+                match failure with
+                | None -> failwith "RatioLFQ accepted a table with log2 intensities"
+                | Some message -> Expect.stringContains message "transformed" "the error says that the table looks transformed"
+                Expect.isFalse (File.Exists (Path.Combine(outDirectory, "RatioLFQ.txt"))) "no RatioLFQ.txt is written"
+            finally
+                Directory.Delete(work, true)
     ]
