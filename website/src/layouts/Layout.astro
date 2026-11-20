@@ -1,0 +1,107 @@
+---
+import '../styles/global.css';
+import '../style.css';
+import '../styles/responsive.css';
+import 'katex/dist/katex.min.css';
+import '../styles/alignment-tools.css';
+import { withBase } from '../lib/site';
+import SiteHeader from '../components/layout/SiteHeader.astro';
+import SiteFooter from '../components/layout/SiteFooter.astro';
+
+interface Props {
+	title?: string;
+	description?: string;
+	showFooter?: boolean;
+	mainClass?: string;
+}
+
+const {
+	title = 'ProteomIQon - Documentation',
+	description = 'Knowledgebase, Tutorials and more.',
+	showFooter = true,
+	mainClass,
+} = Astro.props;
+---
+
+<!doctype html>
+<html lang="en" data-theme="light">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<link rel="icon" type="image/svg+xml" href={withBase('/favicon.svg')} />
+		<link rel="icon" href={withBase('/favicon.ico')} />
+		<link rel="preconnect" href="https://fonts.googleapis.com" />
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+		<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" />
+		<meta name="description" content={description} />
+		<meta name="generator" content={Astro.generator} />
+		<title>{title}</title>
+	</head>
+	<body>
+		<div class="site-shell">
+			<SiteHeader />
+			<main class={mainClass}>
+				<slot />
+			</main>
+			{showFooter && <SiteFooter />}
+		</div>
+		<script>
+			const copyIcon = '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>';
+			const copiedIcon = '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m5 12 4 4L19 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+			for (const commandBlock of document.querySelectorAll('main pre')) {
+				const wrapper = document.createElement('div');
+				wrapper.className = 'copy-command-block';
+				commandBlock.before(wrapper);
+				wrapper.append(commandBlock);
+
+				const button = document.createElement('button');
+				button.type = 'button';
+				button.className = 'copy-command-button';
+				button.setAttribute('aria-label', 'Copy command');
+				button.title = 'Copy command';
+				button.innerHTML = copyIcon;
+				wrapper.append(button);
+
+				let resetTimer: number | undefined;
+				button.addEventListener('click', async () => {
+					const command = commandBlock.textContent?.trim() ?? '';
+					try {
+						try {
+							if (!navigator.clipboard?.writeText) throw new Error('Clipboard API unavailable');
+							await navigator.clipboard.writeText(command);
+						} catch {
+							const fallback = document.createElement('textarea');
+							fallback.value = command;
+							fallback.setAttribute('readonly', '');
+							fallback.style.position = 'fixed';
+							fallback.style.opacity = '0';
+							document.body.append(fallback);
+							fallback.select();
+							let copied = false;
+							try {
+								copied = document.execCommand?.('copy') ?? false;
+							} finally {
+								fallback.remove();
+							}
+							if (!copied) throw new Error('Copy failed');
+						}
+						button.innerHTML = copiedIcon;
+						button.setAttribute('aria-label', 'Copied to clipboard');
+						button.title = 'Copied to clipboard';
+					} catch {
+						button.setAttribute('aria-label', 'Could not copy command');
+						button.title = 'Could not copy command';
+					}
+
+					window.clearTimeout(resetTimer);
+					resetTimer = window.setTimeout(() => {
+						button.innerHTML = copyIcon;
+						button.setAttribute('aria-label', 'Copy command');
+						button.title = 'Copy command';
+					}, 1800);
+				});
+			}
+		</script>
+	</body>
+</html>

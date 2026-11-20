@@ -1,0 +1,42 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { withBase } from '../lib/site';
+import Banner from '../components/ui/Banner.astro';
+import EntryCard from '../components/ui/EntryCard.astro';
+import SectionHeading from '../components/ui/SectionHeading.astro';
+
+const entryPoints = [
+	{ number: '01', title: 'Explore the tools', text: 'Browse each processing step, from mzML conversion to protein inference and quantification.', href: withBase('/tools/'), label: '18 tools in the directory', tone: 'red' },
+	{ number: '02', title: 'Install the pipeline', text: 'Set up the complete pipeline or install individual .NET tools from NuGet.', href: withBase('/guide/installation/'), label: 'Installation guide', tone: 'sky' },
+	{ number: '03', title: 'Get started', text: 'Find the first steps for running ProteomIQon as a beginner or advanced user.', href: withBase('/guide/getting-started/'), label: 'Start here', tone: 'green' },
+	{ number: '04', title: 'Understand the system', text: 'Learn how tools are built, connected, documented and published.', href: withBase('/guide/developer-information/'), label: 'Developer notes', tone: 'orange' },
+	{ number: '05', title: 'Find support', text: 'Report issues, contribute ideas or connect with the people behind the project.', href: withBase('/guide/help/'), label: 'Community & help', tone: 'violet' },
+] as const;
+---
+
+<Layout title="ProteomIQon · Proteomics toolchain" description="Explore the ProteomIQon toolchain, its processing tools, documentation and its tutorials.">
+	<div>
+		<section class="home-intro flex items-center justify-between gap-6 pt-8 pb-8 max-md:flex-col max-md:pt-14 max-md:pb-8 max-[520px]:pt-[47px]">
+			<div class="min-w-0 flex-1 max-md:w-full">
+				<h1 class="mb-6 text-[clamp(3.4rem,6.8vw,6.25rem)]! [text-shadow:0_0_18px_rgba(247,249,251,.92),0_2px_0_rgba(247,249,251,.72)]">Proteom<em class="text-orange not-italic">IQ</em>on</h1>
+				<p class="max-w-[570px] text-[1.2rem] leading-[1.65] text-steel max-[520px]:text-lg">a set of command line tools for the analysis of mass spectrometry based proteomics data</p>
+			</div>
+			<iframe
+				class="block aspect-[6/5] max-h-[460px] w-[min(560px,47%,68vh)] shrink-0 border-0 bg-paper opacity-90 max-md:w-[min(100%,410px)]"
+				src={withBase('/structures/ferredoxin/')}
+				title="Interactive 3D ferredoxin structure"
+			></iframe>
+		</section>
+
+		<section class="home-overview pt-3 pb-[20px] max-md:pb-[32px]" aria-labelledby="entry-title">
+			<SectionHeading
+				class="!mb-[28px]"
+				title="Overview."
+				id="entry-title"
+			/>
+			<nav class="documentation-entries grid grid-cols-5 gap-3 max-md:grid-cols-2 max-[520px]:grid-cols-1" aria-label="Documentation sections">
+				{entryPoints.map((entry) => <EntryCard {...entry} />)}
+			</nav>
+		</section>
+	</div>
+</Layout>

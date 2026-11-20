@@ -1,0 +1,79 @@
+---
+interface Props {
+	number: string;
+	title: string;
+	text: string;
+	href: string;
+	label: string;
+	tone: 'sky' | 'orange' | 'teal' | 'red' | 'green' | 'violet';
+	class?: string;
+	heading?: 'h3' | 'h4';
+}
+const { number, title, text, href, label, tone, class: className, heading: Heading = 'h3' } = Astro.props;
+const toneColors = {
+	red: 'var(--color-red)',
+	sky: 'var(--color-sky)',
+	green: 'var(--color-green)',
+	orange: 'var(--color-orange)',
+	teal: 'var(--color-teal)',
+	violet: 'var(--color-violet)',
+} as const;
+const glowStrength = {
+	red: '11%',
+	sky: '18%',
+	green: '16%',
+	orange: '11%',
+	teal: '11%',
+	violet: '16%',
+} as const;
+---
+
+<a class:list={['documentation-entry flex min-h-[210px] min-w-0 flex-col border px-[18px] pt-[19px] pb-[21px] no-underline transition-[border-color,transform,box-shadow] duration-200 hover:-translate-y-[3px] max-[520px]:min-h-[205px]', className]} style={`--entry-tone: ${toneColors[tone]}; --entry-glow-strength: ${glowStrength[tone]}`} href={href}>
+	<div class="flex justify-between">
+		<span class="text-steel">{number}</span>
+		<span class="entry-arrow text-[1.05rem]" aria-hidden="true">↗</span>
+	</div>
+	<Heading class="mt-7! mb-2.5 text-[1.22rem] leading-[1.08] font-semibold tracking-[-.035em]! text-navy wrap-anywhere"><slot name="title">{title}</slot></Heading>
+	<p class="mb-[18px] text-[.79rem] leading-[1.6] text-steel">{text}</p>
+	<span class="mt-auto font-mono text-[.59rem] tracking-[.07em] text-steel uppercase">{label}</span>
+</a>
+
+<style>
+	.entry-arrow {
+		color: color-mix(in srgb, var(--entry-tone) 68%, var(--paper));
+		transition: color .2s ease;
+	}
+
+	.documentation-entry:hover .entry-arrow {
+		color: var(--entry-tone);
+	}
+
+	.documentation-entry {
+		position: relative;
+		background:
+			radial-gradient(ellipse 85% 70% at 50% 100%, color-mix(in srgb, var(--entry-tone) var(--entry-glow-strength), transparent), transparent 100%),
+			linear-gradient(140deg, color-mix(in srgb, var(--surface) 38%, transparent), color-mix(in srgb, var(--surface) 12%, transparent) 52%, color-mix(in srgb, var(--paper) 30%, transparent)),
+			color-mix(in srgb, var(--paper) 22%, transparent);
+		border-color: color-mix(in srgb, var(--surface) 72%, var(--line));
+		border-radius: 14px;
+		box-shadow: none;
+		backdrop-filter: blur(20px) saturate(125%);
+		-webkit-backdrop-filter: blur(20px) saturate(125%);
+	}
+
+	.documentation-entry::before {
+		content: '';
+		position: absolute;
+		top: 0;
+		left: 18px;
+		width: 34px;
+		height: 3px;
+		border-radius: 0 0 3px 3px;
+		background: color-mix(in srgb, var(--entry-tone) 68%, var(--paper));
+	}
+
+	.documentation-entry:hover {
+		border-color: color-mix(in srgb, var(--surface) 82%, var(--line));
+		box-shadow: none;
+	}
+</style>

@@ -1,0 +1,23 @@
+---
+import Eyebrow from './Eyebrow.astro';
+
+interface Props {
+	eyebrow: string;
+	title?: string;
+	intro?: string;
+	class?: string;
+}
+const { eyebrow, title, intro, class: className } = Astro.props;
+const hasAside = Astro.slots.has('default');
+---
+
+<section class:list={['flex items-center justify-between gap-16 border-b border-line pt-[75px] pb-[70px] max-md:block max-md:pt-14 max-md:pb-12', className]}>
+	<div class="min-w-0 flex-1">
+		<Eyebrow class="mb-[17px]">{eyebrow}</Eyebrow>
+		<h1 class="mb-[18px]! max-w-full text-[clamp(3rem,5.7vw,5.4rem)]!">
+			<slot name="title">{title}</slot>
+		</h1>
+		{intro && <p class="max-w-[570px] text-[1.07rem] leading-[1.75] text-steel max-[520px]:text-base">{intro}</p>}
+	</div>
+	{hasAside && <div><slot /></div>}
+</section>

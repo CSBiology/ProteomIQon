@@ -1,0 +1,13 @@
+---
+interface Props {
+	href: string;
+	external?: boolean;
+	tone?: 'navy' | 'red';
+	class?: string;
+}
+const { href, external = false, tone = 'navy', class: className } = Astro.props;
+---
+
+<a class:list={['text-[.82rem] font-semibold no-underline', tone === 'red' ? 'text-red!' : 'text-navy!', className]} href={href} {...(external ? { rel: 'noopener' } : {})}>
+	<slot /><span class="ml-1.5 text-red" aria-hidden="true">{external ? '↗' : '→'}</span>
+</a>

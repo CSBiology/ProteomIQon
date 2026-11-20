@@ -1,0 +1,39 @@
+---
+import { getCollection, render } from 'astro:content';
+import { Image } from 'astro:assets';
+import Layout from '../../layouts/Layout.astro';
+
+export async function getStaticPaths() {
+	const guides = await getCollection('guides');
+	return guides.map((entry) => ({ params: { slug: entry.id }, props: { entry } }));
+}
+
+const { entry } = Astro.props;
+const { Content } = await render(entry);
+const { title, description, contributors } = entry.data;
+---
+
+<Layout title={`${title} · ProteomIQon`} description={description}>
+	<section class="page-hero compact-page-hero">
+		<div>
+			<h1>{title}</h1>
+		</div>
+	</section>
+
+	<div class="content-column">
+		<article class="legacy-content prose max-w-none prose-a:font-semibold">
+			<Content />
+			{contributors && (
+				<ul class="not-prose mt-8 flex list-none flex-wrap justify-between gap-6 p-0! max-[600px]:justify-center">
+					{contributors.map((person) => (
+						<li class="flex w-40 max-w-full flex-col items-center gap-2 text-center">
+							{person.image && <Image class="aspect-square w-full rounded-full object-cover" src={person.image} alt={`Portrait of ${person.name}`} width={160} height={160} fit="cover" />}
+							<strong>{person.url ? <a class="text-red!" href={person.url} target="_blank" rel="noopener">{person.name}</a> : person.name}</strong>
+							{person.role && <span class="text-sm text-steel">{person.role}</span>}
+						</li>
+					))}
+				</ul>
+			)}
+		</article>
+	</div>
+</Layout>
