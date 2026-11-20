@@ -27,7 +27,7 @@ A labeled experiment gives a light and a heavy intensity for every peptide ion a
 
 4. **Calculate the intensity**
 
-   The intensity is the ratio, oriented sample over reference, times one reference intensity per protein group. That reference intensity is the mean of the up to three largest per-ion medians of the reference channel.
+   The intensity is the ratio, oriented sample over reference, times one reference intensity per protein group. By default, that reference intensity is the mean of the per-ion medians of the reference channel (`ReferenceLevel`).
 
 ## Inputs
 
@@ -51,11 +51,12 @@ Rows without two positive intensities are ignored. The tool stops with a message
 | `MinSharedIons` | `1` | The number of ions that two runs must share so that their comparison is used. |
 | `CentreRuns` | `false` | Shifts the log₂ ratios of every run so that the median over all its ions is 0. This removes differences in the mixing of sample and standard and is only meaningful when most proteins do not change between runs. |
 | `PairWeighting` | `SharedIonCount` | `SharedIonCount` weights the comparison of two runs by the number of ions they share. `Unweighted` gives every comparison the same weight. |
+| `ReferenceLevel` | `MeanOfIonMedians` | `MeanOfIonMedians` takes the mean of all per-ion medians of the reference channel as the reference intensity of a protein group, `TopThreeIonMedians` the mean of the up to three largest. The ratio does not depend on it. |
 
 The default file is [RatioLFQParams.json](https://github.com/CSBiology/ProteomIQon/blob/main/src/ProteomIQon/defaultParams/RatioLFQParams.json):
 
 ```json
-{"Reference":{"Case":"Heavy"},"MinSharedIons":1,"CentreRuns":false,"PairWeighting":{"Case":"SharedIonCount"}}
+{"Reference":{"Case":"Heavy"},"MinSharedIons":1,"CentreRuns":false,"PairWeighting":{"Case":"SharedIonCount"},"ReferenceLevel":{"Case":"MeanOfIonMedians"}}
 ```
 
 ## Outputs

@@ -1,1 +1,1 @@
-{"Reference":{"Case":"Light"},"MinSharedIons":2,"CentreRuns":true,"PairWeighting":{"Case":"SharedIonCount"}}
+{"Reference":{"Case":"Light"},"MinSharedIons":2,"CentreRuns":true,"PairWeighting":{"Case":"SharedIonCount"},"ReferenceLevel":{"Case":"MeanOfIonMedians"}}

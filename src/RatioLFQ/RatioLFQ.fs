@@ -192,16 +192,20 @@ module RatioLFQ =
     let pairwiseProfile (minSharedIons: int) (y: float [] []) : float [] =
         profile PairWeighting.SharedIonCount minSharedIons y |> fst
 
-    /// Reference level of a protein group: the mean of the up to three largest per-ion medians.
+    /// Reference level of a protein group from the per-ion medians of the reference channel: the mean of all of them or the mean of the up to three largest, as the rule says.
     /// reference.[ion].[run] is the linear reference intensity or nan.
-    let referenceLevel (reference: float [] []) : float =
+    let referenceLevel (rule: ReferenceLevel) (reference: float [] []) : float =
         let h =
             reference
             |> Array.choose (fun ion ->
                 let values = ion |> Array.filter (fun v -> not (Double.IsNaN v))
                 if values.Length = 0 then None else Some (Numerics.median values))
             |> Array.sortDescending
-        if h.Length = 0 then nan else h |> Array.truncate 3 |> Array.average
+        if h.Length = 0 then nan
+        else
+            match rule with
+            | ReferenceLevel.MeanOfIonMedians -> Array.average h
+            | ReferenceLevel.TopThreeIonMedians -> h |> Array.truncate 3 |> Array.average
 
     /// Centring, profile, reference level and the output rows for every protein group. The matrices of one protein group cover its present runs
     /// only and are dropped after the group.
@@ -232,7 +236,7 @@ module RatioLFQ =
                      | ReferenceChannel.Heavy -> m.Heavy
                      | ReferenceChannel.Light -> m.Light)
             let x, groups = profile parameters.PairWeighting parameters.MinSharedIons y
-            let level = referenceLevel reference
+            let level = referenceLevel parameters.ReferenceLevel reference
             let ratio = Array.create table.Runs.Length nan
             let intensity = Array.create table.Runs.Length nan
             presentRuns |> Array.iteri (fun c run ->

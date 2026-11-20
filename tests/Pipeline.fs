@@ -1625,7 +1625,7 @@ let pipelineTests =
             let data = Path.Combine(repoRoot, "tests", "data", "RatioLFQ")
             let work = Path.Combine(baseDir, sprintf "ratioLFQ_%s" (Guid.NewGuid().ToString "N"))
             try
-                for paramFile, outName in [ "RatioLFQParams.json", "default"; "RatioLFQParams_Light_Centre_MinShared2.json", "lightCentreMinShared2" ] do
+                for paramFile, outName in [ "RatioLFQParams.json", "default"; "RatioLFQParams_Light_Centre_MinShared2.json", "lightCentreMinShared2"; "RatioLFQParams_Unweighted_Top3Level.json", "unweightedTop3Level" ] do
                     let outDirectory = Path.Combine(work, outName)
                     runDotNet (sprintf "%s -i %s -o %s -p %s" (toolDll "RatioLFQ") (Path.Combine(data, "in", "ionTable.txt")) outDirectory (Path.Combine(data, "in", paramFile))) baseDir
                     let reference = Path.Combine(data, "out", outName, "RatioLFQReference.txt")
