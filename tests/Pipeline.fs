@@ -1620,4 +1620,37 @@ let pipelineTests =
             File.Delete (relToDirectory "../../../data/AddDeducedPeptides/out/minimalQuant2.prot")
             File.Delete (relToDirectory "../../../data/AddDeducedPeptides/out/AddDeducedPeptides_log.txt")
             Expect.isTrue compare "Deduced Proteins are different"
+
+        testCase "RatioLFQ" <| fun _ ->
+            let data = Path.Combine(repoRoot, "tests", "data", "RatioLFQ")
+            let work = Path.Combine(baseDir, sprintf "ratioLFQ_%s" (Guid.NewGuid().ToString "N"))
+            try
+                let outDirectory = Path.Combine(work, "default")
+                runDotNet (sprintf "%s -i %s -o %s -p %s" (toolDll "RatioLFQ") (Path.Combine(data, "in", "ionTable.txt")) outDirectory (Path.Combine(data, "in", "RatioLFQParams.json"))) baseDir
+                let reference = Path.Combine(data, "out", "default", "RatioLFQReference.txt")
+                Expect.isTrue (tsvFilesEqual 1e-9 reference (Path.Combine(outDirectory, "RatioLFQ.txt"))) "RatioLFQ result differs from the reference"
+            finally
+                if Directory.Exists work then Directory.Delete(work, true)
+
+        testCase "RatioLFQMissingColumn" <| fun _ ->
+            let data = Path.Combine(repoRoot, "tests", "data", "RatioLFQ")
+            let work = Path.Combine(baseDir, sprintf "ratioLFQMissing_%s" (Guid.NewGuid().ToString "N"))
+            Directory.CreateDirectory work |> ignore
+            try
+                let lines = File.ReadAllLines (Path.Combine(data, "in", "ionTable.txt"))
+                let drop = lines.[0].Split('\t') |> Array.findIndex ((=) "Quant_Heavy")
+                let withoutHeavy =
+                    lines |> Array.map (fun l -> l.Split '\t' |> Array.indexed |> Array.filter (fun (i, _) -> i <> drop) |> Array.map snd |> String.concat "\t")
+                let table = Path.Combine(work, "noHeavy.txt")
+                File.WriteAllLines(table, withoutHeavy)
+                let failure =
+                    try
+                        runDotNet (sprintf "%s -i %s -o %s -p %s" (toolDll "RatioLFQ") table (Path.Combine(work, "out")) (Path.Combine(data, "in", "RatioLFQParams.json"))) baseDir
+                        None
+                    with e -> Some e.Message
+                match failure with
+                | None -> failwith "RatioLFQ accepted a table without Quant_Heavy"
+                | Some message -> Expect.stringContains message "Quant_Heavy" "the error names the missing column"
+            finally
+                Directory.Delete(work, true)
     ]

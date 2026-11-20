@@ -2,25 +2,16 @@ namespace ProteomIQon
 
 open Argu
 
-module CLIArgumentParsing = 
-    open System.IO
-  
+module CLIArgumentParsing =
+
     type CLIArguments =
-        | [<AltCommandLine("-i")>] InputFile of path:string
-        | [<AltCommandLine("-o")>] OutputFile  of path:string 
-        | [<AltCommandLine("-pc")>] ProteinColumn of path:string
-        | [<AltCommandLine("-rac")>] RatioColumnEnding of string
-        | [<AltCommandLine("-rfc")>] ReferenceColumnEnding of string
-        | [<AltCommandLine("-l")>] Log_Level of level:int
-        | [<AltCommandLine("-v")>] Verbosity_Level of level:int
+        | [<Mandatory>] [<AltCommandLine("-i")>] IonTable of path:string
+        | [<Mandatory>] [<AltCommandLine("-o")>] OutputDirectory of path:string
+        | [<Mandatory>] [<AltCommandLine("-p")>] ParamFile of path:string
     with
         interface IArgParserTemplate with
             member s.Usage =
                 match s with
-                | InputFile _               -> "specify the input file path"
-                | OutputFile  _             -> "specify the output file path"
-                | ProteinColumn _           -> "specify the name of the protein name column"
-                | RatioColumnEnding _       -> "specify the ending of the ratio name column"
-                | ReferenceColumnEnding _   -> "specify the ending of the reference quant column (e.g. heavy or light)"
-                | Log_Level _               -> "set the log level."
-                | Verbosity_Level _         -> "set the verbosity level."
+                | IonTable _        -> "Specify the peptide ion table, GlobModAggregation.txt of LabeledProteinQuantification written without a transform."
+                | OutputDirectory _ -> "Specify the output directory. RatioLFQ.txt and the log file are written into it."
+                | ParamFile _       -> "Specify parameter file."

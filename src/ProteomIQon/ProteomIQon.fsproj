@@ -48,6 +48,7 @@
     <Compile Include="PSMQuantification.fs" />
     <None Include="Scripts\createTIMsMzMLtoMzLiteParams.fsx" />
     <None Include="Scripts\createLabeledQuantificationParams.fsx" />
+    <None Include="Scripts\createRatioLFQParams.fsx" />
     <None Include="Scripts\createLabeledQuantificationParams_CorrFilter_ChargeAgg.fsx" />
     <None Include="Scripts\createLabeledQuantificationParams_CorrFilter_ChargeAgg_ModAgg.fsx" />
     <None Include="Scripts\createLabeledQuantificationParams_withCorrFilter.fsx" />

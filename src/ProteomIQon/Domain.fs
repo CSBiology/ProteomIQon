@@ -347,6 +347,18 @@ module Domain =
             Tukey                       : (string*float*Transform) []
         }
 
+    /// The channel that was spiked in at the same amount in every run.
+    [<RequireQualifiedAccess>]
+    type ReferenceChannel =
+        | Heavy
+        | Light
+
+    type RatioLFQParams =
+        {
+            Reference     : ReferenceChannel
+            MinSharedIons : int
+        }
+
     module LabeledProteinQuantification = 
         
         type LabeledTransforms = 

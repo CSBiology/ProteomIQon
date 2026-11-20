@@ -1404,6 +1404,22 @@ module Dto =
         IonMobility                                 : float
         }
 
+    /// The columns of GlobModAggregation.txt, the peptide ion table of LabeledProteinQuantification, that RatioLFQ reads by their names.
+    type GlobModAggregationResult = {
+        [<FieldAttribute("FileName")>]
+        FileName                                    : string
+        [<FieldAttribute("ProteinGroup")>]
+        ProteinGroup                                : string
+        [<FieldAttribute("StringSequence")>]
+        StringSequence                              : string
+        [<FieldAttribute("Charge")>]
+        Charge                                      : int
+        [<FieldAttribute("Quant_Light")>]
+        Quant_Light                                 : float
+        [<FieldAttribute("Quant_Heavy")>]
+        Quant_Heavy                                 : float
+        }
+
     type TableSortParams =
         {
             SeparatorIn                 : string
@@ -1438,6 +1454,20 @@ module Dto =
                 AggregatorFunctionIntensity = dtoTableSortParams.AggregatorFunctionIntensity
                 AggregatorPepToProt         = dtoTableSortParams.AggregatorPepToProt
                 Tukey                       = dtoTableSortParams.Tukey
+            }
+
+    type RatioLFQParams =
+        {
+            Reference     : Domain.ReferenceChannel
+            MinSharedIons : int
+        }
+
+    module RatioLFQParams =
+
+        let toDomain (dtoRatioLFQParams: RatioLFQParams): Domain.RatioLFQParams =
+            {
+                Reference     = dtoRatioLFQParams.Reference
+                MinSharedIons = dtoRatioLFQParams.MinSharedIons
             }
                        
 
