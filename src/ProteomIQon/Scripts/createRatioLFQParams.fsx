@@ -11,6 +11,7 @@ let defaultRatioLFQParams : Dto.RatioLFQParams =
     {
         Reference     = ReferenceChannel.Heavy
         MinSharedIons = 1
+        CentreRuns    = false
     }
 
 let serialized =

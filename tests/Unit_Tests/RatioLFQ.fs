@@ -1,5 +1,5 @@
-/// Tests of RatioLFQ on peptide ion level: reading the ion table, the pairwise profile of the runs
-/// and the reference level.
+/// Tests of RatioLFQ on peptide ion level: reading the ion table, the pairwise profile of the runs,
+/// the reference level and the centring of runs.
 module ProteomIQon.UnitTestsRatioLFQ
 
 open System
@@ -28,8 +28,8 @@ let private readLines (lines: string list) =
 
 let private parse (rows: string list) = readLines (ionTable rows)
 
-let private parameters reference minShared : RatioLFQParams =
-    { Reference = reference; MinSharedIons = minShared }
+let private parameters reference minShared center : RatioLFQParams =
+    { Reference = reference; MinSharedIons = minShared; CentreRuns = center }
 
 /// Checks equal length, equal nan positions and close values.
 let private expectClose (tolerance: Accuracy) (expected: float []) (actual: float []) message =
@@ -48,6 +48,13 @@ let private workedExample =
 
 let private nanMatrix ions runs = Array.init ions (fun _ -> Array.create runs nan)
 
+/// A table with one protein group per row of ratios (light over heavy, heavy fixed at 1000), one ion each.
+let private singleIonTable (ratios: float [] []) =
+    [ for p in 0 .. ratios.Length - 1 do
+        for r in 0 .. ratios.[p].Length - 1 do
+            yield sprintf "R%i\tP%i\tseq\t%s\t1000" r p ((1000. * ratios.[p].[r]).ToString Globalization.CultureInfo.InvariantCulture) ]
+    |> parse
+
 let private repoPath (parts: string list) = Path.Combine(Array.ofList (Pipeline.repoRoot :: parts))
 
 /// Runs ratioLFQ on the rows in a temporary directory and returns the lines of RatioLFQ.txt.
@@ -57,7 +64,7 @@ let private runRatioLFQ (rows: string list) =
     try
         let table = Path.Combine(work, "ionTable.txt")
         File.WriteAllLines(table, ionTable rows)
-        RatioLFQ.ratioLFQ (parameters ReferenceChannel.Heavy 1) (Path.Combine(work, "out")) table
+        RatioLFQ.ratioLFQ (parameters ReferenceChannel.Heavy 1 false) (Path.Combine(work, "out")) table
         File.ReadAllLines(Path.Combine(work, "out", "RatioLFQ.txt"))
     finally
         Directory.Delete(work, true)
@@ -67,13 +74,13 @@ let ratioLFQTests =
     testList "RatioLFQ" [
         testCase "worked example" <| fun _ ->
             let check minShared reference ratio intensity =
-                let r = (RatioLFQ.compute (parameters reference minShared) workedExample).[0]
+                let r = (RatioLFQ.compute (parameters reference minShared false) workedExample).[0]
                 expectClose roundedTolerance ratio r.Ratio "ratio"
                 expectClose roundedTolerance intensity r.Intensity "intensity"
             check 1 ReferenceChannel.Heavy [| 2.181015; 3.363586; 4. |] [| 1272.2590; 1962.0916; 2333.3333 |]
             check 1 ReferenceChannel.Light [| 2.181015; 3.363586; 4. |] [| 947.5708; 614.4237; 516.6667 |]
             check 2 ReferenceChannel.Heavy [| 2.; 4.; 2.828427 |] [| 1166.6667; 2333.3333; 1649.9158 |]
-            let r2 = (RatioLFQ.compute (parameters ReferenceChannel.Heavy 2) workedExample).[0]
+            let r2 = (RatioLFQ.compute (parameters ReferenceChannel.Heavy 2 false) workedExample).[0]
             Expect.equal r2.RunGroups 1 "the pairs with R1 still connect the runs"
             Expect.equal workedExample.Runs [| "R1"; "R2"; "R3" |] "runs"
 
@@ -100,7 +107,7 @@ let ratioLFQTests =
             let table =
                 parse [ "R1\tP\ta\t2000\t1000"; "R2\tP\ta\t4000\t1000"
                         "R3\tP\tb\t32000\t1000"; "R4\tP\tb\t128000\t1000" ]
-            let r = (RatioLFQ.compute (parameters ReferenceChannel.Heavy 1) table).[0]
+            let r = (RatioLFQ.compute (parameters ReferenceChannel.Heavy 1 false) table).[0]
             Expect.equal r.RunGroups 2 "run groups"
             expectClose linearTolerance [| 2.; 4.; 32.; 128. |] r.Ratio "ratio"
             Expect.isFalse (r.Intensity |> Array.exists Double.IsNaN) "no nan"
@@ -109,7 +116,7 @@ let ratioLFQTests =
             let table =
                 parse [ "R1\tP\ta\t2000\t1000"; "R1\tP\tb\t4000\t500"
                         "R2\tQ\ta\t1000\t1000" ]
-            let results = RatioLFQ.compute (parameters ReferenceChannel.Heavy 1) table
+            let results = RatioLFQ.compute (parameters ReferenceChannel.Heavy 1 false) table
             let p = results.[0]
             // log2 ratios 1 and 3, median 2
             Expect.floatClose linearTolerance p.Ratio.[0] 4. "ratio"
@@ -123,10 +130,17 @@ let ratioLFQTests =
                 parse [ "R1\tP\ta\t2000\t1000"; "R2\tP\ta\t4000\t1000"; "R3\tP\ta\t8000\t1000"
                         "R1\tP\tb\t400\t400";   "R2\tP\tb\t1200\t600"
                         "R1\tQ\tc\t1600\t200";  "R3\tQ\tc\t1200\t300" ]
-            let heavy = RatioLFQ.compute (parameters ReferenceChannel.Heavy 1) table
-            let light = RatioLFQ.compute (parameters ReferenceChannel.Light 1) table
+            let heavy = RatioLFQ.compute (parameters ReferenceChannel.Heavy 1 false) table
+            let light = RatioLFQ.compute (parameters ReferenceChannel.Light 1 false) table
             Array.iter2 (fun (h: RatioLFQ.ProteinResult) (l: RatioLFQ.ProteinResult) ->
                 expectClose logTolerance h.Ratio l.Ratio h.ProteinGroup) heavy light
+
+        testCase "centring gives every run a median log2 ratio of 0" <| fun _ ->
+            let table = singleIonTable [| [| 1.; 2. |]; [| 4.; 3. |]; [| 0.5; 8. |]; [| 2.; 1.5 |]; [| 3.; 5. |] |]
+            let results = RatioLFQ.compute (parameters ReferenceChannel.Heavy 1 true) table
+            for run in 0 .. 1 do
+                let med = results |> Array.map (fun r -> Math.Log2 r.Ratio.[run]) |> Numerics.median
+                Expect.floatClose logTolerance med 0. (sprintf "median of run %i" run)
 
         testCase "referenceLevel is the mean of the three largest ion medians" <| fun _ ->
             let reference = [| [| 10.; 30.; nan |]; [| 100.; nan; 300. |]; [| 5.; 5.; 5. |]; [| 1000.; 2000.; nan |]; [| nan; nan; nan |] |]
@@ -178,7 +192,7 @@ let ratioLFQTests =
             expectClose linearTolerance [| 2.; 2000.; 4.; 4000. |] [| value 1; value 2; value 5; value 6 |] "R1 and R3"
 
         testCase "compute rejects MinSharedIons 0" <| fun _ ->
-            Expect.throws (fun () -> RatioLFQ.compute (parameters ReferenceChannel.Heavy 0) workedExample |> ignore) "MinSharedIons = 0"
+            Expect.throws (fun () -> RatioLFQ.compute (parameters ReferenceChannel.Heavy 0 false) workedExample |> ignore) "MinSharedIons = 0"
 
         testCase "a one-run table written by LabeledProteinQuantification gives the median log2 ratio of each protein group" <| fun _ ->
             let path = repoPath [ "tests"; "data"; "LabeledProteinQuantification"; "out"; "corrFilterChargeAgg"; "minimalGlobModReference.txt" ]
@@ -197,7 +211,7 @@ let ratioLFQTests =
                 |> Array.filter (fun c -> (tryNumber c.[iLight]).IsSome && (tryNumber c.[iHeavy]).IsSome)
                 |> Array.groupBy (fun c -> c.[iGroup])
                 |> Array.map (fun (g, rows) -> g, rows |> Array.map (fun c -> Math.Log2((tryNumber c.[iLight]).Value / (tryNumber c.[iHeavy]).Value)) |> Numerics.median |> fun m -> Math.Pow(2., m))
-            let results = RatioLFQ.compute (parameters ReferenceChannel.Heavy 1) table
+            let results = RatioLFQ.compute (parameters ReferenceChannel.Heavy 1 false) table
             Expect.equal (results |> Array.map (fun r -> r.ProteinGroup)) (expected |> Array.map fst) "protein groups"
             Array.iter2 (fun (r: RatioLFQ.ProteinResult) (_, e) -> Expect.floatClose linearTolerance r.Ratio.[0] e r.ProteinGroup) results expected
 

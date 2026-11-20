@@ -1625,10 +1625,11 @@ let pipelineTests =
             let data = Path.Combine(repoRoot, "tests", "data", "RatioLFQ")
             let work = Path.Combine(baseDir, sprintf "ratioLFQ_%s" (Guid.NewGuid().ToString "N"))
             try
-                let outDirectory = Path.Combine(work, "default")
-                runDotNet (sprintf "%s -i %s -o %s -p %s" (toolDll "RatioLFQ") (Path.Combine(data, "in", "ionTable.txt")) outDirectory (Path.Combine(data, "in", "RatioLFQParams.json"))) baseDir
-                let reference = Path.Combine(data, "out", "default", "RatioLFQReference.txt")
-                Expect.isTrue (tsvFilesEqual 1e-9 reference (Path.Combine(outDirectory, "RatioLFQ.txt"))) "RatioLFQ result differs from the reference"
+                for paramFile, outName in [ "RatioLFQParams.json", "default"; "RatioLFQParams_Light_Centre_MinShared2.json", "lightCentreMinShared2" ] do
+                    let outDirectory = Path.Combine(work, outName)
+                    runDotNet (sprintf "%s -i %s -o %s -p %s" (toolDll "RatioLFQ") (Path.Combine(data, "in", "ionTable.txt")) outDirectory (Path.Combine(data, "in", paramFile))) baseDir
+                    let reference = Path.Combine(data, "out", outName, "RatioLFQReference.txt")
+                    Expect.isTrue (tsvFilesEqual 1e-9 reference (Path.Combine(outDirectory, "RatioLFQ.txt"))) (sprintf "RatioLFQ result differs from the reference for %s" outName)
             finally
                 if Directory.Exists work then Directory.Delete(work, true)
 

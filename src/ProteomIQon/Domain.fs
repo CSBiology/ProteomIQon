@@ -357,6 +357,7 @@ module Domain =
         {
             Reference     : ReferenceChannel
             MinSharedIons : int
+            CentreRuns    : bool
         }
 
     module LabeledProteinQuantification = 
