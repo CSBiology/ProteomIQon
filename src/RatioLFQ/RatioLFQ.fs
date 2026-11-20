@@ -201,12 +201,21 @@ module RatioLFQ =
             |> Array.sortDescending
         if h.Length = 0 then nan else h |> Array.truncate 3 |> Array.average
 
-    /// Profile, reference level and the output rows for every protein group. The matrices of one protein group cover its present runs
+    /// Centring, profile, reference level and the output rows for every protein group. The matrices of one protein group cover its present runs
     /// only and are dropped after the group.
     let compute (parameters: RatioLFQParams) (table: IonTable) : ProteinResult [] =
         if parameters.MinSharedIons < 1 then
             failwithf "MinSharedIons has to be at least 1, got %i." parameters.MinSharedIons
         let log2Ratio (m: IonMeasurement) = Math.Log2(m.Light / m.Heavy)
+        let shift =
+            if parameters.CentreRuns then
+                let perRun = Array.init table.Runs.Length (fun _ -> ResizeArray<float>())
+                for group in table.Measurements do
+                    for m in group do
+                        perRun.[m.Run].Add(log2Ratio m)
+                perRun |> Array.map (fun values -> if values.Count = 0 then 0. else Numerics.median (values.ToArray()))
+            else
+                Array.zeroCreate table.Runs.Length
         Array.map2 (fun name (ms: IonMeasurement []) ->
             let presentRuns = ms |> Array.map (fun m -> m.Run) |> Array.distinct |> Array.sort
             let column = Dictionary<int, int>()
@@ -215,7 +224,7 @@ module RatioLFQ =
             let y = Array.init ions (fun _ -> Array.create presentRuns.Length nan)
             let reference = Array.init ions (fun _ -> Array.create presentRuns.Length nan)
             for m in ms do
-                y.[m.Ion].[column.[m.Run]] <- log2Ratio m
+                y.[m.Ion].[column.[m.Run]] <- log2Ratio m - shift.[m.Run]
                 reference.[m.Ion].[column.[m.Run]] <-
                     (match parameters.Reference with
                      | ReferenceChannel.Heavy -> m.Heavy

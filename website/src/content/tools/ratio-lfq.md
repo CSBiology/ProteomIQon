@@ -49,11 +49,12 @@ Rows without two positive intensities are ignored. The tool stops with a message
 | --- | --- | --- |
 | `Reference` | `Heavy` | `Heavy` or `Light`. The channel that is spiked in at the same amount in every run. The other channel is the sample. |
 | `MinSharedIons` | `1` | The number of ions that two runs must share so that their comparison is used. |
+| `CentreRuns` | `false` | Shifts the log₂ ratios of every run so that the median over all its ions is 0. This removes differences in the mixing of sample and standard and is only meaningful when most proteins do not change between runs. |
 
 The default file is [RatioLFQParams.json](https://github.com/CSBiology/ProteomIQon/blob/main/src/ProteomIQon/defaultParams/RatioLFQParams.json):
 
 ```json
-{"Reference":{"Case":"Heavy"},"MinSharedIons":1}
+{"Reference":{"Case":"Heavy"},"MinSharedIons":1,"CentreRuns":false}
 ```
 
 ## Outputs
