@@ -3,6 +3,7 @@
 * Compute the ratios from the peptide ion table of LabeledProteinQuantification by comparing the runs pairwise over shared ions
 * Write a light to heavy ratio and an intensity per protein group and run
 * Add a parameter file with the reference channel, the minimum number of shared ions and the centring of runs
+* Add the parameter PairWeighting (SharedIonCount or Unweighted) for the weight of a run pair in the fit
 * Read quoted run names and protein groups without their quotes, as LabeledProteinQuantification quotes run names with a space and protein groups with a semicolon
 * Stop with a message when the largest intensity of a channel is below 100, since the table then looks log transformed
 * Update NLog to 4.7.11

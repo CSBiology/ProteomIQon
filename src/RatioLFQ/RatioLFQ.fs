@@ -120,12 +120,12 @@ module RatioLFQ =
             |> Numerics.median)
 
     /// Profile per run (pairwise comparison and level) and the number of run groups.
-    let private profile (minSharedIons: int) (y: float [] []) : float [] * int =
+    let private profile (weighting: PairWeighting) (minSharedIons: int) (y: float [] []) : float [] * int =
         let runs = if y.Length = 0 then 0 else y.[0].Length
         let m = plainRatio y
         let present = [| for r in 0 .. runs - 1 do if not (Double.IsNaN m.[r]) then yield r |]
         let k = present.Length
-        // pairwise ratios over the present runs only, each valid pair weighted by its number of shared ions
+        // pairwise ratios over the present runs only, each valid pair weighted by its number of shared ions or by 1
         let pair = Array2D.create k k nan
         let weight = Array2D.zeroCreate<float> k k
         for a in 0 .. k - 1 do
@@ -139,8 +139,9 @@ module RatioLFQ =
                     let r = Numerics.median diffs
                     pair.[a, b] <- r
                     pair.[b, a] <- -r
-                    weight.[a, b] <- float diffs.Length
-                    weight.[b, a] <- float diffs.Length
+                    let w = match weighting with PairWeighting.SharedIonCount -> float diffs.Length | PairWeighting.Unweighted -> 1.
+                    weight.[a, b] <- w
+                    weight.[b, a] <- w
         let x = Array.create runs nan
         let runGroup = Array.create k -1
         let mutable groups = 0
@@ -186,10 +187,10 @@ module RatioLFQ =
                         x.[present.[idx.[p]]] <- z.[p] + level
         x, groups
 
-    /// Log2 ratio per run from pairwise comparisons over shared ions, placed at the median level of the run group, nan for runs without an ion.
+    /// Log2 ratio per run from pairwise comparisons over shared ions, weighted by the shared ion count, placed at the median level of the run group, nan for runs without an ion.
     /// y.[ion].[run] is the log2 ratio or nan.
     let pairwiseProfile (minSharedIons: int) (y: float [] []) : float [] =
-        profile minSharedIons y |> fst
+        profile PairWeighting.SharedIonCount minSharedIons y |> fst
 
     /// Reference level of a protein group: the mean of the up to three largest per-ion medians.
     /// reference.[ion].[run] is the linear reference intensity or nan.
@@ -230,7 +231,7 @@ module RatioLFQ =
                     (match parameters.Reference with
                      | ReferenceChannel.Heavy -> m.Heavy
                      | ReferenceChannel.Light -> m.Light)
-            let x, groups = profile parameters.MinSharedIons y
+            let x, groups = profile parameters.PairWeighting parameters.MinSharedIons y
             let level = referenceLevel reference
             let ratio = Array.create table.Runs.Length nan
             let intensity = Array.create table.Runs.Length nan

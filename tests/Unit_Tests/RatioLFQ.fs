@@ -29,7 +29,7 @@ let private readLines (lines: string list) =
 let private parse (rows: string list) = readLines (ionTable rows)
 
 let private parameters reference minShared center : RatioLFQParams =
-    { Reference = reference; MinSharedIons = minShared; CentreRuns = center }
+    { Reference = reference; MinSharedIons = minShared; CentreRuns = center; PairWeighting = PairWeighting.SharedIonCount }
 
 /// Checks equal length, equal nan positions and close values.
 let private expectClose (tolerance: Accuracy) (expected: float []) (actual: float []) message =
@@ -83,6 +83,15 @@ let ratioLFQTests =
             let r2 = (RatioLFQ.compute (parameters ReferenceChannel.Heavy 2 false) workedExample).[0]
             Expect.equal r2.RunGroups 1 "the pairs with R1 still connect the runs"
             Expect.equal workedExample.Runs [| "R1"; "R2"; "R3" |] "runs"
+
+        testCase "unweighted pairs give the equal weight fit of the worked example" <| fun _ ->
+            let unweighted = { parameters ReferenceChannel.Heavy 1 false with PairWeighting = PairWeighting.Unweighted }
+            let r = (RatioLFQ.compute unweighted workedExample).[0]
+            // z = (-0.5, 0, 0.5), level 1.5, ratios 2^(1, 1.5, 2), reference level 583.3333
+            expectClose roundedTolerance [| 2.; 2.828427; 4. |] r.Ratio "ratio"
+            expectClose roundedTolerance [| 1166.6667; 1649.9158; 2333.3333 |] r.Intensity "intensity"
+            let weighted = (RatioLFQ.compute (parameters ReferenceChannel.Heavy 1 false) workedExample).[0]
+            Expect.isGreaterThan (abs (weighted.Ratio.[0] - r.Ratio.[0])) 0.1 "the shared ion count changes the ratio"
 
         testCase "complete matrix with identical ion profiles gives the plain ratios" <| fun _ ->
             let y = [| [| 1.; 2.5; -1.; 0.3 |]; [| 1.; 2.5; -1.; 0.3 |]; [| 1.; 2.5; -1.; 0.3 |] |]

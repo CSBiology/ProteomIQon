@@ -1,1 +1,1 @@
-{"Reference":{"Case":"Heavy"},"MinSharedIons":1,"CentreRuns":false}
+{"Reference":{"Case":"Heavy"},"MinSharedIons":1,"CentreRuns":false,"PairWeighting":{"Case":"SharedIonCount"}}

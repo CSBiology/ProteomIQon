@@ -19,7 +19,7 @@ A labeled experiment gives a light and a heavy intensity for every peptide ion a
 
 2. **Fit one ratio per run**
 
-   The tool finds by least squares one log₂ ratio per run that fits all pairwise differences. A comparison counts with the number of ions the two runs share. Runs that share fewer than `MinSharedIons` ions with every other run, directly or through other runs, form their own group and keep their own level.
+   The tool finds by least squares one log₂ ratio per run that fits all pairwise differences. By default, a comparison counts with the number of ions the two runs share (`PairWeighting`). Runs that share fewer than `MinSharedIons` ions with every other run, directly or through other runs, form their own group and keep their own level.
 
 3. **Set the level of the ratios**
 
@@ -50,11 +50,12 @@ Rows without two positive intensities are ignored. The tool stops with a message
 | `Reference` | `Heavy` | `Heavy` or `Light`. The channel that is spiked in at the same amount in every run. The other channel is the sample. |
 | `MinSharedIons` | `1` | The number of ions that two runs must share so that their comparison is used. |
 | `CentreRuns` | `false` | Shifts the log₂ ratios of every run so that the median over all its ions is 0. This removes differences in the mixing of sample and standard and is only meaningful when most proteins do not change between runs. |
+| `PairWeighting` | `SharedIonCount` | `SharedIonCount` weights the comparison of two runs by the number of ions they share. `Unweighted` gives every comparison the same weight. |
 
 The default file is [RatioLFQParams.json](https://github.com/CSBiology/ProteomIQon/blob/main/src/ProteomIQon/defaultParams/RatioLFQParams.json):
 
 ```json
-{"Reference":{"Case":"Heavy"},"MinSharedIons":1,"CentreRuns":false}
+{"Reference":{"Case":"Heavy"},"MinSharedIons":1,"CentreRuns":false,"PairWeighting":{"Case":"SharedIonCount"}}
 ```
 
 ## Outputs
