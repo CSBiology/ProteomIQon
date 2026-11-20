@@ -353,11 +353,18 @@ module Domain =
         | Heavy
         | Light
 
+    /// The weight of a run pair in the fit of the run profile.
+    [<RequireQualifiedAccess>]
+    type PairWeighting =
+        | SharedIonCount
+        | Unweighted
+
     type RatioLFQParams =
         {
             Reference     : ReferenceChannel
             MinSharedIons : int
             CentreRuns    : bool
+            PairWeighting : PairWeighting
         }
 
     module LabeledProteinQuantification = 

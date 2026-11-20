@@ -1461,6 +1461,7 @@ module Dto =
             Reference     : Domain.ReferenceChannel
             MinSharedIons : int
             CentreRuns    : bool
+            PairWeighting : Domain.PairWeighting
         }
 
     module RatioLFQParams =
@@ -1470,6 +1471,7 @@ module Dto =
                 Reference     = dtoRatioLFQParams.Reference
                 MinSharedIons = dtoRatioLFQParams.MinSharedIons
                 CentreRuns    = dtoRatioLFQParams.CentreRuns
+                PairWeighting = dtoRatioLFQParams.PairWeighting
             }
                        
 
