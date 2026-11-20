@@ -20,7 +20,7 @@ ProteinInference maps the identified peptides back to proteins and reports prote
 
    Two parameters decide how groups are formed and which peptides count for them. Take two proteins pA and pB, each found by one unique peptide and both by a third shared peptide. Protein (the integration strictness) decides whether pA, pB and the group pA;pB are all reported or whether overlapping groups are merged into the smallest set that explains every peptide. Peptide (the peptide usage) decides whether the abundance of pA;pB later comes from the shared peptide only or also from the peptides unique to pA and pB. The figure shows the outcomes for every combination.
 
-![Protein Infrence](../../assets/images/ProteinInference.png)
+![Peptide usage and protein grouping](../../assets/images/ProteinInference.png)
 
 ## Inputs
 
@@ -38,7 +38,7 @@ These inputs are needed to execute the tool:
 - The GFF3 file tells the tool which proteins are transcripts of the same gene.
 - With it the Class column (the peptide evidence class) separates groups made of isoforms of one gene from groups that mix unrelated proteins. Without -g every database protein counts as its own gene and the class carries no such information.
 - For every input `run.qpsm` the tool writes `run.prot`, tab separated with a header.
-- Further used from the [JoinQuantWithPepIons](./join-quant-with-peptide-ions.md) and the [Add Deduced Peptides](./add-deduced-peptides.md) Tools
+- [JoinQuantPepIonsWithProteins](./join-quant-with-peptide-ions.md) and [AddDeducedPeptides](./add-deduced-peptides.md) read these `.prot` files.
 - With `-dc` the tool saves a chart of scores against Q-values, as QValueGraph.html in the output directory when the files are grouped and as `run.prot_QValueGraph.html` per run otherwise.
 - Logs go to `ProteinInference_log.txt` and a few `ProteinInference_step_log.txt` files in the output directory. There is no parallelism flag.
 
@@ -52,7 +52,7 @@ These inputs are needed to execute the tool:
 | `GroupFiles` | true | Infer all input files together: the peptides of every run go into one inference and one q-value calculation, and every output file reports the same protein groups, each restricted to the peptides seen in that run. AddDeducedPeptides needs this. false infers each run on its own. |
 | `GetQValue` | QValueMethod.LogisticRegression FDRMethod.MAYU | Estimate the protein FDR with MAYU and turn it into q-values by logistic regression on the target and decoy scores. The other FDR estimates are FDRMethod.DecoyTargetRatio and FDRMethod.Conservative (an FDR of 1). QValueMethod.Storey uses the Storey estimate instead, QValueMethod.NoQValue writes nan. If the chosen calculation fails the tool falls back to nan and logs it. |
 
-- The default file is [PeptideDB.json](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/ProteinInferenceParams.json).
+- The default file is [ProteinInferenceParams.json](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/ProteinInferenceParams.json).
 
 ## Outputs
 
@@ -60,12 +60,16 @@ This Output is generated
 
 | Parameter | Description |
 | --- | --- |
-| ProteinGroup | Protein Identifier Collection |
-| PeptideSequence | List of all peptides assigned to this protein group |
+| ProteinGroup | Protein identifiers in the group, separated by semicolons |
+| PeptideSequence | Peptide sequences assigned to this protein group and found in the current run, separated by semicolons |
 | Class | Peptide Evidence Classes (C1A, C1B, C2A, C2B, C3A, C3B) which define how a peptide has been assigned to its corresponding protein |
 | TargetScore | Target Score calculated based on the individual peptide scores of PSM |
 | DecoyScore | Decoy Score calculated based on the individual peptide scores of PSM |
 | QValue | Q-value (False-Discovery-Rate) for every identified protein |
+
+## Parameter generation
+
+For an F# example that writes a parameter JSON file, see the [parameter-generation example](https://github.com/CSBiology/ProteomIQon/blob/dev/docs/tools/ProteinInference.fsx#L66).
 
 ## Installing and executing the tool
 
