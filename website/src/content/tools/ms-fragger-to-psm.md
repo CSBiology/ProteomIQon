@@ -19,7 +19,7 @@ MsFraggerToPSM turns the `psm.tsv` result of an MSFragger search, as written by 
 
 2. **How does this work?**
 
-   For each row of the tsv the tool rebuilds the modified peptide sequence in ProteomIQon notation, looks it up in the [PeptideDB](./peptide-db.md) database to get the peptide and modified sequence identifiers, and assigns the row to the MS2 spectrum of the mzlite whose scan time and precursor m/z lie closest to the values in the tsv.
+   For each row of the tsv the tool rebuilds the modified peptide sequence in ProteomIQon notation, looks it up in the [PeptideDB](./peptide-db.md) database to get the peptide and modified sequence identifiers, and looks for the corresponding MS2 spectrum in the `.mzlite`. Candidates must have the same precursor charge as the TSV row or have no recorded charge. Among candidates within 0.001 of the reported ion mobility, it minimizes the sum of the absolute scan time and precursor m/z differences. If no candidate meets the mobility criterion or the TSV omits ion mobility, it uses the closest charge-compatible candidate. A row without a charge-compatible candidate is dropped.
 
 ## Inputs
 
@@ -30,12 +30,12 @@ These inputs are needed to execute the tool:
 | Flag | Meaning | Comes from |
 | --- | --- | --- |
 | `-i` | one or more `psm.tsv` files, or a directory that is searched for `*.tsv` | MSFragger (FragPipe) |
-| `-ii` | the matching `.mzlite` files, or a directory that is searched for `*.mzlite` | - |
+| `-ii` | the matching `.mzlite` files, or a directory searched for `*.mzlite` | [MzMLToMzLiteIonMobility](./mzml-to-mzlite-ion-mobility.md) |
 | `-o` | the output directory, created when missing | - |
 | `-d` | The Peptide Database | [PeptideDB](./peptide-db.md) |
 | `-c` | number of pairs converted at the same time, default 1 | - |
 
-All four flags are mandatory.
+`-i`, `-ii`, `-o` and `-d` are required. This tool takes no parameter file.
 
 ### Required TSV columns
 
@@ -43,21 +43,18 @@ The tsv needs the columns:
 
 - `Assigned Modifications`
 - `Peptide`
-- `Spectrum`
 - `Retention`
 - `Charge`
 - `Calibrated Observed M/Z`
 - `Calculated Peptide Mass`
 - `Delta Mass`
-- `Ion Mobility`
 - `Peptide Length`
 - `Number of Missed Cleavages`
-- `Expectation`
 - `Hyperscore`
 - `Probability`
-- `PROTEIN`
+- `Protein`
 
-Retention is read in seconds and stored in minutes. The files are paired by position, the first tsv with the first mzlite and so on.
+`Ion Mobility` is optional. Retention is read in seconds and stored in minutes. The files are paired by position, the first tsv with the first mzlite and so on.
 
 ### File pairing and database requirements
 
@@ -69,9 +66,9 @@ From the Assigned Modifications column the tool understands oxidized methionine 
 
 ### Generated files and logs
 
-The tool writes one `run.qpsm` per mzlite into the output directory, named after the mzlite. It is a tab separated table with a header and one row per identified spectrum.
+The tool writes one `run.qpsm` per mzlite into the output directory, named after the mzlite. It uses the PSMStatistics column layout. `PSMId` identifies the matched `.mzlite` spectrum and `ScanNr` gives its position in scan-time order among the MS2 spectra. The import sets `Label` to `1` and `GlobalMod` to `0`. `ModelScore` is the FragPipe probability and `PEPValue` is one minus that probability. `QValue` is the mean PEP across TSV rows with a PEP at or below that of the current row. `XtandemScore` holds the MSFragger hyperscore. The other search scores are `NaN`. [PSMBasedQuantificationTIMs](./psm-based-quantification-tims.md) retrieves ion mobility from the matched spectrum.
 
-An existing `.qpsm` of the same name is appended to. Delete the old file before a rerun. The output directory also receives `MSFraggerToPSM_log.txt.`
+An existing `.qpsm` of the same name is appended to. Delete the old file before a rerun. The output directory also receives `MSFraggerToPSM_log.txt`.
 
 ## Installing and executing the tool
 

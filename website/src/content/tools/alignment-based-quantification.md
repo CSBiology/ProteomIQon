@@ -80,7 +80,7 @@ In a transferred row, `IonMobility` is the intensity weighted ion mobility of th
 
 With `PerformLabeledQuantification` other than `Unlabeled` the partner of the other label is extracted with the same windows. Its peak is the peak that contains the fitted scan time of the ion. With `RequirePeakAtScanTime` set to `false`, the peak with the closest apex is taken when none contains it. A partner that cannot be quantified keeps its m/z and traces but gets no quantity, and the row is kept. The ion's own peak is always the candidate chosen by the selection model.
 
-An ion that the run did not quantify itself is not transferred when the PSM based row of its labeled partner has a fitted peak and a quantity of the ion's label. Its `Status` is `labeled partner quantified by its PSM based row.`
+An ion that the run did not quantify itself is not transferred when the PSM based row of its labeled partner has a fitted peak and a quantity of the ion's label. Its `Status` is `labeled partner quantified by its PSM based row`.
 
 ## Inputs 
 | Flag | Description | Comes from | 
@@ -96,7 +96,7 @@ An ion that the run did not quantify itself is not transferred when the PSM base
 | `-c`|  number of runs processed in parallel, one core each, default 1 | - | 
 
 - Without -mf the files are paired by position, the files of a directory sorted by name. If the numbers of files differ, the tool stops.
-- `<run>.quant` has the layout of the PSM based `.quant` files. It holds the PSM based rows with a fitted peak, then one row per quantified transferred ion with `QuantificationSource = Alignment.`
+- `<run>.quant` has the layout of the PSM based `.quant` files. It holds the PSM based rows with a fitted peak, then one row per quantified transferred ion with `QuantificationSource = Alignment`.
 - These rows pass no quality filter. In these rows `Difference_SearchRT_FittedRT` is `PredictedScanTime` minus the `fitted scan time`. `AlignmentScore` and `AlignmentQValue` hold `NaN` until [AlignmentBasedQuantStatistics](./alignment-based-quant-statistics.md) fills them.
 - `<run>.alignfeatures` is a tab separated table with one row per `.align` row. `AlignmentBasedQuantStatistics` reads it from the directory of the aligned `.quant` and uses its features. The main columns:
 
@@ -113,9 +113,11 @@ An ion that the run did not quantify itself is not transferred when the PSM base
 | Status | `quantified`, or why the peptide ion was not quantified | 
 
 - With DecoyFraction above 0, `<run>.aligndecoy` holds the decoy transfers: a share of the new ions quantified a second time with `PredictedScanTime` shifted by 4 to 6 minutes, where their own peak is not.
-- A decoy is skipped when the ion's own peak could lie in its XIC. Each row has the .quant columns, the shifted `PredictedScanTime` and the `.alignfeatures columns`. 
-- [AlignmentBasedQuantStatistics](./alignment-based-quant-statistics.md) uses them to estimate how often an peptide ion whose analyte is absent from the run passes the Q-value cutoff. They never enter `<run>.quant`.
+- A decoy is skipped when the ion's own peak could lie in its XIC. Each row has the .quant columns, the shifted `PredictedScanTime` and the `.alignfeatures` feature columns.
+- [AlignmentBasedQuantStatistics](./alignment-based-quant-statistics.md) uses them to estimate how often a peptide ion whose analyte is absent from the run passes the Q-value cutoff. They never enter `<run>.quant`.
 - Logs go to `AlignmentBasedQuantification_log.txt` and one `<run>_log.txt` per run, with the counts of ions per reason at Info level and each peptide ion that was not quantified at Debug level.
+
+The tool overwrites its `.quant` and `.alignfeatures` outputs for the run. If decoy transfers are disabled, it removes an existing `.aligndecoy` for that run.
 
 ## Parameters 
 | Parameter | Default | Description | 
@@ -138,6 +140,12 @@ An ion that the run did not quantify itself is not transferred when the PSM base
 | XicProcessing | `XicProcessing.Wavelet` | Peak detection. The wavelet fields are described on the [PSMBasedQuantification](./psm-based-quantification.md) page. The default `BorderPadMethod` is Zero. `Random` is accepted with a warning, because it makes the detected peaks differ between reruns. | 
 | TopKPSMs | `None` | Not used | 
 | IonMobilityWindow | `Window.Estimate` | `Estimate` or `Window.Fixed v`, in 1/K0 (see Ion mobility). | 
+
+For timsTOF runs, [AlignmentBasedQuantificationTIMsParams.json](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/AlignmentBasedQuantificationTIMsParams.json) sets the m/z half width to `Window.Fixed 0.008` Da and the ion mobility half width to `Window.Fixed 0.025` in 1/K0. These match the defaults in [PSMBasedQuantificationTIMs](./psm-based-quantification-tims.md). Suitable windows depend on the instrument and acquisition method.
+
+## Parameter generation
+
+For an F# example that writes a parameter JSON file, see the [parameter-generation example](https://github.com/CSBiology/ProteomIQon/blob/dev/docs/tools/AlignmentBasedQuantification.fsx#L183).
 
 ## Running the tool 
 

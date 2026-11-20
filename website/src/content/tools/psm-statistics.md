@@ -11,44 +11,33 @@ inputsFrom: [peptide-spectrum-matching, peptide-db]
 
    [PeptideSpectrumMatching](./peptide-spectrum-matching.md) and [PeptideSpectrumMatchingTIMs](./peptide-spectrum-matching-tims.md) report several target and decoy candidates per spectrum, each with a `SEQUEST-like`, an `Andromeda-like` and an `X!Tandem-like` score. PSMStatistics combines these columns into one score with a `FastTree classifier (ML.NET)` trained to separate targets from decoys. It keeps the best candidate per scan by this score, computes its Q-value and PEP value, and writes the targets that pass both thresholds.
 
-## How does PSMStats work?
+## How does PSMStatistics work?
 
-1. **Evaluate peptide matches**
+1. **Build the features**
 
-   Each MS/MS spectrum may have multiple peptide candidates, which are evaluated using three scoring methods: SEQUEST, Andromeda and X!Tandem.
-   The tool also considers additional peptide characteristics, including precursor charge, mass accuracy, peptide length and missed cleavages.
-   If available, Hyperscore and Expectscore provide additional scoring information. Retention time can also be included to improve the evaluation.
+   The classifier uses one-hot encoded precursor charge, precursor m/z, theoretical mass, absolute mass error, peptide length, and missed cleavages looked up in the peptide database. It also uses the three search scores and their `NormDeltaBestToRest` and `NormDeltaNext` columns. If all rows contain finite `Hyperscore` and `Expectscore`, it includes the hyperscore and −log₁₀ of the expectation value.
 
-2. **Train a scoring model**
+2. **Add retention time features**
 
-   PSMStatistics uses a FastTree classifier (ML.NET) to distinguish between: 
-      - Targets: Matches to real peptide sequences.
-      - Decoys: Matches to artificial sequences used to estimate incorrect identifications.
-   
-   The initial training uses highly confident target matches and decoys to teach the model which characteristics indicate a reliable identification.
-   The model combines these characteristics into a single ModelScore for each peptide candidate.
-   Training is repeated with updated high-confidence matches until the results no longer improve sufficiently or the maximum number of iterations is reached.
+   With `RetentionTimeFeature`, a per-file FastTree regression with 200 trees and 64 leaves predicts scan time from peptide sequence and modifications. Training uses the best targets per scan with q < 0.01 under the initial score, using the median scan time for each modified sequence and global modification. The predictors include sequence length, amino acid and modification counts, the unordered residue pairs at positions 1 and n−1 and 2 and n−2, and the C-terminal residue. A peptide and its pseudo-reversal stay in the same one of five sequence folds and receive the same prediction. `RtDeviation` is the observed minus predicted scan time divided by 1.4826 times the median absolute deviation of the held-out residuals. `AbsRtDeviation` is its absolute value. If fewer than 500 peptides are available or held-out R² is below 0.3, the classifier proceeds without both features and logs a warning.
 
-3. **Validate the model**
-   By default, PSMStatistics uses three-fold cross-validation to reduce overfitting and improve the reliability of the scoring model.
-   The spectra are divided into three groups. For each iteration of cross-validation, the model is trained using two groups and evaluates the remaining group.
-   This ensures that each spectrum is evaluated by a model that was not trained on that spectrum.
-   The resulting scores are normalized across the three groups to make them comparable.
+3. **Train and refine the scoring model**
 
-4. **Estimate identification reliability**
-   The tool selects the best match for each spectrum and calculates two values:
-   - QValue: Estimates the proportion of incorrect identifications among matches accepted at a given score threshold.
-   -  PEPValue: Estimates the probability that an individual peptide match is incorrect.
-   Both values are calculated using the score distributions of target and decoy matches.
-   Lower Q-Values and PEP-Values indicate more reliable peptide identifications.
+   Initial training ranks candidates by −log₁₀(`Expectscore`) when those expectation values are available, or by the SEQUEST-like score otherwise. The best candidate of a scan supplies a positive example if it is a target and has q < 0.001. Decoy candidates from the remaining scans supply negatives. FastTree trains on a random 90% split and logs accuracy, AUC and F1 on the other 10%. It uses one thread, caps leaf outputs at 10, and uses seed 1024 for ML.NET and scan fold assignment.
 
-5. **Filter and save results**
-   The tool retains only the highest-scoring target match per spectrum if both its Q-Value and PEP-Value are below the specified thresholds.
-   The filtered results are saved as `.qpsm `files, containing peptide information, search scores, the ModelScore and the estimated confidence values.
-   These files can be used for subsequent protein inference and quantification.
-   Alternative scoring method: Instead of training a model, PSMStatistics can apply fixed SEQUEST and Andromeda score thresholds. In this case, no Q-Values or PEP-Values are calculated.
+   The model rescores the candidates and retrains on updated positives. With cross-validation, the retraining cutoff is q < 0.01. Without it, positives need q < `QValueThreshold / 10` and PEP < `PepValueThreshold`. Retraining keeps the previous model if the count of passing scans falls or training fails. If the count increases by less than `MinimumIncreaseBetweenIterations`, it keeps the new model and stops. The `MaxIterations` limit applies per fold when cross-validation is enabled.
 
-![Protein Infrence](../../assets/images/SemiSupervisedScoring.png)
+4. **Score held-out scans**
+
+   By default, PSMStatistics shuffles scans into three nearly equal folds. For each fold, it trains on the other two and scores the held-out scans. It scales each fold so the lowest-scoring target with q ≤ 0.01 has a score of 0 and the median decoy has a score of −1. It then pools the rescaled scores. With `CrossValidation = false`, a single model trains on and scores all scans.
+
+5. **Estimate q-values and PEPs**
+
+   For the best candidate per scan, the q-value comes from the cumulative ratio of decoys to targets at or above the score, made monotone. For the posterior error probability (PEP), the tool bins the scores and fits a smoothing spline to the logit of the decoy share using iteratively reweighted least squares. Bin width is one FastTree score unit, converted to the pooled scale when cross-validation is enabled. PEP is the fitted decoy-to-target ratio at the candidate's score, capped at 1 and made non-increasing as scores rise.
+
+   A scan is written only if its best candidate is a target and passes both thresholds. When no candidate passes or score estimation fails, the file contains only the header. For an estimation error, see `<run>_log.txt`. To bypass model training, use `Threshold.Fixed` with SEQUEST and Andromeda cutoffs.
+
+![Semi-supervised PSM scoring](../../assets/images/SemiSupervisedScoring.png)
 
 ## Inputs
 
@@ -56,51 +45,45 @@ These inputs are needed to execute the tool:
 
 | Flag | Meaning | Comes from |
 | --- | --- | --- |
-| `-i` | one or more `.psm` files, or a directory that is searched for `*.psm` (not recursive) | [PSMStatistics](./peptide-spectrum-matching.md) |
-| `-d` | The Peptide Database | [PeptideDB](./peptide-db.md) |
+| `-i` | one or more `.psm` files, or a directory that is searched for `*.psm` (not recursive) | [PeptideSpectrumMatching](./peptide-spectrum-matching.md) or [PeptideSpectrumMatchingTIMs](./peptide-spectrum-matching-tims.md) |
+| `-d` | SQLite peptide database. Updated when `StoreIsotopePatterns` is enabled. | [PeptideDB](./peptide-db.md) |
 | `-o` | the output directory, created when missing | - |
 | `-p` | the parameter file in JSON | [Github ProteomIQon Core](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/pSMStatisticsParams.json) |
 | `-dc` | switch: save diagnostic charts to the output directory |  |
-| `-c` | number of files scored at the same time, default 1 | - |
+| `-c` | number of files scored in parallel and number of cores for storing isotope patterns, default 1 | - |
+
+The tool expects the 28-column `.psm` layout. Regenerate files that use the older 23-column layout.
 
 - For every input `run.psm` the tool writes `run.qpsm` to the output directory.
-- The file is tab separated with a header and holds one row per scan.
-- The tool also creates a `run_plots` directory per input. It stays empty unless you pass `-dc`, which adds `Metrics.html` and `InitialSeparation.html`, plus one `separationAtIteration_n.html` per training iteration.
+- The file is tab separated with a header and holds one row per scan that passes filtering. [ProteinInference](./protein-inference.md), [PSMBasedQuantification](./psm-based-quantification.md) and [PSMBasedQuantificationTIMs](./psm-based-quantification-tims.md) read these files.
+- With `StoreIsotopePatterns` enabled, the tool adds the isotope patterns to the database after scoring the last file. For an isotopically labeled database, it stores both forms of each peptide ion. Quantification reuses patterns written with matching BioFSharp and BioFSharp.Mz versions and computes missing patterns on demand. A write failure produces a warning. On a shared filesystem with unreliable locking, run only one process per database or disable `StoreIsotopePatterns` to avoid concurrent database writes.
+- With `-dc`, the per-run `<run>_plots` directory receives `InitialSeparation.html` for the starting scores, `Metrics.html` for the last model's test split, and `separationAtIteration_<n>.html` for model-score distributions, q-values and PEPs. Iterations are numbered from zero. The first retraining replaces the initial model's iteration-zero chart. Cross-validation prefixes the charts with `Fold1_` through `Fold3_` and shows the two training folds for each model. `Threshold.Fixed` produces no charts.
+- Each input also produces a `<run>_plots` directory when charts are disabled. Logs are written to `PSMStatistics_log.txt` and `<run>_log.txt`.
 
 ## Parameter file
 
 PSMStatistics can either estimate a combined score using iterative learning or apply fixed score cutoffs. The default uses `Threshold.Estimate`.
 
-### Threshold selection
+| Parameter | Default | Description |
+|-----------|---------|---------|
+| `Threshold` | `Threshold.Estimate estimationParams` | Learn the combined score and filter by q-value and PEP value. The nested record is listed below. |
+| `Threshold` (alternative) | `Threshold.Fixed { SequestLike = 0.; Andromeda = 0. }` | Skip the learning. Among the matches whose `SequestScore` exceeds `SequestLike` and whose `AndroScore` exceeds `Andromeda`, keep the one with the highest `SequestScore` per scan, and drop it when it is a decoy. `ModelScore` holds the `SequestScore`, and `QValue` and `PEPValue` are `NaN`. Pick your own cutoffs; these values are placeholders. |
+| `ParseProteinIDRegexPattern` | `"id"` | Regex applied to the protein names of the database to produce the `ProteinNames` column. `"id"` keeps them unchanged. The database holds the names as PeptideDB cut them, so keep `"id"`. Another pattern is applied to those stored names and keeps the matched part (empty when it does not match). |
+| `KeepTemporaryFiles` | `true` | Not used by PSMStatistics. |
+| `StoreIsotopePatterns` | `true` | Store the theoretical isotope patterns of the ions in the `.qpsm` files in the table `IsotopePattern` of the peptide database (`-d`), where the quantification tools read them. |
 
-| Parameter | Default | Meaning |
-| --- | --- | --- |
-| `Threshold` | `Threshold.Estimate estimationParams` | Learn a combined model score and retain PSMs according to q-value and PEP thresholds. The nested estimation settings are listed below. |
-| `Threshold` (alternative) | `Threshold.Fixed { SequestLike = 0.; Andromeda = 0. }` | Skip model training and keep the best match per scan only if its `SequestScore` exceeds `SequestLike` and its `AndroScore` exceeds `Andromeda`. Decoy matches are removed. The resulting `ModelScore`, `QValue` and `PEPValue` are `nan`. Both zero cutoffs shown here are placeholders; choose values appropriate for your data. |
-| ParseProteinIDRegexPattern | `id` | Regex applied to the protein names of the database to produce the ProteinNames column. "id" keeps them unchanged. The database holds the names as PeptideDB cut them, so keep "id". Another pattern is applied to those stored names and keeps the matched part (empty when it does not match). |
-| StoreIsotopePatterns | `true` |  Store the theoretical isotope patterns of the ions in the .`.qpsm` files in the table IsotopePattern of the peptide database (-d), where the quantification tools read them. |
-| KeppTemporaryFiles | `true` | Not used by PSMStatistics.
+The fields of `Threshold.Estimate`:
 
-### Estimation parameters
+| Parameter | Default | Description |
+|-----------|---------|---------|
+| `QValueThreshold` | `0.01` | Write PSMs with a q-value below this value. Without `CrossValidation`, the positives of each retraining are the targets with a q-value below a tenth of this value and a PEP below `PepValueThreshold`. |
+| `PepValueThreshold` | `1.0` | Write PSMs with a PEP below this value. The default removes only PSMs with a PEP of 1. |
+| `MaxIterations` | `15` | Upper limit for the retrainings after the first model, per fold with `CrossValidation`. |
+| `MinimumIncreaseBetweenIterations` | `0.005` | Stop when a retraining raises the number of passing scans by less than this fraction of the new number. With `CrossValidation` this number counts the targets with q <= 0.01. Without it, it is the smaller of the numbers of best candidates per scan with q <= `QValueThreshold` and with PEP <= `PepValueThreshold`. |
+| `PepValueFittingMethod` | `PepValueFittingMethod.IRLS` | How the PEP curve is fitted. `IRLS` (iteratively reweighted least squares) is the only case. |
+| `CrossValidation` | `true` | Score each scan with the model trained on the other two of three scan folds, and normalize the scores per fold. Each fold retrains on the targets with q < 0.01, independent of `QValueThreshold` and `PepValueThreshold`, which then only filter the output. The training runs three times per file, each time on two thirds of the scans, so a run takes about two to three times as long as without `CrossValidation`. Parameter files without this field use `false`. |
+| `RetentionTimeFeature` | `true` | Add the features `RtDeviation` and `AbsRtDeviation`, the deviation of the scan time from the time predicted from the sequence. Parameter files without this field use `false`. |
 
-These settings belong to the nested `Threshold.Estimate` record.
-
-| Parameter | Default | Meaning |
-| --- | --- | --- |
-| `QValueThreshold` | `0.01` | Retain PSMs whose q-value is below this threshold. |
-| `PepValueThreshold` | `0.05` | Retain PSMs whose posterior error probability (PEP) is below this threshold. |
-| `MaxIterations` | `15` | Maximum number of iterations used to retrain the scoring model. |
-| `MinimumIncreaseBetweenIterations` | `0.005` | Stop retraining when the relative increase in positive matches at the q-value threshold is smaller than this fraction. |
-| `PepValueFittingMethod` | `PepValueFittingMethod.IRLS` | Fit the PEP curve using iteratively reweighted least squares (`IRLS`); this is the only available fitting method. |
-| CrossValidation | `true` | Score each scan with the model trained on the other two of three scan folds, and normalize the scores per fold. Each fold retrains on the targets with q < 0.01, independent of `QValueThreshold` and `PepValueThreshold`, which then only filter the output. The training runs three times per file, each time on two thirds of the scans, so a run takes about two to three times as long as without `CrossValidation`. Parameter files without this field use `false`. |
-| RetentionTimeFeature | `true` |  	Add the features `RtDeviation` and `AbsRtDeviation`, the deviation of the scan time from the time predicted from the sequence. Parameter files without this field use `false`. |
-
-### General settings
-
-| Parameter | Default | Meaning |
-| --- | --- | --- |
-| `ParseProteinIDRegexPattern` | `"id"` | Regular expression used on database FASTA headers to populate `ProteinNames`. Use the same identifier pattern as in PeptideDB. |
-| `KeepTemporaryFiles` | `true` | Field in the parameter record. Leave this setting at `true`. |
 
 The default parameter file is [pSMStatisticsParams.json ↗](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/pSMStatisticsParams.json).
 
@@ -115,11 +98,11 @@ PSM identifiers, peptide sequences and corresponding proteins
 | Column | Description |
 | --- | --- |
 | `PSMId` | Identifier of the MS/MS spectrum |
-| `GlobalMod` | Indicator, if a peptide ion species is labeled or unlabeled |
+| `GlobalMod` | `0` for an unlabeled peptide ion, `1` for a labeled peptide ion |
 | `PepSequenceID` | Unique identifier of the unmodified peptide sequence, which points to PeptideDB |
 | `ModSequenceID` | Unique identifier of the modified peptide sequence (including PTMs, e.g., methylation), which points to PeptideDB |
 | `StringSequence` | Amino Acid sequence (one-letter code) from PeptideDB which matches the psm candidate |
-| `ProteinNames` | Protein Names out of the PeptideDB |
+| `ProteinNames` | Protein identifiers from the peptide database, separated by semicolons |
 
 ### Spectrum, precursor and peptide properties (8)
 
@@ -127,14 +110,14 @@ Scan details, precursor masses, peptide length and missed cleavages
 
 | Column | Description |
 | --- | --- |
-| `ScanNr` | Scan identifier, combining the spectrum ID in the raw file with an ascending MS2 ID |
+| `ScanNr` | Number of the MS2 spectrum within the run |
 | `ScanTime` | Retention time (RT) in minutes of the MS/MS scan |
 | `Charge` | Precursor ion charge state |
 | `PrecursorMZ` | Precursor ion mass-to-charge ratio (m/z) |
 | `TheoMass` | Theoretical peptide mass in the spectrum (based on amino acid composition) in Dalton |
 | `AbsDeltaMass` | Absolute mass deviation between theoretical and measured mass (mass error) |
 | `PeptideLength` | Peptide length in Amino Acid count |
-| `MissCleavages` | Number of missed cleavages |
+| `MissCleavages` | Number of missed cleavages, looked up in the peptide database |
 
 ### SEQUEST scoring (3)
 
@@ -143,8 +126,8 @@ Similarity score and normalized differences between candidates
 | Column | Description |
 | --- | --- |
 | `SequestScore` | SEQUEST similarity score (e.g., XCorr) quantifying agreement between theoretical and experimental spectra |
-| `SequestNormDeltaBestToRest` | Normalized separation of the best SEQUEST score from the remaining candidate scores |
-| `SequestNormDeltaNext` | Normalized separation between the best and second-best SEQUEST scores |
+| `SequestNormDeltaBestToRest` | (Best SEQUEST score of the spectrum − this score) / best score. The top candidate has a value of `0`. |
+| `SequestNormDeltaNext` | (This SEQUEST score − next lower score of the spectrum) / best score. |
 
 ### Andromeda scoring (3)
 
@@ -153,8 +136,8 @@ Match score and normalized differences between candidates
 | Column | Description |
 | --- | --- |
 | `AndroScore` | Andromeda score quantifying the match between theoretical and experimental spectra |
-| `AndroNormDeltaBestToRest` | Normalized separation of the best Andromeda score from the remaining candidate scores |
-| `AndroNormDeltaNext` | Normalized separation between the best and second-best Andromeda scores |
+| `AndroNormDeltaBestToRest` | (Best Andromeda score of the spectrum − this score) / best score. The top candidate has a value of `0`. |
+| `AndroNormDeltaNext` | (This Andromeda score − next lower score of the spectrum) / best score. |
 
 ### X!Tandem scoring (3)
 
@@ -162,9 +145,9 @@ Match score and normalized differences between candidates
 
 | Column | Description |
 | --- | --- |
-| `XTandemScore` | XTandem score quantifying the match between theoretical and experimental spectra |
-| `XtandemNormDeltaBestToRest` | Normalized separation of the best XTandem score from the remaining candidate scores |
-| `XtandemNormDeltaNext` | Normalized separation between the best and second-best XTandem scores |
+| `XtandemScore` | X!Tandem score quantifying the match between theoretical and experimental spectra |
+| `XtandemNormDeltaBestToRest` | (Best XTandem score of the spectrum − this score) / best score. The top candidate has a value of `0`. |
+| `XtandemNormDeltaNext` | (This XTandem score − next lower score of the spectrum) / best score. |
 
 ### Target/decoy and statistical confidence (4)
 
@@ -172,40 +155,33 @@ Model score, FDR and posterior error probability
 
 | Column | Description |
 | --- | --- |
-| `Label` | Target/decoy label: 1 = target, −1 = decoy |
-| `ModelScore` | Best score value achieved by iterative model to distinguish between target & decoy |
-| `QValue` | Q-value (False-Discovery-Rate) based on combined model scores |
-| `PEPValue` | Posterior Error Probability |
+| `Label` | `1` for target matches. Decoy matches are excluded from the output. |
+| `ModelScore` | Fold-normalized score with `CrossValidation`, raw FastTree score without it, or `SequestScore` with `Threshold.Fixed`. |
+| `QValue` | Q-value of `ModelScore`. `NaN` with `Threshold.Fixed`. |
+| `PEPValue` | Posterior error probability of `ModelScore`. `NaN` with `Threshold.Fixed`. |
+
+## Parameter generation
+
+For an F# example that writes a parameter JSON file, see the [parameter-generation example](https://github.com/CSBiology/ProteomIQon/blob/dev/docs/tools/PSMStatistics.fsx#L87).
 
 ## Installing and executing the tool
 
-1. **Installing**
+Install PSMStatistics as a .NET tool.
 
-   Install the Tool with the following command inside the choosen Command-Line
+```sh
+dotnet tool install --global ProteomIQon.PSMStatistics
+```
 
-   ```sh
-   dotnet tool install --global ProteomIQon.ProteinInference
-   ```
+Score a single run.
 
-2. **Execute**
-     ```sh
-     proteomiqon-proteininference -i path/to/run.qpsm -d path/to/database.db -o path/to/output -p path/to/ProteinInferenceParams.json
-     ```
+```sh
+proteomiqon-psmstatistics -i path/to/run.psm -d path/to/database.db -o path/to/output -p path/to/pSMStatisticsParams.json
+```
 
-3. **Several runs grouped together, with the annotation for the evidence class**
+Score several runs in parallel and write diagnostic charts with `-dc`.
 
-    ```sh
-     proteomiqon-proteininference -i path/to/run1.qpsm path/to/run2.qpsm path/to/run3.qpsm -d path/to/database.db -g path/to/proteome.gff3 -o path/to/output -p path/to/ProteinInferenceParams.json
-     ```
+```sh
+proteomiqon-psmstatistics -i path/to/psmFolder -d path/to/database.db -o path/to/output -p path/to/pSMStatisticsParams.json -c 3 -dc
+```
 
-4. **A whole directory, with the q-value chart**
-
-   ```sh
-     proteomiqon-proteininference -i path/to/qpsmFolder -d path/to/database.db -o path/to/output -p path/to/ProteinInferenceParams.json -dc
-     ```
-
-5. **All Flags**
-
-    ```sh
-     proteomiqon-proteininference --help
-     ```
+List all flags with `proteomiqon-psmstatistics --help`.

@@ -15,6 +15,8 @@ After [JoinQuantPepIonsWithProteins](./join-quant-with-peptide-ions.md), each qu
 
 The results can be passed to [RatioLFQ](https://csbiology.github.io/ProteomIQon/tools/RatioLFQ.html) for further analysis.
 
+BioFSharp.Mz explains how [isotopic labels enter the search](https://www.biofsharp.com/BioFSharp.Mz/02_02_search_databases.html#Describing-the-search-space) and how the [two peaks are quantified](https://www.biofsharp.com/BioFSharp.Mz/03_01_quantification.html#From-one-peak-to-a-pipeline).
+
 ## How does Labeled Protein Quantification work?
 
 The tool processes peptide-ion quantifications in **four aggregation steps**. The first and last steps are mandatory; the two intermediate steps are optional.
@@ -60,14 +62,12 @@ If charge-state aggregation is disabled, charge states remain separate during th
 | Parameter | Default | Description |
 | --- | --- | --- |
 | `Correlation_Light_Heavy_Threshold` | `None` | Optional minimum correlation between light and heavy elution profiles. For example, `Some 0.9` retains rows with a correlation above 0.9. The filter runs during the first aggregation step. |
-| `Alignment_QValue` | `None` in the documentation; `Some 0.05` in the linked JSON presets | Optional filter for rows originating from alignment. Rows with alignment Q-values at or above the threshold are excluded; `None` disables this filter. |
+| `Alignment_QValue` | `Some 0.05` | Excludes transferred rows with an alignment q-value at or above the threshold. PSM-based rows carry an alignment q-value of `0`, and rows with no alignment q-value are kept. `None` disables the filter. |
 | `ModificationFilter` | `UseModifiedPeptides.All` | Controls which peptides are included. `All` accepts all peptides, `No` excludes modified peptides, and `UseOnly` accepts unmodified peptides plus peptides carrying only the specified modifications. |
 | `AggregateGlobalModificationsParams` | Mean for light, heavy and ratio; no transformations or filters | Settings for combining identifications of the light and heavy versions of each ion. This step always runs. |
 | `AggregatePeptideChargeStatesParams` | `None` | When set to `Some AggregationParams`, combines different charge states. `None` skips this step. |
 | `AggregateModifiedPeptidesParams` | `None` | When set to `Some AggregationParams`, combines different modified peptide forms. `None` skips this step. |
 | `AggregateToProteinGroupsParams` | Mean for light, heavy and ratio; no transformations or filters | Settings for the final protein-group aggregation. This step always runs. |
-
-**Note about defaults:** The published documentation shows `Alignment_QValue = None`, but the official JSON presets linked below contain `Some 0.05`. Check the preset you actually use rather than assuming that this filter is disabled.
 
 ### Light/heavy aggregation
 
@@ -145,6 +145,10 @@ Two additional files are written to the output directory:
 | --- | --- |
 | `LabeledProteinQuantification_log.txt` | Log messages from the protein quantification tool. |
 | `LabeledQuantification_log.txt` | Additional log messages from the labeled quantification process. |
+
+## Parameter generation
+
+For an F# example that writes a parameter JSON file, see the [parameter-generation example](https://github.com/CSBiology/ProteomIQon/blob/dev/docs/tools/LabeledProteinQuantification.fsx#L67).
 
 ## Installing and executing the tool
 

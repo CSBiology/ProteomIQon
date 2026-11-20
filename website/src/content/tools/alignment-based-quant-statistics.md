@@ -112,20 +112,20 @@ These inputs are needed to execute the tool:
 
 | Flag | Description | Comes from |
 | --- | --- | --- |
-| `-i` | PSM based `.quant` of the runs to score | [PSMBasedQuantification](./psm-based-quantification.md) |
+| `-i` | PSM based `.quant` of the runs to score | [PSMBasedQuantification](./psm-based-quantification.md) or [PSMBasedQuantificationTIMs](./psm-based-quantification-tims.md) |
 | `-ii` | `.align` of the runs to score | [QuantBasedAlignment](./quant-based-alignment.md) |
 | `-iii` | `aligned .quant` of the runs to score | [AlignmentBasedQuantification](./alignment-based-quantification.md) |
-| `-l` | PSM based `.quant` of the runs to learn from | [PSMBasedQuantification](./psm-based-quantification.md) |
+| `-l` | PSM based `.quant` of the runs to learn from | [PSMBasedQuantification](./psm-based-quantification.md) or [PSMBasedQuantificationTIMs](./psm-based-quantification-tims.md) |
 | `-ll` | `.align` of the runs to learn from | [QuantBasedAlignment](./quant-based-alignment.md) |
 | `-lll` | `aligned .quant` of the runs to learn from | [AlignmentBasedQuantification](./alignment-based-quantification.md) |
 | `-o` | Output directory, created when missing | — |
 | `-p` | Parameter file (JSON) | [Github ProteomIQon Core](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/AlignmentBasedQuantStatisticsParams.json) |
-| `-c` | Number of runs scored in parallel (default: 1) | — |
-| `-ts` | Switch: write the training examples selected from each run | — |
-| `-dc` | Switch: write diagnostic charts | — |
+| `-c` | Number of runs read and written in parallel (default: 1) | — |
+| `-ts` | Switch: write the overlap ions used for training from each learning run | — |
+| `-dc` | Switch: write `AlignmentScoreHistogram.html` | — |
 | `-mf` | Switch: pair input files by name instead of position | — |
 
-- Each flag takes one file, several files, or a directory. The runs to learn from are usually the runs to score. Without `-mf` the files are paired by position, the files of a directory sorted by name, and the numbers of files must agree.
+- Each of the six run-input flags takes one file, several files, or a directory. Keep the `.alignfeatures` and, when present, `.aligndecoy` files beside their corresponding aligned `.quant` files. The runs to learn from are usually the runs to score. Without `-mf` the files are paired by position, the files of a directory sorted by name, and the numbers of files must agree.
 - For every scored run the tool writes `<run>.quant` with the layout of the input `.quant` files: the PSM based rows of `-i` and one row per new peptide ion with `AlignmentScore` and `AlignmentQValue`.
 - When the PSM row of an overlap ion has no fitted peak, the transferred row replaces it and is scored like a new ion. `-ts` writes `<run>.quanttestset` per learning run, with the overlap ions, their label, fold, raw and calibrated out-of-fold score, out-of-fold Q-value and features. 
 - Logs go to `AlignmentBasedQuantStatistics_log.txt`, with the features, the out-of-fold check and the calibration per score bin and per source intensity quartile, and to one `<run>_log.txt` per run.
@@ -136,12 +136,17 @@ These inputs are needed to execute the tool:
 | PositiveRtSdFactor | `1.0`| A peak within this many own peak sd is right. | 
 | NegativeRtSdFactor | `3.0`| Up to this many sd a peak is ambiguous, beyond it wrong. | 
 | MaxAbsLog2QuantRatio | `1.0` | Right and ambiguous peaks need \|log2 (transferred / own quantity)\| at most this. |
-| UseIntensityRatioFeatures | `false`| Add target to source intensity ratios as features. | 
+| UseIntensityRatioFeatures | `false`| Add four features: target-to-source ratios for quantity and apex intensity, plus the target quantity and apex intensity. |
 | UseIonMobility | `true`| Add the ion mobility feature when the rows have a finite `IonMobility` and the `.align` file a `PredictedIonMobilitySd` above 0. | 
 | NumberOfFolds | `5`| Cross-validation folds. | 
-| NumberOfLeaves, NumberOfTrees, MinimumExampleCountPerLeaf, LearningRate | `0` | 0 takes the trainer's defaults: 20, 100, 10, 0.2 for FastTree; 31, 100, 20, 0.1 for LightGbm. | 
+| Trainer | `FastTree`| FastTree or LightGbm. LightGbm needs the native library lib_lightgbm, which the package ships for win-x64, linux-x64 and osx-x64.|
+| NumberOfLeaves, NumberOfTrees, MinimumExampleCountPerLeaf, LearningRate | `null` | null takes the trainer's defaults: 20, 100, 10, 0.2 for FastTree; 31, 100, 20, 0.1 for LightGbm. |
 | AbsentAnalyteFdr | `Estimated`| `Off`, `Estimated` or `Conservative`: whether and how the absent-analyte rate enters the q-value (see Absent analytes). | 
-| Seed | `1`| Seed of the folds and of the trainer. | 
+| Seed | `1`| Seed of the folds and of the trainer. |
+
+## Parameter generation
+
+For an F# example that writes a parameter JSON file, see the [parameter-generation example](https://github.com/CSBiology/ProteomIQon/blob/dev/docs/tools/AlignmentBasedQuantStatistics.fsx#L159).
 
 ## Running the tool 
 
@@ -160,10 +165,14 @@ These inputs are needed to execute the tool:
     proteomiqon-alignmentbasedquantstatistics -i path/to/quant -ii path/to/align -iii path/to/aligned -l path/to/quant -ll path/to/align -lll path/to/aligned -o path/to/output -p path/to/AlignmentBasedQuantStatisticsParams.json -mf -c 4
      ```
 
-3. **Add -ts to keep the training ions and -dc for the score histogram. Print the description of every argument**
+3. **Save training examples and diagnostics**
+
+   Add `-ts` to write the training ions and `-dc` to write the alignment-score histogram.
+
+4. **All flags**
 
    ```sh
-    proteomiqon-alignmentbasedquantification --help
+    proteomiqon-alignmentbasedquantstatistics --help
      ```
 
 ## Limitations 

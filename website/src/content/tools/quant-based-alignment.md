@@ -50,20 +50,23 @@ The tool aligns the `IonMobilityCentre` of the `.quant` rows. When both runs of 
 ## Inputs 
 | Flag | Meaning | Comes from |
 | --- | --- | --- |
-| `-i` | one or more `.quant` files of the target runs, or a directory that is searched for `*.quant` | [PSMBasedQuantification](./psm-based-quantification.md) or [PSMBasedQuantifiationTIMS](./psm-based-quantification-tims.md) | 
-| `-ii` | ne or more `.quant` files of the target runs, or a directory that is searched for `*.quant` | same as above |
+| `-i` | one or more `.quant` files of the target runs, or a directory that is searched for `*.quant` | [PSMBasedQuantification](./psm-based-quantification.md) or [PSMBasedQuantificationTIMs](./psm-based-quantification-tims.md) |
+| `-ii` | one or more `.quant` files of the source runs, or a directory that is searched for `*.quant` | same as above |
 | `-o` | the output directory, created when missing | - |
 | `-s` | seed of the cross-validation folds, default 1 | - | 
 | `-dc`| switch: write `<run>_ScanTimeModels.html` with the shifts, curves and out-of-fold errors per source | - | 
 | `-c` | number of targets aligned in parallel, one core each, default 1 | 
 
 - There is no parameter file. 
--  target is never its own source, so the same directory can be passed to `-i` and `-ii`. 
-- The tool stops when an input path does not exist, when the paths of `-i `or those of `-ii` hold no `.quant` file at all, and when two input files from different directories have the same name.
+- A target is never its own source, so the same directory can be passed to `-i` and `-ii`.
+- The tool stops when an input path does not exist, when the paths of `-i` or those of `-ii` hold no `.quant` file at all, and when two input files from different directories have the same name.
 - For every target the tool writes `<run>.align`, tab separated, one row per transferred ion.
 
-## Outputs 
-| Parameter | Description |
+## Outputs
+
+Each `.align` row starts with the peptide-ion identifiers, its m/z, its predicted scan time in the target, and its scan time, intensity, traces and isotope pattern in the source. The source `IonMobility` is the `IonMobilityCentre` of the source `.quant` row. The following five fields complete the row.
+
+| Column | Description |
 | --- | --- |
 | PredictedScanTimeSd | local error scale of `PredictedScanTime`, in minutes | 
 | SourceFileName | source run of the ion, without extension |
@@ -71,7 +74,7 @@ The tool aligns the `IonMobilityCentre` of the `.quant` rows. When both runs of 
 | PredictedIonMobility | predicted ion mobility in the target, `nan` without ion mobility |
 | PredictedIonMobilitySd | local error scale of `PredictedIonMobility`, `nan` without ion mobility | 
 
-`<run>.alignmetric` holds the out-of-fold predictions of one fold. No later tool reads it. Logs go to `QuantBasedAlignment_log.txt` and one `<run>_log.txt` per target. Per pair they give the numbers of shared and removed ions, the chosen k and the out-of-fold errors. A target without any source that shares 20 ions with it gets a warning.
+`<run>.align` is read by [AlignmentBasedQuantification](./alignment-based-quantification.md) and [AlignmentBasedQuantStatistics](./alignment-based-quant-statistics.md). `<run>.alignmetric` contains the held-out predictions and measurements from the first cross-validation fold. No later tool reads it. Logs go to `QuantBasedAlignment_log.txt` and one `<run>_log.txt` per target. Per pair they give the numbers of shared and removed ions, the chosen k and the out-of-fold errors. A target without any source that shares 20 ions with it gets a warning.
 
 ## Running the tool 
 

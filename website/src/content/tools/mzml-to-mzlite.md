@@ -19,7 +19,7 @@ MzMLToMzLite converts an mzML file into an mzlite file. It is the first tool of 
 
 2. **How to get MzML**
 
-   To get mzML from vendor raw files, use [MSConvert](https://proteowizard.sourceforge.io/). On [Galaxy.eu](https://galaxyproject.org/use/) runs msconvert in the browser without a local install.
+   To get mzML from vendor raw files, use [MSConvert](https://proteowizard.sourceforge.io/). [Galaxy Europe](https://galaxyproject.eu/) runs msconvert in the browser without a local installation.
 
 3. **Converting**
 
@@ -75,6 +75,10 @@ The generated mzlite is read by [PeptideSpectrumMatching](./peptide-spectrum-mat
 
 - The default file is [MzMLToMzLiteParams.json](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/mzMLToMzLiteParams.json). A file with wavelet centroiding on both levels is [TIMsMzMLtoMzLiteParams.json](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/TIMsMzMLtoMzLiteParams.json).
 
+## Parameter generation
+
+For an F# example that writes a parameter JSON file, see the [parameter-generation example](https://github.com/CSBiology/ProteomIQon/blob/dev/docs/tools/MzMLToMzLite.fsx#L76).
+
 ## Installing and executing the tool
 
 1. **Installing**
@@ -96,12 +100,12 @@ The generated mzlite is read by [PeptideSpectrumMatching](./peptide-spectrum-mat
    - Convert multiple runs
 
      ```sh
-     proteomiqon-mzmltomzlite -i path/to/run1.mzML path/to/run2.mzML path/to/run3.mzML -o path/to/output -p path/to/mzMLToMzLiteParams.json -c
+     proteomiqon-mzmltomzlite -i path/to/run1.mzML path/to/run2.mzML path/to/run3.mzML -o path/to/output -p path/to/mzMLToMzLiteParams.json -c 3
      ```
 
 3. **Help**
 
-   If the execution of one or multiple runs failed, use the `-f` flag to get rid of the `quot` part that is a common leftover in the raw vendor files
+   If the XML reader fails because the input contains a stray `&quot`, use `-f` to remove that string from the input file in place.
 
    ```sh
    proteomiqon-mzmltomzlite -i path/to/run.mzML -o path/to/output -p path/to/mzMLToMzLiteParams.json -f

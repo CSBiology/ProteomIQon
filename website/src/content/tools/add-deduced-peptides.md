@@ -40,7 +40,7 @@ After alignment and AlignmentBasedQuantification, a run's `.quant` file holds pe
 
 5. **Continue downstream processing**
 
-   JoinQuantPepIonsWithProteins reads the newly generated `.prot` file together with the scored `.quant` file from the same run.
+   JoinQuantPepIonsWithProteins reads the newly generated `.prot` file together with the same `.quant` file used here. When scoring transfers, run [AlignmentBasedQuantStatistics](./alignment-based-quant-statistics.md) first and use its output in both steps.
 
 ## Inputs
 
@@ -48,7 +48,7 @@ These inputs are needed to execute the tool:
 
 | Flag | Meaning | Comes from |
 | --- | --- | --- |
-| `-i` | One or more aligned `.quant` files, or a directory searched for `*.quant` | [AlignmentBasedQuantification ↗](./alignment-based-quantification.md) |
+| `-i` | One or more aligned `.quant` files, or a directory searched for `*.quant` | [AlignmentBasedQuantification](./alignment-based-quantification.md) or [AlignmentBasedQuantStatistics](./alignment-based-quant-statistics.md) |
 | `-ii` | One or more `.prot` files, or a directory searched for `*.prot` | [Protein Inference ↗](./protein-inference.md) |
 | `-o` | The output directory, created when missing | — |
 
@@ -63,7 +63,7 @@ This Output is generated
 | Parameter | Description |
 | --- | --- |
 | ProteinGroup | Protein Identifier Collection |
-| PeptideSequence | List of all peptides assigned to this protein group |
+| PeptideSequence | Peptide sequences assigned to this group and present in the corresponding `.quant`, separated by semicolons |
 | Class | Peptide Evidence Classes (C1A, C1B, C2A, C2B, C3A, C3B) which define how a peptide has been assigned to its corresponding protein |
 | TargetScore | Target Score calculated based on the individual peptide scores of PSM |
 | DecoyScore | Decoy Score calculated based on the individual peptide scores of PSM |
@@ -88,5 +88,5 @@ This Output is generated
 3. **Help**
 
    ```sh
-    proteomiqon-alignmentbasedquantification --help
+    proteomiqon-adddeducedpeptides --help
      ```
