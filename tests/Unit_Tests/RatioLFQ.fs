@@ -174,6 +174,11 @@ let ratioLFQTests =
             Expect.equal withInvalid.Measurements.[0].[0].Run 1 "the valid row is in R2"
             let empty = parse []
             Expect.equal (empty.Runs, empty.ProteinGroups, empty.Measurements.Length, empty.RowsRead) ([||], [||], 0, 0) "header only"
+            // quoted run names and protein groups lose their quotes
+            let quoted =
+                parse [ "\"sample 03\"\t\"Prot07;Prot08\"\ta\t1000\t1000"; "R2\tProt09\tb\t1000\t1000" ]
+            Expect.equal quoted.Runs [| "sample 03"; "R2" |] "quoted run name with a space"
+            Expect.equal quoted.ProteinGroups [| "Prot07;Prot08"; "Prot09" |] "quoted protein groups"
             // one sequence under two protein groups in one run belongs to both
             let shared = parse [ "R1\tG1\tSHAREDK\t1000\t1000"; "R1\tG2\tSHAREDK\t2000\t1000" ]
             Expect.equal shared.ProteinGroups [| "G1"; "G2" |] "both protein groups"
@@ -201,13 +206,14 @@ let ratioLFQTests =
             Expect.equal table.Runs.Length 1 "one run"
             let columns = lines.[0].Split '\t'
             let iGroup, iLight, iHeavy = Array.IndexOf(columns, "ProteinGroup"), Array.IndexOf(columns, "Quant_Light"), Array.IndexOf(columns, "Quant_Heavy")
+            let unquote (c: string) = if c.Length >= 2 && c.StartsWith "\"" && c.EndsWith "\"" then c.[1 .. c.Length - 2].Replace("\"\"", "\"") else c
             let tryNumber (c: string) =
                 match Double.TryParse(c, Globalization.NumberStyles.Float, Globalization.CultureInfo.InvariantCulture) with
                 | true, v when v > 0. && not (Double.IsInfinity v) -> Some v
                 | _ -> None
             let expected =
                 lines.[1..]
-                |> Array.map (fun l -> l.Split '\t')
+                |> Array.map (fun l -> l.Split '\t' |> Array.map unquote)
                 |> Array.filter (fun c -> (tryNumber c.[iLight]).IsSome && (tryNumber c.[iHeavy]).IsSome)
                 |> Array.groupBy (fun c -> c.[iGroup])
                 |> Array.map (fun (g, rows) -> g, rows |> Array.map (fun c -> Math.Log2((tryNumber c.[iLight]).Value / (tryNumber c.[iHeavy]).Value)) |> Numerics.median |> fun m -> Math.Pow(2., m))
