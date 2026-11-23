@@ -15,11 +15,11 @@ MzMLToMzLite converts an mzML file into an mzlite file. It is the first tool of 
 
 1. **MzML to Mzlite**
 
-   It holds the same spectra and metadata as the mzML, in a form that supports random access to single spectra.
+   The mzlite holds the same spectra and metadata as the mzML, in a form that supports random access to single spectra.
 
 2. **How to get MzML**
 
-   To get mzML from vendor raw files, use [MSConvert](https://proteowizard.sourceforge.io/). [Galaxy Europe](https://galaxyproject.eu/) runs msconvert in the browser without a local installation.
+   To get mzML from vendor raw files, use [msconvert](https://www.nature.com/articles/nbt.2377). Galaxy Europe runs msconvert in the browser without a local install, see [their guide](https://galaxyproject.eu/posts/2019/03/24/msconvert/).
 
 3. **Converting**
 
@@ -33,7 +33,7 @@ MzMLToMzLite converts an mzML file into an mzlite file. It is the first tool of 
 | `-o` | Output directory. Created if it does not exist. | — |
 | `-p` | JSON parameter file. | [ProteomIQon default parameters](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/mzMLToMzLiteParams.json) |
 | `-c` | Number of files converted in parallel. Default: `1`; no effect for a single file. | — |
-| `-f` | Rewrites every input file in place and removes the string &quot from it. Use only if conversion fails because of this character. | Vendor raw files |
+| `-f` | switch: rewrite every input file in place and remove `&quot` | — |
 
 ## Outputs
 
@@ -53,7 +53,7 @@ The generated mzlite is read by [PeptideSpectrumMatching](./peptide-spectrum-mat
 | `StartRetentionTime` | None | With Some t, only spectra with a scan time above t are copied. The comparison uses the time unit of the mzML file. |
 | `EndRetentionTime` | None | With Some t, only spectra with a scan time below t are copied, same unit as above. |
 | `MS1PeakPicking` | PeakPicking.ProfilePeaks | How MS1 peaks are extracted. PeakPicking.ProfilePeaks copies the peak arrays as they are. PeakPicking.Centroid (CentroidizationMode.Wavelet w) runs the wavelet peak picker with the parameters w. |
-| `MS2PeakPicking` | PeakPicking.ProfilePeaks | same choice for MS2 spectra. |
+| `MS2PeakPicking` | PeakPicking.ProfilePeaks | The same choice for MS2 spectra. |
 
 - CentroidizationMode.Manufacturer is for vendor raw files. For mzML input use ProfilePeaks or the wavelet centroiding.
 
@@ -73,7 +73,7 @@ The generated mzlite is read by [PeptideSpectrumMatching](./peptide-spectrum-mat
 - `Some p` pads gaps in sparse profile spectra before the transform. The `PaddingParams` record contains `MaximumPaddingPoints` (`int option`), `Padding_MzTolerance` (`float`), `WindowSize` (`int`) and `SpacingPerc` (`float`).
 - The MS2 settings in the ion mobility default file use `Some { MaximumPaddingPoints = Some 7; Padding_MzTolerance = 0.05; WindowSize = 150; SpacingPerc = 95.0 }` as an example.
 
-- The default file is [MzMLToMzLiteParams.json](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/mzMLToMzLiteParams.json). A file with wavelet centroiding on both levels is [TIMsMzMLtoMzLiteParams.json](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/TIMsMzMLtoMzLiteParams.json).
+- The default file is [mzMLToMzLiteParams.json](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/mzMLToMzLiteParams.json). A file with wavelet centroiding on both levels is [TIMsMzMLtoMzLiteParams.json](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/TIMsMzMLtoMzLiteParams.json).
 
 ## Parameter generation
 

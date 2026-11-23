@@ -1,5 +1,5 @@
 ---
-name: "Labeled Protein Quantification"
+name: "LabeledProteinQuantification"
 phase: protein-quantification
 subgroup: Label-free and labeled quantification
 order: 3
@@ -43,7 +43,7 @@ The tool processes peptide-ion quantifications in **four aggregation steps**. Th
 
    The remaining peptide-level measurements are combined for each protein group and run, producing aggregated light intensity, heavy intensity and light-to-heavy ratio.
 
-Each aggregation step can **transform values, filter individual measurements, remove outliers within groups and aggregate the remaining values**. These operations are configured separately for the light, heavy and ratio series.
+Each aggregation step can **transform values, filter individual measurements, remove outliers within groups and aggregate the remaining values**. The filters are configured per series, but a row that any filter rejects is removed from all three series.
 
 ### What happens when stages are skipped?
 
@@ -108,11 +108,11 @@ Every enabled stage uses the same four-field `LabeledProteinQuantification.Aggre
 | Parameter | Default | Description |
 | --- | --- | --- |
 | `LabeledTransform` | `None` | Optional numeric transformation applied before filtering. Supported operations: `Log2`, `Add`, `Substract`, `MultiplyBy` and `DivideBy`. A series set to `None` remains unchanged. |
-| `LabeledSingleFilters` | `None` | Filters individual measurements using `IsBiggerThan` or `IsSmallerThan`. A value must satisfy every configured filter for its series. |
+| `LabeledSingleFilters` | `None` | Filters individual measurements using `IsBiggerThan` or `IsSmallerThan`. A row must pass every configured filter of all three series. |
 | `LabeledGroupFilters` | `None` | Filters each aggregation group. `Tukey factor` uses the interquartile-range multiplier, `Stdev factor` keeps values within that many standard deviations of the mean, and `TopX count` selects the highest values using an integer count. |
 | `LabeledAggregation` | `{ Light = Mean; Heavy = Mean; Ratio = Mean }` | Specifies how the remaining values are combined independently for each series. Choices: `Mean`, `Median` and `Sum`. |
 
-This F# configuration log₂-transforms all three series, keeps only transformed ratios below zero, applies Tukey filtering to the transformed light values and averages each series.
+This F# configuration log₂-transforms all three series, keeps only rows whose transformed ratio is below zero, removes rows that are Tukey outliers in the transformed light values, and averages each series. A row that any filter rejects is removed from all three series.
 
 ```fsharp
 let example : Common.LabeledProteinQuantification.AggregationParams =

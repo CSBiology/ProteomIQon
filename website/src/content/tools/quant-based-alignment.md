@@ -1,5 +1,5 @@
 ---
-name: "Quant-Based Alignment"
+name: "QuantBasedAlignment"
 phase: alignment
 order: 1
 summary: "Run alignment maps the scan time of one run onto another, so that a later tool can look for the peptide where it should elute."
@@ -12,7 +12,7 @@ In data dependent acquisition a peptide ion quantified in one run is often prese
 
 For every target run (`-i`) it learns, from the peptide ions the target shares with each source run (`-ii`), how scan times shift between the two runs. With that model it predicts the scan time of every source ion in the target, together with an error estimate for each prediction. For timsTOF runs it also predicts the ion mobility.
 
-The tool is the first of three that transfer quantifications between runs. It reads the .quant files of PSMBasedQuantification or PSMBasedQuantificationTIMs. AlignmentBasedQuantification then looks for the peak of each transferred ion, and AlignmentBasedQuantStatistics scores the result.
+The tool is the first of three that transfer quantifications between runs. It reads the `.quant` files of [PSMBasedQuantification](./psm-based-quantification.md) or [PSMBasedQuantificationTIMs](./psm-based-quantification-tims.md). [AlignmentBasedQuantification](./alignment-based-quantification.md) then looks for the peak of each transferred ion, and [AlignmentBasedQuantStatistics](./alignment-based-quant-statistics.md) scores the result.
 
 ![QuantBasedAlignment](../../assets/images/quantbasedalignment.png)
 
@@ -89,21 +89,21 @@ Each `.align` row starts with the peptide-ion identifiers, its m/z, its predicte
 2. **Align every run of an experiment against all others, four at a time**
 
 
-     ```sh
-    proteomiqon-quantbasedalignment -i path/to/quant -ii path/to/quant -o path/to/align -c 4
-     ```
+   ```sh
+   proteomiqon-quantbasedalignment -i path/to/quant -ii path/to/quant -o path/to/align -c 4
+   ```
 
 3. **Align one target against two sources**
 
    ```sh
-        proteomiqon-quantbasedalignment -i path/to/target.quant -ii path/to/source1.quant path/to/source2.quant -o path/to/align
-     ```
+   proteomiqon-quantbasedalignment -i path/to/target.quant -ii path/to/source1.quant path/to/source2.quant -o path/to/align
+   ```
 
 4. **All Flags**
 
-    ```sh
-     proteomiqon-quantbasedalignment --help
-     ```
+   ```sh
+   proteomiqon-quantbasedalignment --help
+   ```
 
 ## Limitations 
 - The trimming floor (0.05 min) and the error scale window (±5 min) are fixed.

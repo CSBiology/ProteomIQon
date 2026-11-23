@@ -1,5 +1,5 @@
 ---
-name: "Ratio LFQ"
+name: "RatioLFQ"
 phase: protein-quantification
 subgroup: Ratio LFQ
 order: 4
@@ -35,7 +35,7 @@ A labeled experiment gives one light-to-heavy ratio per protein and run. RatioLF
 
 ## Outputs
 
-The output is a tab-separated table with a `ProteinGroup` column and one intensity column per input ratio column. Each intensity column keeps the name of its input column and adds the suffix `_LFQ`. A protein needs ratios from at least two runs to appear in the table. A value of `0` marks a missing ratio for that run.
+The output is a tab-separated table with a `ProteinGroup` column and one intensity column per input ratio column. Each intensity column keeps the name of its input column and adds the suffix `_LFQ`. A protein needs ratios from at least two runs to appear in the table. Runs without a ratio for a protein get a 0 in that cell, which stands for no ratio, not for a zero intensity.
 
 ## Installing and executing the tool
 

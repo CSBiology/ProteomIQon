@@ -29,7 +29,7 @@ These inputs are needed to execute the tool:
 | --- | --- | --- |
 | `-i` | one FASTA file (no directories) | Chosen proteome |
 | `-o` | the output directory, created when missing | - |
-| `-p` | the parameter file in JSON | [Github ProteomIQon Core](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/peptideDBParams.json) |
+| `-p` | the parameter file in JSON | [peptideDBParams.json](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/peptideDBParams.json) |
 
 - The tool writes `<Name>.db` into the output directory, using `Name` from the parameter file. [PeptideSpectrumMatchingTIMs](./peptide-spectrum-matching-tims.md) requires a database with monoisotopic masses.
 
@@ -38,11 +38,11 @@ These inputs are needed to execute the tool:
   - [PeptideSpectrumMatching](./peptide-spectrum-matching.md)
   - [PeptideSpectrumMatchingTIMs](./peptide-spectrum-matching-tims.md)
   - [PSMStatistics](./psm-statistics.md)
-  - [MSFraggerToPSM](./ms-fragger-to-psm.md)
+  - [MsFraggerToPSM](./ms-fragger-to-psm.md)
   - [PSMBasedQuantification](./psm-based-quantification.md)
   - [PSMBasedQuantificationTIMs](./psm-based-quantification-tims.md)
   - [AlignmentBasedQuantification](./alignment-based-quantification.md)
-  - [Protein Inference](./protein-inference.md)
+  - [ProteinInference](./protein-inference.md)
 
 - When a `<Name>.db` already exists in the output directory and the parameters stored inside it equal the parameter file, the tool reuses that database and only makes sure its index is present.
 

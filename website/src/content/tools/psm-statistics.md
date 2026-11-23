@@ -33,7 +33,7 @@ inputsFrom: [peptide-spectrum-matching, peptide-db]
 
 5. **Estimate q-values and PEPs**
 
-   For the best candidate per scan, the [q-value](https://www.biofsharp.com/BioFSharp.Mz/04_01_fdr_control.html#Computing-q-values-by-counting-decoys) comes from the cumulative ratio of decoys to targets at or above the score, made monotone. For the [posterior error probability (PEP)](https://www.biofsharp.com/BioFSharp.Mz/04_01_fdr_control.html#From-list-level-q-to-single-PSM-PEP), the tool bins the scores and fits a smoothing spline to the logit of the decoy share using iteratively reweighted least squares. Bin width is one FastTree score unit, converted to the pooled scale when cross-validation is enabled. PEP is the fitted decoy-to-target ratio at the candidate's score, capped at 1 and made non-increasing as scores rise.
+   For the best candidate per scan, the [q-value](https://www.biofsharp.com/BioFSharp.Mz/04_01_fdr_control.html#Computing-q-values-by-counting-decoys) comes from the cumulative ratio of decoys to targets at or above the score, made monotone (`FDRControl.calculateQValueStorey` of BioFSharp.Mz, without a π0 estimate). For the [posterior error probability (PEP)](https://www.biofsharp.com/BioFSharp.Mz/04_01_fdr_control.html#From-list-level-q-to-single-PSM-PEP), the tool bins the scores and fits a smoothing spline to the logit of the decoy share using iteratively reweighted least squares. Bin width is one FastTree score unit, converted to the pooled scale when cross-validation is enabled. PEP is the fitted decoy-to-target ratio at the candidate's score, capped at 1 and made non-increasing as scores rise.
 
    A scan is written only if its best candidate is a target and passes both thresholds. When no candidate passes or score estimation fails, the file contains only the header. For an estimation error, see `<run>_log.txt`. To bypass model training, use `Threshold.Fixed` with SEQUEST and Andromeda cutoffs.
 
@@ -48,9 +48,9 @@ These inputs are needed to execute the tool:
 | `-i` | one or more `.psm` files, or a directory that is searched for `*.psm` (not recursive) | [PeptideSpectrumMatching](./peptide-spectrum-matching.md) or [PeptideSpectrumMatchingTIMs](./peptide-spectrum-matching-tims.md) |
 | `-d` | SQLite peptide database. Updated when `StoreIsotopePatterns` is enabled. | [PeptideDB](./peptide-db.md) |
 | `-o` | the output directory, created when missing | - |
-| `-p` | the parameter file in JSON | [Github ProteomIQon Core](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/pSMStatisticsParams.json) |
+| `-p` | the parameter file in JSON | [pSMStatisticsParams.json](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/pSMStatisticsParams.json) |
 | `-dc` | switch: save diagnostic charts to the output directory |  |
-| `-c` | number of files scored in parallel and number of cores for storing isotope patterns, default 1 | - |
+| `-c` | number of files scored at the same time and the number of cores used to compute the isotope patterns, default 1 | - |
 
 The tool expects the 28-column `.psm` layout. Regenerate files that use the older 23-column layout.
 
@@ -58,7 +58,7 @@ The tool expects the 28-column `.psm` layout. Regenerate files that use the olde
 - The file is tab separated with a header and holds one row per scan that passes filtering. [ProteinInference](./protein-inference.md), [PSMBasedQuantification](./psm-based-quantification.md) and [PSMBasedQuantificationTIMs](./psm-based-quantification-tims.md) read these files.
 - With `StoreIsotopePatterns` enabled, the tool adds the isotope patterns to the database after scoring the last file. For an isotopically labeled database, it stores both forms of each peptide ion. Quantification reuses patterns written with matching BioFSharp and BioFSharp.Mz versions and computes missing patterns on demand. A write failure produces a warning. On a shared filesystem with unreliable locking, run only one process per database or disable `StoreIsotopePatterns` to avoid concurrent database writes.
 - With `-dc`, the per-run `<run>_plots` directory receives `InitialSeparation.html` for the starting scores, `Metrics.html` for the last model's test split, and `separationAtIteration_<n>.html` for model-score distributions, q-values and PEPs. Iterations are numbered from zero. The first retraining replaces the initial model's iteration-zero chart. Cross-validation prefixes the charts with `Fold1_` through `Fold3_` and shows the two training folds for each model. `Threshold.Fixed` produces no charts.
-- Each input also produces a `<run>_plots` directory when charts are disabled. Logs are written to `PSMStatistics_log.txt` and `<run>_log.txt`.
+- The tool also creates a `run_plots` directory per input. It stays empty unless you pass `-dc`. Log output goes to `PSMStatistics_log.txt` and `run_log.txt` in the output directory.
 
 ## Parameter file
 
@@ -125,7 +125,7 @@ Similarity score and normalized differences between candidates
 
 | Column | Description |
 | --- | --- |
-| `SequestScore` | SEQUEST similarity score (e.g., XCorr) quantifying agreement between theoretical and experimental spectra |
+| `SequestScore` | SEQUEST-like score |
 | `SequestNormDeltaBestToRest` | (Best SEQUEST score of the spectrum − this score) / best score. The top candidate has a value of `0`. |
 | `SequestNormDeltaNext` | (This SEQUEST score − next lower score of the spectrum) / best score. |
 
@@ -135,7 +135,7 @@ Match score and normalized differences between candidates
 
 | Column | Description |
 | --- | --- |
-| `AndroScore` | Andromeda score quantifying the match between theoretical and experimental spectra |
+| `AndroScore` | Andromeda-like score |
 | `AndroNormDeltaBestToRest` | (Best Andromeda score of the spectrum − this score) / best score. The top candidate has a value of `0`. |
 | `AndroNormDeltaNext` | (This Andromeda score − next lower score of the spectrum) / best score. |
 
@@ -145,7 +145,7 @@ Match score and normalized differences between candidates
 
 | Column | Description |
 | --- | --- |
-| `XtandemScore` | X!Tandem score quantifying the match between theoretical and experimental spectra |
+| `XtandemScore` | X!Tandem-like score |
 | `XtandemNormDeltaBestToRest` | (Best XTandem score of the spectrum − this score) / best score. The top candidate has a value of `0`. |
 | `XtandemNormDeltaNext` | (This XTandem score − next lower score of the spectrum) / best score. |
 
@@ -209,9 +209,10 @@ Score a single run.
 proteomiqon-psmstatistics -i path/to/run.psm -d path/to/database.db -o path/to/output -p path/to/pSMStatisticsParams.json
 ```
 
-Score several runs in parallel and write diagnostic charts with `-dc`.
+Several runs at once, three of them in parallel:
 
 ```sh
+proteomiqon-psmstatistics -i path/to/run1.psm path/to/run2.psm path/to/run3.psm -d path/to/database.db -o path/to/output -p path/to/pSMStatisticsParams.json -c 3
 proteomiqon-psmstatistics -i path/to/psmFolder -d path/to/database.db -o path/to/output -p path/to/pSMStatisticsParams.json -c 3 -dc
 ```
 

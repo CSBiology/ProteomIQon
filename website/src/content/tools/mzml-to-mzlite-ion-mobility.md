@@ -15,7 +15,7 @@ MzMLToMzLiteIonMobility converts mzML files from ion mobility instruments such a
 
 1. **MzML to Mzlite**
 
-   In these files every peak carries an ion mobility value next to its m/z and intensity, and the tool keeps that value in the mzlite. It reads the same parameter record as [MzMLToMzLite](./mzml-to-mzlite.md). That page also explains how to obtain mzML from vendor files.
+   In mzML files with ion mobility data every peak carries an ion mobility value next to its m/z and intensity, and the tool keeps that value in the mzlite. It reads the same parameter record as [MzMLToMzLite](./mzml-to-mzlite.md). That page also explains how to obtain mzML from vendor files.
 
 2. **Preserve peak arrays**
 
@@ -29,7 +29,7 @@ These inputs are needed to execute the tool:
 | --- | --- | --- |
 | `-i` | one or more mzML files with ion mobility data per peak, or a directory that is searched for `*.mzML` and `*.mzml` (not recursive) | MSConvert |
 | `-o` | the output directory, created when missing | - |
-| `-p` | the parameter file in JSON | [Github ProteomIQon Core](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/TIMsMzMLtoMzLiteParams.json) |
+| `-p` | the parameter file in JSON | [TIMsMzMLtoMzLiteParams.json](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/TIMsMzMLtoMzLiteParams.json) |
 | `-c` | number of files converted at the same time, default 1, no effect on a single file | - |
 | `-f` | switch: rewrite every input file in place and remove `&quot` | - |
 

@@ -32,13 +32,13 @@ These inputs are needed to execute the tool:
 | `-ii` | one or more `.qpsm` files, or a directory that is searched for `*.qpsm` |[PSMStatistics](./psm-statistics.md)  |
 | `-o` | the output directory, created when missing | - |
 | `-d` | the SQLite peptide database | [PeptideDB](./peptide-db.md) |
-| `-p` | the parameter file in JSON | [Github ProteomIQon Core](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/QuantificationParams.json) |
+| `-p` | the parameter file in JSON | [QuantificationParams.json](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/QuantificationParams.json) |
 | `-mf` | switch: pair files by base name instead of by position | - |
 | `-dc` | switch: write diagnostic charts | - |
 | `-z` | switch: pack the chart directory into a zip file and delete it | - |
 | `-c` | number of runs quantified at the same time, default 1 | - |
 
-- The input must be `.mzlite`. A directory given to `-i` is also scanned for `.mzML`, but the tool opens every file with the mzlite reader and fails on anything else, so convert first. With one file per flag the pair is used as given. With lists, the n-th mzlite file is paired with the n-th qpsm file unless you pass -mf, which pairs files by their base name (run1.mzlite with run1.qpsm) and skips mzlite files without a partner.
+- The input must be `.mzlite`. A directory given to `-i` is also scanned for `.mzML`, but the tool opens every file with the mzlite reader and fails on anything else, so convert first. With one file per flag the pair is used as given. With lists, the n-th mzlite file is paired with the n-th qpsm file unless you pass `-mf`, which pairs files by their base name (run1.mzlite with run1.qpsm) and skips mzlite files without a partner.
 
 - For every run the tool writes `run.quant`, tab separated with a header and one row per quantified peptide ion.
 
@@ -103,14 +103,14 @@ The output table contains 47 columns. It uses the same layout as [PSMBasedQuanti
 | `Charge` | Precursor ion charge state |
 | `PepSequenceID` | Unique identifier of the unmodified peptide sequence, which points to PeptideDB |
 | `ModSequenceID` | Unique identifier of the modified peptide sequence (including PTMs, e.g., methylation), which points to PeptideDB |
-| `PrecursorMZ` | Precursor ion mass-to-charge ratio (m/z) |
-| `MeasuredMass` | Measured mass of precursor ions in Dalton |
+| `PrecursorMZ` | Theoretical m/z of the ion plus the m/z correction, the m/z the XIC is centred on |
+| `MeasuredMass` | Mass that corresponds to `PrecursorMZ`, in Dalton |
 | `TheoMass` | Theoretical peptide mass in the spectrum (based on amino acid composition) in Dalton |
-| `AbsDeltaMass` | Absolute mass deviation between theoretical and measured mass (mass error) |
+| `AbsDeltaMass` | Absolute difference between `MeasuredMass` and `TheoMass` |
 | `MeanPercolatorScore` | Mean `ModelScore` of the identifications of the peptide ion |
-| `QValue` | Q-value (False-Discovery-Rate) based on combined model scores |
-| `PEPValue` | Posterior Error Probability |
-| `ProteinNames` | Protein Names out of the PeptideDB |
+| `QValue` | Lowest q-value among the identifications of the ion in the `.qpsm` |
+| `PEPValue` | PEP of that identification |
+| `ProteinNames` | `ProteinNames` of that identification in the `.qpsm` |
 
 ### Light quantification (8)
 
@@ -146,8 +146,8 @@ The output table contains 47 columns. It uses the same layout as [PSMBasedQuanti
 | `IsotopicPatternIntensity_Observed_Light` | Observed intensity distribution of unlabeled isotopic clusters |
 | `IsotopicPatternIntensity_Corrected_Light` | Corrected intensity distribution of unlabeled isotopic clusters |
 | `RtTrace_Light` | Retention Time Profile of unlabeled peptide ion |
-| `IntensityTrace_Observed_Light` | Intensity trace over for an observed unlabeled isotopic peak cluster |
-| `IntensityTrace_Corrected_Light` | Corrected intensity trace between an unlabeled peak and a measured isotopic peak cluster |
+| `IntensityTrace_Observed_Light` | Intensities at the monoisotopic m/z over the scan times in `RtTrace_Light`, drop-outs removed, before baseline subtraction |
+| `IntensityTrace_Corrected_Light` | The intensities of `IntensityTrace_Observed_Light` after ALS baseline subtraction, negative values set to 0 |
 
 ### Heavy isotope patterns and traces (6)
 
@@ -157,8 +157,8 @@ The output table contains 47 columns. It uses the same layout as [PSMBasedQuanti
 | `IsotopicPatternIntensity_Observed_Heavy` | Observed intensity distribution of labeled isotopic clusters |
 | `IsotopicPatternIntensity_Corrected_Heavy` | Corrected intensity distribution of labeled isotopic clusters |
 | `RtTrace_Heavy` | Retention Time Profile of labeled peptide ion |
-| `IntensityTrace_Observed_Heavy` | Intensity trace for an observed labeled isotopic peak cluster |
-| `IntensityTrace_Corrected_Heavy` | Corrected intensity trace between a labeled peak and a measured isotopic peak cluster |
+| `IntensityTrace_Observed_Heavy` | Intensities at the monoisotopic m/z of the labeled partner over the scan times in `RtTrace_Heavy`, drop-outs removed, before baseline subtraction |
+| `IntensityTrace_Corrected_Heavy` | The intensities of `IntensityTrace_Observed_Heavy` after ALS baseline subtraction, negative values set to 0 |
 
 ### Light / Heavy comparison and quantification source (2)
 
@@ -176,7 +176,7 @@ Alignment scores and associated q-values
 | `AlignmentScore` | `NaN` for PSM-based rows. For transferred rows, the probability from AlignmentBasedQuantStatistics that the quantified peak belongs to the ion. |
 | `AlignmentQValue` | `0` for PSM-based rows. For transferred rows, the q-value from AlignmentBasedQuantStatistics. |
 
-### Ion Mobility 
+### Ion Mobility
 | Column | Description |
 | --- | --- |
 |IonMobility | Ion mobility of the identifications, weighted by their matched fragment intensity, NaN without ion mobility |
