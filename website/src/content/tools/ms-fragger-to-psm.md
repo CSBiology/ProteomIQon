@@ -3,19 +3,19 @@ name: "MSFragger to PSM"
 phase: peptide-identification
 subgroup: MSFragger import
 order: 4
-summary: "MsFraggerToPSM turns the psm.tsv result of an MSFragger search, as written by FragPipe, into the .qpsm files that PSMBasedQuantificationTIMs reads."
+summary: "MsFraggerToPSM turns the psm.tsv result of an MSFragger search, as written by FragPipe, into the .qpsm files that [PSMBasedQuantificationTIMs](./psm-based-quantification-tims.md) reads."
 inputsFrom: [mzml-to-mzlite-ion-mobility, peptide-db]
 ---
 
 ## Tool Description
 
-MsFraggerToPSM turns the `psm.tsv` result of an MSFragger search, as written by FragPipe, into the `.qpsm` files that PSMBasedQuantificationTIMs reads.
+MsFraggerToPSM turns the `psm.tsv` result of an MSFragger search, as written by FragPipe, into the `.qpsm` files that [PSMBasedQuantificationTIMs](./psm-based-quantification-tims.md) reads.
 
 ## How does MsFraggerToPSM work?
 
 1. **The advantage**
 
-   With this tool, an ion mobility run can be identified in FragPipe and quantified in ProteomIQon, in place of the PeptideSpectrumMatching and PSMStatistics pair.
+   With this tool, an ion mobility run can be identified in FragPipe and quantified in ProteomIQon, in place of the [PeptideSpectrumMatching](./peptide-spectrum-matching.md) and [PSMStatistics](./psm-statistics.md) pair.
 
 2. **How does this work?**
 
@@ -32,7 +32,7 @@ These inputs are needed to execute the tool:
 | `-i` | one or more `psm.tsv` files, or a directory that is searched for `*.tsv` | MSFragger (FragPipe) |
 | `-ii` | the matching `.mzlite` files, or a directory searched for `*.mzlite` | [MzMLToMzLiteIonMobility](./mzml-to-mzlite-ion-mobility.md) |
 | `-o` | the output directory, created when missing | - |
-| `-d` | The Peptide Database | [PeptideDB](./peptide-db.md) |
+| `-d` | the SQLite peptide database | [PeptideDB](./peptide-db.md) |
 | `-c` | number of pairs converted at the same time, default 1 | - |
 
 `-i`, `-ii`, `-o` and `-d` are required. This tool takes no parameter file.
@@ -54,11 +54,11 @@ The tsv needs the columns:
 - `Probability`
 - `Protein`
 
-`Ion Mobility` is optional. Retention is read in seconds and stored in minutes. The files are paired by position, the first tsv with the first mzlite and so on.
+`Ion Mobility` is optional. Retention is read in seconds and stored in minutes.
 
 ### File pairing and database requirements
 
-Give both lists in the same order and with the same length, otherwise the tool converts nothing. The tool stops when the database file does not exist. The lookup uses the unlabeled sequences of the database. Rows whose modified sequence has no entry in the database are dropped, so the database has to be built with the same modifications as the FragPipe search.
+The files are paired by position, the first tsv with the first mzlite and so on. Give both lists in the same order and with the same length, otherwise the tool converts nothing. The tool stops when the database file does not exist. The lookup uses the unlabeled sequences of the database. Rows whose modified sequence has no entry in the database are dropped, so the database has to be built with the same modifications as the FragPipe search.
 
 ### Supported modifications
 

@@ -1,5 +1,5 @@
 ---
-name: "Label-Free Protein Quantification"
+name: "LabelFreeProteinQuantification"
 phase: protein-quantification
 subgroup: Label-free and labeled quantification
 order: 2
@@ -37,7 +37,7 @@ If charge-state aggregation is disabled, differently charged versions of the sam
 | --- | --- | --- |
 | `-i` | One or more `.quantAndProt` files, or a directory containing those files. Each file contains peptide quantification and protein-group assignments. | [JoinQuantPepIonsWithProteins](./join-quant-with-peptide-ions.md) |
 | `-o` | Directory in which the aggregation results are written. It is created when missing. | Chosen output location |
-| `-p` | Path to a JSON file specifying modification filtering and aggregation settings. | [Default parameter file](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/LabelFreeQuantificationParams.json) |
+| `-p` | the parameter file in JSON | [Default parameter file](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/LabelFreeQuantificationParams.json) |
 
 **Important:** The input must already combine peptide-level quantification with protein inference. The tool does not perform those upstream steps itself.
 
@@ -47,7 +47,7 @@ If charge-state aggregation is disabled, differently charged versions of the sam
 
 | Parameter | Default | Description |
 | --- | --- | --- |
-| Alignment_QValue | `Some 0.05`| Rows that came from `alignment` and have an alignment Q-value at or above this value are dropped. [PSM based quantifications](./psm-based-quantification.md) carry the Q-value 0, and rows without an alignment Q-value are kept. None keeps every row. | 
+| Alignment_QValue | `Some 0.05`| Rows that came from alignment and have an alignment Q-value at or above this value are dropped. [PSM based quantifications](./psm-based-quantification.md) carry the Q-value 0, and rows without an alignment Q-value are kept. None keeps every row. |
 | ModificationFilter | `UseModifiedPeptides.All` | Which peptides enter the aggregation. All keeps every peptide, No drops every peptide with a modification, UseOnly mods keeps unmodified peptides and peptides whose modifications are all in the list. | 
 | AggregatePeptideChargeStatesParams | `None` | Some params runs the charge step with the given `AggregationParams`. `None` skips it. | 
 | AggregateModifiedPeptidesParams | `None` | Some params runs the modification step. None skips it. | 
@@ -84,7 +84,7 @@ The tool writes tab-separated tables.
 | `ProteinAggregation.txt` | One row per protein group and run with aggregated intensity, number of values used, coefficient of variation, standard deviation and standard error of the mean | Always |
 | `LabelFreeQuant.txt` | The same results in wide format, with one row per protein group and a set of columns per run, such as `<run>.Quant_Light` and `<run>.ItemsUsedForQuant_Light`. Missing protein groups have empty cells for the corresponding runs. | Always |
 
-Logs are written to `LabeledProteinQuantification_log.txt` and `LabeledQuantification_log.txt`.
+Logs go to `LabeledProteinQuantification_log.txt` and `LabeledQuantification_log.txt` in the output directory.
 
 ## Parameter generation
 
@@ -139,13 +139,13 @@ Json.serializeAndWrite outputPath labelFreeQuantificationParams
 3. **Several runs in one table, from a list or from a directory**
 
 
-     ```sh
-      proteomiqon-labelfreeproteinquantification -i path/to/run1.quantAndProt path/to/run2.quantAndProt -o path/to/output -p path/to/LabelFreeQuantificationParams.json
-      proteomiqon-labelfreeproteinquantification -i path/to/quantAndProt -o path/to/output -p path/to/LabelFreeQuantificationParams.json
-     ```
+   ```sh
+   proteomiqon-labelfreeproteinquantification -i path/to/run1.quantAndProt path/to/run2.quantAndProt -o path/to/output -p path/to/LabelFreeQuantificationParams.json
+   proteomiqon-labelfreeproteinquantification -i path/to/quantAndProt -o path/to/output -p path/to/LabelFreeQuantificationParams.json
+   ```
 
 4. **All Flags**
 
    ```sh
-    proteomiqon-labelfreeproteinquantification --help
-     ```
+   proteomiqon-labelfreeproteinquantification --help
+   ```

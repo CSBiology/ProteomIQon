@@ -1,5 +1,5 @@
 ---
-name: "Alignment-Based Quantification"
+name: "AlignmentBasedQuantification"
 phase: alignment
 order: 2
 summary: "AlignmentBasedQuantification quantifies a peptide ion identified in another run at the place in this run where QuantBasedAlignment predicts it to elute."
@@ -66,7 +66,7 @@ With `MzWindow_Da` set to `Estimate` the half width is 4 standard deviations of 
 
 With fewer than 50 measured ions left, the correction is fitted on the precursor m/z of the `.quant` file instead, and `Estimate` uses a half width of 0.05 Da.
 
-### ion mobility 
+### Ion mobility
 Ion mobility is used when the spectra and the `.align` file have it. An XIC point is then the sum of the intensity of all peaks inside the m/z window and inside the ion mobility window, as in PSMBasedQuantificationTIMs. Both widths are part of the quantity, so transferred and PSM based quantities are comparable when both tools use the same widths.
 
 The traces of an ion, of its isotopes and of its labeled partner share one window, set by `XicExtraction.IonMobilityWindow`. The expected ion mobility of the ion is `PredictedIonMobility`, or its ion mobility in the source run when the `.align` row has no prediction.
@@ -90,7 +90,7 @@ An ion that the run did not quantify itself is not transferred when the PSM base
 | `-iv` | `.quant` of the same run, or a directory | [PSMBasedQuantification](./psm-based-quantification.md) or [PSMBasedQuantificationTIMs](./psm-based-quantification-tims.md) |
 | `-d`| peptide database (SQLite) | [PeptideDB](./peptide-db.md) | 
 | `-o` | output directory, created when missing | - | 
-| `-p` | the parameter file (JSON) | [Github ProteomIQon Core](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/AlignmentBasedQuantificationParams.json) | 
+| `-p` | the parameter file (JSON) | [AlignmentBasedQuantificationParams.json](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/AlignmentBasedQuantificationParams.json) |
 | `-mf` | switch: pair the files by base name instead of by position | - | 
 | `-dc` | switch: write `<run>_mzCorrection.html` with the m/z offsets and their correction | - |
 | `-c`|  number of runs processed in parallel, one core each, default 1 | - | 
@@ -100,7 +100,7 @@ An ion that the run did not quantify itself is not transferred when the PSM base
 ## Outputs
 
 - `<run>.quant` has the layout of the PSM based `.quant` files. It holds the PSM based rows with a fitted peak, then one row per quantified transferred ion with `QuantificationSource = Alignment`.
-- These rows pass no quality filter. In these rows `Difference_SearchRT_FittedRT` is `PredictedScanTime` minus the `fitted scan time`. `AlignmentScore` and `AlignmentQValue` hold `NaN` until [AlignmentBasedQuantStatistics](./alignment-based-quant-statistics.md) fills them.
+- These rows pass no quality filter. In these rows `Difference_SearchRT_FittedRT` is `PredictedScanTime` minus the fitted scan time. `AlignmentScore` and `AlignmentQValue` hold `NaN` until [AlignmentBasedQuantStatistics](./alignment-based-quant-statistics.md) fills them.
 - `<run>.alignfeatures` is a tab separated table with one row per `.align` row. `AlignmentBasedQuantStatistics` reads it from the directory of the aligned `.quant` and uses its features. The main columns:
 
 | Column | Description | 
@@ -125,7 +125,7 @@ The tool overwrites its `.quant` and `.alignfeatures` outputs for the run. If de
 ## Parameters 
 | Parameter | Default | Description | 
 | --- | --- | --- |
-| PerformLabeledQuantification | `Labeling.N15Labeling` |  	Also quantify the partner of the other label. `Unlabeled` quantifies only the ion itself, for label-free data. `N15Labeling`, `N15LabelingOnly` and `Labelshift` behave the same here. |
+| PerformLabeledQuantification | `Labeling.N15Labeling` |  Also quantify the partner of the other label. `Unlabeled` quantifies only the ion itself, for label-free data. `N15Labeling`, `N15LabelingOnly` and `Labelshift` behave the same here. |
 |  XicExtraction | see below | How the XIC is extracted and processed. |
 |  BaseLineCorrection | `Some { MaxIterations = 10; Lambda = 6; P = 0.05 }`| Asymmetric least squares baseline of the XIC. None switches it off. | 
 | MinScanTimeWindow | `1.0` | Smallest half width of the candidate window, in minutes. | 
@@ -213,21 +213,21 @@ Json.serializeAndWrite outputPath alignmentBasedQuantificationParams
 2. **Quantify one run**
 
 
-     ```sh
-    proteomiqon-alignmentbasedquantification -i path/to/run.mzlite -ii path/to/run.align -iv path/to/run.quant -d path/to/peptides.db -o path/to/output -p path/to/AlignmentBasedQuantificationParams.json
-     ```
+   ```sh
+   proteomiqon-alignmentbasedquantification -i path/to/run.mzlite -ii path/to/run.align -iv path/to/run.quant -d path/to/peptides.db -o path/to/output -p path/to/AlignmentBasedQuantificationParams.json
+   ```
 
 3. **Process every run in a set of directories, paired by file name, four at a time**
 
    ```sh
-    proteomiqon-alignmentbasedquantification -i path/to/mzlite -ii path/to/align -iv path/to/quant -d path/to/peptides.db -o path/to/output -p path/to/AlignmentBasedQuantificationParams.json -mf -c 4
-     ```
+   proteomiqon-alignmentbasedquantification -i path/to/mzlite -ii path/to/align -iv path/to/quant -d path/to/peptides.db -o path/to/output -p path/to/AlignmentBasedQuantificationParams.json -mf -c 4
+   ```
 
 4. **All Flags**
 
-    ```sh
-     proteomiqon-alignmentbasedquantification --help
-     ```
+   ```sh
+   proteomiqon-alignmentbasedquantification --help
+   ```
 
 ## Limitations 
 - MinScanTimeWindow (1 min) and ScanTimeWindow (2 min) are fixed in minutes and do not scale with the gradient length.

@@ -30,18 +30,18 @@ The tool learns from overlap ions: ions that a run identified and quantified its
 Overlap ions whose own peak cannot serve as reference (no fitted peak, or a width or quantity that is not positive) get no label.
 
 ## Features 
-All features come from the transferred row of `AlignmentBasedQuantification` and the `.align row`. None uses the ion's own `PSM row`, so the features of an overlap peptide ion look like those of a new peptide ion.
+All features come from the transferred row of `AlignmentBasedQuantification` and the `.align` row. None uses the ion's own PSM row, so the features of an overlap ion look like those of a new ion.
 
 | Group | Features | 
 | --- | --- |
 | Scan time | residual to `PredictedScanTime` (signed, absolute, per peak sd, per local alignment error), the local alignment error, peak width and its ratio to the source peak | 
-| Mass and isotopes | `\|ppm\|` of the monoisotopic peak, signed intensity-weighted `ppm` over the isotope peaks, number of isotope peaks, similarity of the isotope pattern to the source, KL divergences to the theoretical pattern |
+| Mass and isotopes | `\|ppm\|` of the monoisotopic peak, intensity weighted `\|ppm\|` over the isotope peaks, number of isotope peaks, similarity of the isotope pattern to the source, KL divergences to the theoretical pattern |
 | Chromatogram | correlation with the source trace (around the peak and over the whole XIC), DTW distance to the source trace, competing peaks in the XIC, share of the XIC maximum at the apex, XIC length, relative SEO | 
 | Ion | source quantity and apex intensity, source scan time, m/z, charge |
 | Selection | from `<run>.alignfeatures`: `Sel_NCandidates`, `Sel_IsoCorr`, `Sel_IsoRatioLog2`, `Sel_ShapeCorr`, `Sel_RtZ`, `Sel_ImZ`, `Sel_LogRelHeight`, `Sel_AbsLog2FwhmRatio`, and `Sel_CandidateProbability`, `Sel_CandidateMargin` when all runs used the same selection model |
 | Ion Mobility | `\|IonMobility − PredictedIonMobility\| / PredictedIonMobilitySd` (timsTOF only) |
 
-- The local alignment error of an ion is the median `|own PSM    scan time − PredictedScanTime|` of the run's overlap ions predicted within ±2 min. Every run needs `<run>.alignfeatures` next to its aligned `.quant`.
+- The local alignment error of an ion is the median `|own PSM scan time − PredictedScanTime|` of the run's overlap ions predicted within ±2 min. Every run needs `<run>.alignfeatures` next to its aligned `.quant`.
 - `UseIntensityRatioFeatures` adds four features:
   - Log₂ of the target-to-source quantity ratio.
   - Log₂ of the target-to-source apex intensity ratio.
@@ -115,14 +115,14 @@ These inputs are needed to execute the tool:
 | --- | --- | --- |
 | `-i` | PSM based `.quant` of the runs to score | [PSMBasedQuantification](./psm-based-quantification.md) or [PSMBasedQuantificationTIMs](./psm-based-quantification-tims.md) |
 | `-ii` | `.align` of the runs to score | [QuantBasedAlignment](./quant-based-alignment.md) |
-| `-iii` | `aligned .quant` of the runs to score | [AlignmentBasedQuantification](./alignment-based-quantification.md) |
+| `-iii` | aligned `.quant` of the runs to score | [AlignmentBasedQuantification](./alignment-based-quantification.md) |
 | `-l` | PSM based `.quant` of the runs to learn from | [PSMBasedQuantification](./psm-based-quantification.md) or [PSMBasedQuantificationTIMs](./psm-based-quantification-tims.md) |
 | `-ll` | `.align` of the runs to learn from | [QuantBasedAlignment](./quant-based-alignment.md) |
-| `-lll` | `aligned .quant` of the runs to learn from | [AlignmentBasedQuantification](./alignment-based-quantification.md) |
+| `-lll` | aligned `.quant` of the runs to learn from | [AlignmentBasedQuantification](./alignment-based-quantification.md) |
 | `-o` | Output directory, created when missing | — |
-| `-p` | Parameter file (JSON) | [Github ProteomIQon Core](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/AlignmentBasedQuantStatisticsParams.json) |
-| `-c` | Number of runs read and written in parallel (default: 1) | — |
-| `-ts` | Switch: write the overlap ions used for training from each learning run | — |
+| `-p` | Parameter file (JSON) | [AlignmentBasedQuantStatisticsParams.json](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/AlignmentBasedQuantStatisticsParams.json) |
+| `-c` | number of runs read and written in parallel, one core each, default 1 | — |
+| `-ts` | switch: write the training ions of each learning run | — |
 | `-dc` | Switch: write `AlignmentScoreHistogram.html` | — |
 | `-mf` | Switch: pair input files by name instead of position | — |
 
@@ -193,9 +193,9 @@ Json.serializeAndWrite outputPath alignmentBasedQuantStatisticsParams
 2. **Score every run, learn from all of them, pair the files by name, and work on four runs at a time**
 
 
-     ```sh
-    proteomiqon-alignmentbasedquantstatistics -i path/to/quant -ii path/to/align -iii path/to/aligned -l path/to/quant -ll path/to/align -lll path/to/aligned -o path/to/output -p path/to/AlignmentBasedQuantStatisticsParams.json -mf -c 4
-     ```
+   ```sh
+   proteomiqon-alignmentbasedquantstatistics -i path/to/quant -ii path/to/align -iii path/to/aligned -l path/to/quant -ll path/to/align -lll path/to/aligned -o path/to/output -p path/to/AlignmentBasedQuantStatisticsParams.json -mf -c 4
+   ```
 
 3. **Save training examples and diagnostics**
 
@@ -204,8 +204,8 @@ Json.serializeAndWrite outputPath alignmentBasedQuantStatisticsParams
 4. **All flags**
 
    ```sh
-    proteomiqon-alignmentbasedquantstatistics --help
-     ```
+   proteomiqon-alignmentbasedquantstatistics --help
+   ```
 
 ## Limitations 
 - The false discovery rate of absent analytes is an estimate from decoys at a shifted scan time. Analytes near the detection limit are not modelled.

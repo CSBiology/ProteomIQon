@@ -31,7 +31,7 @@ PeptideSpectrumMatching identifies the peptides behind the MS/MS spectra of a ru
 
 5. **Decoys**
 
-   Each peptide has a decoy with its C-terminal residue kept in place and the remaining residues reversed. If this leaves the sequence unchanged, the entire peptide is reversed. [PSMStatistics](./psm-statistics.md) uses the decoys to estimate the false discovery rate. See [how decoys are used](https://www.biofsharp.com/BioFSharp.Mz/02_03_sequest_like_scoring.html#What-the-decoys-are-for).
+   Each peptide has a decoy with its C-terminal residue kept in place and the remaining residues reversed. A peptide that this leaves unchanged, such as AAAAK, is reversed completely. [PSMStatistics](./psm-statistics.md) uses the decoys to estimate the false discovery rate. See [how decoys are used](https://www.biofsharp.com/BioFSharp.Mz/02_03_sequest_like_scoring.html#What-the-decoys-are-for).
 
 ![Overview of the peptide spectrum matching workflow](../../assets/images/PSM.png)
 
@@ -44,14 +44,14 @@ These inputs are needed to execute the tool:
 | `-i` | one or more `.mzlite` or `.mzML` files, or a directory searched for `*.mzlite`, `*.mzML` and `*.mzml` (not recursive) | [MzMLToMzLite](./mzml-to-mzlite.md) |
 | `-d` | the SQLite peptide database | [PeptideDB](./peptide-db.md) |
 | `-o` | the output directory, created when missing | - |
-| `-p` | the parameter file in JSON | [Github ProteomIQon Core](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/peptideSpectrumMatchingParams.json) |
+| `-p` | the parameter file in JSON | [peptideSpectrumMatchingParams.json](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/peptideSpectrumMatchingParams.json) |
 | `-c` | number of runs scored at the same time, default 1 | - |
 
 - All four flags are mandatory. The reader opens files by extension and knows .mzlite and .mzML only, so an mzML file has to carry the extension in exactly that spelling. The tool stops when the database file does not exist.
 - The tool writes one `<run>.psm` per input into the output directory. It is a tab separated table with a header.
 - Each row is one candidate peptide for one spectrum with its charge, precursor m/z, theoretical mass, the three scores with their delta values to the next candidates, the peptide sequence and a Label of 1 for a target peptide and -1 for a decoy.
 - The row ends with the five columns IonMobility, Hyperscore, Expectscore, MatchedIons and TotalIons, which PeptideSpectrumMatchingTIMs fills while this tool writes NaN in the float columns and 0 in the integer columns.
-- The `.psm` is read by [PSMStatistics](./psm-statistics.md). The output directory also receives `PeptideSpectrumMatching_log.txt` and one `run_log.txt` per input.
+- The `.psm` is read by [PSMStatistics](./psm-statistics.md). The output directory also receives `PeptideSpectrumMatching_log.txt` and one `<run>_log.txt` per input.
 
 ## Parameter file
 
@@ -62,7 +62,7 @@ These inputs are needed to execute the tool:
 | `LookUpPPM` | 30.0 | Mass window, in ppm around the precursor mass, from which candidate peptides are fetched. |
 | `nTerminalSeries` | NTerminalSeries.B | Fragment ion series counted from the N terminus. Keep B, the scoring builds the theoretical spectra from the b and y series. |
 | `cTerminalSeries` | CTerminalSeries.Y | Fragment ion series counted from the C terminus. Keep Y. |
-| `Andromeda` | {PMinPMax = 4, 10; MatchingIonTolerancePPM = 100.0 } | Settings of the Andromeda-like and X!Tandem-like scoring. |
+| `Andromeda` | `{ PMinPMax = 4, 10; MatchingIonTolerancePPM = 100.0 }` | Settings of the Andromeda-like and X!Tandem-like scoring. |
 | `ChargeStateDeterminationParams` | See below | Settings of the precursor charge state determination. |
 
 ### Charge state determination
@@ -89,7 +89,7 @@ These inputs are needed to execute the tool:
 
 Peptide mass and length limits, isotopic labels and peptide modifications are set when building the database with [PeptideDB](./peptide-db.md).
 
-- The default file is [peptideSpectrumMatchingParams.json ↗](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/peptideSpectrumMatchingParams.json).
+- The default file is [peptideSpectrumMatchingParams.json](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/peptideSpectrumMatchingParams.json).
 
 ## Outputs
 
@@ -106,7 +106,7 @@ The table contains 28 columns. `Label` is `1` for targets and `-1` for decoys. P
 | PepSequenceID | Unmodified peptide sequence identifier in PeptideDB |
 | ModSequenceID | Modified peptide sequence identifier in PeptideDB, including PTMs |
 | Label | Target (+1) or decoy (-1) |
-| ScanNr | MS2 position in scan-time order |
+| ScanNr | 0-based position of the MS2 spectrum in scan-time order, counting only the searched spectra (with peaks and a preceding MS1) |
 | ScanTime | MS2 retention time in minutes |
 | Charge | Precursor charge |
 | PrecursorMZ | Precursor mass-to-charge ratio |
