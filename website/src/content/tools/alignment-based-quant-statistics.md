@@ -1,5 +1,5 @@
 ---
-name: "Alignment-BasedQuantStatistics"
+name: "AlignmentBasedQuantStatistics"
 phase: alignment
 order: 3
 summary: "AlignmentBasedQuantStatistics gives every transferred quantification an alignment score and an alignment Q-value."
@@ -35,19 +35,20 @@ All features come from the transferred row of `AlignmentBasedQuantification` and
 | Group | Features | 
 | --- | --- |
 | Scan time | residual to `PredictedScanTime` (signed, absolute, per peak sd, per local alignment error), the local alignment error, peak width and its ratio to the source peak | 
-| Mass and isotopes | `ppm` of the monoisotopic peak, intensity weighted `ppm` over the isotope peaks, number of isotope peaks, similarity of the isotope pattern to the source, KL divergences to the theoretical pattern | 
+| Mass and isotopes | `\|ppm\|` of the monoisotopic peak, signed intensity-weighted `ppm` over the isotope peaks, number of isotope peaks, similarity of the isotope pattern to the source, KL divergences to the theoretical pattern |
 | Chromatogram | correlation with the source trace (around the peak and over the whole XIC), DTW distance to the source trace, competing peaks in the XIC, share of the XIC maximum at the apex, XIC length, relative SEO | 
-| Ion | source quantity and apex intensity, source scan time, m/z, charge
+| Ion | source quantity and apex intensity, source scan time, m/z, charge |
 | Selection | from `<run>.alignfeatures`: `Sel_NCandidates`, `Sel_IsoCorr`, `Sel_IsoRatioLog2`, `Sel_ShapeCorr`, `Sel_RtZ`, `Sel_ImZ`, `Sel_LogRelHeight`, `Sel_AbsLog2FwhmRatio`, and `Sel_CandidateProbability`, `Sel_CandidateMargin` when all runs used the same selection model |
 | Ion Mobility | `\|IonMobility − PredictedIonMobility\| / PredictedIonMobilitySd` (timsTOF only) |
 
 - The local alignment error of an ion is the median `|own PSM    scan time − PredictedScanTime|` of the run's overlap ions predicted within ±2 min. Every run needs `<run>.alignfeatures` next to its aligned `.quant`.
-- `UseIntensityRatioFeatures` adds four features: 
-    - the ratios of target to source quantity
-    - apex intensity
-    - the target quantity
-    - apex intensity. 
-They are off by default: a model that prefers a ratio near 1 penalises peptides that really changed between the samples.
+- `UseIntensityRatioFeatures` adds four features:
+  - Log₂ of the target-to-source quantity ratio.
+  - Log₂ of the target-to-source apex intensity ratio.
+  - Log₁₀ of the target quantity.
+  - Log₁₀ of the target apex intensity.
+
+These features are off by default because a model that prefers a ratio near 1 penalises peptides that really changed between samples.
 
 
 ## Model, calibration and Q-Values 
@@ -136,7 +137,7 @@ These inputs are needed to execute the tool:
 | PositiveRtSdFactor | `1.0`| A peak within this many own peak sd is right. | 
 | NegativeRtSdFactor | `3.0`| Up to this many sd a peak is ambiguous, beyond it wrong. | 
 | MaxAbsLog2QuantRatio | `1.0` | Right and ambiguous peaks need \|log2 (transferred / own quantity)\| at most this. |
-| UseIntensityRatioFeatures | `false`| Add four features: target-to-source ratios for quantity and apex intensity, plus the target quantity and apex intensity. |
+| UseIntensityRatioFeatures | `false` | Include the log₂ target-to-source ratios and log₁₀ target values for quantity and apex intensity. |
 | UseIonMobility | `true`| Add the ion mobility feature when the rows have a finite `IonMobility` and the `.align` file a `PredictedIonMobilitySd` above 0. | 
 | NumberOfFolds | `5`| Cross-validation folds. | 
 | Trainer | `FastTree`| FastTree or LightGbm. LightGbm needs the native library lib_lightgbm, which the package ships for win-x64, linux-x64 and osx-x64.|
@@ -146,13 +147,44 @@ These inputs are needed to execute the tool:
 
 ## Parameter generation
 
-For an F# example that writes a parameter JSON file, see the [parameter-generation example](https://github.com/CSBiology/ProteomIQon/blob/dev/docs/tools/AlignmentBasedQuantStatistics.fsx#L159).
+From the ProteomIQon repository root, build the library with `dotnet build src/ProteomIQon/ProteomIQon.fsproj -c Release`. Save the following as `generate-params.fsx` in that same directory and run `dotnet fsi generate-params.fsx`. The script writes the JSON file to the system temporary directory.
+
+```fsharp
+#r "nuget: Newtonsoft.Json, 13.0.4"
+#r "./src/ProteomIQon/bin/Release/net10.0/ProteomIQon.dll"
+
+open ProteomIQon
+
+let alignmentBasedQuantStatisticsParams : Dto.AlignmentBasedQuantStatisticsParams =
+    {
+        PositiveRtSdFactor         = 1.
+        NegativeRtSdFactor         = 3.
+        MaxAbsLog2QuantRatio       = 1.
+        UseIntensityRatioFeatures  = false
+        UseIonMobility             = true
+        NumberOfFolds              = 5
+        Trainer                    = "FastTree"
+        // empty: the defaults of the trainer
+        NumberOfLeaves             = System.Nullable()
+        NumberOfTrees              = System.Nullable()
+        MinimumExampleCountPerLeaf = System.Nullable()
+        LearningRate               = System.Nullable()
+        AbsentAnalyteFdr           = "Estimated"
+        Seed                       = 1
+    }
+
+// Replace the temp folder with your project folder.
+let outputPath =
+    System.IO.Path.Combine(System.IO.Path.GetTempPath(), "AlignmentBasedQuantStatisticsParams.json")
+
+Json.serializeAndWrite outputPath alignmentBasedQuantStatisticsParams
+```
 
 ## Running the tool 
 
 1. **Installing**
 
-   Install the Tool with the following command inside the choosen Command-Line
+   Install the tool globally with the .NET CLI.
 
    ```sh
    dotnet tool install --global ProteomIQon.AlignmentBasedQuantStatistics

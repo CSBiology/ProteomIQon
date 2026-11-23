@@ -8,12 +8,12 @@ interface Props {
 const { class: className } = Astro.props;
 
 const navigation = [
-	{ href: withBase('/guide/getting-started/'), label: 'Getting started', quiet: false },
-	{ href: withBase('/guide/installation/'), label: 'Installation', quiet: false },
 	{ href: withBase('/tools/'), label: 'Tools', quiet: false },
-	{ href: withBase('/guide/further-information/'), label: 'Learn more', quiet: false },
+	{ href: withBase('/guide/installation/'), label: 'Installation', quiet: false },
+	{ href: withBase('/guide/getting-started/'), label: 'Getting started', quiet: false },
 	{ href: withBase('/guide/developer-information/'), label: 'Developer Information', quiet: false },
 	{ href: withBase('/guide/help/'), label: 'Help', quiet: true },
+	{ href: withBase('/guide/further-information/'), label: 'Learn more', quiet: false },
 ];
 
 const currentPath = Astro.url.pathname;

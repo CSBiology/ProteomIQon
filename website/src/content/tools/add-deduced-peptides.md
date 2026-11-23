@@ -28,7 +28,7 @@ After alignment and AlignmentBasedQuantification, a run's `.quant` file holds pe
 
 3. **Generate run-specific protein files**
 
-   For every input `.quant` file, the tool creates a corresponding `.prot` file in the output directory.
+   For every input `.quant` file, the tool creates `<quant>.prot` in the output directory. For example, `run.quant` produces `run.prot`.
 
    Each output is a tab-separated table with the columns of a ProteinInference result.
 
@@ -53,14 +53,14 @@ These inputs are needed to execute the tool:
 | `-o` | The output directory, created when missing | — |
 
 - For AddDeducedPeptides there is no parameter file needed.
-- Delete an existing output .prot file before a rerun, because the tool appends to it
+- Delete an existing output `<quant>.prot` file before a rerun, because the tool appends to it.
 - Logs go to AddDeducedPeptides_log.txt.
 
 ## Outputs
 
-This Output is generated
+Each `<quant>.prot` file contains these columns.
 
-| Parameter | Description |
+| Column | Description |
 | --- | --- |
 | ProteinGroup | Protein Identifier Collection |
 | PeptideSequence | Peptide sequences assigned to this group and present in the corresponding `.quant`, separated by semicolons |
@@ -72,21 +72,28 @@ This Output is generated
 ## Running the tool 
 1. **Installing**
 
-   Install the Tool with the following command inside the choosen Command-Line
+   Install the tool globally with the .NET CLI.
 
    ```sh
    dotnet tool install --global ProteomIQon.AddDeducedPeptides
    ```
 
-2. **All runs of an experiment. Every .prot file in the directory is read, and every .quant file gets a new .prot file**
-
-
-     ```sh
-      proteomiqon-adddeducedpeptides -i path/to/quant -ii path/to/prot -o path/to/output
-     ```
-
-3. **Help**
+2. **A single run**
 
    ```sh
-    proteomiqon-adddeducedpeptides --help
-     ```
+   proteomiqon-adddeducedpeptides -i path/to/run.quant -ii path/to/run.prot -o path/to/output
+   ```
+
+3. **All runs of an experiment**
+
+   The tool reads every `.prot` file from the input directory and writes a new `.prot` file for each `.quant` file.
+
+   ```sh
+   proteomiqon-adddeducedpeptides -i path/to/quant -ii path/to/prot -o path/to/output
+   ```
+
+4. **Help**
+
+   ```sh
+   proteomiqon-adddeducedpeptides --help
+   ```

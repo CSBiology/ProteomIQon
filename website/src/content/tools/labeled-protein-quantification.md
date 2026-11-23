@@ -13,11 +13,15 @@ In **15N metabolic labeling**, a sample containing heavy (15N-labeled) peptides 
 
 After [JoinQuantPepIonsWithProteins](./join-quant-with-peptide-ions.md), each quantified peptide ion is assigned to a protein group. **LabeledProteinQuantification** combines the light and heavy peptide intensities and calculates a light-to-heavy ratio for each protein group and run.
 
-The results can be passed to [RatioLFQ](https://csbiology.github.io/ProteomIQon/tools/RatioLFQ.html) for further analysis.
+The results can be passed to [RatioLFQ](./ratio-lfq.md) for further analysis.
 
 BioFSharp.Mz explains how [isotopic labels enter the search](https://www.biofsharp.com/BioFSharp.Mz/02_02_search_databases.html#Describing-the-search-space) and how the [two peaks are quantified](https://www.biofsharp.com/BioFSharp.Mz/03_01_quantification.html#From-one-peak-to-a-pipeline).
 
+![Overview of light and heavy peptide quantification](../../assets/images/LabeledQuant.png)
+
 ## How does Labeled Protein Quantification work?
+
+The tool applies `ModificationFilter` when it reads the input rows, before any aggregation.
 
 The tool processes peptide-ion quantifications in **four aggregation steps**. The first and last steps are mandatory; the two intermediate steps are optional.
 
@@ -33,7 +37,7 @@ The tool processes peptide-ion quantifications in **four aggregation steps**. Th
 
 3. **Aggregate modified peptides (optional)**
 
-   Different modified versions of the same peptide sequence can be combined. The `ModificationFilter` determines which peptide modifications are included in the analysis.
+   Different modified versions of the same peptide sequence can be combined.
 
 4. **Aggregate to protein groups (mandatory)**
 
@@ -63,7 +67,7 @@ If charge-state aggregation is disabled, charge states remain separate during th
 | --- | --- | --- |
 | `Correlation_Light_Heavy_Threshold` | `None` | Optional minimum correlation between light and heavy elution profiles. For example, `Some 0.9` retains rows with a correlation above 0.9. The filter runs during the first aggregation step. |
 | `Alignment_QValue` | `Some 0.05` | Excludes transferred rows with an alignment q-value at or above the threshold. PSM-based rows carry an alignment q-value of `0`, and rows with no alignment q-value are kept. `None` disables the filter. |
-| `ModificationFilter` | `UseModifiedPeptides.All` | Controls which peptides are included. `All` accepts all peptides, `No` excludes modified peptides, and `UseOnly` accepts unmodified peptides plus peptides carrying only the specified modifications. |
+| `ModificationFilter` | `UseModifiedPeptides.All` | Filters peptides when reading the input. `All` accepts all peptides, `No` excludes modified peptides, and `UseOnly` accepts unmodified peptides plus peptides carrying only the specified modifications. |
 | `AggregateGlobalModificationsParams` | Mean for light, heavy and ratio; no transformations or filters | Settings for combining identifications of the light and heavy versions of each ion. This step always runs. |
 | `AggregatePeptideChargeStatesParams` | `None` | When set to `Some AggregationParams`, combines different charge states. `None` skips this step. |
 | `AggregateModifiedPeptidesParams` | `None` | When set to `Some AggregationParams`, combines different modified peptide forms. `None` skips this step. |
@@ -105,8 +109,24 @@ Every enabled stage uses the same four-field `LabeledProteinQuantification.Aggre
 | --- | --- | --- |
 | `LabeledTransform` | `None` | Optional numeric transformation applied before filtering. Supported operations: `Log2`, `Add`, `Substract`, `MultiplyBy` and `DivideBy`. A series set to `None` remains unchanged. |
 | `LabeledSingleFilters` | `None` | Filters individual measurements using `IsBiggerThan` or `IsSmallerThan`. A value must satisfy every configured filter for its series. |
-| `LabeledGroupFilters` | `None` | Removes or selects measurements within each aggregation group, using `Tukey`, `Stdev` or `TopX`. |
+| `LabeledGroupFilters` | `None` | Filters each aggregation group. `Tukey factor` uses the interquartile-range multiplier, `Stdev factor` keeps values within that many standard deviations of the mean, and `TopX count` selects the highest values using an integer count. |
 | `LabeledAggregation` | `{ Light = Mean; Heavy = Mean; Ratio = Mean }` | Specifies how the remaining values are combined independently for each series. Choices: `Mean`, `Median` and `Sum`. |
+
+This F# configuration log₂-transforms all three series, keeps only transformed ratios below zero, applies Tukey filtering to the transformed light values and averages each series.
+
+```fsharp
+let example : Common.LabeledProteinQuantification.AggregationParams =
+    {
+        LabeledTransform =
+            Some { Light = Some Log2; Heavy = Some Log2; Ratio = Some Log2 }
+        LabeledSingleFilters =
+            Some { Light = None; Heavy = None; Ratio = Some (seq [IsSmallerThan 0.0]) }
+        LabeledGroupFilters =
+            Some { Light = Some (seq [Tukey 1.5]); Heavy = None; Ratio = None }
+        LabeledAggregation =
+            { Light = Mean; Heavy = Mean; Ratio = Mean }
+    }
+```
 
 **JSON format:** Optional F# values set to `None` are stored as `null`. An aggregation choice such as `Mean` is represented by an object like `{"Case": "Mean"}`.
 
@@ -135,7 +155,7 @@ The tool writes **three mandatory** and **up to two optional** tab-separated res
 | `ProteinAggregation.txt` | One row per protein group and run, with aggregated light, heavy and ratio values. Includes the number of observations used, coefficient of variation (CV), standard deviation and standard error of the mean (SEM) for each series. | Always |
 | `LabeledQuant.txt` | Protein-group results in a wide table: one row per protein group and a set of columns for each input run. Column names follow patterns such as `<run>.Ratio_LightByHeavy` and `<run>.Quant_Heavy`. | Always |
 
-**Next step:** [RatioLFQ](https://csbiology.github.io/ProteomIQon/tools/RatioLFQ.html) uses `LabeledQuant.txt` to derive comparable run-level intensities from the ratios.
+**Next step:** [RatioLFQ](./ratio-lfq.md) uses `LabeledQuant.txt` to derive comparable run-level intensities from the ratios.
 
 ### Log files
 
@@ -148,7 +168,45 @@ Two additional files are written to the output directory:
 
 ## Parameter generation
 
-For an F# example that writes a parameter JSON file, see the [parameter-generation example](https://github.com/CSBiology/ProteomIQon/blob/dev/docs/tools/LabeledProteinQuantification.fsx#L67).
+From the ProteomIQon repository root, build the library with `dotnet build src/ProteomIQon/ProteomIQon.fsproj -c Release`. Save the following as `generate-params.fsx` in that same directory and run `dotnet fsi generate-params.fsx`. The script writes the JSON file to the system temporary directory.
+
+```fsharp
+#r "nuget: Newtonsoft.Json, 13.0.4"
+#r "./src/ProteomIQon/bin/Release/net10.0/ProteomIQon.dll"
+
+open System.IO
+open ProteomIQon
+
+// Used for the first step and the protein step of the default file: no transform, no filters, mean of light, heavy and ratio.
+let meanOfAll : Common.LabeledProteinQuantification.AggregationParams =
+    {
+        LabeledTransform     = None
+        LabeledSingleFilters = None
+        LabeledGroupFilters  = None
+        LabeledAggregation   =
+            {
+                Light = NumericAggregation.Mean
+                Heavy = NumericAggregation.Mean
+                Ratio = NumericAggregation.Mean
+            }
+    }
+
+let labeledQuantificationParams : Dto.LabeledQuantificationParams =
+    {
+        Correlation_Light_Heavy_Threshold  = None
+        Alignment_QValue                   = Some 0.05
+        ModificationFilter                 = UseModifiedPeptides.All
+        AggregateGlobalModificationsParams = meanOfAll
+        AggregatePeptideChargeStatesParams = None
+        AggregateModifiedPeptidesParams    = None
+        AggregateToProteinGroupsParams     = meanOfAll
+    }
+
+// Replace the temp folder with your project folder.
+let outputPath = Path.Combine(Path.GetTempPath(), "LabeledQuantificationParams.json")
+
+Json.serializeAndWrite outputPath labeledQuantificationParams
+```
 
 ## Installing and executing the tool
 

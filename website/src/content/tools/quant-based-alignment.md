@@ -55,7 +55,7 @@ The tool aligns the `IonMobilityCentre` of the `.quant` rows. When both runs of 
 | `-o` | the output directory, created when missing | - |
 | `-s` | seed of the cross-validation folds, default 1 | - | 
 | `-dc`| switch: write `<run>_ScanTimeModels.html` with the shifts, curves and out-of-fold errors per source | - | 
-| `-c` | number of targets aligned in parallel, one core each, default 1 | 
+| `-c` | number of targets aligned in parallel, one core each, default 1 | - |
 
 - There is no parameter file. 
 - A target is never its own source, so the same directory can be passed to `-i` and `-ii`.
@@ -80,7 +80,7 @@ Each `.align` row starts with the peptide-ion identifiers, its m/z, its predicte
 
 1. **Installing**
 
-   Install the Tool with the following command inside the choosen Command-Line
+   Install the tool globally with the .NET CLI.
 
    ```sh
    dotnet tool install --global ProteomIQon.QuantBasedAlignment

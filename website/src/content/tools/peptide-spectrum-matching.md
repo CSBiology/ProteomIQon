@@ -15,19 +15,19 @@ PeptideSpectrumMatching identifies the peptides behind the MS/MS spectra of a ru
 
 1. **Charge state determination**
 
-   For each MS2 scan it first determines the charge of the precursor ion from the isotope pattern in the preceding MS1 scan.
+   For each MS2 scan it first [determines the charge of the precursor ion](https://www.biofsharp.com/BioFSharp.Mz/01_03_charge_state_determination.html) from the isotope pattern in the preceding MS1 scan.
 
-2. **Comparision with PeptideDB**
+2. **Comparison with PeptideDB**
 
    With the charge, the precursor m/z becomes a peptide mass, and the tool fetches every peptide from the [PeptideDB](./peptide-db.md) database whose mass lies within LookUpPPM of it.
 
 3. **Fragmentation**
 
-   For each candidate it computes the theoretical fragment ions and compares them with the measured spectrum.
+   For each candidate it computes the [theoretical fragment ions](https://www.biofsharp.com/BioFSharp.Mz/02_01_fragmentation.html) and compares them with the measured spectrum.
 
 4. **Scoring**
 
-   Each candidate gets a SEQUEST-like score and an Andromeda-like score. An X!Tandem-like score is computed alongside the Andromeda one.
+   Each candidate gets a [SEQUEST-like score](https://www.biofsharp.com/BioFSharp.Mz/02_03_sequest_like_scoring.html) and an [Andromeda-like score](https://www.biofsharp.com/BioFSharp.Mz/02_04_andromeda_like_scoring.html). An X!Tandem-like score is computed alongside the Andromeda one.
 
 5. **Decoys**
 
@@ -111,7 +111,7 @@ The table contains 28 columns. `Label` is `1` for targets and `-1` for decoys. P
 | Charge | Precursor charge |
 | PrecursorMZ | Precursor mass-to-charge ratio |
 | TheoMass | Theoretical peptide mass in Da |
-| AbsDeltaMass | Mass error using the best-matching isotope offset |
+| AbsDeltaMass | Absolute difference between the theoretical peptide mass and the measured precursor mass |
 | PeptideLength | Number of peptide amino acids |
 | MissCleavages | Value -1 at this stage recomputed by PSMStatistics |
 | SequestScore | SEQUEST-like similarity score |
@@ -143,13 +143,52 @@ The output folder also contains `PeptideSpectrumMatching_log.txt` and one `<run>
 
 ## Parameter generation
 
-For an F# example that writes a parameter JSON file, see the [parameter-generation example](https://github.com/CSBiology/ProteomIQon/blob/dev/docs/tools/PeptideSpectrumMatching.fsx#L82).
+From the ProteomIQon repository root, build the library with `dotnet build src/ProteomIQon/ProteomIQon.fsproj -c Release`. Save the following as `generate-params.fsx` in that same directory and run `dotnet fsi generate-params.fsx`. The script writes the JSON file to the system temporary directory.
+
+```fsharp
+#r "nuget: BioFSharp.Mz, 0.2.3"
+#r "nuget: Newtonsoft.Json, 13.0.4"
+#r "./src/ProteomIQon/bin/Release/net10.0/ProteomIQon.dll"
+
+open BioFSharp.Mz
+open ProteomIQon
+
+let chargeDetermParams : ChargeState.ChargeDetermParams =
+    {
+        ExpectedMinimalCharge = 2
+        ExpectedMaximumCharge = 5
+        Width                 = 1.1
+        MinIntensity          = 0.15
+        DeltaMinIntensity     = 0.3
+        NrOfRndSpectra        = 10000
+    }
+
+let andromedaParams : Domain.AndromedaParams =
+    {
+        PMinPMax                = 4, 10
+        MatchingIonTolerancePPM = 100.0
+    }
+
+let peptideSpectrumMatchingParams : Dto.PeptideSpectrumMatchingParams =
+    {
+        ChargeStateDeterminationParams = chargeDetermParams
+        LookUpPPM                      = 30.0
+        nTerminalSeries                = NTerminalSeries.B
+        cTerminalSeries                = CTerminalSeries.Y
+        Andromeda                      = andromedaParams
+    }
+
+// Replace the temp folder with your project folder.
+let outputPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "peptideSpectrumMatchingParams.json")
+
+Json.serializeAndWrite outputPath peptideSpectrumMatchingParams
+```
 
 ## Installing and executing the tool
 
 1. **Installing**
 
-   Install the Tool with the following command inside the choosen Command-Line
+   Install the tool globally with the .NET CLI.
 
    ```sh
    dotnet tool install --global ProteomIQon.PeptideSpectrumMatching

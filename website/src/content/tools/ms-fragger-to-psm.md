@@ -11,7 +11,7 @@ inputsFrom: [mzml-to-mzlite-ion-mobility, peptide-db]
 
 MsFraggerToPSM turns the `psm.tsv` result of an MSFragger search, as written by FragPipe, into the `.qpsm` files that PSMBasedQuantificationTIMs reads.
 
-## How does MSFragger work?
+## How does MsFraggerToPSM work?
 
 1. **The advantage**
 
@@ -74,7 +74,7 @@ An existing `.qpsm` of the same name is appended to. Delete the old file before 
 
 ### Installing
 
-Install the Tool with the following command inside the choosen Command-Line
+Install the tool globally with the .NET CLI.
 
 ```sh
 dotnet tool install --global ProteomIQon.MsFraggerToPSM

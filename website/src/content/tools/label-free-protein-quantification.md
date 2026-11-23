@@ -36,7 +36,7 @@ If charge-state aggregation is disabled, differently charged versions of the sam
 | Flag | Meaning | Comes from |
 | --- | --- | --- |
 | `-i` | One or more `.quantAndProt` files, or a directory containing those files. Each file contains peptide quantification and protein-group assignments. | [JoinQuantPepIonsWithProteins](./join-quant-with-peptide-ions.md) |
-| `-o` | Directory in which the aggregation results are written. | Chosen output location |
+| `-o` | Directory in which the aggregation results are written. It is created when missing. | Chosen output location |
 | `-p` | Path to a JSON file specifying modification filtering and aggregation settings. | [Default parameter file](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/LabelFreeQuantificationParams.json) |
 
 **Important:** The input must already combine peptide-level quantification with protein inference. The tool does not perform those upstream steps itself.
@@ -88,12 +88,43 @@ Logs are written to `LabeledProteinQuantification_log.txt` and `LabeledQuantific
 
 ## Parameter generation
 
-For an F# example that writes a parameter JSON file, see the [parameter-generation example](https://github.com/CSBiology/ProteomIQon/blob/dev/docs/tools/LabelFreeProteinQuantification.fsx#L63).
+From the ProteomIQon repository root, build the library with `dotnet build src/ProteomIQon/ProteomIQon.fsproj -c Release`. Save the following as `generate-params.fsx` in that same directory and run `dotnet fsi generate-params.fsx`. The script writes the JSON file to the system temporary directory.
+
+```fsharp
+#r "nuget: Newtonsoft.Json, 13.0.4"
+#r "./src/ProteomIQon/bin/Release/net10.0/ProteomIQon.dll"
+
+open System.IO
+open ProteomIQon
+
+// The protein step of the default file: no transform, no filters, mean of the peptide intensities.
+let proteinStep : Common.LabelFreeQuantification.AggregationParams =
+    {
+        Transform     = None
+        SingleFilters = None
+        GroupFilters  = None
+        Aggregation   = { Light = NumericAggregation.Mean }
+    }
+
+let labelFreeQuantificationParams : Dto.LabelFreeQuantificationParams =
+    {
+        Alignment_QValue                   = Some 0.05
+        ModificationFilter                 = UseModifiedPeptides.All
+        AggregatePeptideChargeStatesParams = None
+        AggregateModifiedPeptidesParams    = None
+        AggregateToProteinGroupsParams     = proteinStep
+    }
+
+// Replace the temp folder with your project folder.
+let outputPath = Path.Combine(Path.GetTempPath(), "LabelFreeQuantificationParams.json")
+
+Json.serializeAndWrite outputPath labelFreeQuantificationParams
+```
 
 ## Running the tool
 1. **Installing**
 
-   Install the Tool with the following command inside the choosen Command-Line
+   Install the tool globally with the .NET CLI.
 
    ```sh
    dotnet tool install --global ProteomIQon.LabelFreeProteinQuantification
