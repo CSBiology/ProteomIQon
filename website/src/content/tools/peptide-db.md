@@ -27,7 +27,7 @@ These inputs are needed to execute the tool:
 
 | Flag | Meaning | Comes from |
 | --- | --- | --- |
-| `-i` | one FASTA file (no directories) | choosen Proteome |
+| `-i` | one FASTA file (no directories) | Chosen proteome |
 | `-o` | the output directory, created when missing | - |
 | `-p` | the parameter file in JSON | [Github ProteomIQon Core](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/peptideDBParams.json) |
 
@@ -71,13 +71,44 @@ These inputs are needed to execute the tool:
 
 ## Parameter generation
 
-For an F# example that writes a parameter JSON file, see the [parameter-generation example](https://github.com/CSBiology/ProteomIQon/blob/dev/docs/tools/PeptideDB.fsx#L65).
+From the ProteomIQon repository root, build the library with `dotnet build src/ProteomIQon/ProteomIQon.fsproj -c Release`. Save the following as `generate-params.fsx` in that same directory and run `dotnet fsi generate-params.fsx`. The script writes the JSON file to the system temporary directory.
+
+```fsharp
+#r "nuget: BioFSharp.Mz, 0.2.3"
+#r "nuget: Newtonsoft.Json, 13.0.4"
+#r "./src/ProteomIQon/bin/Release/net10.0/ProteomIQon.dll"
+
+open BioFSharp.Mz.SearchDB
+open ProteomIQon
+
+let peptideDBParams : Dto.PeptideDBParams =
+    {
+        Name                       = "AraTest"
+        ParseProteinIDRegexPattern = "id"
+        Protease                   = Protease.Trypsin
+        MinMissedCleavages         = 0
+        MaxMissedCleavages         = 2
+        MaxMass                    = 15000.0
+        MinPepLength               = 6
+        MaxPepLength               = 65
+        IsotopicMod                = [IsotopicMod.N15]
+        MassMode                   = MassMode.Monoisotopic
+        FixedMods                  = []
+        VariableMods               = [Modification.Oxidation'Met'; Modification.Acetylation'ProtNTerm']
+        VarModThreshold            = 4
+    }
+
+// Replace the temp folder with your project folder.
+let outputPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "peptideDBParams.json")
+
+Json.serializeAndWrite outputPath peptideDBParams
+```
 
 ## Installing and executing the tool
 
 1. **Installing**
 
-   Install the Tool with the following command inside the choosen Command-Line
+   Install the tool globally with the .NET CLI.
 
    ```sh
    dotnet tool install --global ProteomIQon.PeptideDB

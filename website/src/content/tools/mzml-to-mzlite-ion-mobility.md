@@ -36,7 +36,7 @@ These inputs are needed to execute the tool:
 - The reader fails on mzML without ion mobility data.
 - The tool writes one `run.mzlite` per input into the output directory.
 - Spectra with an MS level other than 1 or 2 stop the conversion with an error. Scan times are stored in minutes.
-- The mzlite is read by [PeptideSpectrumMatchingTIMs](./peptide-spectrum-matching-tims.md), [PSMBasedQuantificationTIMs](./psm-based-quantification-tims.md), [AlignmentBasedQuantification](./alignment-based-quantification.md) and [MsFraggerToPSM](./ms-fragger-to-psm.md). The output directory also receives `MzMLToMzLite_log.txt` and one `run_log.txt` per input.
+- The mzlite is read by [PeptideSpectrumMatchingTIMs](./peptide-spectrum-matching-tims.md), [PSMBasedQuantificationTIMs](./psm-based-quantification-tims.md) and [AlignmentBasedQuantification](./alignment-based-quantification.md). [MsFraggerToPSM](./ms-fragger-to-psm.md) reads it when identification comes from FragPipe. The output directory also receives `MzMLToMzLite_log.txt` and one `run_log.txt` per input.
 
 ## Parameter file
 
@@ -52,13 +52,67 @@ These inputs are needed to execute the tool:
 
 ## Parameter generation
 
-For an F# example that writes a parameter JSON file, see the [parameter-generation example](https://github.com/CSBiology/ProteomIQon/blob/dev/docs/tools/MzMLToMzLiteIonMobility.fsx#L59).
+From the ProteomIQon repository root, build the library with `dotnet build src/ProteomIQon/ProteomIQon.fsproj -c Release`. Save the following as `generate-params.fsx` in that same directory and run `dotnet fsi generate-params.fsx`. The script writes the JSON file to the system temporary directory.
+
+```fsharp
+#r "nuget: Newtonsoft.Json, 13.0.4"
+#r "./src/ProteomIQon/bin/Release/net10.0/ProteomIQon.dll"
+
+open ProteomIQon
+open ProteomIQon.Domain
+
+let ms1Wavelet : WaveletPeakPickingParams =
+    {
+        NumberOfScales       = 3
+        YThreshold           = YThreshold.Fixed 1.0
+        Centroid_MzTolerance = 0.1
+        SNRS_Percentile      = 95.0
+        MinSNR               = 1.0
+        RefineMZ             = false
+        SumIntensities       = false
+        PaddingParams        = None
+    }
+
+let ms2Padding : PaddingParams =
+    {
+        MaximumPaddingPoints = Some 7
+        Padding_MzTolerance  = 0.05
+        WindowSize           = 150
+        SpacingPerc          = 95.0
+    }
+
+let ms2Wavelet : WaveletPeakPickingParams =
+    {
+        NumberOfScales       = 10
+        YThreshold           = YThreshold.MinSpectrumIntensity
+        Centroid_MzTolerance = 0.1
+        SNRS_Percentile      = 95.0
+        MinSNR               = 1.0
+        RefineMZ             = false
+        SumIntensities       = false
+        PaddingParams        = Some ms2Padding
+    }
+
+let timsMzMLToMzLiteParams : Dto.MzMLtoMzLiteParams =
+    {
+        Compress           = Compression.NoCompression
+        StartRetentionTime = None
+        EndRetentionTime   = None
+        MS1PeakPicking     = PeakPicking.Centroid (CentroidizationMode.Wavelet ms1Wavelet)
+        MS2PeakPicking     = PeakPicking.Centroid (CentroidizationMode.Wavelet ms2Wavelet)
+    }
+
+// Replace the temp folder with your project folder.
+let outputPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "TIMsMzMLtoMzLiteParams.json")
+
+Json.serializeAndWrite outputPath timsMzMLToMzLiteParams
+```
 
 ## Installing and executing the tool
 
 1. **Installing**
 
-   Install the Tool with the following command inside the choosen Command-Line
+   Install the tool globally with the .NET CLI.
 
    ```sh
    dotnet tool install --global ProteomIQon.MzMLToMzLiteIonMobility

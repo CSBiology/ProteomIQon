@@ -1,5 +1,5 @@
 ---
-name: "PSMBasedQuantificationTIMS"
+name: "PSMBasedQuantificationTIMs"
 phase: peptide-quantification
 order: 2
 summary: "PSMBasedQuantificationTIMs is the PSMBasedQuantification variant for timsTOF runs."
@@ -18,8 +18,8 @@ PSMBasedQuantificationTIMs is the PSMBasedQuantification variant for timsTOF run
    With `IonMobilityWindow` set to `Window.Fixed v`, the ion mobility window is ±v around the ion mobility centre of the ion. The centre is the intensity weighted ion mobility of the signal within v of the weighted ion mobility of the identifications, around their weighted scan time (see `CentrePSMs`). Without such signal it is the weighted ion mobility of the identifications.
 
 2. **Peak Detection and Quantification**
-   The points form a retention time ion chromatogram.
-   As PSMBasedQuantification does, the tool detects the peaks on the trace and fits and integrates the peak that contains the weighted scan time of the identifications.
+   The points form a retention time [ion chromatogram](https://www.biofsharp.com/BioFSharp.Mz/03_01_quantification.html#Building-an-XIC-trace).
+   As PSMBasedQuantification does, the tool detects the peaks on the trace and [fits and integrates](https://www.biofsharp.com/BioFSharp.Mz/03_01_quantification.html#Fitting-and-integrating-the-main-peak) the peak that contains the weighted scan time of the identifications.
    The measured isotope pattern of a row (the `KLDiv` and `IsotopicPattern` columns) is read with the same windows, on the spectrum closest to the fitted scan time.
 
 3. **Output**
@@ -59,7 +59,7 @@ The parameter record is shared with PSMBasedQuantification. The following defaul
 | `PerformLabeledQuantification` | `Labeling.Unlabeled` | Label free quantification of the identified ion. The three labeled cases work as in PSMBasedQuantification and quantify the partner ion too. |
 | `XicExtraction.ScanTimeWindow` | `2.0` | Half width of the retention time range around the identification that is extracted, in the scan time unit of the run. |
 | `XicExtraction.MzWindow_Da` | `Window.Fixed 0.008` | Half width of the m/z window, in Da. Every peak inside it counts in an XIC point. The m/z correction and `Window.Estimate` work as in PSMBasedQuantification. |
-| `XicExtraction.XicProcessing` | `XicProcessing.Wavelet waveletParams` | Peak detection on the retention time trace, summed over the ion mobility window. The wavelet parameters are listed below. `SecondDerivative` also works on the retention time trace. `Gabor3D` detects peaks in the retention time and ion mobility grid. |
+| `XicExtraction.XicProcessing` | `XicProcessing.Wavelet waveletParams` | Peak detection on the retention time trace, summed over the ion mobility window. The wavelet parameters are listed below. `SecondDerivative` is the other supported case. `Gabor3D` is in development and does not work currently. |
 | `XicExtraction.TopKPSMs` | `None` | `Some k` keeps only the k identifications with the highest `ModelScore` per peptide ion when placing the peak. |
 | `XicExtraction.IonMobilityWindow` | `Window.Fixed 0.025` | Half width v of the ion mobility window around the ion mobility centre of the ion, in 1/K0. `Window.Estimate` is not available here and stops the tool with an error that asks for `Fixed`. |
 | `BaseLineCorrection` | `Some { MaxIterations = 10; Lambda = 6; P = 0.05 }` | Asymmetric least squares baseline subtraction before peak detection. `None` skips it. |
@@ -182,13 +182,59 @@ Alignment scores and associated q-values
 
 ## Parameter generation
 
-For an F# example that writes a parameter JSON file, see the [parameter-generation example](https://github.com/CSBiology/ProteomIQon/blob/dev/docs/tools/PSMBasedQuantificationTIMs.fsx#L91).
+From the ProteomIQon repository root, build the library with `dotnet build src/ProteomIQon/ProteomIQon.fsproj -c Release`. Save the following as `generate-params.fsx` in that same directory and run `dotnet fsi generate-params.fsx`. The script writes the JSON file to the system temporary directory.
+
+```fsharp
+#r "nuget: FSharp.Stats, 0.6.0"
+#r "nuget: Newtonsoft.Json, 13.0.4"
+#r "./src/ProteomIQon/bin/Release/net10.0/ProteomIQon.dll"
+
+open ProteomIQon
+open ProteomIQon.Domain
+open FSharp.Stats.Signal
+
+let waveletParams : WaveletParameters =
+    {
+        Borderpadding          = None
+        BorderPadMethod        = Padding.BorderPaddingMethod.Random
+        InternalPaddingMethod  = Padding.InternalPaddingMethod.LinearInterpolation
+        HugeGapPaddingMethod   = Padding.HugeGapPaddingMethod.Zero
+        HugeGapPaddingDistance = 100.
+        MinPeakDistance        = Some 0.1
+        MinPeakLength          = Some 0.1
+        MaxPeakLength          = 1.5
+        NoiseQuantile          = 0.01
+        MinSNR                 = 0.01
+    }
+
+let quantificationTIMsParams : Dto.QuantificationParams =
+    {
+        PerformLabeledQuantification = Labeling.Unlabeled
+        XicExtraction =
+            {
+                ScanTimeWindow = 2.
+                MzWindow_Da    = Window.Fixed 0.008
+                XicProcessing  = XicProcessing.Wavelet waveletParams
+                TopKPSMs       = None
+                IonMobilityWindow = Window.Fixed 0.025
+            }
+        BaseLineCorrection = Some { MaxIterations = 10; Lambda = 6; P = 0.05 }
+        QualityFilterLog2Limit = 2.
+        CentrePSMs = 3
+        RequirePeakAtScanTime = true
+    }
+
+// Replace the temp folder with your project folder.
+let outputPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "QuantificationTIMsParams.json")
+
+Json.serializeAndWrite outputPath quantificationTIMsParams
+```
 
 ## Installing and executing the tool
 
 1. **Installing**
 
-   Install the Tool with the following command inside the choosen Command-Line
+   Install the tool globally with the .NET CLI.
 
    ```sh
    dotnet tool install --global ProteomIQon.PSMBasedQuantificationTIMs

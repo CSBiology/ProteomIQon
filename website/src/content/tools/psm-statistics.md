@@ -33,7 +33,7 @@ inputsFrom: [peptide-spectrum-matching, peptide-db]
 
 5. **Estimate q-values and PEPs**
 
-   For the best candidate per scan, the q-value comes from the cumulative ratio of decoys to targets at or above the score, made monotone. For the posterior error probability (PEP), the tool bins the scores and fits a smoothing spline to the logit of the decoy share using iteratively reweighted least squares. Bin width is one FastTree score unit, converted to the pooled scale when cross-validation is enabled. PEP is the fitted decoy-to-target ratio at the candidate's score, capped at 1 and made non-increasing as scores rise.
+   For the best candidate per scan, the [q-value](https://www.biofsharp.com/BioFSharp.Mz/04_01_fdr_control.html#Computing-q-values-by-counting-decoys) comes from the cumulative ratio of decoys to targets at or above the score, made monotone. For the [posterior error probability (PEP)](https://www.biofsharp.com/BioFSharp.Mz/04_01_fdr_control.html#From-list-level-q-to-single-PSM-PEP), the tool bins the scores and fits a smoothing spline to the logit of the decoy share using iteratively reweighted least squares. Bin width is one FastTree score unit, converted to the pooled scale when cross-validation is enabled. PEP is the fitted decoy-to-target ratio at the candidate's score, capped at 1 and made non-increasing as scores rise.
 
    A scan is written only if its best candidate is a target and passes both thresholds. When no candidate passes or score estimation fails, the file contains only the header. For an estimation error, see `<run>_log.txt`. To bypass model training, use `Threshold.Fixed` with SEQUEST and Andromeda cutoffs.
 
@@ -162,7 +162,38 @@ Model score, FDR and posterior error probability
 
 ## Parameter generation
 
-For an F# example that writes a parameter JSON file, see the [parameter-generation example](https://github.com/CSBiology/ProteomIQon/blob/dev/docs/tools/PSMStatistics.fsx#L87).
+From the ProteomIQon repository root, build the library with `dotnet build src/ProteomIQon/ProteomIQon.fsproj -c Release`. Save the following as `generate-params.fsx` in that same directory and run `dotnet fsi generate-params.fsx`. The script writes the JSON file to the system temporary directory.
+
+```fsharp
+#r "nuget: Newtonsoft.Json, 13.0.4"
+#r "./src/ProteomIQon/bin/Release/net10.0/ProteomIQon.dll"
+
+open ProteomIQon
+open ProteomIQon.Domain
+
+let psmStatisticsParams : Dto.PSMStatisticsParams =
+    {
+        Threshold =
+            Threshold.Estimate
+                {
+                    QValueThreshold                  = 0.01
+                    PepValueThreshold                = 1.0
+                    MaxIterations                    = 15
+                    MinimumIncreaseBetweenIterations = 0.005
+                    PepValueFittingMethod            = PepValueFittingMethod.IRLS
+                    CrossValidation                  = true
+                    RetentionTimeFeature             = true
+                }
+        ParseProteinIDRegexPattern = "id"
+        KeepTemporaryFiles         = true
+        StoreIsotopePatterns       = true
+    }
+
+// Replace the temp folder with your project folder.
+let outputPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "pSMStatisticsParams.json")
+
+Json.serializeAndWrite outputPath psmStatisticsParams
+```
 
 ## Installing and executing the tool
 

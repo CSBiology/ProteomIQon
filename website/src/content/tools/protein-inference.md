@@ -14,7 +14,7 @@ ProteinInference maps the identified peptides back to proteins and reports prote
 
 1. **One Peptide, multiple Proteins**
 
-   A peptide identified by [PSMStatistics](./psm-statistics.md) often fits more than one protein, for example two splice variants of the same gene. Each Peptide Evidence group gets a score from its peptides and a decoy score from the reversed proteins, and from these a protein level q-value.
+   A peptide identified by [PSMStatistics](./psm-statistics.md) often fits more than one protein, for example two splice variants of the same gene. Each [protein group](https://www.biofsharp.com/BioFSharp.Mz/04_02_protein_inference.html#Grouping-the-evidence-into-protein-groups) gets a score from its peptides and a decoy score from the reversed proteins. The tool uses these scores to estimate a [protein-level q-value](https://www.biofsharp.com/BioFSharp.Mz/04_02_protein_inference.html#Estimating-the-protein-level-FDR).
 
 2. **How Protein Groups are formed**
 
@@ -40,7 +40,7 @@ These inputs are needed to execute the tool:
 - For every input `run.qpsm` the tool writes `run.prot`, tab separated with a header.
 - [JoinQuantPepIonsWithProteins](./join-quant-with-peptide-ions.md) and [AddDeducedPeptides](./add-deduced-peptides.md) read these `.prot` files.
 - With `-dc` the tool saves a chart of scores against Q-values, as QValueGraph.html in the output directory when the files are grouped and as `run.prot_QValueGraph.html` per run otherwise.
-- Logs go to `ProteinInference_log.txt` and a few `ProteinInference_step_log.txt` files in the output directory. There is no parallelism flag.
+- Logs go to `ProteinInference_log.txt` and a few `ProteinInference_<step>_log.txt` files in the output directory. There is no parallelism flag.
 
 ## Parameter file
 
@@ -56,9 +56,9 @@ These inputs are needed to execute the tool:
 
 ## Outputs
 
-This Output is generated
+The `.prot` file contains these columns.
 
-| Parameter | Description |
+| Column | Description |
 | --- | --- |
 | ProteinGroup | Protein identifiers in the group, separated by semicolons |
 | PeptideSequence | Peptide sequences assigned to this protein group and found in the current run, separated by semicolons |
@@ -67,15 +67,41 @@ This Output is generated
 | DecoyScore | Decoy Score calculated based on the individual peptide scores of PSM |
 | QValue | Q-value (False-Discovery-Rate) for every identified protein |
 
+See the [BioFSharp.Mz protein inference documentation](https://www.biofsharp.com/BioFSharp.Mz/04_02_protein_inference.html) for more information about the columns.
+
 ## Parameter generation
 
-For an F# example that writes a parameter JSON file, see the [parameter-generation example](https://github.com/CSBiology/ProteomIQon/blob/dev/docs/tools/ProteinInference.fsx#L66).
+From the ProteomIQon repository root, build the library with `dotnet build src/ProteomIQon/ProteomIQon.fsproj -c Release`. Save the following as `generate-params.fsx` in that same directory and run `dotnet fsi generate-params.fsx`. The script writes the JSON file to the system temporary directory.
+
+```fsharp
+#r "nuget: BioFSharp.Mz, 0.2.3"
+#r "nuget: Newtonsoft.Json, 13.0.4"
+#r "./src/ProteomIQon/bin/Release/net10.0/ProteomIQon.dll"
+
+open ProteomIQon
+open ProteomIQon.Domain
+open BioFSharp.Mz
+
+let proteinInferenceParams : Dto.ProteinInferenceParams =
+    {
+        ProteinIdentifierRegex = @"Cre\S+"
+        Protein                = ProteinInference.IntegrationStrictness.Maximal
+        Peptide                = ProteinInference.PeptideUsageForQuantification.Minimal
+        GroupFiles             = true
+        GetQValue              = QValueMethod.LogisticRegression FDRMethod.MAYU
+    }
+
+// Replace the temp folder with your project folder.
+let outputPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "ProteinInferenceParams.json")
+
+Json.serializeAndWrite outputPath proteinInferenceParams
+```
 
 ## Installing and executing the tool
 
 1. **Installing**
 
-   Install the Tool with the following command inside the choosen Command-Line
+   Install the tool globally with the .NET CLI.
 
    ```sh
    dotnet tool install --global ProteomIQon.ProteinInference

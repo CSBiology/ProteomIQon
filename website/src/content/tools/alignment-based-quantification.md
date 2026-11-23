@@ -19,7 +19,7 @@ QuantBasedAlignment predicts where a peptide ion identified in another run shoul
     AlignmentBasedQuantification extracts the ion chromatogram (XIC) of every transferred ion around that prediction, decides which of the peaks in the XIC belongs to the ion, and fits that peak as PSMBasedQuantification does.
 2. **Learn peak selection per run**
 
-    The decision is made by a model that each run learns from the ions it identified itself. The output is a .quant file with the run's own quantifications followed by the transferred ones, which AlignmentBasedQuantStatistics then scores.
+    The decision is made by a model that each run learns from the ions it identified itself. The output is a `.quant` file with the run's own quantifications followed by the transferred ones, which AlignmentBasedQuantStatistics then scores.
 3. **Detect peaks in the chromatogram**
 
     The XIC is extracted over ±ScanTimeWindow around PredictedScanTime, baseline corrected, and its peaks are detected with the wavelet or second derivative method of the PSM based quantification. 
@@ -37,14 +37,14 @@ A peak is always chosen when any candidate lies in the window, so this step neve
 
 |Feature | Description|
 | --- | --- |
-| Scan time distance | `candidate − PredictedScanTime` in units of PredictedScanTimeSd (at least 0.03 min), and its square | 
+| Scan time distance | `\|candidate scan time − PredictedScanTime\| / max(PredictedScanTimeSd, 0.03 min)`, and its square |
 | Shape correlation | correlation of the candidate with the source trace, shifted onto the candidate | 
 | Relative height | log10 of the candidate height relative to the highest candidate | 
-| Width ratio | `\|log2\|` of the ratio of the widths at half height of candidate and source trace |
+| Width ratio | `\|log2(candidate FWHM / source FWHM)\|`, using the full widths at half maximum |
 | Number of candidates | log2 of the number of candidates in the window | 
 | Isotope evidence | correlation of the M0 and M+1 traces over the candidate, and log2 (M+1 / M0)  | 
-| Mass error | `ppm` of the M0 m/z around the candidate apex| 
-| Ion mobility distance | `candidate ion mobility − PredictedIonMobility` in units of `PredictedIonMobilitySd` (timsTOF only) | 
+| Mass error | `\|median M0 mass error in ppm\|` around the candidate apex |
+| Ion mobility distance | `\|candidate ion mobility − PredictedIonMobility\| / max(PredictedIonMobilitySd, 0.001)` (timsTOF only, with ion mobility in 1/K0) |
 
 The model is trained per run on the ions the run identified itself and that [QuantBasedAlignment](./quant-based-alignment.md) also transferred (overlap ions). For these the right answer is known: the candidate within one standard deviation of the apex of the run's own PSM based peak. Only overlap ions with a reliable own fit (|search − apex of the fitted peak| < 2 standard deviations of the fitted peak) are used.
 
@@ -56,7 +56,7 @@ A run with fewer than 200 training ions uses a fixed score instead: −0.5 · mi
 
 In the figure four peaks lie in the candidate window. The highest is 0.6 min from the prediction. The model chooses the peak next to the prediction, whose shape matches the source trace. It is the peak of the run's own identification.
 
-An ion that cannot be quantified gets no row, for example when no candidate lies in the window, the XIC is too short, or the peak detection or the fit fails. The reason is in `Status` of .`alignfeatures`.
+An ion that cannot be quantified gets no row, for example when no candidate lies in the window, the XIC is too short, or the peak detection or the fit fails. The reason is recorded in the `Status` column of `<run>.alignfeatures`.
 
 ### m/z window 
 
@@ -64,17 +64,17 @@ The tool measures the offset between observed and theoretical m/z in the MS1 spe
 
 With `MzWindow_Da` set to `Estimate` the half width is 4 standard deviations of the offsets that remain after the correction, the same at every m/z. `Fixed` sets the half width in Da and keeps the correction.
 
-With fewer than 50 measured ions left, the correction is fitted on the precursor m/z of the .quant file instead, and `Estimate` uses a half width of 0.05 Da.
+With fewer than 50 measured ions left, the correction is fitted on the precursor m/z of the `.quant` file instead, and `Estimate` uses a half width of 0.05 Da.
 
 ### ion mobility 
 Ion mobility is used when the spectra and the `.align` file have it. An XIC point is then the sum of the intensity of all peaks inside the m/z window and inside the ion mobility window, as in PSMBasedQuantificationTIMs. Both widths are part of the quantity, so transferred and PSM based quantities are comparable when both tools use the same widths.
 
-The traces of an ion, of its isotopes and of its labeled partner share one window, set by XicExtraction.`IonMobilityWindow`. The expected ion mobility of the ion is `PredictedIonMobility`, or its ion mobility in the source run when the `.align` row has no prediction.
+The traces of an ion, of its isotopes and of its labeled partner share one window, set by `XicExtraction.IonMobilityWindow`. The expected ion mobility of the ion is `PredictedIonMobility`, or its ion mobility in the source run when the `.align` row has no prediction.
 
-- `Fixed v`: ±v around the ion mobility centre of the ion. The centre is the intensity weighted ion mobility of the signal within v of the expected ion mobility, around the PredictedScanTime. Without such signal it is the expected ion mobility.
+- `Fixed v`: ±v around the ion mobility centre of the ion. The centre is the intensity weighted ion mobility of the signal within v of the expected ion mobility, around `PredictedScanTime`. Without such signal it is the expected ion mobility.
 - `Estimate`: ±max(0.05, 4 · PredictedIonMobilitySd) 1/K0 around the expected ion mobility, ±0.05 without prediction.
 
-In a transferred row, `IonMobility` is the intensity weighted ion mobility of the chosen peak, measured within one fitted standard deviation of its apex. `IonMobilityCentre` is the ion mobility the traces were summed around: the centre with Fixed, the expected ion mobility with `Estimate`, `NaN` without ion mobility.
+In a transferred row, `IonMobility` is the intensity weighted ion mobility of the chosen peak, measured within one fitted standard deviation of its apex. `IonMobilityCentre` is the ion mobility the traces were summed around: the centre with `Fixed`, the expected ion mobility with `Estimate`, `NaN` without ion mobility.
 
 ### Labeled quantification
 
@@ -87,15 +87,18 @@ An ion that the run did not quantify itself is not transferred when the PSM base
 | --- | --- | --- |
 | `-i` | `.mzlite` of the run, or a directory | [MzMLToMzLite](./mzml-to-mzlite.md) or [MzMLToMzLiteIonMobility](./mzml-to-mzlite-ion-mobility.md) |
 | `-ii` | `.align` of the run, or a directory | [QuantBasedAlignment](./quant-based-alignment.md) | 
-| `-iv` | `.quant ` of the same run, or a directory| [PSMBasedQuantification](./psm-based-quantification.md) or [PSMBasedQuantificationTIMs](./psm-based-quantification-tims.md) | 
+| `-iv` | `.quant` of the same run, or a directory | [PSMBasedQuantification](./psm-based-quantification.md) or [PSMBasedQuantificationTIMs](./psm-based-quantification-tims.md) |
 | `-d`| peptide database (SQLite) | [PeptideDB](./peptide-db.md) | 
 | `-o` | output directory, created when missing | - | 
 | `-p` | the parameter file (JSON) | [Github ProteomIQon Core](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/AlignmentBasedQuantificationParams.json) | 
 | `-mf` | switch: pair the files by base name instead of by position | - | 
-| `-dc`| switch: `write <run>_mzCorrection.html` with the m/z offsets and their correction | - | 
+| `-dc` | switch: write `<run>_mzCorrection.html` with the m/z offsets and their correction | - |
 | `-c`|  number of runs processed in parallel, one core each, default 1 | - | 
 
-- Without -mf the files are paired by position, the files of a directory sorted by name. If the numbers of files differ, the tool stops.
+- Without `-mf` the files are paired by position, the files of a directory sorted by name. If the numbers of files differ, the tool stops.
+
+## Outputs
+
 - `<run>.quant` has the layout of the PSM based `.quant` files. It holds the PSM based rows with a fitted peak, then one row per quantified transferred ion with `QuantificationSource = Alignment`.
 - These rows pass no quality filter. In these rows `Difference_SearchRT_FittedRT` is `PredictedScanTime` minus the `fitted scan time`. `AlignmentScore` and `AlignmentQValue` hold `NaN` until [AlignmentBasedQuantStatistics](./alignment-based-quant-statistics.md) fills them.
 - `<run>.alignfeatures` is a tab separated table with one row per `.align` row. `AlignmentBasedQuantStatistics` reads it from the directory of the aligned `.quant` and uses its features. The main columns:
@@ -112,8 +115,8 @@ An ion that the run did not quantify itself is not transferred when the PSM base
 | ScanTimeWindow, MzWindow, IonMobilityWindow | half widths of the windows used | 
 | Status | `quantified`, or why the peptide ion was not quantified | 
 
-- With DecoyFraction above 0, `<run>.aligndecoy` holds the decoy transfers: a share of the new ions quantified a second time with `PredictedScanTime` shifted by 4 to 6 minutes, where their own peak is not.
-- A decoy is skipped when the ion's own peak could lie in its XIC. Each row has the .quant columns, the shifted `PredictedScanTime` and the `.alignfeatures` feature columns.
+- With `DecoyFraction` above 0, `<run>.aligndecoy` holds the decoy transfers: a share of the new ions quantified a second time with `PredictedScanTime` shifted by 4 to 6 minutes, where their own peak is not.
+- A decoy is skipped when the ion's own peak could lie in its XIC. Each row has the `.quant` columns, the shifted `PredictedScanTime` and the `.alignfeatures` feature columns.
 - [AlignmentBasedQuantStatistics](./alignment-based-quant-statistics.md) uses them to estimate how often a peptide ion whose analyte is absent from the run passes the Q-value cutoff. They never enter `<run>.quant`.
 - Logs go to `AlignmentBasedQuantification_log.txt` and one `<run>_log.txt` per run, with the counts of ions per reason at Info level and each peptide ion that was not quantified at Debug level.
 
@@ -136,7 +139,7 @@ The tool overwrites its `.quant` and `.alignfeatures` outputs for the run. If de
 |XicExtraction field | Default | Description | 
 | --- | --- | --- |
 | ScanTimeWindow | `2.0`| Half width of the XIC in minutes, and the largest half width of the candidate window. | 
-| MzWindow_Da | `Window.Estimate`| `Estimate` measures the m/z window from the run. Window.Fixed 0.01 sets ±0.01 Da. | 
+| MzWindow_Da | `Window.Estimate` | `Estimate` measures the m/z window from the run. `Window.Fixed 0.01` sets ±0.01 Da. |
 | XicProcessing | `XicProcessing.Wavelet` | Peak detection. The wavelet fields are described on the [PSMBasedQuantification](./psm-based-quantification.md) page. The default `BorderPadMethod` is Zero. `Random` is accepted with a warning, because it makes the detected peaks differ between reruns. | 
 | TopKPSMs | `None` | Not used | 
 | IonMobilityWindow | `Window.Estimate` | `Estimate` or `Window.Fixed v`, in 1/K0 (see Ion mobility). | 
@@ -145,13 +148,63 @@ For timsTOF runs, [AlignmentBasedQuantificationTIMsParams.json](https://github.c
 
 ## Parameter generation
 
-For an F# example that writes a parameter JSON file, see the [parameter-generation example](https://github.com/CSBiology/ProteomIQon/blob/dev/docs/tools/AlignmentBasedQuantification.fsx#L183).
+From the ProteomIQon repository root, build the library with `dotnet build src/ProteomIQon/ProteomIQon.fsproj -c Release`. Save the following as `generate-params.fsx` in that same directory and run `dotnet fsi generate-params.fsx`. The script writes the JSON file to the system temporary directory.
+
+```fsharp
+#r "nuget: FSharp.Stats, 0.6.0"
+#r "nuget: Newtonsoft.Json, 13.0.4"
+#r "./src/ProteomIQon/bin/Release/net10.0/ProteomIQon.dll"
+
+open ProteomIQon
+open ProteomIQon.Domain
+open FSharp.Stats.Signal
+
+let waveletParams : WaveletParameters =
+    {
+        Borderpadding          = None
+        BorderPadMethod        = Padding.BorderPaddingMethod.Zero
+        InternalPaddingMethod  = Padding.InternalPaddingMethod.LinearInterpolation
+        HugeGapPaddingMethod   = Padding.HugeGapPaddingMethod.Zero
+        HugeGapPaddingDistance = 100.
+        MinPeakDistance        = None
+        MinPeakLength          = Some 0.1
+        MaxPeakLength          = 1.5
+        NoiseQuantile          = 0.01
+        MinSNR                 = 0.01
+    }
+
+let alignmentBasedQuantificationParams : Dto.AlignmentBasedQuantificationParams =
+    {
+        // Labeling.Unlabeled for label-free data
+        PerformLabeledQuantification = Labeling.N15Labeling
+        XicExtraction =
+            {
+                ScanTimeWindow = 2.
+                MzWindow_Da    = Window.Estimate
+                XicProcessing  = XicProcessing.Wavelet waveletParams
+                TopKPSMs       = None
+                IonMobilityWindow = Window.Estimate
+            }
+        BaseLineCorrection     = Some { MaxIterations = 10; Lambda = 6; P = 0.05 }
+        MinScanTimeWindow      = 1.
+        ScanTimeWindowSdFactor = 8.
+        DecoyFraction          = 0.2
+        Seed                   = 1
+        RequirePeakAtScanTime  = true
+    }
+
+// Replace the temp folder with your project folder.
+let outputPath =
+    System.IO.Path.Combine(System.IO.Path.GetTempPath(), "AlignmentBasedQuantificationParams.json")
+
+Json.serializeAndWrite outputPath alignmentBasedQuantificationParams
+```
 
 ## Running the tool 
 
 1. **Installing**
 
-   Install the Tool with the following command inside the choosen Command-Line
+   Install the tool globally with the .NET CLI.
 
    ```sh
    dotnet tool install --global ProteomIQon.AlignmentBasedQuantification

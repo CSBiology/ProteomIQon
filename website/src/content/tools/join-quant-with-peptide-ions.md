@@ -1,5 +1,5 @@
 ---
-name: "JoinQuantWithPepIons"
+name: "JoinQuantPepIonsWithProteins"
 phase: protein-quantification
 subgroup: Join quantification
 order: 1

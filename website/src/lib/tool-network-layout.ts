@@ -26,8 +26,8 @@ export const workflowNodes: readonly WorkflowNode[] = [
 ];
 
 export const workflowEdges = [
-	[1, 3], [2, 3], [4, 6], [3, 5], [5, 6], [6, 7], [7, 8], [7, 12], [8, 9],
-	[9, 10], [10, 11], [11, 12], [12, 13], [12, 14], [13, 15], [14, 15],
+	[1, 3], [2, 3], [4, 6], [3, 5], [5, 6], [5, 7], [6, 8], [7, 11], [7, 12],
+	[8, 9], [9, 10], [10, 11], [11, 12], [12, 13], [12, 14], [14, 15],
 ] as const;
 
 type Circle = { x: number; y: number; radius: number };

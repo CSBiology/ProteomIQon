@@ -9,7 +9,7 @@ inputsFrom: []
 
 ## Tool Description
 
-MzMLToMzLite converts an mzML file into an mzlite file. It is the first tool of the chain, every later tool reads the mzlite it writes. Mzlite is the SQLite based storage format of MzIO.
+MzMLToMzLite converts an mzML file into an mzlite file. It is the first tool of the chain, every later tool reads the mzlite it writes. Mzlite is the SQLite based storage format of [MzIO](https://github.com/CSBiology/MzIO).
 
 ## How does MzMLToMzLite work?
 
@@ -23,7 +23,7 @@ MzMLToMzLite converts an mzML file into an mzlite file. It is the first tool of 
 
 3. **Converting**
 
-   During the conversion the tool can restrict the spectra to a retention time window and can centroid profile spectra with a wavelet peak picker. Centroiding replaces the many points that describe one peak by a single m/z and intensity pair. The algorithm is described in the [BioFSharp.Mz documentation](https://www.biofsharp.com/BioFSharp/).
+   During the conversion the tool can restrict the spectra to a retention time window and can centroid profile spectra with a wavelet peak picker. Centroiding replaces the many points that describe one peak by a single m/z and intensity pair. The algorithm is described in the [BioFSharp.Mz documentation](https://www.biofsharp.com/BioFSharp.Mz/01_02_signal_detection.html#Centroiding-with-the-wavelet-peak-picker).
 
 ## Inputs
 
@@ -77,13 +77,35 @@ The generated mzlite is read by [PeptideSpectrumMatching](./peptide-spectrum-mat
 
 ## Parameter generation
 
-For an F# example that writes a parameter JSON file, see the [parameter-generation example](https://github.com/CSBiology/ProteomIQon/blob/dev/docs/tools/MzMLToMzLite.fsx#L76).
+From the ProteomIQon repository root, build the library with `dotnet build src/ProteomIQon/ProteomIQon.fsproj -c Release`. Save the following as `generate-params.fsx` in that same directory and run `dotnet fsi generate-params.fsx`. The script writes the JSON file to the system temporary directory.
+
+```fsharp
+#r "nuget: Newtonsoft.Json, 13.0.4"
+#r "./src/ProteomIQon/bin/Release/net10.0/ProteomIQon.dll"
+
+open ProteomIQon
+open ProteomIQon.Domain
+
+let mzMLToMzLiteParams : Dto.MzMLtoMzLiteParams =
+    {
+        Compress           = Compression.NoCompression
+        StartRetentionTime = None
+        EndRetentionTime   = None
+        MS1PeakPicking     = PeakPicking.ProfilePeaks
+        MS2PeakPicking     = PeakPicking.ProfilePeaks
+    }
+
+// Replace the temp folder with your project folder.
+let outputPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "mzMLToMzLiteParams.json")
+
+Json.serializeAndWrite outputPath mzMLToMzLiteParams
+```
 
 ## Installing and executing the tool
 
 1. **Installing**
 
-   Install the Tool with the following command inside the choosen Command-Line
+   Install the tool globally with the .NET CLI.
 
    ```sh
    dotnet tool install --global ProteomIQon.MzMLToMzLite

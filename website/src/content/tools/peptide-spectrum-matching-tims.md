@@ -21,7 +21,7 @@ PeptideSpectrumMatchingTIMs identifies peptides from timsTOF runs using precurso
 
 2. **Build the target and decoy fragment indexes**
 
-   The tool builds separate indexes of theoretical b and y fragments for targets and decoys. A decoy keeps the C-terminal residue in place and reverses the rest of the peptide. If that produces the original sequence, the tool reverses the entire peptide.
+   The tool indexes the theoretical b and y fragments of target peptides and uses a second index of the same size for their decoys. A decoy keeps the C-terminal residue in place and reverses the rest of the peptide. If that produces the original sequence, as with `AAAAK`, the tool reverses the entire peptide to produce `KAAAA`.
 
    Only peptides in the measured runs' precursor-mass windows are indexed, accounting for isotope errors and precursor tolerance. Fragment masses are capped by the largest applicable precursor window plus 1 Da or the optional `-f` value, and never above the largest peptide mass in the database plus 1 Da. Each fragment entry occupies 4 bytes.
 
@@ -71,15 +71,15 @@ PeptideSpectrumMatchingTIMs identifies peptides from timsTOF runs using precurso
 
 | Flag | Meaning | Comes from |
 | --- | --- | --- |
-| `-i` | One or more `.mzlite` files, or a directory containing `*.mzlite` files | [MzMLToMzLiteIonMobility ↗](https://csbiology.github.io/ProteomIQon/tools/MzMLToMzLiteIonMobility.html) |
-| `-d` | SQLite peptide database | [PeptideDB ↗](https://csbiology.github.io/ProteomIQon/tools/PeptideDB.html) |
+| `-i` | One or more `.mzlite` files, or a directory containing `*.mzlite` files | [MzMLToMzLiteIonMobility](./mzml-to-mzlite-ion-mobility.md) |
+| `-d` | SQLite peptide database | [PeptideDB](./peptide-db.md) |
 | `-o` | Output directory, automatically created if absent | — |
-| `-p` | JSON file containing search parameters | Parameters section below |
-| `-c` | Concurrent runs (one thread per run) | Default: `1` |
-| `-s` | Number of sequential fragment-index slices | Default: `1` |
-| `-k` | Cache preprocessed spectra between index slices | Optional switch |
-| `-f` | Maximum indexed fragment mass, in Da | Default: largest precursor window + 1 Da |
-| `--mobility-merge-ppm` | m/z grouping width when combining mobility scans, in ppm | Default: `FragmentTolerancePPM` |
+| `-p` | JSON file containing search parameters | [Parameters](#parameters) |
+| `-c` | Concurrent runs (one thread per run). Defaults to `1`. | — |
+| `-s` | Number of sequential fragment-index slices. Defaults to `1`. | — |
+| `-k` | Optional switch to cache preprocessed spectra between index slices. | — |
+| `-f` | Maximum indexed fragment mass, in Da. Defaults to the largest precursor window plus 1 Da. | — |
+| `--mobility-merge-ppm` | m/z grouping width when combining mobility scans, in ppm. Defaults to `FragmentTolerancePPM`. | — |
 
 - `-i`, `-d`, `-o` and `-p` are mandatory. The input directory search is not recursive.
 
@@ -176,13 +176,54 @@ The output folder also contains `PeptideSpectrumMatchingTIMs_log.txt` and one `<
 
 ## Parameter generation
 
-For an F# example that writes a parameter JSON file, see the [parameter-generation example](https://github.com/CSBiology/ProteomIQon/blob/dev/docs/tools/PeptideSpectrumMatchingTIMs.fsx#L116).
+From the ProteomIQon repository root, build the library with `dotnet build src/ProteomIQon/ProteomIQon.fsproj -c Release`. Save the following as `generate-params.fsx` in that same directory and run `dotnet fsi generate-params.fsx`. The script writes the JSON file to the system temporary directory.
+
+```fsharp
+#r "nuget: BioFSharp.Mz, 0.2.3"
+#r "nuget: Newtonsoft.Json, 13.0.4"
+#r "./src/ProteomIQon/bin/Release/net10.0/ProteomIQon.dll"
+
+open BioFSharp.Mz
+open ProteomIQon
+
+let andromedaParams : Domain.AndromedaParams =
+    {
+        PMinPMax                = 4, 10
+        MatchingIonTolerancePPM = 100.0
+    }
+
+let peptideSpectrumMatchingTIMsParams : Dto.PeptideSpectrumMatchingTIMsParams =
+    {
+        PrecursorTolerancePPM  = 20.0
+        FragmentTolerancePPM   = 20.0
+        IsotopeErrors          = [0; 1; 2]
+        MaxFragmentCharge      = 2
+        FallbackChargeStates   = [2; 3]
+        TopNPeaks               = 150
+        MinimumPeakRatio        = 0.01
+        RemovePrecursorRange    = 1.5
+        Deisotope               = true
+        MinimumPeaks            = 15
+        MinMatchedFragments     = 4
+        MinFragmentsModelling   = 1
+        ReportedHitsPerLabel    = 10
+        FragmentIndexBinWidth   = 0.01
+        nTerminalSeries         = NTerminalSeries.B
+        cTerminalSeries         = CTerminalSeries.Y
+        Andromeda               = andromedaParams
+    }
+
+// Replace the temp folder with your project folder.
+let outputPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "peptideSpectrumMatchingTIMsParams.json")
+
+Json.serializeAndWrite outputPath peptideSpectrumMatchingTIMsParams
+```
 
 ## Installing and executing the tool
 
 1. **Installing**
 
-   Install the Tool with the following command inside the choosen Command-Line
+   Install the tool globally with the .NET CLI.
 
    ```sh
    dotnet tool install --global ProteomIQon.PeptideSpectrumMatchingTIMs
