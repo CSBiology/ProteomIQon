@@ -1,0 +1,239 @@
+<!DOCTYPE html><html lang="en" data-theme="light"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="icon" type="image/svg+xml" href="/ProteomIQon/favicon.svg"><link rel="icon" href="/ProteomIQon/favicon.ico"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap"><meta name="description" content="MzMLToMzLite converts an mzML file into an mzlite file."><meta name="generator" content="Astro v7.3.8"><title>MzMLToMzLite · ProteomIQon</title><link rel="stylesheet" href="/ProteomIQon/_astro/global.LELvuLUR.css"><link rel="stylesheet" href="/ProteomIQon/_astro/Layout.BzR0PIOI.css"></head><body><div class="site-shell"><header class="site-masthead mx-auto flex w-[min(1180px,calc(100%-48px))] items-center justify-between gap-x-6 border-b border-line pt-6 pb-5 max-md:w-[min(100%-32px,640px)] max-[520px]:block"><a class="inline-flex items-center gap-[11px] text-[1.16rem] font-bold tracking-[-.04em] no-underline" href="/ProteomIQon/" aria-label="ProteomIQon home"><span class="inline-flex h-[21px] items-end gap-0.5" aria-hidden="true"><span class="block h-3 w-[5px] rounded-t-[1px] bg-sky"></span><span class="block h-5 w-[5px] rounded-t-[1px] bg-orange"></span><span class="block h-[15px] w-[5px] rounded-t-[1px] bg-teal"></span></span><span>Proteom<span class="text-orange">IQ</span>on</span></a><nav class="desktop-site-nav flex items-center gap-[25px] max-[520px]:mt-[18px] max-[520px]:flex-wrap max-[520px]:gap-x-4 max-[520px]:gap-y-2" aria-label="Main navigation"><a class="group relative py-1 text-[.8rem] whitespace-nowrap no-underline transition-colors duration-200 hover:text-navy! text-navy!" href="/ProteomIQon/tools/" aria-current="true">Tools<span class="absolute inset-x-0 bottom-0 h-0.5 origin-right scale-x-0 bg-red transition-transform duration-200 group-hover:origin-left group-hover:scale-x-100 origin-left scale-x-100"></span></a><a class="group relative py-1 text-[.8rem] whitespace-nowrap no-underline transition-colors duration-200 hover:text-navy! text-steel!" href="/ProteomIQon/guide/installation/">Installation<span class="absolute inset-x-0 bottom-0 h-0.5 origin-right scale-x-0 bg-red transition-transform duration-200 group-hover:origin-left group-hover:scale-x-100"></span></a><a class="group relative py-1 text-[.8rem] whitespace-nowrap no-underline transition-colors duration-200 hover:text-navy! text-steel!" href="/ProteomIQon/guide/getting-started/">Getting started<span class="absolute inset-x-0 bottom-0 h-0.5 origin-right scale-x-0 bg-red transition-transform duration-200 group-hover:origin-left group-hover:scale-x-100"></span></a><a class="group relative py-1 text-[.8rem] whitespace-nowrap no-underline transition-colors duration-200 hover:text-navy! text-steel!" href="/ProteomIQon/guide/developer-information/">Developer Information<span class="absolute inset-x-0 bottom-0 h-0.5 origin-right scale-x-0 bg-red transition-transform duration-200 group-hover:origin-left group-hover:scale-x-100"></span></a><a class="group relative py-1 text-[.8rem] whitespace-nowrap no-underline transition-colors duration-200 hover:text-navy! text-red!" href="/ProteomIQon/guide/help/">Help<span class="absolute inset-x-0 bottom-0 h-0.5 origin-right scale-x-0 bg-red transition-transform duration-200 group-hover:origin-left group-hover:scale-x-100"></span></a><a class="group relative py-1 text-[.8rem] whitespace-nowrap no-underline transition-colors duration-200 hover:text-navy! text-steel!" href="/ProteomIQon/guide/further-information/">Learn more<span class="absolute inset-x-0 bottom-0 h-0.5 origin-right scale-x-0 bg-red transition-transform duration-200 group-hover:origin-left group-hover:scale-x-100"></span></a></nav><details class="mobile-site-nav"><summary><span>Menu</span><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"></path></svg></summary><nav aria-label="Main navigation"><a href="/ProteomIQon/tools/" aria-current="true">Tools</a><a href="/ProteomIQon/guide/installation/">Installation</a><a href="/ProteomIQon/guide/getting-started/">Getting started</a><a href="/ProteomIQon/guide/developer-information/">Developer Information</a><a href="/ProteomIQon/guide/help/">Help</a><a href="/ProteomIQon/guide/further-information/">Learn more</a></nav></details></header><script type="module">var e=document.querySelector(`.mobile-site-nav`);document.addEventListener(`click`,t=>{e?.open&&t.target instanceof Node&&!e.contains(t.target)&&(e.open=!1)}),e?.addEventListener(`keydown`,t=>{t.key===`Escape`&&(e.open=!1,e.querySelector(`summary`)?.focus())});</script><main class="tool-page-wide"><div class="tool-detail-layout phase-preprocessing"><aside class="tool-sidebar"><a class="back-link" href="/ProteomIQon/tools/">← All tools</a><div class="sidebar-rule"></div><p class="sidebar-label">In this stage</p><nav aria-label="Preprocessing tools"><a class="active" aria-current="page" href="/ProteomIQon/tools/mzml-to-mzlite/">MzMLToMzLite</a><a href="/ProteomIQon/tools/mzml-to-mzlite-ion-mobility/">MzMLToMzLiteIonMobility</a><a href="/ProteomIQon/tools/peptide-db/">PeptideDB</a></nav><details class="mobile-stage-navigation"><summary>In this stage <span>3 tools</span></summary><nav aria-label="Preprocessing tools"><a class="active" aria-current="page" href="/ProteomIQon/tools/mzml-to-mzlite/">MzMLToMzLite</a><a href="/ProteomIQon/tools/mzml-to-mzlite-ion-mobility/">MzMLToMzLiteIonMobility</a><a href="/ProteomIQon/tools/peptide-db/">PeptideDB</a></nav></details></aside><main class="tool-detail"><section class="tool-detail-hero"><h1>Mz<wbr>MLTo<wbr>Mz<wbr>Lite</h1></section><article class="legacy-content tool-legacy-content prose max-w-none prose-a:font-semibold prose-code:before:content-none prose-code:after:content-none"><h2 id="tool-description">Tool Description</h2>
+<p>MzMLToMzLite converts an mzML file into an mzlite file. It is the first tool of the chain, every later tool reads the mzlite it writes. Mzlite is the SQLite based storage format of <a href="https://github.com/CSBiology/MzIO">MzIO</a>.</p>
+<h2 class="tool-workflow-heading" id="how-does-mzmltomzlite-work">How does MzMLToMzLite work?</h2>
+<ol class="tool-explanation-steps" role="list">
+<li><div class="tool-step-copy">
+<p class="tool-step-heading"><strong>MzML to Mzlite</strong></p>
+<p>The mzlite holds the same spectra and metadata as the mzML, in a form that supports random access to single spectra.</p>
+</div></li>
+<li><div class="tool-step-copy">
+<p class="tool-step-heading"><strong>How to get MzML</strong></p>
+<p>To get mzML from vendor raw files, use <a href="https://www.nature.com/articles/nbt.2377">msconvert</a>. Galaxy Europe runs msconvert in the browser without a local install, see <a href="https://galaxyproject.eu/posts/2019/03/24/msconvert/">their guide</a>.</p>
+</div></li>
+<li><div class="tool-step-copy">
+<p class="tool-step-heading"><strong>Converting</strong></p>
+<p>During the conversion the tool can restrict the spectra to a retention time window and can centroid profile spectra with a wavelet peak picker. Centroiding replaces the many points that describe one peak by a single m/z and intensity pair. The algorithm is described in the <a href="https://www.biofsharp.com/BioFSharp.Mz/01_02_signal_detection.html#Centroiding-with-the-wavelet-peak-picker">BioFSharp.Mz documentation</a>.</p>
+</div></li>
+</ol>
+<details id="inputs" class="accordion tool-io-accordion tool-io-inputs"><summary class="accordion-header"><span class="accordion-icon" aria-hidden="true">IN</span><span class="accordion-heading"><strong role="heading" aria-level="2">Inputs</strong><small>Files and command-line flags</small></span><span class="accordion-chevron" aria-hidden="true"></span></summary><div class="accordion-content">
+<div class="tool-io-table-scroll" tabindex="0" role="region" aria-label="Inputs table"><table class="responsive-table" role="table">
+<thead role="rowgroup">
+<tr role="row">
+<th scope="col" role="columnheader">Flag</th>
+<th scope="col" role="columnheader">Description</th>
+<th scope="col" role="columnheader">Source</th>
+</tr>
+</thead>
+<tbody role="rowgroup">
+<tr role="row">
+<td role="cell" data-label="Flag"><code>-i</code></td>
+<td role="cell" data-label="Description">One or more mzML files, or a directory searched for <code>*.mzML</code> and <code>*.mzml</code> (not recursively).</td>
+<td role="cell" data-label="Source">MSConvert</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Flag"><code>-o</code></td>
+<td role="cell" data-label="Description">Output directory. Created if it does not exist.</td>
+<td role="cell" data-label="Source">—</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Flag"><code>-p</code></td>
+<td role="cell" data-label="Description">JSON parameter file.</td>
+<td role="cell" data-label="Source"><a href="https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/mzMLToMzLiteParams.json">ProteomIQon default parameters</a></td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Flag"><code>-c</code></td>
+<td role="cell" data-label="Description">Number of files converted in parallel. Default: <code>1</code>; no effect for a single file.</td>
+<td role="cell" data-label="Source">—</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Flag"><code>-f</code></td>
+<td role="cell" data-label="Description">switch: rewrite every input file in place and remove <code>&amp;quot</code></td>
+<td role="cell" data-label="Source">—</td>
+</tr>
+</tbody>
+</table></div>
+</div></details><details id="outputs" class="accordion tool-io-accordion tool-io-outputs"><summary class="accordion-header"><span class="accordion-icon" aria-hidden="true">OUT</span><span class="accordion-heading"><strong role="heading" aria-level="2">Outputs</strong><small>Generated data and log files</small></span><span class="accordion-chevron" aria-hidden="true"></span></summary><div class="accordion-content">
+<div class="tool-io-table-scroll" tabindex="0" role="region" aria-label="Outputs table"><table class="responsive-table" role="table">
+<thead role="rowgroup">
+<tr role="row">
+<th scope="col" role="columnheader">Output</th>
+<th scope="col" role="columnheader">Quantity</th>
+<th scope="col" role="columnheader">Description</th>
+</tr>
+</thead>
+<tbody role="rowgroup">
+<tr role="row">
+<td role="cell" data-label="Output"><code>run.mzlite</code></td>
+<td role="cell" data-label="Quantity">One per input mzML</td>
+<td role="cell" data-label="Description">MzIO SQLite file containing spectra and metadata. Copies MS1 and MS2 spectra only; skips spectra with an empty peak array after peak picking. Scan times are stored in minutes, regardless of the mzML unit.</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Output"><code>MzMLToMzLite_log.txt</code></td>
+<td role="cell" data-label="Quantity">One per conversion</td>
+<td role="cell" data-label="Description">Overall conversion log in the output directory.</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Output"><code>run_log.txt</code></td>
+<td role="cell" data-label="Quantity">One per input file</td>
+<td role="cell" data-label="Description">Per-run log in the output directory.</td>
+</tr>
+</tbody>
+</table></div>
+<p>The generated mzlite is read by <a href="/ProteomIQon/tools/peptide-spectrum-matching/">PeptideSpectrumMatching</a>, <a href="/ProteomIQon/tools/psm-based-quantification/">PSMBasedQuantification</a> and <a href="/ProteomIQon/tools/alignment-based-quantification/">AlignmentBasedQuantification</a>.</p>
+</div></details><details id="parameter-file" class="accordion tool-io-accordion tool-io-parameters"><summary class="accordion-header"><span class="accordion-icon" aria-hidden="true">CFG</span><span class="accordion-heading"><strong role="heading" aria-level="2">Parameter file</strong><small>Default values and tool settings</small></span><span class="accordion-chevron" aria-hidden="true"></span></summary><div class="accordion-content">
+<div class="tool-io-table-scroll" tabindex="0" role="region" aria-label="Parameter file table"><table class="responsive-table" role="table">
+<thead role="rowgroup">
+<tr role="row">
+<th scope="col" role="columnheader">Parameter</th>
+<th scope="col" role="columnheader">Default</th>
+<th scope="col" role="columnheader">Meaning</th>
+</tr>
+</thead>
+<tbody role="rowgroup">
+<tr role="row">
+<td role="cell" data-label="Parameter"><code>Compress</code></td>
+<td role="cell" data-label="Default">Compression.NoCompression</td>
+<td role="cell" data-label="Meaning">Compression of the peak arrays in the mzlite. Compression.ZLib and Compression.NumPress are the other options, Compression.NumPressZLib combines both.</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Parameter"><code>StartRetentionTime</code></td>
+<td role="cell" data-label="Default">None</td>
+<td role="cell" data-label="Meaning">With Some t, only spectra with a scan time above t are copied. The comparison uses the time unit of the mzML file.</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Parameter"><code>EndRetentionTime</code></td>
+<td role="cell" data-label="Default">None</td>
+<td role="cell" data-label="Meaning">With Some t, only spectra with a scan time below t are copied, same unit as above.</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Parameter"><code>MS1PeakPicking</code></td>
+<td role="cell" data-label="Default">PeakPicking.ProfilePeaks</td>
+<td role="cell" data-label="Meaning">How MS1 peaks are extracted. PeakPicking.ProfilePeaks copies the peak arrays as they are. PeakPicking.Centroid (CentroidizationMode.Wavelet w) runs the wavelet peak picker with the parameters w.</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Parameter"><code>MS2PeakPicking</code></td>
+<td role="cell" data-label="Default">PeakPicking.ProfilePeaks</td>
+<td role="cell" data-label="Meaning">The same choice for MS2 spectra.</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li>
+<p>CentroidizationMode.Manufacturer is for vendor raw files. For mzML input use ProfilePeaks or the wavelet centroiding.</p>
+</li>
+<li>
+<p>When a spectrum type is set to PeakPicking.Centroid (CentroidizationMode.Wavelet w), w is a WaveletPeakPickingParams record. The values below are the MS1 settings from the ion mobility default file and serve as a starting point.</p>
+<div class="tool-io-table-scroll" tabindex="0" role="region" aria-label="Parameter file table"><table class="responsive-table" role="table">
+<thead role="rowgroup">
+<tr role="row">
+<th scope="col" role="columnheader">Parameter</th>
+<th scope="col" role="columnheader">Example</th>
+<th scope="col" role="columnheader">Meaning</th>
+</tr>
+</thead>
+<tbody role="rowgroup">
+<tr role="row">
+<td role="cell" data-label="Parameter"><code>NumberOfScales</code></td>
+<td role="cell" data-label="Example"><code>3</code></td>
+<td role="cell" data-label="Meaning">Number of wavelet widths the transform is evaluated at.</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Parameter"><code>YThreshold</code></td>
+<td role="cell" data-label="Example"><code>YThreshold.Fixed 1.0</code></td>
+<td role="cell" data-label="Meaning">Intensity floor for the transform. <code>YThreshold.MinSpectrumIntensity</code> uses the lowest intensity in each spectrum instead of a fixed value.</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Parameter"><code>Centroid_MzTolerance</code></td>
+<td role="cell" data-label="Example"><code>0.1</code></td>
+<td role="cell" data-label="Meaning">m/z tolerance within which neighbouring maxima are merged into one centroid.</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Parameter"><code>SNRS_Percentile</code></td>
+<td role="cell" data-label="Example"><code>95.0</code></td>
+<td role="cell" data-label="Meaning">Percentile of the signal used to estimate the noise level.</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Parameter"><code>MinSNR</code></td>
+<td role="cell" data-label="Example"><code>1.0</code></td>
+<td role="cell" data-label="Meaning">Minimum signal-to-noise ratio a centroid must reach.</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Parameter"><code>RefineMZ</code></td>
+<td role="cell" data-label="Example"><code>false</code></td>
+<td role="cell" data-label="Meaning">Whether the centroid m/z is refined from the profile points around the maximum.</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Parameter"><code>SumIntensities</code></td>
+<td role="cell" data-label="Example"><code>false</code></td>
+<td role="cell" data-label="Meaning">Whether centroid intensity is the sum of the profile intensities under the peak instead of the maximum.</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Parameter"><code>PaddingParams</code></td>
+<td role="cell" data-label="Example"><code>None</code></td>
+<td role="cell" data-label="Meaning">Optional padding settings for gaps in sparse profile spectra.</td>
+</tr>
+</tbody>
+</table></div>
+</li>
+<li>
+<p><code>Some p</code> pads gaps in sparse profile spectra before the transform. The <code>PaddingParams</code> record contains <code>MaximumPaddingPoints</code> (<code>int option</code>), <code>Padding_MzTolerance</code> (<code>float</code>), <code>WindowSize</code> (<code>int</code>) and <code>SpacingPerc</code> (<code>float</code>).</p>
+</li>
+<li>
+<p>The MS2 settings in the ion mobility default file use <code>Some { MaximumPaddingPoints = Some 7; Padding_MzTolerance = 0.05; WindowSize = 150; SpacingPerc = 95.0 }</code> as an example.</p>
+</li>
+<li>
+<p>The default file is <a href="https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/mzMLToMzLiteParams.json">mzMLToMzLiteParams.json</a>. A file with wavelet centroiding on both levels is <a href="https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/TIMsMzMLtoMzLiteParams.json">TIMsMzMLtoMzLiteParams.json</a>.</p>
+</li>
+</ul>
+</div></details><details id="parameter-generation" class="accordion tool-io-accordion tool-io-parameters"><summary class="accordion-header"><span class="accordion-icon" aria-hidden="true">CFG</span><span class="accordion-heading"><strong role="heading" aria-level="2">Parameter generation</strong><small>JSON and parameter-generation examples</small></span><span class="accordion-chevron" aria-hidden="true"></span></summary><div class="accordion-content">
+<p>From the ProteomIQon repository root, build the library with <code>dotnet build src/ProteomIQon/ProteomIQon.fsproj -c Release</code>. Save the following as <code>generate-params.fsx</code> in that same directory and run <code>dotnet fsi generate-params.fsx</code>. The script writes the JSON file to the system temporary directory.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="fsharp"><code><span class="line"><span style="color:#E1E4E8">#r </span><span style="color:#9ECBFF">"nuget: Newtonsoft.Json, 13.0.4"</span></span>
+<span class="line"><span style="color:#E1E4E8">#r </span><span style="color:#9ECBFF">"./src/ProteomIQon/bin/Release/net10.0/ProteomIQon.dll"</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">open</span><span style="color:#B392F0"> ProteomIQon</span></span>
+<span class="line"><span style="color:#F97583">open</span><span style="color:#B392F0"> ProteomIQon.Domain</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">let</span><span style="color:#FFAB70"> mzMLToMzLiteParams </span><span style="color:#F97583">:</span><span style="color:#B392F0"> Dto.MzMLtoMzLiteParams </span><span style="color:#F97583">=</span></span>
+<span class="line"><span style="color:#F97583">    {</span></span>
+<span class="line"><span style="color:#E1E4E8">        Compress           </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> Compression.NoCompression</span></span>
+<span class="line"><span style="color:#E1E4E8">        StartRetentionTime </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> None</span></span>
+<span class="line"><span style="color:#E1E4E8">        EndRetentionTime   </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> None</span></span>
+<span class="line"><span style="color:#E1E4E8">        MS1PeakPicking     </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> PeakPicking.ProfilePeaks</span></span>
+<span class="line"><span style="color:#E1E4E8">        MS2PeakPicking     </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> PeakPicking.ProfilePeaks</span></span>
+<span class="line"><span style="color:#F97583">    }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D">// Replace the temp folder with your project folder.</span></span>
+<span class="line"><span style="color:#F97583">let</span><span style="color:#FFAB70"> outputPath</span><span style="color:#F97583"> =</span><span style="color:#E1E4E8"> System.IO.Path.Combine</span><span style="color:#F97583">(</span><span style="color:#E1E4E8">System.IO.Path.GetTempPath</span><span style="color:#F97583">(),</span><span style="color:#9ECBFF"> "mzMLToMzLiteParams.json"</span><span style="color:#F97583">)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#E1E4E8">Json.serializeAndWrite outputPath mzMLToMzLiteParams</span></span></code></pre>
+</div></details><h2 id="installing-and-executing-the-tool">Installing and executing the tool</h2>
+<ol>
+<li>
+<p><strong>Installing</strong></p>
+<p>Install the tool globally with the .NET CLI.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="sh"><code><span class="line"><span style="color:#B392F0">dotnet</span><span style="color:#9ECBFF"> tool</span><span style="color:#9ECBFF"> install</span><span style="color:#79B8FF"> --global</span><span style="color:#9ECBFF"> ProteomIQon.MzMLToMzLite</span></span></code></pre>
+</li>
+<li>
+<p><strong>Execute</strong></p>
+<ul>
+<li>
+<p>Convert one run</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="sh"><code><span class="line"><span style="color:#B392F0">proteomiqon-mzmltomzlite</span><span style="color:#79B8FF"> -i</span><span style="color:#9ECBFF"> path/to/run.mzML</span><span style="color:#79B8FF"> -o</span><span style="color:#9ECBFF"> path/to/output</span><span style="color:#79B8FF"> -p</span><span style="color:#9ECBFF"> path/to/mzMLToMzLiteParams.json</span></span></code></pre>
+</li>
+<li>
+<p>Convert multiple runs</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="sh"><code><span class="line"><span style="color:#B392F0">proteomiqon-mzmltomzlite</span><span style="color:#79B8FF"> -i</span><span style="color:#9ECBFF"> path/to/run1.mzML</span><span style="color:#9ECBFF"> path/to/run2.mzML</span><span style="color:#9ECBFF"> path/to/run3.mzML</span><span style="color:#79B8FF"> -o</span><span style="color:#9ECBFF"> path/to/output</span><span style="color:#79B8FF"> -p</span><span style="color:#9ECBFF"> path/to/mzMLToMzLiteParams.json</span><span style="color:#79B8FF"> -c</span><span style="color:#79B8FF"> 3</span></span></code></pre>
+</li>
+</ul>
+</li>
+<li>
+<p><strong>Help</strong></p>
+<p>If the XML reader fails because the input contains a stray <code>&amp;quot</code>, use <code>-f</code> to remove that string from the input file in place.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="sh"><code><span class="line"><span style="color:#B392F0">proteomiqon-mzmltomzlite</span><span style="color:#79B8FF"> -i</span><span style="color:#9ECBFF"> path/to/run.mzML</span><span style="color:#79B8FF"> -o</span><span style="color:#9ECBFF"> path/to/output</span><span style="color:#79B8FF"> -p</span><span style="color:#9ECBFF"> path/to/mzMLToMzLiteParams.json</span><span style="color:#79B8FF"> -f</span></span></code></pre>
+</li>
+<li>
+<p><strong>All Flags</strong></p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="sh"><code><span class="line"><span style="color:#B392F0">proteomiqon-mzmltomzlite</span><span style="color:#79B8FF"> --help</span></span></code></pre>
+</li>
+</ol>
+</article><nav class="tool-pagination" aria-label="Browse tools"><span></span><a class="next" href="/ProteomIQon/tools/mzml-to-mzlite-ion-mobility/"><small>Next tool</small><span>MzMLToMzLiteIonMobility →</span></a></nav></main></div></main><footer class="site-bottom mx-auto w-[min(1180px,calc(100%-48px))] border-t border-line pt-[22px] pb-[34px] text-xs max-md:w-[min(100%-32px,640px)]" data-astro-cid-qup6pdxl><div class="institution-logos" data-astro-cid-pe4ulxjw><span class="rptu-logo" data-astro-cid-pe4ulxjw><img src="/ProteomIQon/images/RPTU%20Logo_1c-1.svg" alt="RPTU Kaiserslautern-Landau" width="152" height="42" data-astro-cid-pe4ulxjw></span><img class="csb-logo" src="/ProteomIQon/images/csb-narrow-black.svg" alt="CSB" width="96" height="39" data-astro-cid-pe4ulxjw></div><a class="footer-github text-red! no-underline" href="https://github.com/CSBiology/ProteomIQon/" data-astro-cid-qup6pdxl>View the project on GitHub ↗</a></footer></div><script type="module">var e=`<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>`;for(let t of document.querySelectorAll(`main pre`)){let n=document.createElement(`div`);n.className=`copy-command-block`,t.before(n),n.append(t);let r=document.createElement(`button`);r.type=`button`,r.className=`copy-command-button`,r.setAttribute(`aria-label`,`Copy command`),r.title=`Copy command`,r.innerHTML=e,n.append(r);let i;r.addEventListener(`click`,async()=>{let n=t.textContent?.trim()??``;try{try{if(!navigator.clipboard?.writeText)throw Error(`Clipboard API unavailable`);await navigator.clipboard.writeText(n)}catch{let e=document.createElement(`textarea`);e.value=n,e.setAttribute(`readonly`,``),e.style.position=`fixed`,e.style.opacity=`0`,document.body.append(e),e.select();let t=!1;try{t=document.execCommand?.(`copy`)??!1}finally{e.remove()}if(!t)throw Error(`Copy failed`)}r.innerHTML=`<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m5 12 4 4L19 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`,r.setAttribute(`aria-label`,`Copied to clipboard`),r.title=`Copied to clipboard`}catch{r.setAttribute(`aria-label`,`Could not copy command`),r.title=`Could not copy command`}window.clearTimeout(i),i=window.setTimeout(()=>{r.innerHTML=e,r.setAttribute(`aria-label`,`Copy command`),r.title=`Copy command`},1800)})}</script></body></html>

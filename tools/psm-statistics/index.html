@@ -1,0 +1,387 @@
+<!DOCTYPE html><html lang="en" data-theme="light"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="icon" type="image/svg+xml" href="/ProteomIQon/favicon.svg"><link rel="icon" href="/ProteomIQon/favicon.ico"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap"><meta name="description" content="PSMStatistics learns one combined score from the per-spectrum scores reported by PeptideSpectrumMatching."><meta name="generator" content="Astro v7.3.8"><title>PSMStatistics · ProteomIQon</title><link rel="stylesheet" href="/ProteomIQon/_astro/global.LELvuLUR.css"><link rel="stylesheet" href="/ProteomIQon/_astro/Layout.BzR0PIOI.css"></head><body><div class="site-shell"><header class="site-masthead mx-auto flex w-[min(1180px,calc(100%-48px))] items-center justify-between gap-x-6 border-b border-line pt-6 pb-5 max-md:w-[min(100%-32px,640px)] max-[520px]:block"><a class="inline-flex items-center gap-[11px] text-[1.16rem] font-bold tracking-[-.04em] no-underline" href="/ProteomIQon/" aria-label="ProteomIQon home"><span class="inline-flex h-[21px] items-end gap-0.5" aria-hidden="true"><span class="block h-3 w-[5px] rounded-t-[1px] bg-sky"></span><span class="block h-5 w-[5px] rounded-t-[1px] bg-orange"></span><span class="block h-[15px] w-[5px] rounded-t-[1px] bg-teal"></span></span><span>Proteom<span class="text-orange">IQ</span>on</span></a><nav class="desktop-site-nav flex items-center gap-[25px] max-[520px]:mt-[18px] max-[520px]:flex-wrap max-[520px]:gap-x-4 max-[520px]:gap-y-2" aria-label="Main navigation"><a class="group relative py-1 text-[.8rem] whitespace-nowrap no-underline transition-colors duration-200 hover:text-navy! text-navy!" href="/ProteomIQon/tools/" aria-current="true">Tools<span class="absolute inset-x-0 bottom-0 h-0.5 origin-right scale-x-0 bg-red transition-transform duration-200 group-hover:origin-left group-hover:scale-x-100 origin-left scale-x-100"></span></a><a class="group relative py-1 text-[.8rem] whitespace-nowrap no-underline transition-colors duration-200 hover:text-navy! text-steel!" href="/ProteomIQon/guide/installation/">Installation<span class="absolute inset-x-0 bottom-0 h-0.5 origin-right scale-x-0 bg-red transition-transform duration-200 group-hover:origin-left group-hover:scale-x-100"></span></a><a class="group relative py-1 text-[.8rem] whitespace-nowrap no-underline transition-colors duration-200 hover:text-navy! text-steel!" href="/ProteomIQon/guide/getting-started/">Getting started<span class="absolute inset-x-0 bottom-0 h-0.5 origin-right scale-x-0 bg-red transition-transform duration-200 group-hover:origin-left group-hover:scale-x-100"></span></a><a class="group relative py-1 text-[.8rem] whitespace-nowrap no-underline transition-colors duration-200 hover:text-navy! text-steel!" href="/ProteomIQon/guide/developer-information/">Developer Information<span class="absolute inset-x-0 bottom-0 h-0.5 origin-right scale-x-0 bg-red transition-transform duration-200 group-hover:origin-left group-hover:scale-x-100"></span></a><a class="group relative py-1 text-[.8rem] whitespace-nowrap no-underline transition-colors duration-200 hover:text-navy! text-red!" href="/ProteomIQon/guide/help/">Help<span class="absolute inset-x-0 bottom-0 h-0.5 origin-right scale-x-0 bg-red transition-transform duration-200 group-hover:origin-left group-hover:scale-x-100"></span></a><a class="group relative py-1 text-[.8rem] whitespace-nowrap no-underline transition-colors duration-200 hover:text-navy! text-steel!" href="/ProteomIQon/guide/further-information/">Learn more<span class="absolute inset-x-0 bottom-0 h-0.5 origin-right scale-x-0 bg-red transition-transform duration-200 group-hover:origin-left group-hover:scale-x-100"></span></a></nav><details class="mobile-site-nav"><summary><span>Menu</span><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"></path></svg></summary><nav aria-label="Main navigation"><a href="/ProteomIQon/tools/" aria-current="true">Tools</a><a href="/ProteomIQon/guide/installation/">Installation</a><a href="/ProteomIQon/guide/getting-started/">Getting started</a><a href="/ProteomIQon/guide/developer-information/">Developer Information</a><a href="/ProteomIQon/guide/help/">Help</a><a href="/ProteomIQon/guide/further-information/">Learn more</a></nav></details></header><script type="module">var e=document.querySelector(`.mobile-site-nav`);document.addEventListener(`click`,t=>{e?.open&&t.target instanceof Node&&!e.contains(t.target)&&(e.open=!1)}),e?.addEventListener(`keydown`,t=>{t.key===`Escape`&&(e.open=!1,e.querySelector(`summary`)?.focus())});</script><main class="tool-page-wide"><div class="tool-detail-layout phase-peptide-identification"><aside class="tool-sidebar"><a class="back-link" href="/ProteomIQon/tools/">← All tools</a><div class="sidebar-rule"></div><p class="sidebar-label">In this stage</p><nav aria-label="Peptide Identification tools"><a href="/ProteomIQon/tools/peptide-spectrum-matching/">PeptideSpectrumMatching</a><a href="/ProteomIQon/tools/peptide-spectrum-matching-tims/">PeptideSpectrumMatchingTIMs</a><a class="active" aria-current="page" href="/ProteomIQon/tools/psm-statistics/">PSMStatistics</a><a href="/ProteomIQon/tools/ms-fragger-to-psm/">MSFragger to PSM</a></nav><details class="mobile-stage-navigation"><summary>In this stage <span>4 tools</span></summary><nav aria-label="Peptide Identification tools"><a href="/ProteomIQon/tools/peptide-spectrum-matching/">PeptideSpectrumMatching</a><a href="/ProteomIQon/tools/peptide-spectrum-matching-tims/">PeptideSpectrumMatchingTIMs</a><a class="active" aria-current="page" href="/ProteomIQon/tools/psm-statistics/">PSMStatistics</a><a href="/ProteomIQon/tools/ms-fragger-to-psm/">MSFragger to PSM</a></nav></details></aside><main class="tool-detail"><section class="tool-detail-hero"><h1>PSMStatistics</h1></section><article class="legacy-content tool-legacy-content prose max-w-none prose-a:font-semibold prose-code:before:content-none prose-code:after:content-none"><h2 id="tool-description">Tool Description</h2>
+<p><a href="/ProteomIQon/tools/peptide-spectrum-matching/">PeptideSpectrumMatching</a> and <a href="/ProteomIQon/tools/peptide-spectrum-matching-tims/">PeptideSpectrumMatchingTIMs</a> report several target and decoy candidates per spectrum, each with a <code>SEQUEST-like</code>, an <code>Andromeda-like</code> and an <code>X!Tandem-like</code> score. PSMStatistics combines these columns into one score with a <code>FastTree classifier (ML.NET)</code> trained to separate targets from decoys. It keeps the best candidate per scan by this score, computes its Q-value and PEP value, and writes the targets that pass both thresholds.</p>
+<h2 class="tool-workflow-heading" id="how-does-psmstatistics-work">How does PSMStatistics work?</h2>
+<ol class="tool-explanation-steps" role="list">
+<li><div class="tool-step-copy">
+<p class="tool-step-heading"><strong>Build the features</strong></p>
+<p>The classifier uses one-hot encoded precursor charge, precursor m/z, theoretical mass, absolute mass error, peptide length, and missed cleavages looked up in the peptide database. It also uses the three search scores and their <code>NormDeltaBestToRest</code> and <code>NormDeltaNext</code> columns. If all rows contain finite <code>Hyperscore</code> and <code>Expectscore</code>, it includes the hyperscore and −log₁₀ of the expectation value.</p>
+</div></li>
+<li><div class="tool-step-copy">
+<p class="tool-step-heading"><strong>Add retention time features</strong></p>
+<p>With <code>RetentionTimeFeature</code>, a per-file FastTree regression with 200 trees and 64 leaves predicts scan time from peptide sequence and modifications. Training uses the best targets per scan with q &lt; 0.01 under the initial score, using the median scan time for each modified sequence and global modification. The predictors include sequence length, amino acid and modification counts, the unordered residue pairs at positions 1 and n−1 and 2 and n−2, and the C-terminal residue. A peptide and its pseudo-reversal stay in the same one of five sequence folds and receive the same prediction. <code>RtDeviation</code> is the observed minus predicted scan time divided by 1.4826 times the median absolute deviation of the held-out residuals. <code>AbsRtDeviation</code> is its absolute value. If fewer than 500 peptides are available or held-out R² is below 0.3, the classifier proceeds without both features and logs a warning.</p>
+</div></li>
+<li><div class="tool-step-copy">
+<p class="tool-step-heading"><strong>Train and refine the scoring model</strong></p>
+<p>Initial training ranks candidates by −log₁₀(<code>Expectscore</code>) when those expectation values are available, or by the SEQUEST-like score otherwise. The best candidate of a scan supplies a positive example if it is a target and has q &lt; 0.001. Decoy candidates from the remaining scans supply negatives. FastTree trains on a random 90% split and logs accuracy, AUC and F1 on the other 10%. It uses one thread, caps leaf outputs at 10, and uses seed 1024 for ML.NET and scan fold assignment.</p>
+<p>The model rescores the candidates and retrains on updated positives. With cross-validation, the retraining cutoff is q &lt; 0.01. Without it, positives need q &lt; <code>QValueThreshold / 10</code> and PEP &lt; <code>PepValueThreshold</code>. Retraining keeps the previous model if the count of passing scans falls or training fails. If the count increases by less than <code>MinimumIncreaseBetweenIterations</code>, it keeps the new model and stops. The <code>MaxIterations</code> limit applies per fold when cross-validation is enabled.</p>
+</div></li>
+<li><div class="tool-step-copy">
+<p class="tool-step-heading"><strong>Score held-out scans</strong></p>
+<p>By default, PSMStatistics shuffles scans into three nearly equal folds. For each fold, it trains on the other two and scores the held-out scans. It scales each fold so the lowest-scoring target with q ≤ 0.01 has a score of 0 and the median decoy has a score of −1. It then pools the rescaled scores. With <code>CrossValidation = false</code>, a single model trains on and scores all scans.</p>
+</div></li>
+<li><div class="tool-step-copy">
+<p class="tool-step-heading"><strong>Estimate q-values and PEPs</strong></p>
+<p>For the best candidate per scan, the <a href="https://www.biofsharp.com/BioFSharp.Mz/04_01_fdr_control.html#Computing-q-values-by-counting-decoys">q-value</a> comes from the cumulative ratio of decoys to targets at or above the score, made monotone (<code>FDRControl.calculateQValueStorey</code> of BioFSharp.Mz, without a π0 estimate). For the <a href="https://www.biofsharp.com/BioFSharp.Mz/04_01_fdr_control.html#From-list-level-q-to-single-PSM-PEP">posterior error probability (PEP)</a>, the tool bins the scores and fits a smoothing spline to the logit of the decoy share using iteratively reweighted least squares. Bin width is one FastTree score unit, converted to the pooled scale when cross-validation is enabled. PEP is the fitted decoy-to-target ratio at the candidate's score, capped at 1 and made non-increasing as scores rise.</p>
+<p>A scan is written only if its best candidate is a target and passes both thresholds. When no candidate passes or score estimation fails, the file contains only the header. For an estimation error, see <code>&lt;run&gt;_log.txt</code>. To bypass model training, use <code>Threshold.Fixed</code> with SEQUEST and Andromeda cutoffs.</p>
+</div></li>
+</ol>
+<p><img alt="Semi-supervised PSM scoring" loading="lazy" decoding="async" width="1448" height="652" src="/ProteomIQon/_astro/SemiSupervisedScoring.xvR4zfg9_dhdVk.webp"></p>
+<details id="inputs" class="accordion tool-io-accordion tool-io-inputs"><summary class="accordion-header"><span class="accordion-icon" aria-hidden="true">IN</span><span class="accordion-heading"><strong role="heading" aria-level="2">Inputs</strong><small>Files and command-line flags</small></span><span class="accordion-chevron" aria-hidden="true"></span></summary><div class="accordion-content">
+<p>These inputs are needed to execute the tool:</p>
+<div class="tool-io-table-scroll" tabindex="0" role="region" aria-label="Inputs table"><table class="responsive-table" role="table">
+<thead role="rowgroup">
+<tr role="row">
+<th scope="col" role="columnheader">Flag</th>
+<th scope="col" role="columnheader">Meaning</th>
+<th scope="col" role="columnheader">Comes from</th>
+</tr>
+</thead>
+<tbody role="rowgroup">
+<tr role="row">
+<td role="cell" data-label="Flag"><code>-i</code></td>
+<td role="cell" data-label="Meaning">one or more <code>.psm</code> files, or a directory that is searched for <code>*.psm</code> (not recursive)</td>
+<td role="cell" data-label="Comes from"><a href="/ProteomIQon/tools/peptide-spectrum-matching/">PeptideSpectrumMatching</a> or <a href="/ProteomIQon/tools/peptide-spectrum-matching-tims/">PeptideSpectrumMatchingTIMs</a></td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Flag"><code>-d</code></td>
+<td role="cell" data-label="Meaning">SQLite peptide database. Updated when <code>StoreIsotopePatterns</code> is enabled.</td>
+<td role="cell" data-label="Comes from"><a href="/ProteomIQon/tools/peptide-db/">PeptideDB</a></td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Flag"><code>-o</code></td>
+<td role="cell" data-label="Meaning">the output directory, created when missing</td>
+<td role="cell" data-label="Comes from">-</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Flag"><code>-p</code></td>
+<td role="cell" data-label="Meaning">the parameter file in JSON</td>
+<td role="cell" data-label="Comes from"><a href="https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/pSMStatisticsParams.json">pSMStatisticsParams.json</a></td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Flag"><code>-dc</code></td>
+<td role="cell" data-label="Meaning">switch: save diagnostic charts to the output directory</td>
+<td role="cell" data-label="Comes from"></td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Flag"><code>-c</code></td>
+<td role="cell" data-label="Meaning">number of files scored at the same time and the number of cores used to compute the isotope patterns, default 1</td>
+<td role="cell" data-label="Comes from">-</td>
+</tr>
+</tbody>
+</table></div>
+<p>The tool expects the 28-column <code>.psm</code> layout. Regenerate files that use the older 23-column layout.</p>
+<ul>
+<li>For every input <code>run.psm</code> the tool writes <code>run.qpsm</code> to the output directory.</li>
+<li>The file is tab separated with a header and holds one row per scan that passes filtering. <a href="/ProteomIQon/tools/protein-inference/">ProteinInference</a>, <a href="/ProteomIQon/tools/psm-based-quantification/">PSMBasedQuantification</a> and <a href="/ProteomIQon/tools/psm-based-quantification-tims/">PSMBasedQuantificationTIMs</a> read these files.</li>
+<li>With <code>StoreIsotopePatterns</code> enabled, the tool adds the isotope patterns to the database after scoring the last file. For an isotopically labeled database, it stores both forms of each peptide ion. Quantification reuses patterns written with matching BioFSharp and BioFSharp.Mz versions and computes missing patterns on demand. A write failure produces a warning. On a shared filesystem with unreliable locking, run only one process per database or disable <code>StoreIsotopePatterns</code> to avoid concurrent database writes.</li>
+<li>With <code>-dc</code>, the per-run <code>&lt;run&gt;_plots</code> directory receives <code>InitialSeparation.html</code> for the starting scores, <code>Metrics.html</code> for the last model's test split, and <code>separationAtIteration_&lt;n&gt;.html</code> for model-score distributions, q-values and PEPs. Iterations are numbered from zero. The first retraining replaces the initial model's iteration-zero chart. Cross-validation prefixes the charts with <code>Fold1_</code> through <code>Fold3_</code> and shows the two training folds for each model. <code>Threshold.Fixed</code> produces no charts.</li>
+<li>The tool also creates a <code>run_plots</code> directory per input. It stays empty unless you pass <code>-dc</code>. Log output goes to <code>PSMStatistics_log.txt</code> and <code>run_log.txt</code> in the output directory.</li>
+</ul>
+</div></details><details id="parameter-file" class="accordion tool-io-accordion tool-io-parameters"><summary class="accordion-header"><span class="accordion-icon" aria-hidden="true">CFG</span><span class="accordion-heading"><strong role="heading" aria-level="2">Parameter file</strong><small>Default values and tool settings</small></span><span class="accordion-chevron" aria-hidden="true"></span></summary><div class="accordion-content">
+<p>PSMStatistics can either estimate a combined score using iterative learning or apply fixed score cutoffs. The default uses <code>Threshold.Estimate</code>.</p>
+<div class="tool-io-table-scroll" tabindex="0" role="region" aria-label="Parameter file table"><table class="responsive-table" role="table">
+<thead role="rowgroup">
+<tr role="row">
+<th scope="col" role="columnheader">Parameter</th>
+<th scope="col" role="columnheader">Default</th>
+<th scope="col" role="columnheader">Description</th>
+</tr>
+</thead>
+<tbody role="rowgroup">
+<tr role="row">
+<td role="cell" data-label="Parameter"><code>Threshold</code></td>
+<td role="cell" data-label="Default"><code>Threshold.Estimate estimationParams</code></td>
+<td role="cell" data-label="Description">Learn the combined score and filter by q-value and PEP value. The nested record is listed below.</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Parameter"><code>Threshold</code> (alternative)</td>
+<td role="cell" data-label="Default"><code>Threshold.Fixed { SequestLike = 0.; Andromeda = 0. }</code></td>
+<td role="cell" data-label="Description">Skip the learning. Among the matches whose <code>SequestScore</code> exceeds <code>SequestLike</code> and whose <code>AndroScore</code> exceeds <code>Andromeda</code>, keep the one with the highest <code>SequestScore</code> per scan, and drop it when it is a decoy. <code>ModelScore</code> holds the <code>SequestScore</code>, and <code>QValue</code> and <code>PEPValue</code> are <code>NaN</code>. Pick your own cutoffs; these values are placeholders.</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Parameter"><code>ParseProteinIDRegexPattern</code></td>
+<td role="cell" data-label="Default"><code>"id"</code></td>
+<td role="cell" data-label="Description">Regex applied to the protein names of the database to produce the <code>ProteinNames</code> column. <code>"id"</code> keeps them unchanged. The database holds the names as PeptideDB cut them, so keep <code>"id"</code>. Another pattern is applied to those stored names and keeps the matched part (empty when it does not match).</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Parameter"><code>KeepTemporaryFiles</code></td>
+<td role="cell" data-label="Default"><code>true</code></td>
+<td role="cell" data-label="Description">Not used by PSMStatistics.</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Parameter"><code>StoreIsotopePatterns</code></td>
+<td role="cell" data-label="Default"><code>true</code></td>
+<td role="cell" data-label="Description">Store the theoretical isotope patterns of the ions in the <code>.qpsm</code> files in the table <code>IsotopePattern</code> of the peptide database (<code>-d</code>), where the quantification tools read them.</td>
+</tr>
+</tbody>
+</table></div>
+<p>The fields of <code>Threshold.Estimate</code>:</p>
+<div class="tool-io-table-scroll" tabindex="0" role="region" aria-label="Parameter file table"><table class="responsive-table" role="table">
+<thead role="rowgroup">
+<tr role="row">
+<th scope="col" role="columnheader">Parameter</th>
+<th scope="col" role="columnheader">Default</th>
+<th scope="col" role="columnheader">Description</th>
+</tr>
+</thead>
+<tbody role="rowgroup">
+<tr role="row">
+<td role="cell" data-label="Parameter"><code>QValueThreshold</code></td>
+<td role="cell" data-label="Default"><code>0.01</code></td>
+<td role="cell" data-label="Description">Write PSMs with a q-value below this value. Without <code>CrossValidation</code>, the positives of each retraining are the targets with a q-value below a tenth of this value and a PEP below <code>PepValueThreshold</code>.</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Parameter"><code>PepValueThreshold</code></td>
+<td role="cell" data-label="Default"><code>1.0</code></td>
+<td role="cell" data-label="Description">Write PSMs with a PEP below this value. The default removes only PSMs with a PEP of 1.</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Parameter"><code>MaxIterations</code></td>
+<td role="cell" data-label="Default"><code>15</code></td>
+<td role="cell" data-label="Description">Upper limit for the retrainings after the first model, per fold with <code>CrossValidation</code>.</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Parameter"><code>MinimumIncreaseBetweenIterations</code></td>
+<td role="cell" data-label="Default"><code>0.005</code></td>
+<td role="cell" data-label="Description">Stop when a retraining raises the number of passing scans by less than this fraction of the new number. With <code>CrossValidation</code> this number counts the targets with q &lt;= 0.01. Without it, it is the smaller of the numbers of best candidates per scan with q &lt;= <code>QValueThreshold</code> and with PEP &lt;= <code>PepValueThreshold</code>.</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Parameter"><code>PepValueFittingMethod</code></td>
+<td role="cell" data-label="Default"><code>PepValueFittingMethod.IRLS</code></td>
+<td role="cell" data-label="Description">How the PEP curve is fitted. <code>IRLS</code> (iteratively reweighted least squares) is the only case.</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Parameter"><code>CrossValidation</code></td>
+<td role="cell" data-label="Default"><code>true</code></td>
+<td role="cell" data-label="Description">Score each scan with the model trained on the other two of three scan folds, and normalize the scores per fold. Each fold retrains on the targets with q &lt; 0.01, independent of <code>QValueThreshold</code> and <code>PepValueThreshold</code>, which then only filter the output. The training runs three times per file, each time on two thirds of the scans, so a run takes about two to three times as long as without <code>CrossValidation</code>. Parameter files without this field use <code>false</code>.</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Parameter"><code>RetentionTimeFeature</code></td>
+<td role="cell" data-label="Default"><code>true</code></td>
+<td role="cell" data-label="Description">Add the features <code>RtDeviation</code> and <code>AbsRtDeviation</code>, the deviation of the scan time from the time predicted from the sequence. Parameter files without this field use <code>false</code>.</td>
+</tr>
+</tbody>
+</table></div>
+<p>The default parameter file is <a href="https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/pSMStatisticsParams.json">pSMStatisticsParams.json ↗</a>.</p>
+</div></details><details id="outputs" class="accordion tool-io-accordion tool-io-outputs"><summary class="accordion-header"><span class="accordion-icon" aria-hidden="true">OUT</span><span class="accordion-heading"><strong role="heading" aria-level="2">Outputs</strong><small>Generated data and log files</small></span><span class="accordion-chevron" aria-hidden="true"></span></summary><div class="accordion-content">
+<p>The output <code>.qpsm</code> file contains 27 columns. The columns are grouped by category below.</p>
+<h3 id="identification-and-protein-assignment-6">Identification and protein assignment (6)</h3>
+<p>PSM identifiers, peptide sequences and corresponding proteins</p>
+<div class="tool-io-table-scroll" tabindex="0" role="region" aria-label="Outputs table"><table class="responsive-table" role="table">
+<thead role="rowgroup">
+<tr role="row">
+<th scope="col" role="columnheader">Column</th>
+<th scope="col" role="columnheader">Description</th>
+</tr>
+</thead>
+<tbody role="rowgroup">
+<tr role="row">
+<td role="cell" data-label="Column"><code>PSMId</code></td>
+<td role="cell" data-label="Description">Identifier of the MS/MS spectrum</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Column"><code>GlobalMod</code></td>
+<td role="cell" data-label="Description"><code>0</code> for an unlabeled peptide ion, <code>1</code> for a labeled peptide ion</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Column"><code>PepSequenceID</code></td>
+<td role="cell" data-label="Description">Unique identifier of the unmodified peptide sequence, which points to PeptideDB</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Column"><code>ModSequenceID</code></td>
+<td role="cell" data-label="Description">Unique identifier of the modified peptide sequence (including PTMs, e.g., methylation), which points to PeptideDB</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Column"><code>StringSequence</code></td>
+<td role="cell" data-label="Description">Amino Acid sequence (one-letter code) from PeptideDB which matches the psm candidate</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Column"><code>ProteinNames</code></td>
+<td role="cell" data-label="Description">Protein identifiers from the peptide database, separated by semicolons</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="spectrum-precursor-and-peptide-properties-8">Spectrum, precursor and peptide properties (8)</h3>
+<p>Scan details, precursor masses, peptide length and missed cleavages</p>
+<div class="tool-io-table-scroll" tabindex="0" role="region" aria-label="Outputs table"><table class="responsive-table" role="table">
+<thead role="rowgroup">
+<tr role="row">
+<th scope="col" role="columnheader">Column</th>
+<th scope="col" role="columnheader">Description</th>
+</tr>
+</thead>
+<tbody role="rowgroup">
+<tr role="row">
+<td role="cell" data-label="Column"><code>ScanNr</code></td>
+<td role="cell" data-label="Description">Number of the MS2 spectrum within the run</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Column"><code>ScanTime</code></td>
+<td role="cell" data-label="Description">Retention time (RT) in minutes of the MS/MS scan</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Column"><code>Charge</code></td>
+<td role="cell" data-label="Description">Precursor ion charge state</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Column"><code>PrecursorMZ</code></td>
+<td role="cell" data-label="Description">Precursor ion mass-to-charge ratio (m/z)</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Column"><code>TheoMass</code></td>
+<td role="cell" data-label="Description">Theoretical peptide mass in the spectrum (based on amino acid composition) in Dalton</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Column"><code>AbsDeltaMass</code></td>
+<td role="cell" data-label="Description">Absolute mass deviation between theoretical and measured mass (mass error)</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Column"><code>PeptideLength</code></td>
+<td role="cell" data-label="Description">Peptide length in Amino Acid count</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Column"><code>MissCleavages</code></td>
+<td role="cell" data-label="Description">Number of missed cleavages, looked up in the peptide database</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="sequest-scoring-3">SEQUEST scoring (3)</h3>
+<p>Similarity score and normalized differences between candidates</p>
+<div class="tool-io-table-scroll" tabindex="0" role="region" aria-label="Outputs table"><table class="responsive-table" role="table">
+<thead role="rowgroup">
+<tr role="row">
+<th scope="col" role="columnheader">Column</th>
+<th scope="col" role="columnheader">Description</th>
+</tr>
+</thead>
+<tbody role="rowgroup">
+<tr role="row">
+<td role="cell" data-label="Column"><code>SequestScore</code></td>
+<td role="cell" data-label="Description">SEQUEST-like score</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Column"><code>SequestNormDeltaBestToRest</code></td>
+<td role="cell" data-label="Description">(Best SEQUEST score of the spectrum − this score) / best score. The top candidate has a value of <code>0</code>.</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Column"><code>SequestNormDeltaNext</code></td>
+<td role="cell" data-label="Description">(This SEQUEST score − next lower score of the spectrum) / best score.</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="andromeda-scoring-3">Andromeda scoring (3)</h3>
+<p>Match score and normalized differences between candidates</p>
+<div class="tool-io-table-scroll" tabindex="0" role="region" aria-label="Outputs table"><table class="responsive-table" role="table">
+<thead role="rowgroup">
+<tr role="row">
+<th scope="col" role="columnheader">Column</th>
+<th scope="col" role="columnheader">Description</th>
+</tr>
+</thead>
+<tbody role="rowgroup">
+<tr role="row">
+<td role="cell" data-label="Column"><code>AndroScore</code></td>
+<td role="cell" data-label="Description">Andromeda-like score</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Column"><code>AndroNormDeltaBestToRest</code></td>
+<td role="cell" data-label="Description">(Best Andromeda score of the spectrum − this score) / best score. The top candidate has a value of <code>0</code>.</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Column"><code>AndroNormDeltaNext</code></td>
+<td role="cell" data-label="Description">(This Andromeda score − next lower score of the spectrum) / best score.</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="xtandem-scoring-3">X!Tandem scoring (3)</h3>
+<p>Match score and normalized differences between candidates</p>
+<div class="tool-io-table-scroll" tabindex="0" role="region" aria-label="Outputs table"><table class="responsive-table" role="table">
+<thead role="rowgroup">
+<tr role="row">
+<th scope="col" role="columnheader">Column</th>
+<th scope="col" role="columnheader">Description</th>
+</tr>
+</thead>
+<tbody role="rowgroup">
+<tr role="row">
+<td role="cell" data-label="Column"><code>XtandemScore</code></td>
+<td role="cell" data-label="Description">X!Tandem-like score</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Column"><code>XtandemNormDeltaBestToRest</code></td>
+<td role="cell" data-label="Description">(Best XTandem score of the spectrum − this score) / best score. The top candidate has a value of <code>0</code>.</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Column"><code>XtandemNormDeltaNext</code></td>
+<td role="cell" data-label="Description">(This XTandem score − next lower score of the spectrum) / best score.</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="targetdecoy-and-statistical-confidence-4">Target/decoy and statistical confidence (4)</h3>
+<p>Model score, FDR and posterior error probability</p>
+<div class="tool-io-table-scroll" tabindex="0" role="region" aria-label="Outputs table"><table class="responsive-table" role="table">
+<thead role="rowgroup">
+<tr role="row">
+<th scope="col" role="columnheader">Column</th>
+<th scope="col" role="columnheader">Description</th>
+</tr>
+</thead>
+<tbody role="rowgroup">
+<tr role="row">
+<td role="cell" data-label="Column"><code>Label</code></td>
+<td role="cell" data-label="Description"><code>1</code> for target matches. Decoy matches are excluded from the output.</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Column"><code>ModelScore</code></td>
+<td role="cell" data-label="Description">Fold-normalized score with <code>CrossValidation</code>, raw FastTree score without it, or <code>SequestScore</code> with <code>Threshold.Fixed</code>.</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Column"><code>QValue</code></td>
+<td role="cell" data-label="Description">Q-value of <code>ModelScore</code>. <code>NaN</code> with <code>Threshold.Fixed</code>.</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Column"><code>PEPValue</code></td>
+<td role="cell" data-label="Description">Posterior error probability of <code>ModelScore</code>. <code>NaN</code> with <code>Threshold.Fixed</code>.</td>
+</tr>
+</tbody>
+</table></div>
+</div></details><details id="parameter-generation" class="accordion tool-io-accordion tool-io-parameters"><summary class="accordion-header"><span class="accordion-icon" aria-hidden="true">CFG</span><span class="accordion-heading"><strong role="heading" aria-level="2">Parameter generation</strong><small>JSON and parameter-generation examples</small></span><span class="accordion-chevron" aria-hidden="true"></span></summary><div class="accordion-content">
+<p>From the ProteomIQon repository root, build the library with <code>dotnet build src/ProteomIQon/ProteomIQon.fsproj -c Release</code>. Save the following as <code>generate-params.fsx</code> in that same directory and run <code>dotnet fsi generate-params.fsx</code>. The script writes the JSON file to the system temporary directory.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="fsharp"><code><span class="line"><span style="color:#E1E4E8">#r </span><span style="color:#9ECBFF">"nuget: Newtonsoft.Json, 13.0.4"</span></span>
+<span class="line"><span style="color:#E1E4E8">#r </span><span style="color:#9ECBFF">"./src/ProteomIQon/bin/Release/net10.0/ProteomIQon.dll"</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">open</span><span style="color:#B392F0"> ProteomIQon</span></span>
+<span class="line"><span style="color:#F97583">open</span><span style="color:#B392F0"> ProteomIQon.Domain</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">let</span><span style="color:#FFAB70"> psmStatisticsParams </span><span style="color:#F97583">:</span><span style="color:#B392F0"> Dto.PSMStatisticsParams </span><span style="color:#F97583">=</span></span>
+<span class="line"><span style="color:#F97583">    {</span></span>
+<span class="line"><span style="color:#E1E4E8">        Threshold </span><span style="color:#F97583">=</span></span>
+<span class="line"><span style="color:#E1E4E8">            Threshold.Estimate</span></span>
+<span class="line"><span style="color:#F97583">                {</span></span>
+<span class="line"><span style="color:#E1E4E8">                    QValueThreshold                  </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0.01</span></span>
+<span class="line"><span style="color:#E1E4E8">                    PepValueThreshold                </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 1.0</span></span>
+<span class="line"><span style="color:#E1E4E8">                    MaxIterations                    </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 15</span></span>
+<span class="line"><span style="color:#E1E4E8">                    MinimumIncreaseBetweenIterations </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0.005</span></span>
+<span class="line"><span style="color:#E1E4E8">                    PepValueFittingMethod            </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> PepValueFittingMethod.IRLS</span></span>
+<span class="line"><span style="color:#E1E4E8">                    CrossValidation                  </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> true</span></span>
+<span class="line"><span style="color:#E1E4E8">                    RetentionTimeFeature             </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> true</span></span>
+<span class="line"><span style="color:#F97583">                }</span></span>
+<span class="line"><span style="color:#E1E4E8">        ParseProteinIDRegexPattern </span><span style="color:#F97583">=</span><span style="color:#9ECBFF"> "id"</span></span>
+<span class="line"><span style="color:#E1E4E8">        KeepTemporaryFiles         </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> true</span></span>
+<span class="line"><span style="color:#E1E4E8">        StoreIsotopePatterns       </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> true</span></span>
+<span class="line"><span style="color:#F97583">    }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D">// Replace the temp folder with your project folder.</span></span>
+<span class="line"><span style="color:#F97583">let</span><span style="color:#FFAB70"> outputPath</span><span style="color:#F97583"> =</span><span style="color:#E1E4E8"> System.IO.Path.Combine</span><span style="color:#F97583">(</span><span style="color:#E1E4E8">System.IO.Path.GetTempPath</span><span style="color:#F97583">(),</span><span style="color:#9ECBFF"> "pSMStatisticsParams.json"</span><span style="color:#F97583">)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#E1E4E8">Json.serializeAndWrite outputPath psmStatisticsParams</span></span></code></pre>
+</div></details><h2 id="installing-and-executing-the-tool">Installing and executing the tool</h2>
+<p>Install PSMStatistics as a .NET tool.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="sh"><code><span class="line"><span style="color:#B392F0">dotnet</span><span style="color:#9ECBFF"> tool</span><span style="color:#9ECBFF"> install</span><span style="color:#79B8FF"> --global</span><span style="color:#9ECBFF"> ProteomIQon.PSMStatistics</span></span></code></pre>
+<p>Score a single run.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="sh"><code><span class="line"><span style="color:#B392F0">proteomiqon-psmstatistics</span><span style="color:#79B8FF"> -i</span><span style="color:#9ECBFF"> path/to/run.psm</span><span style="color:#79B8FF"> -d</span><span style="color:#9ECBFF"> path/to/database.db</span><span style="color:#79B8FF"> -o</span><span style="color:#9ECBFF"> path/to/output</span><span style="color:#79B8FF"> -p</span><span style="color:#9ECBFF"> path/to/pSMStatisticsParams.json</span></span></code></pre>
+<p>Several runs at once, three of them in parallel:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="sh"><code><span class="line"><span style="color:#B392F0">proteomiqon-psmstatistics</span><span style="color:#79B8FF"> -i</span><span style="color:#9ECBFF"> path/to/run1.psm</span><span style="color:#9ECBFF"> path/to/run2.psm</span><span style="color:#9ECBFF"> path/to/run3.psm</span><span style="color:#79B8FF"> -d</span><span style="color:#9ECBFF"> path/to/database.db</span><span style="color:#79B8FF"> -o</span><span style="color:#9ECBFF"> path/to/output</span><span style="color:#79B8FF"> -p</span><span style="color:#9ECBFF"> path/to/pSMStatisticsParams.json</span><span style="color:#79B8FF"> -c</span><span style="color:#79B8FF"> 3</span></span>
+<span class="line"><span style="color:#B392F0">proteomiqon-psmstatistics</span><span style="color:#79B8FF"> -i</span><span style="color:#9ECBFF"> path/to/psmFolder</span><span style="color:#79B8FF"> -d</span><span style="color:#9ECBFF"> path/to/database.db</span><span style="color:#79B8FF"> -o</span><span style="color:#9ECBFF"> path/to/output</span><span style="color:#79B8FF"> -p</span><span style="color:#9ECBFF"> path/to/pSMStatisticsParams.json</span><span style="color:#79B8FF"> -c</span><span style="color:#79B8FF"> 3</span><span style="color:#79B8FF"> -dc</span></span></code></pre>
+<p>List all flags with <code>proteomiqon-psmstatistics --help</code>.</p>
+</article><nav class="tool-pagination" aria-label="Browse tools"><a href="/ProteomIQon/tools/peptide-spectrum-matching-tims/"><small>Previous tool</small><span>← PeptideSpectrumMatchingTIMs</span></a><a class="next" href="/ProteomIQon/tools/ms-fragger-to-psm/"><small>Next tool</small><span>MSFragger to PSM →</span></a></nav></main></div></main><footer class="site-bottom mx-auto w-[min(1180px,calc(100%-48px))] border-t border-line pt-[22px] pb-[34px] text-xs max-md:w-[min(100%-32px,640px)]" data-astro-cid-qup6pdxl><div class="institution-logos" data-astro-cid-pe4ulxjw><span class="rptu-logo" data-astro-cid-pe4ulxjw><img src="/ProteomIQon/images/RPTU%20Logo_1c-1.svg" alt="RPTU Kaiserslautern-Landau" width="152" height="42" data-astro-cid-pe4ulxjw></span><img class="csb-logo" src="/ProteomIQon/images/csb-narrow-black.svg" alt="CSB" width="96" height="39" data-astro-cid-pe4ulxjw></div><a class="footer-github text-red! no-underline" href="https://github.com/CSBiology/ProteomIQon/" data-astro-cid-qup6pdxl>View the project on GitHub ↗</a></footer></div><script type="module">var e=`<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>`;for(let t of document.querySelectorAll(`main pre`)){let n=document.createElement(`div`);n.className=`copy-command-block`,t.before(n),n.append(t);let r=document.createElement(`button`);r.type=`button`,r.className=`copy-command-button`,r.setAttribute(`aria-label`,`Copy command`),r.title=`Copy command`,r.innerHTML=e,n.append(r);let i;r.addEventListener(`click`,async()=>{let n=t.textContent?.trim()??``;try{try{if(!navigator.clipboard?.writeText)throw Error(`Clipboard API unavailable`);await navigator.clipboard.writeText(n)}catch{let e=document.createElement(`textarea`);e.value=n,e.setAttribute(`readonly`,``),e.style.position=`fixed`,e.style.opacity=`0`,document.body.append(e),e.select();let t=!1;try{t=document.execCommand?.(`copy`)??!1}finally{e.remove()}if(!t)throw Error(`Copy failed`)}r.innerHTML=`<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m5 12 4 4L19 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`,r.setAttribute(`aria-label`,`Copied to clipboard`),r.title=`Copied to clipboard`}catch{r.setAttribute(`aria-label`,`Could not copy command`),r.title=`Could not copy command`}window.clearTimeout(i),i=window.setTimeout(()=>{r.innerHTML=e,r.setAttribute(`aria-label`,`Copy command`),r.title=`Copy command`},1800)})}</script></body></html>

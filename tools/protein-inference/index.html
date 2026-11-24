@@ -1,0 +1,202 @@
+<!DOCTYPE html><html lang="en" data-theme="light"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="icon" type="image/svg+xml" href="/ProteomIQon/favicon.svg"><link rel="icon" href="/ProteomIQon/favicon.ico"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap"><meta name="description" content="ProteinInference maps the identified peptides back to proteins and reports protein groups: sets of proteins that share their peptide evidence."><meta name="generator" content="Astro v7.3.8"><title>ProteinInference · ProteomIQon</title><link rel="stylesheet" href="/ProteomIQon/_astro/global.LELvuLUR.css"><link rel="stylesheet" href="/ProteomIQon/_astro/Layout.BzR0PIOI.css"></head><body><div class="site-shell"><header class="site-masthead mx-auto flex w-[min(1180px,calc(100%-48px))] items-center justify-between gap-x-6 border-b border-line pt-6 pb-5 max-md:w-[min(100%-32px,640px)] max-[520px]:block"><a class="inline-flex items-center gap-[11px] text-[1.16rem] font-bold tracking-[-.04em] no-underline" href="/ProteomIQon/" aria-label="ProteomIQon home"><span class="inline-flex h-[21px] items-end gap-0.5" aria-hidden="true"><span class="block h-3 w-[5px] rounded-t-[1px] bg-sky"></span><span class="block h-5 w-[5px] rounded-t-[1px] bg-orange"></span><span class="block h-[15px] w-[5px] rounded-t-[1px] bg-teal"></span></span><span>Proteom<span class="text-orange">IQ</span>on</span></a><nav class="desktop-site-nav flex items-center gap-[25px] max-[520px]:mt-[18px] max-[520px]:flex-wrap max-[520px]:gap-x-4 max-[520px]:gap-y-2" aria-label="Main navigation"><a class="group relative py-1 text-[.8rem] whitespace-nowrap no-underline transition-colors duration-200 hover:text-navy! text-navy!" href="/ProteomIQon/tools/" aria-current="true">Tools<span class="absolute inset-x-0 bottom-0 h-0.5 origin-right scale-x-0 bg-red transition-transform duration-200 group-hover:origin-left group-hover:scale-x-100 origin-left scale-x-100"></span></a><a class="group relative py-1 text-[.8rem] whitespace-nowrap no-underline transition-colors duration-200 hover:text-navy! text-steel!" href="/ProteomIQon/guide/installation/">Installation<span class="absolute inset-x-0 bottom-0 h-0.5 origin-right scale-x-0 bg-red transition-transform duration-200 group-hover:origin-left group-hover:scale-x-100"></span></a><a class="group relative py-1 text-[.8rem] whitespace-nowrap no-underline transition-colors duration-200 hover:text-navy! text-steel!" href="/ProteomIQon/guide/getting-started/">Getting started<span class="absolute inset-x-0 bottom-0 h-0.5 origin-right scale-x-0 bg-red transition-transform duration-200 group-hover:origin-left group-hover:scale-x-100"></span></a><a class="group relative py-1 text-[.8rem] whitespace-nowrap no-underline transition-colors duration-200 hover:text-navy! text-steel!" href="/ProteomIQon/guide/developer-information/">Developer Information<span class="absolute inset-x-0 bottom-0 h-0.5 origin-right scale-x-0 bg-red transition-transform duration-200 group-hover:origin-left group-hover:scale-x-100"></span></a><a class="group relative py-1 text-[.8rem] whitespace-nowrap no-underline transition-colors duration-200 hover:text-navy! text-red!" href="/ProteomIQon/guide/help/">Help<span class="absolute inset-x-0 bottom-0 h-0.5 origin-right scale-x-0 bg-red transition-transform duration-200 group-hover:origin-left group-hover:scale-x-100"></span></a><a class="group relative py-1 text-[.8rem] whitespace-nowrap no-underline transition-colors duration-200 hover:text-navy! text-steel!" href="/ProteomIQon/guide/further-information/">Learn more<span class="absolute inset-x-0 bottom-0 h-0.5 origin-right scale-x-0 bg-red transition-transform duration-200 group-hover:origin-left group-hover:scale-x-100"></span></a></nav><details class="mobile-site-nav"><summary><span>Menu</span><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"></path></svg></summary><nav aria-label="Main navigation"><a href="/ProteomIQon/tools/" aria-current="true">Tools</a><a href="/ProteomIQon/guide/installation/">Installation</a><a href="/ProteomIQon/guide/getting-started/">Getting started</a><a href="/ProteomIQon/guide/developer-information/">Developer Information</a><a href="/ProteomIQon/guide/help/">Help</a><a href="/ProteomIQon/guide/further-information/">Learn more</a></nav></details></header><script type="module">var e=document.querySelector(`.mobile-site-nav`);document.addEventListener(`click`,t=>{e?.open&&t.target instanceof Node&&!e.contains(t.target)&&(e.open=!1)}),e?.addEventListener(`keydown`,t=>{t.key===`Escape`&&(e.open=!1,e.querySelector(`summary`)?.focus())});</script><main class="tool-page-wide"><div class="tool-detail-layout phase-protein-identification"><aside class="tool-sidebar"><a class="back-link" href="/ProteomIQon/tools/">← All tools</a><div class="sidebar-rule"></div><p class="sidebar-label">In this stage</p><nav aria-label="Protein Identification tools"><a class="active" aria-current="page" href="/ProteomIQon/tools/protein-inference/">ProteinInference</a></nav><details class="mobile-stage-navigation"><summary>In this stage <span>1 tools</span></summary><nav aria-label="Protein Identification tools"><a class="active" aria-current="page" href="/ProteomIQon/tools/protein-inference/">ProteinInference</a></nav></details></aside><main class="tool-detail"><section class="tool-detail-hero"><h1>Protein<wbr>Inference</h1></section><article class="legacy-content tool-legacy-content prose max-w-none prose-a:font-semibold prose-code:before:content-none prose-code:after:content-none"><h2 id="tool-description">Tool Description</h2>
+<p>ProteinInference maps the identified peptides back to proteins and reports protein groups: sets of proteins that share their peptide evidence.</p>
+<h2 class="tool-workflow-heading" id="how-does-protein-inference-work">How does Protein Inference work?</h2>
+<ol class="tool-explanation-steps" role="list">
+<li><div class="tool-step-copy">
+<p class="tool-step-heading"><strong>One Peptide, multiple Proteins</strong></p>
+<p>A peptide identified by <a href="/ProteomIQon/tools/psm-statistics/">PSMStatistics</a> often fits more than one protein, for example two splice variants of the same gene. Each <a href="https://www.biofsharp.com/BioFSharp.Mz/04_02_protein_inference.html#Grouping-the-evidence-into-protein-groups">protein group</a> gets a score from its peptides and a decoy score from the reversed proteins. The tool uses these scores to estimate a <a href="https://www.biofsharp.com/BioFSharp.Mz/04_02_protein_inference.html#Estimating-the-protein-level-FDR">protein-level q-value</a>.</p>
+</div></li>
+<li><div class="tool-step-copy">
+<p class="tool-step-heading"><strong>How Protein Groups are formed</strong></p>
+<p>Two parameters decide how groups are formed and which peptides count for them. Take two proteins pA and pB, each found by one unique peptide and both by a third shared peptide. Protein (the integration strictness) decides whether pA, pB and the group pA;pB are all reported or whether overlapping groups are merged into the smallest set that explains every peptide. Peptide (the peptide usage) decides whether the abundance of pA;pB later comes from the shared peptide only or also from the peptides unique to pA and pB. The figure shows the outcomes for every combination.</p>
+</div></li>
+</ol>
+<p><img alt="Peptide usage and protein grouping" loading="lazy" decoding="async" width="2444" height="836" src="/ProteomIQon/_astro/ProteinInference.lkEPBsTn_bfyXb.webp"></p>
+<details id="inputs" class="accordion tool-io-accordion tool-io-inputs"><summary class="accordion-header"><span class="accordion-icon" aria-hidden="true">IN</span><span class="accordion-heading"><strong role="heading" aria-level="2">Inputs</strong><small>Files and command-line flags</small></span><span class="accordion-chevron" aria-hidden="true"></span></summary><div class="accordion-content">
+<p>These inputs are needed to execute the tool:</p>
+<div class="tool-io-table-scroll" tabindex="0" role="region" aria-label="Inputs table"><table class="responsive-table" role="table">
+<thead role="rowgroup">
+<tr role="row">
+<th scope="col" role="columnheader">Flag</th>
+<th scope="col" role="columnheader">Meaning</th>
+<th scope="col" role="columnheader">Comes from</th>
+</tr>
+</thead>
+<tbody role="rowgroup">
+<tr role="row">
+<td role="cell" data-label="Flag"><code>-i</code></td>
+<td role="cell" data-label="Meaning">one or more <code>.qpsm</code> files, or a directory that is searched for <code>*.qpsm</code></td>
+<td role="cell" data-label="Comes from"><a href="/ProteomIQon/tools/psm-statistics/">PSMStatistics</a></td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Flag"><code>-d</code></td>
+<td role="cell" data-label="Meaning">the SQLite peptide database</td>
+<td role="cell" data-label="Comes from"><a href="/ProteomIQon/tools/peptide-db/">PeptideDB</a></td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Flag"><code>-g</code></td>
+<td role="cell" data-label="Meaning">optional GFF3 annotation of the proteome</td>
+<td role="cell" data-label="Comes from">your genome annotation</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Flag"><code>-o</code></td>
+<td role="cell" data-label="Meaning">the output directory, created when missing</td>
+<td role="cell" data-label="Comes from">-</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Flag"><code>-p</code></td>
+<td role="cell" data-label="Meaning">the parameter file in JSON</td>
+<td role="cell" data-label="Comes from"><a href="https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/ProteinInferenceParams.json">ProteinInferenceParams.json</a></td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Flag"><code>-dc</code></td>
+<td role="cell" data-label="Meaning">switch: save diagnostic charts to the output directory</td>
+<td role="cell" data-label="Comes from"></td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li>The GFF3 file tells the tool which proteins are transcripts of the same gene.</li>
+<li>With it the Class column (the peptide evidence class) separates groups made of isoforms of one gene from groups that mix unrelated proteins. Without -g every database protein counts as its own gene and the class carries no such information.</li>
+<li>For every input <code>run.qpsm</code> the tool writes <code>run.prot</code>, tab separated with a header.</li>
+<li><a href="/ProteomIQon/tools/join-quant-with-peptide-ions/">JoinQuantPepIonsWithProteins</a> and <a href="/ProteomIQon/tools/add-deduced-peptides/">AddDeducedPeptides</a> read these <code>.prot</code> files.</li>
+<li>With <code>-dc</code> the tool saves a chart of scores against Q-values, as QValueGraph.html in the output directory when the files are grouped and as <code>run.prot_QValueGraph.html</code> per run otherwise.</li>
+<li>Logs go to <code>ProteinInference_log.txt</code> and a few <code>ProteinInference_&lt;step&gt;_log.txt</code> files in the output directory. There is no parallelism flag.</li>
+</ul>
+</div></details><details id="parameter-file" class="accordion tool-io-accordion tool-io-parameters"><summary class="accordion-header"><span class="accordion-icon" aria-hidden="true">CFG</span><span class="accordion-heading"><strong role="heading" aria-level="2">Parameter file</strong><small>Default values and tool settings</small></span><span class="accordion-chevron" aria-hidden="true"></span></summary><div class="accordion-content">
+<div class="tool-io-table-scroll" tabindex="0" role="region" aria-label="Parameter file table"><table class="responsive-table" role="table">
+<thead role="rowgroup">
+<tr role="row">
+<th scope="col" role="columnheader">Parameter</th>
+<th scope="col" role="columnheader">Default</th>
+<th scope="col" role="columnheader">Meaning</th>
+</tr>
+</thead>
+<tbody role="rowgroup">
+<tr role="row">
+<td role="cell" data-label="Parameter"><code>ProteinIdentifierRegex</code></td>
+<td role="cell" data-label="Default"><code>"Cre\S+"</code></td>
+<td role="cell" data-label="Meaning">Regex that extracts the protein identifier from the protein names in the database and, with <code>-g</code>, from the GFF3 entries. The default matches Chlamydomonas identifiers. Put a pattern for your own proteome here.</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Parameter"><code>Protein</code></td>
+<td role="cell" data-label="Default"><code>ProteinInference.IntegrationStrictness.Maximal</code></td>
+<td role="cell" data-label="Meaning"><code>Maximal</code> keeps every protein group intact. <code>Minimal</code> merges overlapping groups into the smallest set of proteins that explains all peptides.</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Parameter"><code>Peptide</code></td>
+<td role="cell" data-label="Default"><code>ProteinInference.PeptideUsageForQuantification.Minimal</code></td>
+<td role="cell" data-label="Meaning"><code>Minimal</code> uses only the best matching peptides of a group. <code>Maximal</code> also uses peptides that point to a larger group containing this one. <code>MaximalInverse</code> also uses peptides that point to a part of this group.</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Parameter"><code>GroupFiles</code></td>
+<td role="cell" data-label="Default"><code>true</code></td>
+<td role="cell" data-label="Meaning">Infer all input files together: the peptides of every run go into one inference and one q-value calculation, and every output file reports the same protein groups, each restricted to the peptides seen in that run. AddDeducedPeptides needs this. <code>false</code> infers each run on its own.</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Parameter"><code>GetQValue</code></td>
+<td role="cell" data-label="Default"><code>QValueMethod.LogisticRegression FDRMethod.MAYU</code></td>
+<td role="cell" data-label="Meaning">Estimate the protein FDR with MAYU and turn it into q-values by logistic regression on the target and decoy scores. The other FDR estimates are <code>FDRMethod.DecoyTargetRatio</code> and <code>FDRMethod.Conservative</code> (an FDR of 1). <code>QValueMethod.Storey</code> uses the Storey estimate instead, <code>QValueMethod.NoQValue</code> writes <code>nan</code>. If the chosen calculation fails the tool falls back to <code>nan</code> and logs it.</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li>The default file is <a href="https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/ProteinInferenceParams.json">ProteinInferenceParams.json</a>.</li>
+</ul>
+</div></details><details id="outputs" class="accordion tool-io-accordion tool-io-outputs"><summary class="accordion-header"><span class="accordion-icon" aria-hidden="true">OUT</span><span class="accordion-heading"><strong role="heading" aria-level="2">Outputs</strong><small>Generated data and log files</small></span><span class="accordion-chevron" aria-hidden="true"></span></summary><div class="accordion-content">
+<p>The <code>.prot</code> file contains these columns.</p>
+<div class="tool-io-table-scroll" tabindex="0" role="region" aria-label="Outputs table"><table class="responsive-table" role="table">
+<thead role="rowgroup">
+<tr role="row">
+<th scope="col" role="columnheader">Column</th>
+<th scope="col" role="columnheader">Description</th>
+</tr>
+</thead>
+<tbody role="rowgroup">
+<tr role="row">
+<td role="cell" data-label="Column">ProteinGroup</td>
+<td role="cell" data-label="Description">Protein identifiers in the group, separated by semicolons</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Column">PeptideSequence</td>
+<td role="cell" data-label="Description">Peptide sequences assigned to this protein group and found in the current run, separated by semicolons</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Column">Class</td>
+<td role="cell" data-label="Description">Peptide Evidence Classes (C1a, C1b, C2a, C2b, C3a, C3b, or Unknown) which define how a peptide has been assigned to its corresponding protein</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Column">TargetScore</td>
+<td role="cell" data-label="Description">Target Score calculated based on the individual peptide scores of PSM</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Column">DecoyScore</td>
+<td role="cell" data-label="Description">Decoy Score calculated based on the individual peptide scores of PSM</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Column">QValue</td>
+<td role="cell" data-label="Description">Q-value (False-Discovery-Rate) for every identified protein</td>
+</tr>
+</tbody>
+</table></div>
+<p>See the <a href="https://www.biofsharp.com/BioFSharp.Mz/04_02_protein_inference.html">BioFSharp.Mz protein inference documentation</a> for more information about the columns.</p>
+</div></details><details id="parameter-generation" class="accordion tool-io-accordion tool-io-parameters"><summary class="accordion-header"><span class="accordion-icon" aria-hidden="true">CFG</span><span class="accordion-heading"><strong role="heading" aria-level="2">Parameter generation</strong><small>JSON and parameter-generation examples</small></span><span class="accordion-chevron" aria-hidden="true"></span></summary><div class="accordion-content">
+<p>From the ProteomIQon repository root, build the library with <code>dotnet build src/ProteomIQon/ProteomIQon.fsproj -c Release</code>. Save the following as <code>generate-params.fsx</code> in that same directory and run <code>dotnet fsi generate-params.fsx</code>. The script writes the JSON file to the system temporary directory.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="fsharp"><code><span class="line"><span style="color:#E1E4E8">#r </span><span style="color:#9ECBFF">"nuget: BioFSharp.Mz, 0.2.3"</span></span>
+<span class="line"><span style="color:#E1E4E8">#r </span><span style="color:#9ECBFF">"nuget: Newtonsoft.Json, 13.0.4"</span></span>
+<span class="line"><span style="color:#E1E4E8">#r </span><span style="color:#9ECBFF">"./src/ProteomIQon/bin/Release/net10.0/ProteomIQon.dll"</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">open</span><span style="color:#B392F0"> ProteomIQon</span></span>
+<span class="line"><span style="color:#F97583">open</span><span style="color:#B392F0"> ProteomIQon.Domain</span></span>
+<span class="line"><span style="color:#F97583">open</span><span style="color:#B392F0"> BioFSharp.Mz</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">let</span><span style="color:#FFAB70"> proteinInferenceParams </span><span style="color:#F97583">:</span><span style="color:#B392F0"> Dto.ProteinInferenceParams </span><span style="color:#F97583">=</span></span>
+<span class="line"><span style="color:#F97583">    {</span></span>
+<span class="line"><span style="color:#E1E4E8">        ProteinIdentifierRegex </span><span style="color:#F97583">=</span><span style="color:#9ECBFF"> @"Cre\S+"</span></span>
+<span class="line"><span style="color:#E1E4E8">        Protein                </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> ProteinInference.IntegrationStrictness.Maximal</span></span>
+<span class="line"><span style="color:#E1E4E8">        Peptide                </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> ProteinInference.PeptideUsageForQuantification.Minimal</span></span>
+<span class="line"><span style="color:#E1E4E8">        GroupFiles             </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> true</span></span>
+<span class="line"><span style="color:#E1E4E8">        GetQValue              </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> QValueMethod.LogisticRegression FDRMethod.MAYU</span></span>
+<span class="line"><span style="color:#F97583">    }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D">// Replace the temp folder with your project folder.</span></span>
+<span class="line"><span style="color:#F97583">let</span><span style="color:#FFAB70"> outputPath</span><span style="color:#F97583"> =</span><span style="color:#E1E4E8"> System.IO.Path.Combine</span><span style="color:#F97583">(</span><span style="color:#E1E4E8">System.IO.Path.GetTempPath</span><span style="color:#F97583">(),</span><span style="color:#9ECBFF"> "ProteinInferenceParams.json"</span><span style="color:#F97583">)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#E1E4E8">Json.serializeAndWrite outputPath proteinInferenceParams</span></span></code></pre>
+</div></details><h2 id="installing-and-executing-the-tool">Installing and executing the tool</h2>
+<ol>
+<li>
+<p><strong>Installing</strong></p>
+<p>Install the tool globally with the .NET CLI.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="sh"><code><span class="line"><span style="color:#B392F0">dotnet</span><span style="color:#9ECBFF"> tool</span><span style="color:#9ECBFF"> install</span><span style="color:#79B8FF"> --global</span><span style="color:#9ECBFF"> ProteomIQon.ProteinInference</span></span></code></pre>
+</li>
+<li>
+<p><strong>Execute</strong></p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="sh"><code><span class="line"><span style="color:#B392F0">proteomiqon-proteininference</span><span style="color:#79B8FF"> -i</span><span style="color:#9ECBFF"> path/to/run.qpsm</span><span style="color:#79B8FF"> -d</span><span style="color:#9ECBFF"> path/to/database.db</span><span style="color:#79B8FF"> -o</span><span style="color:#9ECBFF"> path/to/output</span><span style="color:#79B8FF"> -p</span><span style="color:#9ECBFF"> path/to/ProteinInferenceParams.json</span></span></code></pre>
+</li>
+<li>
+<p><strong>Several runs grouped together, with the annotation for the evidence class</strong></p>
+<ul>
+<li>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="sh"><code><span class="line"><span style="color:#B392F0">proteomiqon-proteininference</span><span style="color:#79B8FF"> -i</span><span style="color:#9ECBFF"> path/to/run1.qpsm</span><span style="color:#9ECBFF"> path/to/run2.qpsm</span><span style="color:#9ECBFF"> path/to/run3.qpsm</span><span style="color:#79B8FF"> -d</span><span style="color:#9ECBFF"> path/to/database.db</span><span style="color:#79B8FF"> -g</span><span style="color:#9ECBFF"> path/to/proteome.gff3</span><span style="color:#79B8FF"> -o</span><span style="color:#9ECBFF"> path/to/output</span><span style="color:#79B8FF"> -p</span><span style="color:#9ECBFF"> path/to/ProteinInferenceParams.json</span></span></code></pre>
+</li>
+</ul>
+</li>
+<li>
+<p><strong>A whole directory, with the q-value chart</strong></p>
+<ul>
+<li>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="sh"><code><span class="line"><span style="color:#B392F0">proteomiqon-proteininference</span><span style="color:#79B8FF"> -i</span><span style="color:#9ECBFF"> path/to/qpsmFolder</span><span style="color:#79B8FF"> -d</span><span style="color:#9ECBFF"> path/to/database.db</span><span style="color:#79B8FF"> -o</span><span style="color:#9ECBFF"> path/to/output</span><span style="color:#79B8FF"> -p</span><span style="color:#9ECBFF"> path/to/ProteinInferenceParams.json</span><span style="color:#79B8FF"> -dc</span></span></code></pre>
+</li>
+</ul>
+</li>
+<li>
+<p><strong>All Flags</strong></p>
+<ul>
+<li>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="sh"><code><span class="line"><span style="color:#B392F0">proteomiqon-proteininference</span><span style="color:#79B8FF"> --help</span></span></code></pre>
+</li>
+</ul>
+</li>
+</ol>
+</article><nav class="tool-pagination" aria-label="Browse tools"><a href="/ProteomIQon/tools/psm-based-quantification-tims/"><small>Previous tool</small><span>← PSMBasedQuantificationTIMs</span></a><a class="next" href="/ProteomIQon/tools/quant-based-alignment/"><small>Next tool</small><span>QuantBasedAlignment →</span></a></nav></main></div></main><footer class="site-bottom mx-auto w-[min(1180px,calc(100%-48px))] border-t border-line pt-[22px] pb-[34px] text-xs max-md:w-[min(100%-32px,640px)]" data-astro-cid-qup6pdxl><div class="institution-logos" data-astro-cid-pe4ulxjw><span class="rptu-logo" data-astro-cid-pe4ulxjw><img src="/ProteomIQon/images/RPTU%20Logo_1c-1.svg" alt="RPTU Kaiserslautern-Landau" width="152" height="42" data-astro-cid-pe4ulxjw></span><img class="csb-logo" src="/ProteomIQon/images/csb-narrow-black.svg" alt="CSB" width="96" height="39" data-astro-cid-pe4ulxjw></div><a class="footer-github text-red! no-underline" href="https://github.com/CSBiology/ProteomIQon/" data-astro-cid-qup6pdxl>View the project on GitHub ↗</a></footer></div><script type="module">var e=`<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>`;for(let t of document.querySelectorAll(`main pre`)){let n=document.createElement(`div`);n.className=`copy-command-block`,t.before(n),n.append(t);let r=document.createElement(`button`);r.type=`button`,r.className=`copy-command-button`,r.setAttribute(`aria-label`,`Copy command`),r.title=`Copy command`,r.innerHTML=e,n.append(r);let i;r.addEventListener(`click`,async()=>{let n=t.textContent?.trim()??``;try{try{if(!navigator.clipboard?.writeText)throw Error(`Clipboard API unavailable`);await navigator.clipboard.writeText(n)}catch{let e=document.createElement(`textarea`);e.value=n,e.setAttribute(`readonly`,``),e.style.position=`fixed`,e.style.opacity=`0`,document.body.append(e),e.select();let t=!1;try{t=document.execCommand?.(`copy`)??!1}finally{e.remove()}if(!t)throw Error(`Copy failed`)}r.innerHTML=`<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m5 12 4 4L19 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`,r.setAttribute(`aria-label`,`Copied to clipboard`),r.title=`Copied to clipboard`}catch{r.setAttribute(`aria-label`,`Could not copy command`),r.title=`Could not copy command`}window.clearTimeout(i),i=window.setTimeout(()=>{r.innerHTML=e,r.setAttribute(`aria-label`,`Copy command`),r.title=`Copy command`},1800)})}</script></body></html>

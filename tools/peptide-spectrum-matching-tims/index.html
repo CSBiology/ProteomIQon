@@ -1,0 +1,436 @@
+<!DOCTYPE html><html lang="en" data-theme="light"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="icon" type="image/svg+xml" href="/ProteomIQon/favicon.svg"><link rel="icon" href="/ProteomIQon/favicon.ico"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap"><meta name="description" content="PeptideSpectrumMatchingTIMs identifies peptides from timsTOF runs using precursor ion mobility data."><meta name="generator" content="Astro v7.3.8"><title>PeptideSpectrumMatchingTIMs · ProteomIQon</title><link rel="stylesheet" href="/ProteomIQon/_astro/global.LELvuLUR.css"><link rel="stylesheet" href="/ProteomIQon/_astro/Layout.BzR0PIOI.css"></head><body><div class="site-shell"><header class="site-masthead mx-auto flex w-[min(1180px,calc(100%-48px))] items-center justify-between gap-x-6 border-b border-line pt-6 pb-5 max-md:w-[min(100%-32px,640px)] max-[520px]:block"><a class="inline-flex items-center gap-[11px] text-[1.16rem] font-bold tracking-[-.04em] no-underline" href="/ProteomIQon/" aria-label="ProteomIQon home"><span class="inline-flex h-[21px] items-end gap-0.5" aria-hidden="true"><span class="block h-3 w-[5px] rounded-t-[1px] bg-sky"></span><span class="block h-5 w-[5px] rounded-t-[1px] bg-orange"></span><span class="block h-[15px] w-[5px] rounded-t-[1px] bg-teal"></span></span><span>Proteom<span class="text-orange">IQ</span>on</span></a><nav class="desktop-site-nav flex items-center gap-[25px] max-[520px]:mt-[18px] max-[520px]:flex-wrap max-[520px]:gap-x-4 max-[520px]:gap-y-2" aria-label="Main navigation"><a class="group relative py-1 text-[.8rem] whitespace-nowrap no-underline transition-colors duration-200 hover:text-navy! text-navy!" href="/ProteomIQon/tools/" aria-current="true">Tools<span class="absolute inset-x-0 bottom-0 h-0.5 origin-right scale-x-0 bg-red transition-transform duration-200 group-hover:origin-left group-hover:scale-x-100 origin-left scale-x-100"></span></a><a class="group relative py-1 text-[.8rem] whitespace-nowrap no-underline transition-colors duration-200 hover:text-navy! text-steel!" href="/ProteomIQon/guide/installation/">Installation<span class="absolute inset-x-0 bottom-0 h-0.5 origin-right scale-x-0 bg-red transition-transform duration-200 group-hover:origin-left group-hover:scale-x-100"></span></a><a class="group relative py-1 text-[.8rem] whitespace-nowrap no-underline transition-colors duration-200 hover:text-navy! text-steel!" href="/ProteomIQon/guide/getting-started/">Getting started<span class="absolute inset-x-0 bottom-0 h-0.5 origin-right scale-x-0 bg-red transition-transform duration-200 group-hover:origin-left group-hover:scale-x-100"></span></a><a class="group relative py-1 text-[.8rem] whitespace-nowrap no-underline transition-colors duration-200 hover:text-navy! text-steel!" href="/ProteomIQon/guide/developer-information/">Developer Information<span class="absolute inset-x-0 bottom-0 h-0.5 origin-right scale-x-0 bg-red transition-transform duration-200 group-hover:origin-left group-hover:scale-x-100"></span></a><a class="group relative py-1 text-[.8rem] whitespace-nowrap no-underline transition-colors duration-200 hover:text-navy! text-red!" href="/ProteomIQon/guide/help/">Help<span class="absolute inset-x-0 bottom-0 h-0.5 origin-right scale-x-0 bg-red transition-transform duration-200 group-hover:origin-left group-hover:scale-x-100"></span></a><a class="group relative py-1 text-[.8rem] whitespace-nowrap no-underline transition-colors duration-200 hover:text-navy! text-steel!" href="/ProteomIQon/guide/further-information/">Learn more<span class="absolute inset-x-0 bottom-0 h-0.5 origin-right scale-x-0 bg-red transition-transform duration-200 group-hover:origin-left group-hover:scale-x-100"></span></a></nav><details class="mobile-site-nav"><summary><span>Menu</span><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"></path></svg></summary><nav aria-label="Main navigation"><a href="/ProteomIQon/tools/" aria-current="true">Tools</a><a href="/ProteomIQon/guide/installation/">Installation</a><a href="/ProteomIQon/guide/getting-started/">Getting started</a><a href="/ProteomIQon/guide/developer-information/">Developer Information</a><a href="/ProteomIQon/guide/help/">Help</a><a href="/ProteomIQon/guide/further-information/">Learn more</a></nav></details></header><script type="module">var e=document.querySelector(`.mobile-site-nav`);document.addEventListener(`click`,t=>{e?.open&&t.target instanceof Node&&!e.contains(t.target)&&(e.open=!1)}),e?.addEventListener(`keydown`,t=>{t.key===`Escape`&&(e.open=!1,e.querySelector(`summary`)?.focus())});</script><main class="tool-page-wide"><div class="tool-detail-layout phase-peptide-identification"><aside class="tool-sidebar"><a class="back-link" href="/ProteomIQon/tools/">← All tools</a><div class="sidebar-rule"></div><p class="sidebar-label">In this stage</p><nav aria-label="Peptide Identification tools"><a href="/ProteomIQon/tools/peptide-spectrum-matching/">PeptideSpectrumMatching</a><a class="active" aria-current="page" href="/ProteomIQon/tools/peptide-spectrum-matching-tims/">PeptideSpectrumMatchingTIMs</a><a href="/ProteomIQon/tools/psm-statistics/">PSMStatistics</a><a href="/ProteomIQon/tools/ms-fragger-to-psm/">MSFragger to PSM</a></nav><details class="mobile-stage-navigation"><summary>In this stage <span>4 tools</span></summary><nav aria-label="Peptide Identification tools"><a href="/ProteomIQon/tools/peptide-spectrum-matching/">PeptideSpectrumMatching</a><a class="active" aria-current="page" href="/ProteomIQon/tools/peptide-spectrum-matching-tims/">PeptideSpectrumMatchingTIMs</a><a href="/ProteomIQon/tools/psm-statistics/">PSMStatistics</a><a href="/ProteomIQon/tools/ms-fragger-to-psm/">MSFragger to PSM</a></nav></details></aside><main class="tool-detail"><section class="tool-detail-hero"><h1>Peptide<wbr>Spectrum<wbr>Matching<wbr>TIMs</h1></section><article class="legacy-content tool-legacy-content prose max-w-none prose-a:font-semibold prose-code:before:content-none prose-code:after:content-none"><h2 id="tool-description">Tool Description</h2>
+<p>PeptideSpectrumMatchingTIMs identifies peptides from timsTOF runs using precursor ion mobility data. It accepts <code>mzlite</code> input and follows the search pattern used by MSFragger. <a href="/ProteomIQon/tools/peptide-spectrum-matching/">PeptideSpectrumMatching</a> performs the corresponding search for <code>mzlite</code> and <code>mzML</code> files.</p>
+<h2 class="tool-workflow-heading" id="how-does-peptidespectrummatchingtims-work">How does PeptideSpectrumMatchingTIMs work?</h2>
+<ol class="tool-explanation-steps" role="list">
+<li><div class="tool-step-copy">
+<p class="tool-step-heading"><strong>Combine ion mobility scans</strong></p>
+<p>A timsTOF mzlite MS2 spectrum stores peaks by mobility scan. Since the fragment ions inherit the precursor's mobility, the tool combines these scans before matching. Working from low to high m/z, it groups peaks lying within <code>--mobility-merge-ppm</code> of the first peak of the group. Group intensity is summed, while the representative m/z is intensity-weighted.</p>
+<p>The default merging width equals <code>FragmentTolerancePPM</code>. Setting <code>--mobility-merge-ppm 0</code> combines only exactly equal m/z values; it does <em>not</em> disable summation. Spectra without peak-level mobility information pass through unchanged. Separate PASEF measurements remain separate MS2 spectra.</p>
+</div></li>
+<li><div class="tool-step-copy">
+<p class="tool-step-heading"><strong>Build the target and decoy fragment indexes</strong></p>
+<p>The tool indexes the theoretical b and y fragments of target peptides and uses a second index of the same size for their decoys. A decoy keeps the C-terminal residue in place and reverses the rest of the peptide. If that produces the original sequence, as with <code>AAAAK</code>, the tool reverses the entire peptide to produce <code>KAAAA</code>.</p>
+<p>Only peptides in the measured runs' precursor-mass windows are indexed, accounting for isotope errors and precursor tolerance. Fragment masses are capped by the largest applicable precursor window plus 1 Da or the optional <code>-f</code> value, and never above the largest peptide mass in the database plus 1 Da. Each fragment entry occupies 4 bytes.</p>
+<h3 id="memory-management-index-slices">Memory management: index slices</h3>
+<p>With <code>-s</code>, the peptide table is divided into that many index slices, built and searched sequentially so only one slice is held in memory. Normally the spectra are reread for each slice. Adding <code>-k</code> caches preprocessed spectra instead (roughly 2.4 kB per spectrum and charge). Slicing changes memory and I/O requirements, not the results.</p>
+</div></li>
+<li><div class="tool-step-copy">
+<p class="tool-step-heading"><strong>Preprocess the spectra and retrieve candidates</strong></p>
+<p>For each spectrum, remove peaks near the precursor m/z, peaks below the <code>MinimumPeakRatio</code> fraction of the base peak, and isotope partners; then retain the <code>TopNPeaks</code> strongest peaks. The remaining peaks query the fragment index, while peptide candidates must fit the precursor mass for at least one configured isotope error.</p>
+<p>Precursor m/z and charge normally come from the mzlite input. Missing charge information triggers the configured <code>FallbackChargeStates</code>. The search retains the top <code>ReportedHitsPerLabel</code> targets and the same number of decoys.</p>
+<h3 id="index-binning-and-duplicate-hit-prevention">Index binning and duplicate-hit prevention</h3>
+<p>Lookup operates on complete <code>FragmentIndexBinWidth</code> bins, which can extend the effective candidate-retrieval interval by up to one bin width on either side of the specified tolerance. Nearby peak tolerance ranges closer than a bin are merged using the stronger intensity, preventing repeated fragment counts during index lookup.</p>
+</div></li>
+<li><div class="tool-step-copy">
+<p class="tool-step-heading"><strong>Calculate and refine the hyperscore</strong></p>
+<p>The initial X!Tandem-style hyperscore is calculated using the BioFSharp.Mz implementation. With base-peak-relative intensities scaled to 100 and a minimum intensity floor of zero, the natural-log version is:</p>
+<p><code>ln(sum of matched intensities) + ln(Nb!) + ln(Ny!)</code></p>
+<p><code>Nb</code> and <code>Ny</code> denote the counts of matched b and y fragments. For reported candidates, the tool repeats matching at the exact fragment tolerance. This second calculation determines <code>Hyperscore</code>, <code>MatchedIons</code> and hyperscore rank. <code>MinMatchedFragments</code> is checked against that exact match count.</p>
+</div></li>
+<li><div class="tool-step-copy">
+<p class="tool-step-heading"><strong>Model expectation values</strong></p>
+<p>The expectation-value model follows X!Tandem's approach, also used by MSFragger. For each spectrum, index-pass candidate scores with at least <code>MinFragmentsModelling</code> matched fragments populate a histogram with bins of width one on the X!Tandem score scale.</p>
+<p>The histogram score scale is <code>4 × log10(product-form hyperscore)</code>, equivalent to <code>4 / ln(10)</code> times the natural-log expression above. The fit discards candidates above a gap in the upper survival-function tail and fits a line to the log10 survival function, from half of the remaining candidate count down to ten survivors.</p>
+<p>When fewer than 200 candidates remain, the X!Tandem fallback is <code>10^(3.5 - 0.18 × x)</code>. Expectation values cannot go below <code>1e-15</code>. Importantly, <code>Expectscore</code> is evaluated using the <em>index-pass</em> hyperscore, whereas <code>Hyperscore</code> is the exact rescored value. Consequently, the two columns need not rank candidates identically.</p>
+</div></li>
+<li><div class="tool-step-copy">
+<p class="tool-step-heading"><strong>Compute classic scores and score differences</strong></p>
+<p>The reported targets and decoys also receive the SEQUEST-like score from PeptideSpectrumMatching and Andromeda-like and X!Tandem-like scores. The <code>NormDeltaBestToRest</code> and <code>NormDeltaNext</code> metrics account for both target and decoy forms of all peptides selected during index retrieval, including candidates subsequently removed by exact rescoring.</p>
+<p>In ordinary PeptideSpectrumMatching, these differences use all peptides in the precursor window. Therefore, those normalized delta values are <strong>not directly comparable</strong> between the two tools.</p>
+</div></li>
+<li><div class="tool-step-copy">
+<p class="tool-step-heading"><strong>Process multiple runs</strong></p>
+<p>With <code>-c</code>, the tool handles groups of runs concurrently, using one thread per run and one shared index per group. Building the index uses one worker per run. A new group starts only after all runs in the current group finish; the default is <code>-c 1</code>.</p>
+<p>The peptide database must contain <strong>monoisotopic masses</strong>. Classic rescoring accounts for much of the processing time, so increasing <code>ReportedHitsPerLabel</code> also increases runtime.</p>
+</div></li>
+</ol>
+<details id="inputs" class="accordion tool-io-accordion tool-io-inputs"><summary class="accordion-header"><span class="accordion-icon" aria-hidden="true">IN</span><span class="accordion-heading"><strong role="heading" aria-level="2">Inputs</strong><small>Files and command-line flags</small></span><span class="accordion-chevron" aria-hidden="true"></span></summary><div class="accordion-content">
+<div class="tool-io-table-scroll" tabindex="0" role="region" aria-label="Inputs table"><table class="responsive-table" role="table">
+<thead role="rowgroup">
+<tr role="row">
+<th scope="col" role="columnheader">Flag</th>
+<th scope="col" role="columnheader">Meaning</th>
+<th scope="col" role="columnheader">Comes from</th>
+</tr>
+</thead>
+<tbody role="rowgroup">
+<tr role="row">
+<td role="cell" data-label="Flag"><code>-i</code></td>
+<td role="cell" data-label="Meaning">One or more <code>.mzlite</code> files, or a directory containing <code>*.mzlite</code> files</td>
+<td role="cell" data-label="Comes from"><a href="/ProteomIQon/tools/mzml-to-mzlite-ion-mobility/">MzMLToMzLiteIonMobility</a></td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Flag"><code>-d</code></td>
+<td role="cell" data-label="Meaning">SQLite peptide database</td>
+<td role="cell" data-label="Comes from"><a href="/ProteomIQon/tools/peptide-db/">PeptideDB</a></td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Flag"><code>-o</code></td>
+<td role="cell" data-label="Meaning">Output directory, automatically created if absent</td>
+<td role="cell" data-label="Comes from">—</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Flag"><code>-p</code></td>
+<td role="cell" data-label="Meaning">JSON file containing search parameters</td>
+<td role="cell" data-label="Comes from"><a href="#parameters">Parameters</a></td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Flag"><code>-c</code></td>
+<td role="cell" data-label="Meaning">Concurrent runs (one thread per run). Defaults to <code>1</code>.</td>
+<td role="cell" data-label="Comes from">—</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Flag"><code>-s</code></td>
+<td role="cell" data-label="Meaning">Number of sequential fragment-index slices. Defaults to <code>1</code>.</td>
+<td role="cell" data-label="Comes from">—</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Flag"><code>-k</code></td>
+<td role="cell" data-label="Meaning">Optional switch to cache preprocessed spectra between index slices.</td>
+<td role="cell" data-label="Comes from">—</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Flag"><code>-f</code></td>
+<td role="cell" data-label="Meaning">Maximum indexed fragment mass, in Da. Defaults to the largest precursor window plus 1 Da.</td>
+<td role="cell" data-label="Comes from">—</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Flag"><code>--mobility-merge-ppm</code></td>
+<td role="cell" data-label="Meaning">m/z grouping width when combining mobility scans, in ppm. Defaults to <code>FragmentTolerancePPM</code>.</td>
+<td role="cell" data-label="Comes from">—</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li><code>-i</code>, <code>-d</code>, <code>-o</code> and <code>-p</code> are mandatory. The input directory search is not recursive.</li>
+</ul>
+<p><strong>Input restrictions:</strong> Directory scanning is not recursive. An mzML input path produces an error; only mzlite inputs are supported.</p>
+</div></details><details id="parameters" class="accordion tool-io-accordion tool-io-parameters"><summary class="accordion-header"><span class="accordion-icon" aria-hidden="true">CFG</span><span class="accordion-heading"><strong role="heading" aria-level="2">Parameters</strong><small>Default values and tool settings</small></span><span class="accordion-chevron" aria-hidden="true"></span></summary><div class="accordion-content">
+<p>The search parameters are provided through the JSON file passed with <code>-p</code>. The table lists every parameter and its documented default.</p>
+<div class="tool-io-table-scroll" tabindex="0" role="region" aria-label="Parameters table"><table class="responsive-table" role="table">
+<thead role="rowgroup">
+<tr role="row">
+<th scope="col" role="columnheader">Parameter</th>
+<th scope="col" role="columnheader">Default</th>
+<th scope="col" role="columnheader">Description</th>
+</tr>
+</thead>
+<tbody role="rowgroup">
+<tr role="row">
+<td role="cell" data-label="Parameter"><code>PrecursorTolerancePPM</code></td>
+<td role="cell" data-label="Default">20.0</td>
+<td role="cell" data-label="Description">Tolerance for neutral precursor mass, in ppm</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Parameter"><code>FragmentTolerancePPM</code></td>
+<td role="cell" data-label="Default">20.0</td>
+<td role="cell" data-label="Description">Tolerance for fragment m/z matching, in ppm</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Parameter"><code>IsotopeErrors</code></td>
+<td role="cell" data-label="Default"><code>[0, 1, 2]</code></td>
+<td role="cell" data-label="Description">Allowed precursor isotope offsets; zero denotes the monoisotopic peak</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Parameter"><code>MaxFragmentCharge</code></td>
+<td role="cell" data-label="Default">2</td>
+<td role="cell" data-label="Description">Upper fragment charge, restricted to the precursor charge minus one and at least one</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Parameter"><code>FallbackChargeStates</code></td>
+<td role="cell" data-label="Default"><code>[2, 3]</code></td>
+<td role="cell" data-label="Description">Charge states used when precursor charge is missing; must contain at least one</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Parameter"><code>TopNPeaks</code></td>
+<td role="cell" data-label="Default">150</td>
+<td role="cell" data-label="Description">Maximum strongest peaks retained after preprocessing</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Parameter"><code>MinimumPeakRatio</code></td>
+<td role="cell" data-label="Default">0.01</td>
+<td role="cell" data-label="Description">Discard peaks below this base-peak intensity fraction</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Parameter"><code>RemovePrecursorRange</code></td>
+<td role="cell" data-label="Default">1.5</td>
+<td role="cell" data-label="Description">Excluded m/z distance around the precursor</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Parameter"><code>Deisotope</code></td>
+<td role="cell" data-label="Default"><code>true</code></td>
+<td role="cell" data-label="Description">Remove isotope-related peaks before searching</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Parameter"><code>MinimumPeaks</code></td>
+<td role="cell" data-label="Default">15</td>
+<td role="cell" data-label="Description">Skip spectra with fewer peaks after filtering</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Parameter"><code>MinMatchedFragments</code></td>
+<td role="cell" data-label="Default">4</td>
+<td role="cell" data-label="Description">Minimum exact fragment matches required to report a candidate</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Parameter"><code>MinFragmentsModelling</code></td>
+<td role="cell" data-label="Default">1</td>
+<td role="cell" data-label="Description">Minimum index-pass fragment matches for expectation-model inclusion</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Parameter"><code>ReportedHitsPerLabel</code></td>
+<td role="cell" data-label="Default">10</td>
+<td role="cell" data-label="Description">Top hits to report separately for targets and decoys; affects runtime</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Parameter"><code>FragmentIndexBinWidth</code></td>
+<td role="cell" data-label="Default">0.01</td>
+<td role="cell" data-label="Description">Index bin width, in Da</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Parameter"><code>nTerminalSeries</code></td>
+<td role="cell" data-label="Default"><code>B</code></td>
+<td role="cell" data-label="Description">N-terminal ion series used for classic rescoring</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Parameter"><code>cTerminalSeries</code></td>
+<td role="cell" data-label="Default"><code>Y</code></td>
+<td role="cell" data-label="Description">C-terminal ion series used for classic rescoring</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Parameter"><code>Andromeda</code></td>
+<td role="cell" data-label="Default"><code>{ PMinPMax = 4, 10; MatchingIonTolerancePPM = 100.0 }</code></td>
+<td role="cell" data-label="Description">Nested Andromeda-like scoring configuration</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Note:</strong> <code>nTerminalSeries</code> and <code>cTerminalSeries</code> only change the classic rescoring stage; the fragment index always contains b and y ions.</p>
+<h3 id="andromeda-subparameters">Andromeda subparameters</h3>
+<p><code>Andromeda</code> is a <code>ProteomIQon.Domain.AndromedaParams</code> record.</p>
+<div class="tool-io-table-scroll" tabindex="0" role="region" aria-label="Parameters table"><table class="responsive-table" role="table">
+<thead role="rowgroup">
+<tr role="row">
+<th scope="col" role="columnheader">Parameter</th>
+<th scope="col" role="columnheader">Default</th>
+<th scope="col" role="columnheader">Description</th>
+</tr>
+</thead>
+<tbody role="rowgroup">
+<tr role="row">
+<td role="cell" data-label="Parameter"><code>PMinPMax</code></td>
+<td role="cell" data-label="Default"><code>4, 10</code></td>
+<td role="cell" data-label="Description">Minimum and maximum count of strongest peaks per 100 Da window. Every count in the range is tested; the best result is chosen.</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Parameter"><code>MatchingIonTolerancePPM</code></td>
+<td role="cell" data-label="Default">100.0</td>
+<td role="cell" data-label="Description">Theoretical-to-observed fragment matching tolerance, in ppm</td>
+</tr>
+</tbody>
+</table></div>
+<p>The default file is <a href="https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/peptideSpectrumMatchingTIMsParams.json">peptideSpectrumMatchingTIMsParams.json</a>.</p>
+</div></details><details id="outputs" class="accordion tool-io-accordion tool-io-outputs"><summary class="accordion-header"><span class="accordion-icon" aria-hidden="true">OUT</span><span class="accordion-heading"><strong role="heading" aria-level="2">Outputs</strong><small>Generated data and log files</small></span><span class="accordion-chevron" aria-hidden="true"></span></summary><div class="accordion-content">
+<p>Every input run generates <code>&lt;run&gt;.psm</code> in the output directory, as a header-containing, tab-delimited file. Existing PSM files are overwritten. Its data record is <code>Dto.PeptideSpectrumMatchingResult</code>, shared with PeptideSpectrumMatching.</p>
+<p>The table contains 28 columns: 23 classic PSM columns and 5 TIMs-specific additions. <code>Label</code> is <code>1</code> for targets and <code>-1</code> for reversed decoys; <code>MissCleavages</code> is set to <code>-1</code> and recalculated by PSMStatistics.</p>
+<h3 id="classic-psm-columns-23">Classic PSM columns (23)</h3>
+<div class="tool-io-table-scroll" tabindex="0" role="region" aria-label="Outputs table"><table class="responsive-table" role="table">
+<thead role="rowgroup">
+<tr role="row">
+<th scope="col" role="columnheader">Column</th>
+<th scope="col" role="columnheader">Description</th>
+</tr>
+</thead>
+<tbody role="rowgroup">
+<tr role="row">
+<td role="cell" data-label="Column">PSMId</td>
+<td role="cell" data-label="Description">MS/MS spectrum match identifier</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Column">GlobalMod</td>
+<td role="cell" data-label="Description">Whether the peptide ion species is labeled or unlabeled</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Column">PepSequenceID</td>
+<td role="cell" data-label="Description">Unmodified peptide sequence identifier in PeptideDB</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Column">ModSequenceID</td>
+<td role="cell" data-label="Description">Modified peptide sequence identifier in PeptideDB, including PTMs</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Column">Label</td>
+<td role="cell" data-label="Description">Target (+1) or decoy (-1)</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Column">ScanNr</td>
+<td role="cell" data-label="Description">MS2 position in scan-time order</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Column">ScanTime</td>
+<td role="cell" data-label="Description">MS2 retention time in minutes</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Column">Charge</td>
+<td role="cell" data-label="Description">Precursor charge</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Column">PrecursorMZ</td>
+<td role="cell" data-label="Description">Precursor mass-to-charge ratio</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Column">TheoMass</td>
+<td role="cell" data-label="Description">Theoretical peptide mass in Da</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Column">AbsDeltaMass</td>
+<td role="cell" data-label="Description">Mass error using the best-matching isotope offset</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Column">PeptideLength</td>
+<td role="cell" data-label="Description">Number of peptide amino acids</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Column">MissCleavages</td>
+<td role="cell" data-label="Description">Value -1 at this stage; recomputed by PSMStatistics</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Column">SequestScore</td>
+<td role="cell" data-label="Description">SEQUEST-like similarity score</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Column">SequestNormDeltaBestToRest</td>
+<td role="cell" data-label="Description">Normalized separation of best score from remaining candidates</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Column">SequestNormDeltaNext</td>
+<td role="cell" data-label="Description">Normalized separation of top two candidate scores</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Column">AndroScore</td>
+<td role="cell" data-label="Description">Andromeda-like match score</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Column">AndroNormDeltaBestToRest</td>
+<td role="cell" data-label="Description">Normalized best-to-rest Andromeda score separation</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Column">AndroNormDeltaNext</td>
+<td role="cell" data-label="Description">Normalized top-two Andromeda score separation</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Column">XtandemScore</td>
+<td role="cell" data-label="Description">X!Tandem-like match score</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Column">XtandemNormDeltaBestToRest</td>
+<td role="cell" data-label="Description">Normalized best-to-rest X!Tandem score separation</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Column">XtandemNormDeltaNext</td>
+<td role="cell" data-label="Description">Normalized top-two X!Tandem score separation</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Column">StringSequence</td>
+<td role="cell" data-label="Description">Matching peptide amino acid sequence in one-letter code</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="tims-specific-columns-5">TIMs-specific columns (5)</h3>
+<div class="tool-io-table-scroll" tabindex="0" role="region" aria-label="Outputs table"><table class="responsive-table" role="table">
+<thead role="rowgroup">
+<tr role="row">
+<th scope="col" role="columnheader">Column</th>
+<th scope="col" role="columnheader">Description</th>
+</tr>
+</thead>
+<tbody role="rowgroup">
+<tr role="row">
+<td role="cell" data-label="Column">IonMobility</td>
+<td role="cell" data-label="Description">Inverse reduced mobility (1/K0) of the precursor; <code>NaN</code> if unavailable</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Column">Hyperscore</td>
+<td role="cell" data-label="Description">Exact b/y-fragment hyperscore</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Column">Expectscore</td>
+<td role="cell" data-label="Description">Expectation value estimated using the index-pass hyperscore distribution</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Column">MatchedIons</td>
+<td role="cell" data-label="Description">Count of matched b and y fragments used in the hyperscore</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Column">TotalIons</td>
+<td role="cell" data-label="Description">Count of theoretical peptide b and y fragments</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="identifiers-and-logs">Identifiers and logs</h3>
+<p><code>ScanNr</code> is the MS2 position after ordering spectra by scan time. For <code>PSMId</code>, spectrum-id spaces become hyphens and the suffix <code>_ScanNr_charge_rank</code> is added. Rank is determined by hyperscore within the reported target or decoy group for that spectrum.</p>
+<p>The output folder also contains <code>PeptideSpectrumMatchingTIMs_log.txt</code> and one <code>&lt;run&gt;_log.txt</code> for each run.</p>
+<p><strong>Downstream compatibility:</strong> <a href="/ProteomIQon/tools/psm-statistics/">PSMStatistics</a> reads it directly and uses <code>Hyperscore</code> and <code>Expectscore</code> when they are present. <a href="/ProteomIQon/tools/psm-based-quantification-tims/">PSMBasedQuantificationTIMs</a> reads the resulting <code>.qpsm</code> and retrieves ion mobility from the corresponding spectra in the <code>.mzlite</code> file.</p>
+</div></details><details id="parameter-generation" class="accordion tool-io-accordion tool-io-parameters"><summary class="accordion-header"><span class="accordion-icon" aria-hidden="true">CFG</span><span class="accordion-heading"><strong role="heading" aria-level="2">Parameter generation</strong><small>JSON and parameter-generation examples</small></span><span class="accordion-chevron" aria-hidden="true"></span></summary><div class="accordion-content">
+<p>From the ProteomIQon repository root, build the library with <code>dotnet build src/ProteomIQon/ProteomIQon.fsproj -c Release</code>. Save the following as <code>generate-params.fsx</code> in that same directory and run <code>dotnet fsi generate-params.fsx</code>. The script writes the JSON file to the system temporary directory.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="fsharp"><code><span class="line"><span style="color:#E1E4E8">#r </span><span style="color:#9ECBFF">"nuget: BioFSharp.Mz, 0.2.3"</span></span>
+<span class="line"><span style="color:#E1E4E8">#r </span><span style="color:#9ECBFF">"nuget: Newtonsoft.Json, 13.0.4"</span></span>
+<span class="line"><span style="color:#E1E4E8">#r </span><span style="color:#9ECBFF">"./src/ProteomIQon/bin/Release/net10.0/ProteomIQon.dll"</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">open</span><span style="color:#B392F0"> BioFSharp.Mz</span></span>
+<span class="line"><span style="color:#F97583">open</span><span style="color:#B392F0"> ProteomIQon</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">let</span><span style="color:#FFAB70"> andromedaParams </span><span style="color:#F97583">:</span><span style="color:#B392F0"> Domain.AndromedaParams </span><span style="color:#F97583">=</span></span>
+<span class="line"><span style="color:#F97583">    {</span></span>
+<span class="line"><span style="color:#E1E4E8">        PMinPMax                </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 4</span><span style="color:#F97583">,</span><span style="color:#79B8FF"> 10</span></span>
+<span class="line"><span style="color:#E1E4E8">        MatchingIonTolerancePPM </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 100.0</span></span>
+<span class="line"><span style="color:#F97583">    }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">let</span><span style="color:#FFAB70"> peptideSpectrumMatchingTIMsParams </span><span style="color:#F97583">:</span><span style="color:#B392F0"> Dto.PeptideSpectrumMatchingTIMsParams </span><span style="color:#F97583">=</span></span>
+<span class="line"><span style="color:#F97583">    {</span></span>
+<span class="line"><span style="color:#E1E4E8">        PrecursorTolerancePPM  </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 20.0</span></span>
+<span class="line"><span style="color:#E1E4E8">        FragmentTolerancePPM   </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 20.0</span></span>
+<span class="line"><span style="color:#E1E4E8">        IsotopeErrors          </span><span style="color:#F97583">=</span><span style="color:#F97583"> [</span><span style="color:#79B8FF">0</span><span style="color:#F97583">;</span><span style="color:#79B8FF"> 1</span><span style="color:#F97583">;</span><span style="color:#79B8FF"> 2</span><span style="color:#F97583">]</span></span>
+<span class="line"><span style="color:#E1E4E8">        MaxFragmentCharge      </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 2</span></span>
+<span class="line"><span style="color:#E1E4E8">        FallbackChargeStates   </span><span style="color:#F97583">=</span><span style="color:#F97583"> [</span><span style="color:#79B8FF">2</span><span style="color:#F97583">;</span><span style="color:#79B8FF"> 3</span><span style="color:#F97583">]</span></span>
+<span class="line"><span style="color:#E1E4E8">        TopNPeaks               </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 150</span></span>
+<span class="line"><span style="color:#E1E4E8">        MinimumPeakRatio        </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0.01</span></span>
+<span class="line"><span style="color:#E1E4E8">        RemovePrecursorRange    </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 1.5</span></span>
+<span class="line"><span style="color:#E1E4E8">        Deisotope               </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> true</span></span>
+<span class="line"><span style="color:#E1E4E8">        MinimumPeaks            </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 15</span></span>
+<span class="line"><span style="color:#E1E4E8">        MinMatchedFragments     </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 4</span></span>
+<span class="line"><span style="color:#E1E4E8">        MinFragmentsModelling   </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 1</span></span>
+<span class="line"><span style="color:#E1E4E8">        ReportedHitsPerLabel    </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 10</span></span>
+<span class="line"><span style="color:#E1E4E8">        FragmentIndexBinWidth   </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0.01</span></span>
+<span class="line"><span style="color:#E1E4E8">        nTerminalSeries         </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> NTerminalSeries.B</span></span>
+<span class="line"><span style="color:#E1E4E8">        cTerminalSeries         </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> CTerminalSeries.Y</span></span>
+<span class="line"><span style="color:#E1E4E8">        Andromeda               </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> andromedaParams</span></span>
+<span class="line"><span style="color:#F97583">    }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D">// Replace the temp folder with your project folder.</span></span>
+<span class="line"><span style="color:#F97583">let</span><span style="color:#FFAB70"> outputPath</span><span style="color:#F97583"> =</span><span style="color:#E1E4E8"> System.IO.Path.Combine</span><span style="color:#F97583">(</span><span style="color:#E1E4E8">System.IO.Path.GetTempPath</span><span style="color:#F97583">(),</span><span style="color:#9ECBFF"> "peptideSpectrumMatchingTIMsParams.json"</span><span style="color:#F97583">)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#E1E4E8">Json.serializeAndWrite outputPath peptideSpectrumMatchingTIMsParams</span></span></code></pre>
+</div></details><h2 id="installing-and-executing-the-tool">Installing and executing the tool</h2>
+<ol>
+<li>
+<p><strong>Installing</strong></p>
+<p>Install the tool globally with the .NET CLI.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="sh"><code><span class="line"><span style="color:#B392F0">dotnet</span><span style="color:#9ECBFF"> tool</span><span style="color:#9ECBFF"> install</span><span style="color:#79B8FF"> --global</span><span style="color:#9ECBFF"> ProteomIQon.PeptideSpectrumMatchingTIMs</span></span></code></pre>
+</li>
+<li>
+<p><strong>Execute</strong></p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="sh"><code><span class="line"><span style="color:#B392F0">proteomiqon-peptidespectrummatchingtims</span><span style="color:#79B8FF"> -i</span><span style="color:#9ECBFF"> path/to/run.mzlite</span><span style="color:#79B8FF"> -d</span><span style="color:#9ECBFF"> path/to/AraTest.db</span><span style="color:#79B8FF"> -o</span><span style="color:#9ECBFF"> path/to/output</span><span style="color:#79B8FF"> -p</span><span style="color:#9ECBFF"> path/to/peptideSpectrumMatchingTIMsParams.json</span></span></code></pre>
+</li>
+<li>
+<p><strong>Running the tool for multiple runs</strong></p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="sh"><code><span class="line"><span style="color:#B392F0">proteomiqon-peptidespectrummatchingtims</span><span style="color:#79B8FF"> -i</span><span style="color:#9ECBFF"> path/to/run1.mzlite</span><span style="color:#9ECBFF"> path/to/run2.mzlite</span><span style="color:#9ECBFF"> path/to/run3.mzlite</span><span style="color:#79B8FF"> -d</span><span style="color:#9ECBFF"> path/to/AraTest.db</span><span style="color:#79B8FF"> -o</span><span style="color:#9ECBFF"> path/to/output</span><span style="color:#79B8FF"> -p</span><span style="color:#9ECBFF"> path/to/peptideSpectrumMatchingTIMsParams.json</span><span style="color:#79B8FF"> -c</span><span style="color:#79B8FF"> 3</span></span></code></pre>
+</li>
+<li>
+<p><strong>With a large database, build the index in four slices and keep the spectra in memory between them:</strong></p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="sh"><code><span class="line"><span style="color:#B392F0">proteomiqon-peptidespectrummatchingtims</span><span style="color:#79B8FF"> -i</span><span style="color:#9ECBFF"> path/to/run.mzlite</span><span style="color:#79B8FF"> -d</span><span style="color:#9ECBFF"> path/to/AraTest.db</span><span style="color:#79B8FF"> -o</span><span style="color:#9ECBFF"> path/to/output</span><span style="color:#79B8FF"> -p</span><span style="color:#9ECBFF"> path/to/peptideSpectrumMatchingTIMsParams.json</span><span style="color:#79B8FF"> -s</span><span style="color:#79B8FF"> 4</span><span style="color:#79B8FF"> -k</span></span></code></pre>
+</li>
+<li>
+<p><strong>All Flags</strong></p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="sh"><code><span class="line"><span style="color:#B392F0">proteomiqon-peptidespectrummatchingtims</span><span style="color:#79B8FF"> --help</span></span></code></pre>
+</li>
+</ol>
+</article><nav class="tool-pagination" aria-label="Browse tools"><a href="/ProteomIQon/tools/peptide-spectrum-matching/"><small>Previous tool</small><span>← PeptideSpectrumMatching</span></a><a class="next" href="/ProteomIQon/tools/psm-statistics/"><small>Next tool</small><span>PSMStatistics →</span></a></nav></main></div></main><footer class="site-bottom mx-auto w-[min(1180px,calc(100%-48px))] border-t border-line pt-[22px] pb-[34px] text-xs max-md:w-[min(100%-32px,640px)]" data-astro-cid-qup6pdxl><div class="institution-logos" data-astro-cid-pe4ulxjw><span class="rptu-logo" data-astro-cid-pe4ulxjw><img src="/ProteomIQon/images/RPTU%20Logo_1c-1.svg" alt="RPTU Kaiserslautern-Landau" width="152" height="42" data-astro-cid-pe4ulxjw></span><img class="csb-logo" src="/ProteomIQon/images/csb-narrow-black.svg" alt="CSB" width="96" height="39" data-astro-cid-pe4ulxjw></div><a class="footer-github text-red! no-underline" href="https://github.com/CSBiology/ProteomIQon/" data-astro-cid-qup6pdxl>View the project on GitHub ↗</a></footer></div><script type="module">var e=`<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>`;for(let t of document.querySelectorAll(`main pre`)){let n=document.createElement(`div`);n.className=`copy-command-block`,t.before(n),n.append(t);let r=document.createElement(`button`);r.type=`button`,r.className=`copy-command-button`,r.setAttribute(`aria-label`,`Copy command`),r.title=`Copy command`,r.innerHTML=e,n.append(r);let i;r.addEventListener(`click`,async()=>{let n=t.textContent?.trim()??``;try{try{if(!navigator.clipboard?.writeText)throw Error(`Clipboard API unavailable`);await navigator.clipboard.writeText(n)}catch{let e=document.createElement(`textarea`);e.value=n,e.setAttribute(`readonly`,``),e.style.position=`fixed`,e.style.opacity=`0`,document.body.append(e),e.select();let t=!1;try{t=document.execCommand?.(`copy`)??!1}finally{e.remove()}if(!t)throw Error(`Copy failed`)}r.innerHTML=`<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m5 12 4 4L19 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`,r.setAttribute(`aria-label`,`Copied to clipboard`),r.title=`Copied to clipboard`}catch{r.setAttribute(`aria-label`,`Could not copy command`),r.title=`Could not copy command`}window.clearTimeout(i),i=window.setTimeout(()=>{r.innerHTML=e,r.setAttribute(`aria-label`,`Copy command`),r.title=`Copy command`},1800)})}</script></body></html>

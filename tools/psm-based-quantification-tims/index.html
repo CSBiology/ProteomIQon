@@ -1,0 +1,563 @@
+<!DOCTYPE html><html lang="en" data-theme="light"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="icon" type="image/svg+xml" href="/ProteomIQon/favicon.svg"><link rel="icon" href="/ProteomIQon/favicon.ico"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap"><meta name="description" content="PSMBasedQuantificationTIMs is the PSMBasedQuantification variant for timsTOF runs."><meta name="generator" content="Astro v7.3.8"><title>PSMBasedQuantificationTIMs · ProteomIQon</title><link rel="stylesheet" href="/ProteomIQon/_astro/global.LELvuLUR.css"><link rel="stylesheet" href="/ProteomIQon/_astro/Layout.BzR0PIOI.css"></head><body><div class="site-shell"><header class="site-masthead mx-auto flex w-[min(1180px,calc(100%-48px))] items-center justify-between gap-x-6 border-b border-line pt-6 pb-5 max-md:w-[min(100%-32px,640px)] max-[520px]:block"><a class="inline-flex items-center gap-[11px] text-[1.16rem] font-bold tracking-[-.04em] no-underline" href="/ProteomIQon/" aria-label="ProteomIQon home"><span class="inline-flex h-[21px] items-end gap-0.5" aria-hidden="true"><span class="block h-3 w-[5px] rounded-t-[1px] bg-sky"></span><span class="block h-5 w-[5px] rounded-t-[1px] bg-orange"></span><span class="block h-[15px] w-[5px] rounded-t-[1px] bg-teal"></span></span><span>Proteom<span class="text-orange">IQ</span>on</span></a><nav class="desktop-site-nav flex items-center gap-[25px] max-[520px]:mt-[18px] max-[520px]:flex-wrap max-[520px]:gap-x-4 max-[520px]:gap-y-2" aria-label="Main navigation"><a class="group relative py-1 text-[.8rem] whitespace-nowrap no-underline transition-colors duration-200 hover:text-navy! text-navy!" href="/ProteomIQon/tools/" aria-current="true">Tools<span class="absolute inset-x-0 bottom-0 h-0.5 origin-right scale-x-0 bg-red transition-transform duration-200 group-hover:origin-left group-hover:scale-x-100 origin-left scale-x-100"></span></a><a class="group relative py-1 text-[.8rem] whitespace-nowrap no-underline transition-colors duration-200 hover:text-navy! text-steel!" href="/ProteomIQon/guide/installation/">Installation<span class="absolute inset-x-0 bottom-0 h-0.5 origin-right scale-x-0 bg-red transition-transform duration-200 group-hover:origin-left group-hover:scale-x-100"></span></a><a class="group relative py-1 text-[.8rem] whitespace-nowrap no-underline transition-colors duration-200 hover:text-navy! text-steel!" href="/ProteomIQon/guide/getting-started/">Getting started<span class="absolute inset-x-0 bottom-0 h-0.5 origin-right scale-x-0 bg-red transition-transform duration-200 group-hover:origin-left group-hover:scale-x-100"></span></a><a class="group relative py-1 text-[.8rem] whitespace-nowrap no-underline transition-colors duration-200 hover:text-navy! text-steel!" href="/ProteomIQon/guide/developer-information/">Developer Information<span class="absolute inset-x-0 bottom-0 h-0.5 origin-right scale-x-0 bg-red transition-transform duration-200 group-hover:origin-left group-hover:scale-x-100"></span></a><a class="group relative py-1 text-[.8rem] whitespace-nowrap no-underline transition-colors duration-200 hover:text-navy! text-red!" href="/ProteomIQon/guide/help/">Help<span class="absolute inset-x-0 bottom-0 h-0.5 origin-right scale-x-0 bg-red transition-transform duration-200 group-hover:origin-left group-hover:scale-x-100"></span></a><a class="group relative py-1 text-[.8rem] whitespace-nowrap no-underline transition-colors duration-200 hover:text-navy! text-steel!" href="/ProteomIQon/guide/further-information/">Learn more<span class="absolute inset-x-0 bottom-0 h-0.5 origin-right scale-x-0 bg-red transition-transform duration-200 group-hover:origin-left group-hover:scale-x-100"></span></a></nav><details class="mobile-site-nav"><summary><span>Menu</span><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"></path></svg></summary><nav aria-label="Main navigation"><a href="/ProteomIQon/tools/" aria-current="true">Tools</a><a href="/ProteomIQon/guide/installation/">Installation</a><a href="/ProteomIQon/guide/getting-started/">Getting started</a><a href="/ProteomIQon/guide/developer-information/">Developer Information</a><a href="/ProteomIQon/guide/help/">Help</a><a href="/ProteomIQon/guide/further-information/">Learn more</a></nav></details></header><script type="module">var e=document.querySelector(`.mobile-site-nav`);document.addEventListener(`click`,t=>{e?.open&&t.target instanceof Node&&!e.contains(t.target)&&(e.open=!1)}),e?.addEventListener(`keydown`,t=>{t.key===`Escape`&&(e.open=!1,e.querySelector(`summary`)?.focus())});</script><main class="tool-page-wide"><div class="tool-detail-layout phase-peptide-quantification"><aside class="tool-sidebar"><a class="back-link" href="/ProteomIQon/tools/">← All tools</a><div class="sidebar-rule"></div><p class="sidebar-label">In this stage</p><nav aria-label="Peptide Quantification tools"><a href="/ProteomIQon/tools/psm-based-quantification/">PSMBasedQuantification</a><a class="active" aria-current="page" href="/ProteomIQon/tools/psm-based-quantification-tims/">PSMBasedQuantificationTIMs</a></nav><details class="mobile-stage-navigation"><summary>In this stage <span>2 tools</span></summary><nav aria-label="Peptide Quantification tools"><a href="/ProteomIQon/tools/psm-based-quantification/">PSMBasedQuantification</a><a class="active" aria-current="page" href="/ProteomIQon/tools/psm-based-quantification-tims/">PSMBasedQuantificationTIMs</a></nav></details></aside><main class="tool-detail"><section class="tool-detail-hero"><h1>PSMBased<wbr>Quantification<wbr>TIMs</h1></section><article class="legacy-content tool-legacy-content prose max-w-none prose-a:font-semibold prose-code:before:content-none prose-code:after:content-none"><h2 id="tool-description">Tool Description</h2>
+<p>PSMBasedQuantificationTIMs is the <a href="/ProteomIQon/tools/psm-based-quantification/">PSMBasedQuantification</a> variant for timsTOF runs. On these instruments a peptide ion is a peak in two dimensions, retention time and ion mobility, so the tool extracts the signal around every identification in both dimensions.</p>
+<h2 class="tool-workflow-heading" id="how-does-psmbasedquantificationtims-work">How does PSMBasedQuantificationTIMs work?</h2>
+<ol class="tool-explanation-steps" role="list">
+<li><div class="tool-step-copy">
+<p class="tool-step-heading"><strong>XIC Point Calculation and Ion Mobility Window</strong></p>
+<p>An XIC point is the sum of the intensity of all peaks inside the m/z window (<code>MzWindow_Da</code>) and inside the ion mobility window (<code>IonMobilityWindow</code>), so both widths are part of the quantity.
+With <code>IonMobilityWindow</code> set to <code>Window.Fixed v</code>, the ion mobility window is ±v around the ion mobility centre of the ion. The centre is the intensity weighted ion mobility of the signal within v of the weighted ion mobility of the identifications, around their weighted scan time (see <code>CentrePSMs</code>). Without such signal it is the weighted ion mobility of the identifications.</p>
+</div></li>
+<li><div class="tool-step-copy">
+<p><strong>Peak Detection and Quantification</strong>
+The points form a retention time <a href="https://www.biofsharp.com/BioFSharp.Mz/03_01_quantification.html#Building-an-XIC-trace">ion chromatogram</a>.
+As PSMBasedQuantification does, the tool detects the peaks on the trace and <a href="https://www.biofsharp.com/BioFSharp.Mz/03_01_quantification.html#Fitting-and-integrating-the-main-peak">fits and integrates</a> the peak that contains the weighted scan time of the identifications.
+The measured isotope pattern of a row (the <code>KLDiv</code> and <code>IsotopicPattern</code> columns) is read with the same windows, on the spectrum closest to the fitted scan time.</p>
+</div></li>
+<li><div class="tool-step-copy">
+<p class="tool-step-heading"><strong>Output</strong></p>
+<p>The output has the same layout as the output of PSMBasedQuantification, so the downstream tools do not care which of the two produced it.</p>
+</div></li>
+</ol>
+<details id="inputs" class="accordion tool-io-accordion tool-io-inputs"><summary class="accordion-header"><span class="accordion-icon" aria-hidden="true">IN</span><span class="accordion-heading"><strong role="heading" aria-level="2">Inputs</strong><small>Files and command-line flags</small></span><span class="accordion-chevron" aria-hidden="true"></span></summary><div class="accordion-content">
+<p>These inputs are needed to execute the tool:</p>
+<div class="tool-io-table-scroll" tabindex="0" role="region" aria-label="Inputs table"><table class="responsive-table" role="table">
+<thead role="rowgroup">
+<tr role="row">
+<th scope="col" role="columnheader">Flag</th>
+<th scope="col" role="columnheader">Meaning</th>
+<th scope="col" role="columnheader">Comes from</th>
+</tr>
+</thead>
+<tbody role="rowgroup">
+<tr role="row">
+<td role="cell" data-label="Flag"><code>-i</code></td>
+<td role="cell" data-label="Meaning">one or more <code>.mzlite</code> files with ion mobility, or a directory</td>
+<td role="cell" data-label="Comes from"><a href="/ProteomIQon/tools/mzml-to-mzlite-ion-mobility/">MzMLToMzLiteIonMobility</a></td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Flag"><code>-ii</code></td>
+<td role="cell" data-label="Meaning">one or more <code>.qpsm</code> files in the PSMStatistics layout, or a directory searched for <code>*.qpsm</code></td>
+<td role="cell" data-label="Comes from"><a href="/ProteomIQon/tools/psm-statistics/">PSMStatistics</a> or <a href="/ProteomIQon/tools/ms-fragger-to-psm/">MsFraggerToPSM</a></td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Flag"><code>-o</code></td>
+<td role="cell" data-label="Meaning">the output directory, created when missing</td>
+<td role="cell" data-label="Comes from">-</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Flag"><code>-d</code></td>
+<td role="cell" data-label="Meaning">the SQLite peptide database</td>
+<td role="cell" data-label="Comes from"><a href="/ProteomIQon/tools/peptide-db/">PeptideDB</a></td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Flag"><code>-p</code></td>
+<td role="cell" data-label="Meaning">the parameter file in JSON</td>
+<td role="cell" data-label="Comes from"><a href="https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/QuantificationTIMsParams.json">QuantificationTIMsParams.json</a></td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Flag"><code>-mf</code></td>
+<td role="cell" data-label="Meaning">switch: pair files by base name instead of by position</td>
+<td role="cell" data-label="Comes from">-</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Flag"><code>-dc</code></td>
+<td role="cell" data-label="Meaning">switch: write diagnostic charts</td>
+<td role="cell" data-label="Comes from">-</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Flag"><code>-z</code></td>
+<td role="cell" data-label="Meaning">switch: pack the chart directory into a zip file and delete it</td>
+<td role="cell" data-label="Comes from">-</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Flag"><code>-c</code></td>
+<td role="cell" data-label="Meaning">number of runs quantified at the same time, default 1</td>
+<td role="cell" data-label="Comes from">-</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li>The tool refuses any instrument file whose name does not end in <code>.mzlite</code>. It reads the qpsm files in the column layout of PSMStatistics, which MsFraggerToPSM writes too, and stops with the missing columns when a file has another layout. The qpsm carries no ion mobility, so the tool reads the ion mobility of every identification from its MS2 spectrum in the mzlite, the spectrum whose id is the <code>PSMId</code>. The tool warns about identifications whose spectrum is missing or has no ion mobility. These identifications do not locate the trace. An ion without any identification with ion mobility gets no row, and the tool stops when no identification of the file has an ion mobility.</li>
+<li>With one file per flag the pair is used as given. With lists, the n-th mzlite file is paired with the n-th qpsm file unless you pass <code>-mf</code>, which pairs files by their base name and skips mzlite files without a partner.</li>
+<li>For every run the tool writes <code>run.quant</code>, tab separated with a header.</li>
+<li>With <code>-dc</code> the tool writes charts into <code>run_plots</code>, and <code>-z</code> packs that directory into <code>run_plots.zip</code> and deletes it.</li>
+<li>Delete an existing <code>run.quant</code> in the output directory before a rerun, the tool appends to it. Logs go to <code>PSMBasedQuantification_log.txt</code> and <code>run_log.txt</code> in the output directory.</li>
+</ul>
+</div></details><details id="parameter-file" class="accordion tool-io-accordion tool-io-parameters"><summary class="accordion-header"><span class="accordion-icon" aria-hidden="true">CFG</span><span class="accordion-heading"><strong role="heading" aria-level="2">Parameter file</strong><small>Default values and tool settings</small></span><span class="accordion-chevron" aria-hidden="true"></span></summary><div class="accordion-content">
+<p>The parameter record is shared with PSMBasedQuantification. The following default values are specific to timsTOF runs.</p>
+<h3 id="general-settings">General settings</h3>
+<div class="tool-io-table-scroll" tabindex="0" role="region" aria-label="Parameter file table"><table class="responsive-table" role="table">
+<thead role="rowgroup">
+<tr role="row">
+<th scope="col" role="columnheader">Parameter</th>
+<th scope="col" role="columnheader">Default</th>
+<th scope="col" role="columnheader">Description</th>
+</tr>
+</thead>
+<tbody role="rowgroup">
+<tr role="row">
+<td role="cell" data-label="Parameter"><code>PerformLabeledQuantification</code></td>
+<td role="cell" data-label="Default"><code>Labeling.Unlabeled</code></td>
+<td role="cell" data-label="Description">Label free quantification of the identified ion. The three labeled cases work as in PSMBasedQuantification and quantify the partner ion too.</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Parameter"><code>XicExtraction.ScanTimeWindow</code></td>
+<td role="cell" data-label="Default"><code>2.0</code></td>
+<td role="cell" data-label="Description">Half width of the retention time range around the identification that is extracted, in the scan time unit of the run.</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Parameter"><code>XicExtraction.MzWindow_Da</code></td>
+<td role="cell" data-label="Default"><code>Window.Fixed 0.008</code></td>
+<td role="cell" data-label="Description">Half width of the m/z window, in Da. Every peak inside it counts in an XIC point. The m/z correction and <code>Window.Estimate</code> work as in PSMBasedQuantification.</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Parameter"><code>XicExtraction.XicProcessing</code></td>
+<td role="cell" data-label="Default"><code>XicProcessing.Wavelet waveletParams</code></td>
+<td role="cell" data-label="Description">Peak detection on the retention time trace, summed over the ion mobility window. The wavelet parameters are listed below. <code>SecondDerivative</code> is the other supported case. <code>Gabor3D</code> is in development and does not work currently.</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Parameter"><code>XicExtraction.TopKPSMs</code></td>
+<td role="cell" data-label="Default"><code>None</code></td>
+<td role="cell" data-label="Description"><code>Some k</code> keeps only the k identifications with the highest <code>ModelScore</code> per peptide ion when placing the peak.</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Parameter"><code>XicExtraction.IonMobilityWindow</code></td>
+<td role="cell" data-label="Default"><code>Window.Fixed 0.025</code></td>
+<td role="cell" data-label="Description">Half width v of the ion mobility window around the ion mobility centre of the ion, in 1/K0. <code>Window.Estimate</code> is not available here and stops the tool with an error that asks for <code>Fixed</code>.</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Parameter"><code>BaseLineCorrection</code></td>
+<td role="cell" data-label="Default"><code>Some { MaxIterations = 10; Lambda = 6; P = 0.05 }</code></td>
+<td role="cell" data-label="Description">Asymmetric least squares baseline subtraction before peak detection. <code>None</code> skips it.</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Parameter"><code>QualityFilterLog2Limit</code></td>
+<td role="cell" data-label="Default"><code>2.0</code></td>
+<td role="cell" data-label="Description">The quality filter keeps rows with -limit &lt; log2 ((area / median area) / (apex / median apex)) &lt; limit. Rows with a non-finite or non-positive area, apex or ratio are dropped.</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Parameter"><code>CentrePSMs</code></td>
+<td role="cell" data-label="Default"><code>3</code></td>
+<td role="cell" data-label="Description">Number of identifications per peptide ion with an ion mobility, ranked by the summed intensity of their matched fragment ions, whose intensity weighted scan time and ion mobility locate the trace. It is applied after <code>TopKPSMs</code>, which ranks by <code>ModelScore</code>. At least 1.</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Parameter"><code>RequirePeakAtScanTime</code></td>
+<td role="cell" data-label="Default"><code>true</code></td>
+<td role="cell" data-label="Description"><code>true</code> quantifies only a peak that contains the weighted scan time of the identifications, so an ion without such a peak gets no row. <code>false</code> takes the peak with the closest apex when no peak contains it.</td>
+</tr>
+</tbody>
+</table></div>
+<p>The wavelet parameters:</p>
+<div class="tool-io-table-scroll" tabindex="0" role="region" aria-label="Parameter file table"><table class="responsive-table" role="table">
+<thead role="rowgroup">
+<tr role="row">
+<th scope="col" role="columnheader">Parameter</th>
+<th scope="col" role="columnheader">Default</th>
+<th scope="col" role="columnheader">Description</th>
+</tr>
+</thead>
+<tbody role="rowgroup">
+<tr role="row">
+<td role="cell" data-label="Parameter"><code>Borderpadding</code></td>
+<td role="cell" data-label="Default"><code>None</code></td>
+<td role="cell" data-label="Description">Number of points padded at both ends of the trace. <code>None</code> derives it from the data.</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Parameter"><code>BorderPadMethod</code></td>
+<td role="cell" data-label="Default"><code>Padding.BorderPaddingMethod.Random</code></td>
+<td role="cell" data-label="Description">How the border points are filled (<code>Random</code> or <code>Zero</code>).</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Parameter"><code>InternalPaddingMethod</code></td>
+<td role="cell" data-label="Default"><code>Padding.InternalPaddingMethod.LinearInterpolation</code></td>
+<td role="cell" data-label="Description">How small gaps inside the trace are filled.</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Parameter"><code>HugeGapPaddingMethod</code></td>
+<td role="cell" data-label="Default"><code>Padding.HugeGapPaddingMethod.Zero</code></td>
+<td role="cell" data-label="Description">How gaps longer than <code>HugeGapPaddingDistance</code> are filled.</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Parameter"><code>HugeGapPaddingDistance</code></td>
+<td role="cell" data-label="Default"><code>100.</code></td>
+<td role="cell" data-label="Description">Gap length from which a gap counts as huge.</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Parameter"><code>MinPeakDistance</code></td>
+<td role="cell" data-label="Default"><code>Some 0.1</code></td>
+<td role="cell" data-label="Description">Peaks closer than this (in minutes) are merged. The distance is at least 1.5 times the median point spacing of the trace, which is also what <code>None</code> uses.</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Parameter"><code>MinPeakLength</code></td>
+<td role="cell" data-label="Default"><code>Some 0.1</code></td>
+<td role="cell" data-label="Description">Smallest peak width the wavelet scales start at.</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Parameter"><code>MaxPeakLength</code></td>
+<td role="cell" data-label="Default"><code>1.5</code></td>
+<td role="cell" data-label="Description">Largest peak width the wavelet scales go up to.</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Parameter"><code>NoiseQuantile</code></td>
+<td role="cell" data-label="Default"><code>0.01</code></td>
+<td role="cell" data-label="Description">Quantile of the wavelet correlation used as noise level.</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Parameter"><code>MinSNR</code></td>
+<td role="cell" data-label="Default"><code>0.01</code></td>
+<td role="cell" data-label="Description">A peak needs a correlation above <code>MinSNR</code> times the noise level.</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Default parameter file:</strong> <a href="https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/QuantificationTIMsParams.json">Default JSON File</a></p>
+<p>For a given dataset, use the same fixed m/z and ion mobility windows in <a href="/ProteomIQon/tools/alignment-based-quantification/">AlignmentBasedQuantification</a>. The appropriate windows depend on the instrument and acquisition method.</p>
+</div></details><details id="outputs" class="accordion tool-io-accordion tool-io-outputs"><summary class="accordion-header"><span class="accordion-icon" aria-hidden="true">OUT</span><span class="accordion-heading"><strong role="heading" aria-level="2">Outputs</strong><small>Generated data and log files</small></span><span class="accordion-chevron" aria-hidden="true"></span></summary><div class="accordion-content">
+<p><a href="/ProteomIQon/tools/quant-based-alignment/">QuantBasedAlignment</a>, <a href="/ProteomIQon/tools/alignment-based-quantification/">AlignmentBasedQuantification</a>, <a href="/ProteomIQon/tools/alignment-based-quant-statistics/">AlignmentBasedQuantStatistics</a> and <a href="/ProteomIQon/tools/join-quant-with-peptide-ions/">JoinQuantPepIonsWithProteins</a> read these <code>.quant</code> files.</p>
+<p>The output table contains 47 columns. The columns are grouped by category below.</p>
+<h3 id="identification-and-psm-confidence">Identification and PSM confidence</h3>
+<div class="tool-io-table-scroll" tabindex="0" role="region" aria-label="Outputs table"><table class="responsive-table" role="table">
+<thead role="rowgroup">
+<tr role="row">
+<th scope="col" role="columnheader">Column</th>
+<th scope="col" role="columnheader">Description</th>
+</tr>
+</thead>
+<tbody role="rowgroup">
+<tr role="row">
+<td role="cell" data-label="Column"><code>StringSequence</code></td>
+<td role="cell" data-label="Description">Amino Acid sequence (one-letter code) from PeptideDB which matches the psm candidate</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Column"><code>GlobalMod</code></td>
+<td role="cell" data-label="Description">Indicator, if a peptide ion species is labeled or unlabeled</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Column"><code>Charge</code></td>
+<td role="cell" data-label="Description">Precursor ion charge state</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Column"><code>PepSequenceID</code></td>
+<td role="cell" data-label="Description">Unique identifier of the unmodified peptide sequence, which points to PeptideDB</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Column"><code>ModSequenceID</code></td>
+<td role="cell" data-label="Description">Unique identifier of the modified peptide sequence (including PTMs, e.g., methylation), which points to PeptideDB</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Column"><code>PrecursorMZ</code></td>
+<td role="cell" data-label="Description">Theoretical m/z of the ion plus the m/z correction, the m/z the XIC is centred on</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Column"><code>MeasuredMass</code></td>
+<td role="cell" data-label="Description">Mass that corresponds to <code>PrecursorMZ</code>, in Dalton</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Column"><code>TheoMass</code></td>
+<td role="cell" data-label="Description">Theoretical peptide mass in the spectrum (based on amino acid composition) in Dalton</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Column"><code>AbsDeltaMass</code></td>
+<td role="cell" data-label="Description">Absolute difference between <code>MeasuredMass</code> and <code>TheoMass</code></td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Column"><code>MeanPercolatorScore</code></td>
+<td role="cell" data-label="Description">Mean <code>ModelScore</code> of the identifications of the peptide ion</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Column"><code>QValue</code></td>
+<td role="cell" data-label="Description">Lowest q-value among the identifications of the ion in the <code>.qpsm</code></td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Column"><code>PEPValue</code></td>
+<td role="cell" data-label="Description">PEP of that identification</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Column"><code>ProteinNames</code></td>
+<td role="cell" data-label="Description"><code>ProteinNames</code> of that identification in the <code>.qpsm</code></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="light-quantification-8">Light quantification (8)</h3>
+<div class="tool-io-table-scroll" tabindex="0" role="region" aria-label="Outputs table"><table class="responsive-table" role="table">
+<thead role="rowgroup">
+<tr role="row">
+<th scope="col" role="columnheader">Column</th>
+<th scope="col" role="columnheader">Description</th>
+</tr>
+</thead>
+<tbody role="rowgroup">
+<tr role="row">
+<td role="cell" data-label="Column"><code>QuantMz_Light</code></td>
+<td role="cell" data-label="Description">Mass-to-charge ratio from the extracted XIC of the unlabeled peptide ion</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Column"><code>Quant_Light</code></td>
+<td role="cell" data-label="Description">Peak area from the extracted XIC of the unlabeled peptide ion</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Column"><code>MeasuredApex_Light</code></td>
+<td role="cell" data-label="Description">Measured Apex of unlabeled peak</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Column"><code>Seo_Light</code></td>
+<td role="cell" data-label="Description">Standard Error of Prediction for quantification</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Column"><code>Params_Light</code></td>
+<td role="cell" data-label="Description">Describes the shape of the fitted peak for the unlabeled version of a peptide. Contains information about peak height, estimated peak time, and peak width.</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Column"><code>Difference_SearchRT_FittedRT_Light</code></td>
+<td role="cell" data-label="Description">Difference between the retention time originally determined using PSMs and the retention time calculated from the measured peak</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Column"><code>KLDiv_Observed_Theoretical_Light</code></td>
+<td role="cell" data-label="Description">Describes how well the measured unlabeled isotope pattern matches the theoretically expected pattern.</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Column"><code>KLDiv_CorrectedObserved_Theoretical_Light</code></td>
+<td role="cell" data-label="Description">Corrected Kullback–Leibler divergence of isotopic pattern of unlabeled peptide ion versus the measured pattern</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="heavy-quantification-8">Heavy quantification (8)</h3>
+<div class="tool-io-table-scroll" tabindex="0" role="region" aria-label="Outputs table"><table class="responsive-table" role="table">
+<thead role="rowgroup">
+<tr role="row">
+<th scope="col" role="columnheader">Column</th>
+<th scope="col" role="columnheader">Description</th>
+</tr>
+</thead>
+<tbody role="rowgroup">
+<tr role="row">
+<td role="cell" data-label="Column"><code>QuantMz_Heavy</code></td>
+<td role="cell" data-label="Description">Mass-to-charge ratio from the extracted XIC of the labeled peptide ion</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Column"><code>Quant_Heavy</code></td>
+<td role="cell" data-label="Description">Peak area from the extracted XIC of the labeled peptide ion</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Column"><code>MeasuredApex_Heavy</code></td>
+<td role="cell" data-label="Description">Measured Apex of labeled peak</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Column"><code>Seo_Heavy</code></td>
+<td role="cell" data-label="Description">Standard Error of Prediction of quantification</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Column"><code>Params_Heavy</code></td>
+<td role="cell" data-label="Description">Describes the shape of the fitted peak for the labeled version of a peptide. Contains information about peak height, estimated peak time, and peak width.</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Column"><code>Difference_SearchRT_FittedRT_Heavy</code></td>
+<td role="cell" data-label="Description">Difference between the retention time originally determined using PSMs and the retention time calculated from the measured peak</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Column"><code>KLDiv_Observed_Theoretical_Heavy</code></td>
+<td role="cell" data-label="Description">Describes how well the measured labeled isotope pattern matches the theoretically expected pattern.</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Column"><code>KLDiv_CorrectedObserved_Theoretical_Heavy</code></td>
+<td role="cell" data-label="Description">Corrected Kullback–Leibler divergence of isotopic pattern of labeled peptide ion versus the measured pattern</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="light-isotope-patterns-and-traces-6">Light isotope patterns and traces (6)</h3>
+<div class="tool-io-table-scroll" tabindex="0" role="region" aria-label="Outputs table"><table class="responsive-table" role="table">
+<thead role="rowgroup">
+<tr role="row">
+<th scope="col" role="columnheader">Column</th>
+<th scope="col" role="columnheader">Description</th>
+</tr>
+</thead>
+<tbody role="rowgroup">
+<tr role="row">
+<td role="cell" data-label="Column"><code>IsotopicPatternMz_Light</code></td>
+<td role="cell" data-label="Description">M/z-distribution of isotope cluster in spectra for unlabeled peaks</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Column"><code>IsotopicPatternIntensity_Observed_Light</code></td>
+<td role="cell" data-label="Description">Observed intensity distribution of unlabeled isotopic clusters</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Column"><code>IsotopicPatternIntensity_Corrected_Light</code></td>
+<td role="cell" data-label="Description">Corrected intensity distribution of unlabeled isotopic clusters</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Column"><code>RtTrace_Light</code></td>
+<td role="cell" data-label="Description">Retention Time Profile of unlabeled peptide ion</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Column"><code>IntensityTrace_Observed_Light</code></td>
+<td role="cell" data-label="Description">Intensities at the monoisotopic m/z over the scan times in <code>RtTrace_Light</code>, drop-outs removed, before baseline subtraction</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Column"><code>IntensityTrace_Corrected_Light</code></td>
+<td role="cell" data-label="Description">The intensities of <code>IntensityTrace_Observed_Light</code> after ALS baseline subtraction, negative values set to 0</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="heavy-isotope-patterns-and-traces-6">Heavy isotope patterns and traces (6)</h3>
+<div class="tool-io-table-scroll" tabindex="0" role="region" aria-label="Outputs table"><table class="responsive-table" role="table">
+<thead role="rowgroup">
+<tr role="row">
+<th scope="col" role="columnheader">Column</th>
+<th scope="col" role="columnheader">Description</th>
+</tr>
+</thead>
+<tbody role="rowgroup">
+<tr role="row">
+<td role="cell" data-label="Column"><code>IsotopicPatternMz_Heavy</code></td>
+<td role="cell" data-label="Description">M/z-distribution of isotope cluster in spectra for labeled peaks</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Column"><code>IsotopicPatternIntensity_Observed_Heavy</code></td>
+<td role="cell" data-label="Description">Observed intensity distribution of labeled isotopic clusters</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Column"><code>IsotopicPatternIntensity_Corrected_Heavy</code></td>
+<td role="cell" data-label="Description">Corrected intensity distribution of labeled isotopic clusters</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Column"><code>RtTrace_Heavy</code></td>
+<td role="cell" data-label="Description">Retention Time Profile of labeled peptide ion</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Column"><code>IntensityTrace_Observed_Heavy</code></td>
+<td role="cell" data-label="Description">Intensities at the monoisotopic m/z of the labeled partner over the scan times in <code>RtTrace_Heavy</code>, drop-outs removed, before baseline subtraction</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Column"><code>IntensityTrace_Corrected_Heavy</code></td>
+<td role="cell" data-label="Description">The intensities of <code>IntensityTrace_Observed_Heavy</code> after ALS baseline subtraction, negative values set to 0</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="light--heavy-comparison-and-quantification-source-2">Light / Heavy comparison and quantification source (2)</h3>
+<div class="tool-io-table-scroll" tabindex="0" role="region" aria-label="Outputs table"><table class="responsive-table" role="table">
+<thead role="rowgroup">
+<tr role="row">
+<th scope="col" role="columnheader">Column</th>
+<th scope="col" role="columnheader">Description</th>
+</tr>
+</thead>
+<tbody role="rowgroup">
+<tr role="row">
+<td role="cell" data-label="Column"><code>Correlation_Light_Heavy</code></td>
+<td role="cell" data-label="Description">Correlation calculated based on Pearson between unlabeled and labeled peaks</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Column"><code>QuantificationSource</code></td>
+<td role="cell" data-label="Description">If spectra are found over Alignments or Peptide Spectrum Matching</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="alignment-quality-2">Alignment quality (2)</h3>
+<p>Alignment scores and associated q-values</p>
+<div class="tool-io-table-scroll" tabindex="0" role="region" aria-label="Outputs table"><table class="responsive-table" role="table">
+<thead role="rowgroup">
+<tr role="row">
+<th scope="col" role="columnheader">Column</th>
+<th scope="col" role="columnheader">Description</th>
+</tr>
+</thead>
+<tbody role="rowgroup">
+<tr role="row">
+<td role="cell" data-label="Column"><code>AlignmentScore</code></td>
+<td role="cell" data-label="Description"><code>NaN</code> for PSM-based rows. For transferred rows, the probability from AlignmentBasedQuantStatistics that the quantified peak belongs to the ion.</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Column"><code>AlignmentQValue</code></td>
+<td role="cell" data-label="Description"><code>0</code> for PSM-based rows. For transferred rows, the q-value from AlignmentBasedQuantStatistics.</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="ion-mobility">Ion Mobility</h3>
+<div class="tool-io-table-scroll" tabindex="0" role="region" aria-label="Outputs table"><table class="responsive-table" role="table">
+<thead role="rowgroup">
+<tr role="row">
+<th scope="col" role="columnheader">Column</th>
+<th scope="col" role="columnheader">Description</th>
+</tr>
+</thead>
+<tbody role="rowgroup">
+<tr role="row">
+<td role="cell" data-label="Column">IonMobility</td>
+<td role="cell" data-label="Description">Ion mobility of the identifications, weighted by their matched fragment intensity, NaN without ion mobility</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Column">IonMobilityCentre</td>
+<td role="cell" data-label="Description">Ion mobility the XIC of the row is summed around, NaN without an ion mobility window</td>
+</tr>
+</tbody>
+</table></div>
+</div></details><details id="parameter-generation" class="accordion tool-io-accordion tool-io-parameters"><summary class="accordion-header"><span class="accordion-icon" aria-hidden="true">CFG</span><span class="accordion-heading"><strong role="heading" aria-level="2">Parameter generation</strong><small>JSON and parameter-generation examples</small></span><span class="accordion-chevron" aria-hidden="true"></span></summary><div class="accordion-content">
+<p>From the ProteomIQon repository root, build the library with <code>dotnet build src/ProteomIQon/ProteomIQon.fsproj -c Release</code>. Save the following as <code>generate-params.fsx</code> in that same directory and run <code>dotnet fsi generate-params.fsx</code>. The script writes the JSON file to the system temporary directory.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="fsharp"><code><span class="line"><span style="color:#E1E4E8">#r </span><span style="color:#9ECBFF">"nuget: FSharp.Stats, 0.6.0"</span></span>
+<span class="line"><span style="color:#E1E4E8">#r </span><span style="color:#9ECBFF">"nuget: Newtonsoft.Json, 13.0.4"</span></span>
+<span class="line"><span style="color:#E1E4E8">#r </span><span style="color:#9ECBFF">"./src/ProteomIQon/bin/Release/net10.0/ProteomIQon.dll"</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">open</span><span style="color:#B392F0"> ProteomIQon</span></span>
+<span class="line"><span style="color:#F97583">open</span><span style="color:#B392F0"> ProteomIQon.Domain</span></span>
+<span class="line"><span style="color:#F97583">open</span><span style="color:#B392F0"> FSharp.Stats.Signal</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">let</span><span style="color:#FFAB70"> waveletParams </span><span style="color:#F97583">:</span><span style="color:#B392F0"> WaveletParameters </span><span style="color:#F97583">=</span></span>
+<span class="line"><span style="color:#F97583">    {</span></span>
+<span class="line"><span style="color:#E1E4E8">        Borderpadding          </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> None</span></span>
+<span class="line"><span style="color:#E1E4E8">        BorderPadMethod        </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> Padding.BorderPaddingMethod.Random</span></span>
+<span class="line"><span style="color:#E1E4E8">        InternalPaddingMethod  </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> Padding.InternalPaddingMethod.LinearInterpolation</span></span>
+<span class="line"><span style="color:#E1E4E8">        HugeGapPaddingMethod   </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> Padding.HugeGapPaddingMethod.Zero</span></span>
+<span class="line"><span style="color:#E1E4E8">        HugeGapPaddingDistance </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 100.</span></span>
+<span class="line"><span style="color:#E1E4E8">        MinPeakDistance        </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> Some </span><span style="color:#79B8FF">0.1</span></span>
+<span class="line"><span style="color:#E1E4E8">        MinPeakLength          </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> Some </span><span style="color:#79B8FF">0.1</span></span>
+<span class="line"><span style="color:#E1E4E8">        MaxPeakLength          </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 1.5</span></span>
+<span class="line"><span style="color:#E1E4E8">        NoiseQuantile          </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0.01</span></span>
+<span class="line"><span style="color:#E1E4E8">        MinSNR                 </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0.01</span></span>
+<span class="line"><span style="color:#F97583">    }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">let</span><span style="color:#FFAB70"> quantificationTIMsParams </span><span style="color:#F97583">:</span><span style="color:#B392F0"> Dto.QuantificationParams </span><span style="color:#F97583">=</span></span>
+<span class="line"><span style="color:#F97583">    {</span></span>
+<span class="line"><span style="color:#E1E4E8">        PerformLabeledQuantification </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> Labeling.Unlabeled</span></span>
+<span class="line"><span style="color:#E1E4E8">        XicExtraction </span><span style="color:#F97583">=</span></span>
+<span class="line"><span style="color:#F97583">            {</span></span>
+<span class="line"><span style="color:#E1E4E8">                ScanTimeWindow </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 2.</span></span>
+<span class="line"><span style="color:#E1E4E8">                MzWindow</span><span style="color:#F97583">_</span><span style="color:#E1E4E8">Da    </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> Window.Fixed </span><span style="color:#79B8FF">0.008</span></span>
+<span class="line"><span style="color:#E1E4E8">                XicProcessing  </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> XicProcessing.Wavelet waveletParams</span></span>
+<span class="line"><span style="color:#E1E4E8">                TopKPSMs       </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> None</span></span>
+<span class="line"><span style="color:#E1E4E8">                IonMobilityWindow </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> Window.Fixed </span><span style="color:#79B8FF">0.025</span></span>
+<span class="line"><span style="color:#F97583">            }</span></span>
+<span class="line"><span style="color:#E1E4E8">        BaseLineCorrection </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> Some </span><span style="color:#F97583">{</span><span style="color:#E1E4E8"> MaxIterations </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 10</span><span style="color:#F97583">;</span><span style="color:#E1E4E8"> Lambda </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 6</span><span style="color:#F97583">;</span><span style="color:#E1E4E8"> P </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0.05</span><span style="color:#F97583"> }</span></span>
+<span class="line"><span style="color:#E1E4E8">        QualityFilterLog2Limit </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 2.</span></span>
+<span class="line"><span style="color:#E1E4E8">        CentrePSMs </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 3</span></span>
+<span class="line"><span style="color:#E1E4E8">        RequirePeakAtScanTime </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> true</span></span>
+<span class="line"><span style="color:#F97583">    }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D">// Replace the temp folder with your project folder.</span></span>
+<span class="line"><span style="color:#F97583">let</span><span style="color:#FFAB70"> outputPath</span><span style="color:#F97583"> =</span><span style="color:#E1E4E8"> System.IO.Path.Combine</span><span style="color:#F97583">(</span><span style="color:#E1E4E8">System.IO.Path.GetTempPath</span><span style="color:#F97583">(),</span><span style="color:#9ECBFF"> "QuantificationTIMsParams.json"</span><span style="color:#F97583">)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#E1E4E8">Json.serializeAndWrite outputPath quantificationTIMsParams</span></span></code></pre>
+</div></details><h2 id="installing-and-executing-the-tool">Installing and executing the tool</h2>
+<ol>
+<li>
+<p><strong>Installing</strong></p>
+<p>Install the tool globally with the .NET CLI.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="sh"><code><span class="line"><span style="color:#B392F0">dotnet</span><span style="color:#9ECBFF"> tool</span><span style="color:#9ECBFF"> install</span><span style="color:#79B8FF"> --global</span><span style="color:#9ECBFF"> ProteomIQon.PSMBasedQuantificationTIMs</span></span></code></pre>
+</li>
+<li>
+<p><strong>Execute</strong></p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="sh"><code><span class="line"><span style="color:#B392F0">proteomiqon-psmbasedquantificationtims</span><span style="color:#79B8FF"> -i</span><span style="color:#9ECBFF"> path/to/run.mzlite</span><span style="color:#79B8FF"> -ii</span><span style="color:#9ECBFF"> path/to/run.qpsm</span><span style="color:#79B8FF"> -d</span><span style="color:#9ECBFF"> path/to/database.db</span><span style="color:#79B8FF"> -o</span><span style="color:#9ECBFF"> path/to/output</span><span style="color:#79B8FF"> -p</span><span style="color:#9ECBFF"> path/to/QuantificationTIMsParams.json</span></span></code></pre>
+</li>
+<li>
+<p><strong>Running the tool for multiple runs, for three at the same time</strong></p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="sh"><code><span class="line"><span style="color:#B392F0">proteomiqon-psmbasedquantificationtims</span><span style="color:#79B8FF"> -i</span><span style="color:#9ECBFF"> path/to/run1.mzlite</span><span style="color:#9ECBFF"> path/to/run2.mzlite</span><span style="color:#9ECBFF"> path/to/run3.mzlite</span><span style="color:#79B8FF"> -ii</span><span style="color:#9ECBFF"> path/to/run1.qpsm</span><span style="color:#9ECBFF"> path/to/run2.qpsm</span><span style="color:#9ECBFF"> path/to/run3.qpsm</span><span style="color:#79B8FF"> -d</span><span style="color:#9ECBFF"> path/to/database.db</span><span style="color:#79B8FF"> -o</span><span style="color:#9ECBFF"> path/to/output</span><span style="color:#79B8FF"> -p</span><span style="color:#9ECBFF"> path/to/QuantificationTIMsParams.json</span><span style="color:#79B8FF"> -c</span><span style="color:#79B8FF"> 3</span></span></code></pre>
+</li>
+<li>
+<p><strong>Two directories, paired by file name</strong></p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="sh"><code><span class="line"><span style="color:#B392F0">proteomiqon-psmbasedquantificationtims</span><span style="color:#79B8FF"> -i</span><span style="color:#9ECBFF"> path/to/mzliteFolder</span><span style="color:#79B8FF"> -ii</span><span style="color:#9ECBFF"> path/to/qpsmFolder</span><span style="color:#79B8FF"> -d</span><span style="color:#9ECBFF"> path/to/database.db</span><span style="color:#79B8FF"> -o</span><span style="color:#9ECBFF"> path/to/output</span><span style="color:#79B8FF"> -p</span><span style="color:#9ECBFF"> path/to/QuantificationTIMsParams.json</span><span style="color:#79B8FF"> -c</span><span style="color:#79B8FF"> 3</span><span style="color:#79B8FF"> -mf</span></span></code></pre>
+</li>
+<li>
+<p><strong>All Flags</strong></p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="sh"><code><span class="line"><span style="color:#B392F0">proteomiqon-psmbasedquantificationtims</span><span style="color:#79B8FF"> --help</span></span></code></pre>
+</li>
+</ol>
+</article><nav class="tool-pagination" aria-label="Browse tools"><a href="/ProteomIQon/tools/psm-based-quantification/"><small>Previous tool</small><span>← PSMBasedQuantification</span></a><a class="next" href="/ProteomIQon/tools/protein-inference/"><small>Next tool</small><span>ProteinInference →</span></a></nav></main></div></main><footer class="site-bottom mx-auto w-[min(1180px,calc(100%-48px))] border-t border-line pt-[22px] pb-[34px] text-xs max-md:w-[min(100%-32px,640px)]" data-astro-cid-qup6pdxl><div class="institution-logos" data-astro-cid-pe4ulxjw><span class="rptu-logo" data-astro-cid-pe4ulxjw><img src="/ProteomIQon/images/RPTU%20Logo_1c-1.svg" alt="RPTU Kaiserslautern-Landau" width="152" height="42" data-astro-cid-pe4ulxjw></span><img class="csb-logo" src="/ProteomIQon/images/csb-narrow-black.svg" alt="CSB" width="96" height="39" data-astro-cid-pe4ulxjw></div><a class="footer-github text-red! no-underline" href="https://github.com/CSBiology/ProteomIQon/" data-astro-cid-qup6pdxl>View the project on GitHub ↗</a></footer></div><script type="module">var e=`<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>`;for(let t of document.querySelectorAll(`main pre`)){let n=document.createElement(`div`);n.className=`copy-command-block`,t.before(n),n.append(t);let r=document.createElement(`button`);r.type=`button`,r.className=`copy-command-button`,r.setAttribute(`aria-label`,`Copy command`),r.title=`Copy command`,r.innerHTML=e,n.append(r);let i;r.addEventListener(`click`,async()=>{let n=t.textContent?.trim()??``;try{try{if(!navigator.clipboard?.writeText)throw Error(`Clipboard API unavailable`);await navigator.clipboard.writeText(n)}catch{let e=document.createElement(`textarea`);e.value=n,e.setAttribute(`readonly`,``),e.style.position=`fixed`,e.style.opacity=`0`,document.body.append(e),e.select();let t=!1;try{t=document.execCommand?.(`copy`)??!1}finally{e.remove()}if(!t)throw Error(`Copy failed`)}r.innerHTML=`<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m5 12 4 4L19 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`,r.setAttribute(`aria-label`,`Copied to clipboard`),r.title=`Copied to clipboard`}catch{r.setAttribute(`aria-label`,`Could not copy command`),r.title=`Could not copy command`}window.clearTimeout(i),i=window.setTimeout(()=>{r.innerHTML=e,r.setAttribute(`aria-label`,`Copy command`),r.title=`Copy command`},1800)})}</script></body></html>

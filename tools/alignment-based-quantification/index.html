@@ -1,0 +1,378 @@
+<!DOCTYPE html><html lang="en" data-theme="light"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="icon" type="image/svg+xml" href="/ProteomIQon/favicon.svg"><link rel="icon" href="/ProteomIQon/favicon.ico"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap"><meta name="description" content="AlignmentBasedQuantification quantifies a peptide ion identified in another run at the place in this run where QuantBasedAlignment predicts it to elute."><meta name="generator" content="Astro v7.3.8"><title>AlignmentBasedQuantification · ProteomIQon</title><link rel="stylesheet" href="/ProteomIQon/_astro/global.LELvuLUR.css"><link rel="stylesheet" href="/ProteomIQon/_astro/Layout.BzR0PIOI.css"></head><body><div class="site-shell"><header class="site-masthead mx-auto flex w-[min(1180px,calc(100%-48px))] items-center justify-between gap-x-6 border-b border-line pt-6 pb-5 max-md:w-[min(100%-32px,640px)] max-[520px]:block"><a class="inline-flex items-center gap-[11px] text-[1.16rem] font-bold tracking-[-.04em] no-underline" href="/ProteomIQon/" aria-label="ProteomIQon home"><span class="inline-flex h-[21px] items-end gap-0.5" aria-hidden="true"><span class="block h-3 w-[5px] rounded-t-[1px] bg-sky"></span><span class="block h-5 w-[5px] rounded-t-[1px] bg-orange"></span><span class="block h-[15px] w-[5px] rounded-t-[1px] bg-teal"></span></span><span>Proteom<span class="text-orange">IQ</span>on</span></a><nav class="desktop-site-nav flex items-center gap-[25px] max-[520px]:mt-[18px] max-[520px]:flex-wrap max-[520px]:gap-x-4 max-[520px]:gap-y-2" aria-label="Main navigation"><a class="group relative py-1 text-[.8rem] whitespace-nowrap no-underline transition-colors duration-200 hover:text-navy! text-navy!" href="/ProteomIQon/tools/" aria-current="true">Tools<span class="absolute inset-x-0 bottom-0 h-0.5 origin-right scale-x-0 bg-red transition-transform duration-200 group-hover:origin-left group-hover:scale-x-100 origin-left scale-x-100"></span></a><a class="group relative py-1 text-[.8rem] whitespace-nowrap no-underline transition-colors duration-200 hover:text-navy! text-steel!" href="/ProteomIQon/guide/installation/">Installation<span class="absolute inset-x-0 bottom-0 h-0.5 origin-right scale-x-0 bg-red transition-transform duration-200 group-hover:origin-left group-hover:scale-x-100"></span></a><a class="group relative py-1 text-[.8rem] whitespace-nowrap no-underline transition-colors duration-200 hover:text-navy! text-steel!" href="/ProteomIQon/guide/getting-started/">Getting started<span class="absolute inset-x-0 bottom-0 h-0.5 origin-right scale-x-0 bg-red transition-transform duration-200 group-hover:origin-left group-hover:scale-x-100"></span></a><a class="group relative py-1 text-[.8rem] whitespace-nowrap no-underline transition-colors duration-200 hover:text-navy! text-steel!" href="/ProteomIQon/guide/developer-information/">Developer Information<span class="absolute inset-x-0 bottom-0 h-0.5 origin-right scale-x-0 bg-red transition-transform duration-200 group-hover:origin-left group-hover:scale-x-100"></span></a><a class="group relative py-1 text-[.8rem] whitespace-nowrap no-underline transition-colors duration-200 hover:text-navy! text-red!" href="/ProteomIQon/guide/help/">Help<span class="absolute inset-x-0 bottom-0 h-0.5 origin-right scale-x-0 bg-red transition-transform duration-200 group-hover:origin-left group-hover:scale-x-100"></span></a><a class="group relative py-1 text-[.8rem] whitespace-nowrap no-underline transition-colors duration-200 hover:text-navy! text-steel!" href="/ProteomIQon/guide/further-information/">Learn more<span class="absolute inset-x-0 bottom-0 h-0.5 origin-right scale-x-0 bg-red transition-transform duration-200 group-hover:origin-left group-hover:scale-x-100"></span></a></nav><details class="mobile-site-nav"><summary><span>Menu</span><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"></path></svg></summary><nav aria-label="Main navigation"><a href="/ProteomIQon/tools/" aria-current="true">Tools</a><a href="/ProteomIQon/guide/installation/">Installation</a><a href="/ProteomIQon/guide/getting-started/">Getting started</a><a href="/ProteomIQon/guide/developer-information/">Developer Information</a><a href="/ProteomIQon/guide/help/">Help</a><a href="/ProteomIQon/guide/further-information/">Learn more</a></nav></details></header><script type="module">var e=document.querySelector(`.mobile-site-nav`);document.addEventListener(`click`,t=>{e?.open&&t.target instanceof Node&&!e.contains(t.target)&&(e.open=!1)}),e?.addEventListener(`keydown`,t=>{t.key===`Escape`&&(e.open=!1,e.querySelector(`summary`)?.focus())});</script><main class="tool-page-wide"><div class="tool-detail-layout phase-alignment"><aside class="tool-sidebar"><a class="back-link" href="/ProteomIQon/tools/">← All tools</a><div class="sidebar-rule"></div><p class="sidebar-label">In this stage</p><nav aria-label="Alignment tools"><a href="/ProteomIQon/tools/quant-based-alignment/">QuantBasedAlignment</a><a class="active" aria-current="page" href="/ProteomIQon/tools/alignment-based-quantification/">AlignmentBasedQuantification</a><a href="/ProteomIQon/tools/alignment-based-quant-statistics/">AlignmentBasedQuantStatistics</a><a href="/ProteomIQon/tools/add-deduced-peptides/">AddDeducedPeptides</a></nav><details class="mobile-stage-navigation"><summary>In this stage <span>4 tools</span></summary><nav aria-label="Alignment tools"><a href="/ProteomIQon/tools/quant-based-alignment/">QuantBasedAlignment</a><a class="active" aria-current="page" href="/ProteomIQon/tools/alignment-based-quantification/">AlignmentBasedQuantification</a><a href="/ProteomIQon/tools/alignment-based-quant-statistics/">AlignmentBasedQuantStatistics</a><a href="/ProteomIQon/tools/add-deduced-peptides/">AddDeducedPeptides</a></nav></details></aside><main class="tool-detail"><section class="tool-detail-hero"><h1>Alignment<wbr>Based<wbr>Quantification</h1></section><article class="legacy-content tool-legacy-content prose max-w-none prose-a:font-semibold prose-code:before:content-none prose-code:after:content-none tool-alignment-content"><h2 id="tool-description">Tool Description</h2>
+<p>QuantBasedAlignment predicts where a peptide ion identified in another run should elute in this run.</p>
+<figure class="alignment-figure alignment-figure-overview"><img alt="Alignment" loading="lazy" decoding="async" width="2172" height="724" src="/ProteomIQon/_astro/quantbasedalignment.CB0Z_N8-_2q2tye.webp"></figure>
+<h2 class="tool-workflow-heading" id="how-does-alignmentbasedquantification-work">How does AlignmentBasedQuantification work?</h2>
+<ol class="tool-explanation-steps" role="list">
+<li><div class="tool-step-copy">
+<p class="tool-step-heading"><strong>Extract transferred ion chromatograms</strong></p>
+<p>AlignmentBasedQuantification extracts the ion chromatogram (XIC) of every transferred ion around that prediction, decides which of the peaks in the XIC belongs to the ion, and fits that peak as PSMBasedQuantification does.</p>
+</div></li>
+<li><div class="tool-step-copy">
+<p class="tool-step-heading"><strong>Learn peak selection per run</strong></p>
+<p>The decision is made by a model that each run learns from the ions it identified itself. The output is a <code>.quant</code> file with the run's own quantifications followed by the transferred ones, which AlignmentBasedQuantStatistics then scores.</p>
+</div></li>
+<li><div class="tool-step-copy">
+<p class="tool-step-heading"><strong>Detect peaks in the chromatogram</strong></p>
+<p>The XIC is extracted over ±ScanTimeWindow around PredictedScanTime, baseline corrected, and its peaks are detected with the wavelet or second derivative method of the PSM based quantification.</p>
+</div></li>
+<li><div class="tool-step-copy">
+<p class="tool-step-heading"><strong>Define the candidate window</strong></p>
+<p>Candidates are the peaks whose position lies within ±max(MinScanTimeWindow, ScanTimeWindowSdFactor · PredictedScanTimeSd) of the prediction, at most ±ScanTimeWindow. With the defaults this is ±1 min where the alignment is precise and up to ±2 min where it is not.</p>
+</div></li>
+<li><div class="tool-step-copy">
+<p class="tool-step-heading"><strong>Describe each candidate</strong></p>
+<p>Each candidate gets the features below.</p>
+</div></li>
+<li><div class="tool-step-copy">
+<p class="tool-step-heading"><strong>Select and fit the best peak</strong></p>
+<p>A logistic regression gives each candidate a probability of being the ion's peak. The candidate with the highest probability is fitted.</p>
+</div></li>
+</ol>
+<p class="alignment-note">A peak is always chosen when any candidate lies in the window, so this step never rejects an ion. Ions whose analyte is absent from the run are handled by AlignmentBasedQuantStatistics, which uses the decoy transfers described below.</p>
+<div class="content-table-scroll" tabindex="0" role="region" aria-label="Feature, Description table"><table class="responsive-table" role="table">
+<thead role="rowgroup">
+<tr role="row">
+<th scope="col" role="columnheader">Feature</th>
+<th scope="col" role="columnheader">Description</th>
+</tr>
+</thead>
+<tbody role="rowgroup">
+<tr role="row">
+<td role="cell" data-label="Feature">Scan time distance</td>
+<td role="cell" data-label="Description"><code>|candidate scan time − PredictedScanTime| / max(PredictedScanTimeSd, 0.03 min)</code>, and its square</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Feature">Shape correlation</td>
+<td role="cell" data-label="Description">correlation of the candidate with the source trace, shifted onto the candidate</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Feature">Relative height</td>
+<td role="cell" data-label="Description">log10 of the candidate height relative to the highest candidate</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Feature">Width ratio</td>
+<td role="cell" data-label="Description"><code>|log2(candidate FWHM / source FWHM)|</code>, using the full widths at half maximum</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Feature">Number of candidates</td>
+<td role="cell" data-label="Description">log2 of the number of candidates in the window</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Feature">Isotope evidence</td>
+<td role="cell" data-label="Description">correlation of the M0 and M+1 traces over the candidate, and log2 (M+1 / M0)</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Feature">Mass error</td>
+<td role="cell" data-label="Description"><code>|median M0 mass error in ppm|</code> around the candidate apex</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Feature">Ion mobility distance</td>
+<td role="cell" data-label="Description"><code>|candidate ion mobility − PredictedIonMobility| / max(PredictedIonMobilitySd, 0.001)</code> (timsTOF only, with ion mobility in 1/K0)</td>
+</tr>
+</tbody>
+</table></div>
+<p>The model is trained per run on the ions the run identified itself and that <a href="/ProteomIQon/tools/quant-based-alignment/">QuantBasedAlignment</a> also transferred (overlap ions). For these the right answer is known: the candidate within one standard deviation of the apex of the run's own PSM based peak. Only overlap ions with a reliable own fit (|search − apex of the fitted peak| &lt; 2 standard deviations of the fitted peak) are used.</p>
+<p>The training is cross-fitted: the peptides are split into 5 folds, and an overlap ion is decided by the model trained on the other four folds. New ions are decided by the model trained on all overlap ions.</p>
+<p class="alignment-note">A run with fewer than 200 training ions uses a fixed score instead: −0.5 · min(d², 50) + 4 · shape correlation + 2 · log10 relative height, with d the scan time distance.</p>
+<figure class="alignment-figure"><img alt="AlignmentBasedQuant" loading="lazy" decoding="async" width="1119" height="595" src="/ProteomIQon/_astro/AlignmentBasedQuantification_Candidates.DkjL1-zE_1vonKg.webp"><figcaption>In the figure four peaks lie in the candidate window. The highest is 0.6 min from the prediction. The model chooses the peak next to the prediction, whose shape matches the source trace. It is the peak of the run's own identification.</figcaption></figure>
+<p>An ion that cannot be quantified gets no row, for example when no candidate lies in the window, the XIC is too short, or the peak detection or the fit fails. The reason is recorded in the <code>Status</code> column of <code>&lt;run&gt;.alignfeatures</code>.</p>
+<h3 id="mz-window">m/z window</h3>
+<p>The tool measures the offset between observed and theoretical m/z in the MS1 spectra of ions the run quantified itself. After removing outliers it fits the offset in ppm as the sum of a function of scan time and a function of m/z. Every trace of an ion (monoisotopic, isotopes, labeled partner) is centred on its theoretical m/z plus the correction at the <code>PredictedScanTime</code> and that m/z.</p>
+<p>With <code>MzWindow_Da</code> set to <code>Estimate</code> the half width is 4 standard deviations of the offsets that remain after the correction, the same at every m/z. <code>Fixed</code> sets the half width in Da and keeps the correction.</p>
+<p>With fewer than 50 measured ions left, the correction is fitted on the precursor m/z of the <code>.quant</code> file instead, and <code>Estimate</code> uses a half width of 0.05 Da.</p>
+<h3 id="ion-mobility">Ion mobility</h3>
+<p>Ion mobility is used when the spectra and the <code>.align</code> file have it. An XIC point is then the sum of the intensity of all peaks inside the m/z window and inside the ion mobility window, as in PSMBasedQuantificationTIMs. Both widths are part of the quantity, so transferred and PSM based quantities are comparable when both tools use the same widths.</p>
+<p>The traces of an ion, of its isotopes and of its labeled partner share one window, set by <code>XicExtraction.IonMobilityWindow</code>. The expected ion mobility of the ion is <code>PredictedIonMobility</code>, or its ion mobility in the source run when the <code>.align</code> row has no prediction.</p>
+<ul>
+<li><code>Fixed v</code>: ±v around the ion mobility centre of the ion. The centre is the intensity weighted ion mobility of the signal within v of the expected ion mobility, around <code>PredictedScanTime</code>. Without such signal it is the expected ion mobility.</li>
+<li><code>Estimate</code>: ±max(0.05, 4 · PredictedIonMobilitySd) 1/K0 around the expected ion mobility, ±0.05 without prediction.</li>
+</ul>
+<p>In a transferred row, <code>IonMobility</code> is the intensity weighted ion mobility of the chosen peak, measured within one fitted standard deviation of its apex. <code>IonMobilityCentre</code> is the ion mobility the traces were summed around: the centre with <code>Fixed</code>, the expected ion mobility with <code>Estimate</code>, <code>NaN</code> without ion mobility.</p>
+<h3 id="labeled-quantification">Labeled quantification</h3>
+<p>With <code>PerformLabeledQuantification</code> other than <code>Unlabeled</code> the partner of the other label is extracted with the same windows. Its peak is the peak that contains the fitted scan time of the ion. With <code>RequirePeakAtScanTime</code> set to <code>false</code>, the peak with the closest apex is taken when none contains it. A partner that cannot be quantified keeps its m/z and traces but gets no quantity, and the row is kept. The ion's own peak is always the candidate chosen by the selection model.</p>
+<p>An ion that the run did not quantify itself is not transferred when the PSM based row of its labeled partner has a fitted peak and a quantity of the ion's label. Its <code>Status</code> is <code>labeled partner quantified by its PSM based row</code>.</p>
+<details id="inputs" class="accordion tool-io-accordion tool-io-inputs"><summary class="accordion-header"><span class="accordion-icon" aria-hidden="true">IN</span><span class="accordion-heading"><strong role="heading" aria-level="2">Inputs</strong><small>Files and command-line flags</small></span><span class="accordion-chevron" aria-hidden="true"></span></summary><div class="accordion-content">
+<div class="tool-io-table-scroll" tabindex="0" role="region" aria-label="Inputs table"><table class="responsive-table" role="table">
+<thead role="rowgroup">
+<tr role="row">
+<th scope="col" role="columnheader">Flag</th>
+<th scope="col" role="columnheader">Description</th>
+<th scope="col" role="columnheader">Comes from</th>
+</tr>
+</thead>
+<tbody role="rowgroup">
+<tr role="row">
+<td role="cell" data-label="Flag"><code>-i</code></td>
+<td role="cell" data-label="Description"><code>.mzlite</code> of the run, or a directory</td>
+<td role="cell" data-label="Comes from"><a href="/ProteomIQon/tools/mzml-to-mzlite/">MzMLToMzLite</a> or <a href="/ProteomIQon/tools/mzml-to-mzlite-ion-mobility/">MzMLToMzLiteIonMobility</a></td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Flag"><code>-ii</code></td>
+<td role="cell" data-label="Description"><code>.align</code> of the run, or a directory</td>
+<td role="cell" data-label="Comes from"><a href="/ProteomIQon/tools/quant-based-alignment/">QuantBasedAlignment</a></td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Flag"><code>-iv</code></td>
+<td role="cell" data-label="Description"><code>.quant</code> of the same run, or a directory</td>
+<td role="cell" data-label="Comes from"><a href="/ProteomIQon/tools/psm-based-quantification/">PSMBasedQuantification</a> or <a href="/ProteomIQon/tools/psm-based-quantification-tims/">PSMBasedQuantificationTIMs</a></td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Flag"><code>-d</code></td>
+<td role="cell" data-label="Description">peptide database (SQLite)</td>
+<td role="cell" data-label="Comes from"><a href="/ProteomIQon/tools/peptide-db/">PeptideDB</a></td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Flag"><code>-o</code></td>
+<td role="cell" data-label="Description">output directory, created when missing</td>
+<td role="cell" data-label="Comes from">-</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Flag"><code>-p</code></td>
+<td role="cell" data-label="Description">the parameter file (JSON)</td>
+<td role="cell" data-label="Comes from"><a href="https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/AlignmentBasedQuantificationParams.json">AlignmentBasedQuantificationParams.json</a></td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Flag"><code>-mf</code></td>
+<td role="cell" data-label="Description">switch: pair the files by base name instead of by position</td>
+<td role="cell" data-label="Comes from">-</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Flag"><code>-dc</code></td>
+<td role="cell" data-label="Description">switch: write <code>&lt;run&gt;_mzCorrection.html</code> with the m/z offsets and their correction</td>
+<td role="cell" data-label="Comes from">-</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Flag"><code>-c</code></td>
+<td role="cell" data-label="Description">number of runs processed in parallel, one core each, default 1</td>
+<td role="cell" data-label="Comes from">-</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li>Without <code>-mf</code> the files are paired by position, the files of a directory sorted by name. If the numbers of files differ, the tool stops.</li>
+</ul>
+</div></details><details id="outputs" class="accordion tool-io-accordion tool-io-outputs"><summary class="accordion-header"><span class="accordion-icon" aria-hidden="true">OUT</span><span class="accordion-heading"><strong role="heading" aria-level="2">Outputs</strong><small>Generated data and log files</small></span><span class="accordion-chevron" aria-hidden="true"></span></summary><div class="accordion-content">
+<ul>
+<li><code>&lt;run&gt;.quant</code> has the layout of the PSM based <code>.quant</code> files. It holds the PSM based rows with a fitted peak, then one row per quantified transferred ion with <code>QuantificationSource = Alignment</code>.</li>
+<li>These rows pass no quality filter. In these rows <code>Difference_SearchRT_FittedRT</code> is <code>PredictedScanTime</code> minus the fitted scan time. <code>AlignmentScore</code> and <code>AlignmentQValue</code> hold <code>NaN</code> until <a href="/ProteomIQon/tools/alignment-based-quant-statistics/">AlignmentBasedQuantStatistics</a> fills them.</li>
+<li><code>&lt;run&gt;.alignfeatures</code> is a tab separated table with one row per <code>.align</code> row. <code>AlignmentBasedQuantStatistics</code> reads it from the directory of the aligned <code>.quant</code> and uses its features. The main columns:</li>
+</ul>
+<div class="tool-io-table-scroll" tabindex="0" role="region" aria-label="Outputs table"><table class="responsive-table" role="table">
+<thead role="rowgroup">
+<tr role="row">
+<th scope="col" role="columnheader">Column</th>
+<th scope="col" role="columnheader">Description</th>
+</tr>
+</thead>
+<tbody role="rowgroup">
+<tr role="row">
+<td role="cell" data-label="Column">StringSequence, GlobalMod, Charge, PepSequenceID, ModSequenceID</td>
+<td role="cell" data-label="Description">Peptide Ion</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Column">CandidateProbability</td>
+<td role="cell" data-label="Description">probability of the chosen candidate, <code>nan</code> with the fixed score</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Column">CandidateMargin</td>
+<td role="cell" data-label="Description">lead of the chosen candidate over the second best</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Column">NCandidates</td>
+<td role="cell" data-label="Description">number of candidates</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Column">RtZ, ImZ, ShapeCorr, LogRelHeight, AbsLog2FwhmRatio, IsoCorr, IsoRatioLog2, AbsPpmMono</td>
+<td role="cell" data-label="Description">the features of the chosen candidate</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Column">SelectionModel</td>
+<td role="cell" data-label="Description"><code>Logistic</code> or <code>FixedScore</code></td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Column">CandidateScanTime</td>
+<td role="cell" data-label="Description">position of the chosen candidate, in minutes</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Column">ScanTimeWindow, MzWindow, IonMobilityWindow</td>
+<td role="cell" data-label="Description">half widths of the windows used</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Column">Status</td>
+<td role="cell" data-label="Description"><code>quantified</code>, or why the peptide ion was not quantified</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li>With <code>DecoyFraction</code> above 0, <code>&lt;run&gt;.aligndecoy</code> holds the decoy transfers: a share of the new ions quantified a second time with <code>PredictedScanTime</code> shifted by 4 to 6 minutes, where their own peak is not.</li>
+<li>A decoy is skipped when the ion's own peak could lie in its XIC. Each row has the <code>.quant</code> columns, the shifted <code>PredictedScanTime</code> and the <code>.alignfeatures</code> feature columns.</li>
+<li><a href="/ProteomIQon/tools/alignment-based-quant-statistics/">AlignmentBasedQuantStatistics</a> uses them to estimate how often a peptide ion whose analyte is absent from the run passes the Q-value cutoff. They never enter <code>&lt;run&gt;.quant</code>.</li>
+<li>Logs go to <code>AlignmentBasedQuantification_log.txt</code> and one <code>&lt;run&gt;_log.txt</code> per run, with the counts of ions per reason at Info level and each peptide ion that was not quantified at Debug level.</li>
+</ul>
+<p>The tool overwrites its <code>.quant</code> and <code>.alignfeatures</code> outputs for the run. If decoy transfers are disabled, it removes an existing <code>.aligndecoy</code> for that run.</p>
+</div></details><details id="parameters" class="accordion tool-io-accordion tool-io-parameters"><summary class="accordion-header"><span class="accordion-icon" aria-hidden="true">CFG</span><span class="accordion-heading"><strong role="heading" aria-level="2">Parameters</strong><small>Default values and tool settings</small></span><span class="accordion-chevron" aria-hidden="true"></span></summary><div class="accordion-content">
+<div class="tool-io-table-scroll" tabindex="0" role="region" aria-label="Parameters table"><table class="responsive-table" role="table">
+<thead role="rowgroup">
+<tr role="row">
+<th scope="col" role="columnheader">Parameter</th>
+<th scope="col" role="columnheader">Default</th>
+<th scope="col" role="columnheader">Description</th>
+</tr>
+</thead>
+<tbody role="rowgroup">
+<tr role="row">
+<td role="cell" data-label="Parameter">PerformLabeledQuantification</td>
+<td role="cell" data-label="Default"><code>Labeling.N15Labeling</code></td>
+<td role="cell" data-label="Description">Also quantify the partner of the other label. <code>Unlabeled</code> quantifies only the ion itself, for label-free data. <code>N15Labeling</code>, <code>N15LabelingOnly</code> and <code>Labelshift</code> behave the same here.</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Parameter">XicExtraction</td>
+<td role="cell" data-label="Default">see below</td>
+<td role="cell" data-label="Description">How the XIC is extracted and processed.</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Parameter">BaseLineCorrection</td>
+<td role="cell" data-label="Default"><code>Some { MaxIterations = 10; Lambda = 6; P = 0.05 }</code></td>
+<td role="cell" data-label="Description">Asymmetric least squares baseline of the XIC. None switches it off.</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Parameter">MinScanTimeWindow</td>
+<td role="cell" data-label="Default"><code>1.0</code></td>
+<td role="cell" data-label="Description">Smallest half width of the candidate window, in minutes.</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Parameter">ScanTimeWindowSdFactor</td>
+<td role="cell" data-label="Default"><code>8.0</code></td>
+<td role="cell" data-label="Description">Half width of the candidate window in units of <code>PredictedScanTimeSd</code>, if larger than <code>MinScanTimeWindow</code>.</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Parameter">DecoyFraction</td>
+<td role="cell" data-label="Default"><code>0.2</code></td>
+<td role="cell" data-label="Description">Share of the new ions that also get a decoy transfer. 0 writes no decoys.</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Parameter">Seed</td>
+<td role="cell" data-label="Default"><code>1</code></td>
+<td role="cell" data-label="Description">Seed of the cross-fitting folds and of the choice of the decoys.</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Parameter">RequirePeakAtScanTime</td>
+<td role="cell" data-label="Default"><code>true</code></td>
+<td role="cell" data-label="Description">Whether the labeled partner needs a peak that contains the fitted scan time of the ion (see Labeled quantification).</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>XIC Extraction</strong></p>
+<div class="tool-io-table-scroll" tabindex="0" role="region" aria-label="Parameters table"><table class="responsive-table" role="table">
+<thead role="rowgroup">
+<tr role="row">
+<th scope="col" role="columnheader">XicExtraction field</th>
+<th scope="col" role="columnheader">Default</th>
+<th scope="col" role="columnheader">Description</th>
+</tr>
+</thead>
+<tbody role="rowgroup">
+<tr role="row">
+<td role="cell" data-label="XicExtraction field">ScanTimeWindow</td>
+<td role="cell" data-label="Default"><code>2.0</code></td>
+<td role="cell" data-label="Description">Half width of the XIC in minutes, and the largest half width of the candidate window.</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="XicExtraction field">MzWindow_Da</td>
+<td role="cell" data-label="Default"><code>Window.Estimate</code></td>
+<td role="cell" data-label="Description"><code>Estimate</code> measures the m/z window from the run. <code>Window.Fixed 0.01</code> sets ±0.01 Da.</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="XicExtraction field">XicProcessing</td>
+<td role="cell" data-label="Default"><code>XicProcessing.Wavelet</code></td>
+<td role="cell" data-label="Description">Peak detection. The wavelet fields are described on the <a href="/ProteomIQon/tools/psm-based-quantification/">PSMBasedQuantification</a> page. The default <code>BorderPadMethod</code> is Zero. <code>Random</code> is accepted with a warning, because it makes the detected peaks differ between reruns.</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="XicExtraction field">TopKPSMs</td>
+<td role="cell" data-label="Default"><code>None</code></td>
+<td role="cell" data-label="Description">Not used</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="XicExtraction field">IonMobilityWindow</td>
+<td role="cell" data-label="Default"><code>Window.Estimate</code></td>
+<td role="cell" data-label="Description"><code>Estimate</code> or <code>Window.Fixed v</code>, in 1/K0 (see Ion mobility).</td>
+</tr>
+</tbody>
+</table></div>
+<p>For timsTOF runs, <a href="https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/AlignmentBasedQuantificationTIMsParams.json">AlignmentBasedQuantificationTIMsParams.json</a> sets the m/z half width to <code>Window.Fixed 0.008</code> Da and the ion mobility half width to <code>Window.Fixed 0.025</code> in 1/K0. These match the defaults in <a href="/ProteomIQon/tools/psm-based-quantification-tims/">PSMBasedQuantificationTIMs</a>. Suitable windows depend on the instrument and acquisition method.</p>
+</div></details><details id="parameter-generation" class="accordion tool-io-accordion tool-io-parameters"><summary class="accordion-header"><span class="accordion-icon" aria-hidden="true">CFG</span><span class="accordion-heading"><strong role="heading" aria-level="2">Parameter generation</strong><small>JSON and parameter-generation examples</small></span><span class="accordion-chevron" aria-hidden="true"></span></summary><div class="accordion-content">
+<p>From the ProteomIQon repository root, build the library with <code>dotnet build src/ProteomIQon/ProteomIQon.fsproj -c Release</code>. Save the following as <code>generate-params.fsx</code> in that same directory and run <code>dotnet fsi generate-params.fsx</code>. The script writes the JSON file to the system temporary directory.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="fsharp"><code><span class="line"><span style="color:#E1E4E8">#r </span><span style="color:#9ECBFF">"nuget: FSharp.Stats, 0.6.0"</span></span>
+<span class="line"><span style="color:#E1E4E8">#r </span><span style="color:#9ECBFF">"nuget: Newtonsoft.Json, 13.0.4"</span></span>
+<span class="line"><span style="color:#E1E4E8">#r </span><span style="color:#9ECBFF">"./src/ProteomIQon/bin/Release/net10.0/ProteomIQon.dll"</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">open</span><span style="color:#B392F0"> ProteomIQon</span></span>
+<span class="line"><span style="color:#F97583">open</span><span style="color:#B392F0"> ProteomIQon.Domain</span></span>
+<span class="line"><span style="color:#F97583">open</span><span style="color:#B392F0"> FSharp.Stats.Signal</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">let</span><span style="color:#FFAB70"> waveletParams </span><span style="color:#F97583">:</span><span style="color:#B392F0"> WaveletParameters </span><span style="color:#F97583">=</span></span>
+<span class="line"><span style="color:#F97583">    {</span></span>
+<span class="line"><span style="color:#E1E4E8">        Borderpadding          </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> None</span></span>
+<span class="line"><span style="color:#E1E4E8">        BorderPadMethod        </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> Padding.BorderPaddingMethod.Zero</span></span>
+<span class="line"><span style="color:#E1E4E8">        InternalPaddingMethod  </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> Padding.InternalPaddingMethod.LinearInterpolation</span></span>
+<span class="line"><span style="color:#E1E4E8">        HugeGapPaddingMethod   </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> Padding.HugeGapPaddingMethod.Zero</span></span>
+<span class="line"><span style="color:#E1E4E8">        HugeGapPaddingDistance </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 100.</span></span>
+<span class="line"><span style="color:#E1E4E8">        MinPeakDistance        </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> None</span></span>
+<span class="line"><span style="color:#E1E4E8">        MinPeakLength          </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> Some </span><span style="color:#79B8FF">0.1</span></span>
+<span class="line"><span style="color:#E1E4E8">        MaxPeakLength          </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 1.5</span></span>
+<span class="line"><span style="color:#E1E4E8">        NoiseQuantile          </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0.01</span></span>
+<span class="line"><span style="color:#E1E4E8">        MinSNR                 </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0.01</span></span>
+<span class="line"><span style="color:#F97583">    }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">let</span><span style="color:#FFAB70"> alignmentBasedQuantificationParams </span><span style="color:#F97583">:</span><span style="color:#B392F0"> Dto.AlignmentBasedQuantificationParams </span><span style="color:#F97583">=</span></span>
+<span class="line"><span style="color:#F97583">    {</span></span>
+<span class="line"><span style="color:#6A737D">        // Labeling.Unlabeled for label-free data</span></span>
+<span class="line"><span style="color:#E1E4E8">        PerformLabeledQuantification </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> Labeling.N15Labeling</span></span>
+<span class="line"><span style="color:#E1E4E8">        XicExtraction </span><span style="color:#F97583">=</span></span>
+<span class="line"><span style="color:#F97583">            {</span></span>
+<span class="line"><span style="color:#E1E4E8">                ScanTimeWindow </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 2.</span></span>
+<span class="line"><span style="color:#E1E4E8">                MzWindow</span><span style="color:#F97583">_</span><span style="color:#E1E4E8">Da    </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> Window.Estimate</span></span>
+<span class="line"><span style="color:#E1E4E8">                XicProcessing  </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> XicProcessing.Wavelet waveletParams</span></span>
+<span class="line"><span style="color:#E1E4E8">                TopKPSMs       </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> None</span></span>
+<span class="line"><span style="color:#E1E4E8">                IonMobilityWindow </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> Window.Estimate</span></span>
+<span class="line"><span style="color:#F97583">            }</span></span>
+<span class="line"><span style="color:#E1E4E8">        BaseLineCorrection     </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> Some </span><span style="color:#F97583">{</span><span style="color:#E1E4E8"> MaxIterations </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 10</span><span style="color:#F97583">;</span><span style="color:#E1E4E8"> Lambda </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 6</span><span style="color:#F97583">;</span><span style="color:#E1E4E8"> P </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0.05</span><span style="color:#F97583"> }</span></span>
+<span class="line"><span style="color:#E1E4E8">        MinScanTimeWindow      </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 1.</span></span>
+<span class="line"><span style="color:#E1E4E8">        ScanTimeWindowSdFactor </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 8.</span></span>
+<span class="line"><span style="color:#E1E4E8">        DecoyFraction          </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0.2</span></span>
+<span class="line"><span style="color:#E1E4E8">        Seed                   </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 1</span></span>
+<span class="line"><span style="color:#E1E4E8">        RequirePeakAtScanTime  </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> true</span></span>
+<span class="line"><span style="color:#F97583">    }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D">// Replace the temp folder with your project folder.</span></span>
+<span class="line"><span style="color:#F97583">let</span><span style="color:#FFAB70"> outputPath</span><span style="color:#F97583"> =</span></span>
+<span class="line"><span style="color:#E1E4E8">    System.IO.Path.Combine</span><span style="color:#F97583">(</span><span style="color:#E1E4E8">System.IO.Path.GetTempPath</span><span style="color:#F97583">(),</span><span style="color:#9ECBFF"> "AlignmentBasedQuantificationParams.json"</span><span style="color:#F97583">)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#E1E4E8">Json.serializeAndWrite outputPath alignmentBasedQuantificationParams</span></span></code></pre>
+</div></details><h2 id="running-the-tool">Running the tool</h2>
+<ol>
+<li>
+<p><strong>Installing</strong></p>
+<p>Install the tool globally with the .NET CLI.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="sh"><code><span class="line"><span style="color:#B392F0">dotnet</span><span style="color:#9ECBFF"> tool</span><span style="color:#9ECBFF"> install</span><span style="color:#79B8FF"> --global</span><span style="color:#9ECBFF"> ProteomIQon.AlignmentBasedQuantification</span></span></code></pre>
+</li>
+<li>
+<p><strong>Quantify one run</strong></p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="sh"><code><span class="line"><span style="color:#B392F0">proteomiqon-alignmentbasedquantification</span><span style="color:#79B8FF"> -i</span><span style="color:#9ECBFF"> path/to/run.mzlite</span><span style="color:#79B8FF"> -ii</span><span style="color:#9ECBFF"> path/to/run.align</span><span style="color:#79B8FF"> -iv</span><span style="color:#9ECBFF"> path/to/run.quant</span><span style="color:#79B8FF"> -d</span><span style="color:#9ECBFF"> path/to/peptides.db</span><span style="color:#79B8FF"> -o</span><span style="color:#9ECBFF"> path/to/output</span><span style="color:#79B8FF"> -p</span><span style="color:#9ECBFF"> path/to/AlignmentBasedQuantificationParams.json</span></span></code></pre>
+</li>
+<li>
+<p><strong>Process every run in a set of directories, paired by file name, four at a time</strong></p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="sh"><code><span class="line"><span style="color:#B392F0">proteomiqon-alignmentbasedquantification</span><span style="color:#79B8FF"> -i</span><span style="color:#9ECBFF"> path/to/mzlite</span><span style="color:#79B8FF"> -ii</span><span style="color:#9ECBFF"> path/to/align</span><span style="color:#79B8FF"> -iv</span><span style="color:#9ECBFF"> path/to/quant</span><span style="color:#79B8FF"> -d</span><span style="color:#9ECBFF"> path/to/peptides.db</span><span style="color:#79B8FF"> -o</span><span style="color:#9ECBFF"> path/to/output</span><span style="color:#79B8FF"> -p</span><span style="color:#9ECBFF"> path/to/AlignmentBasedQuantificationParams.json</span><span style="color:#79B8FF"> -mf</span><span style="color:#79B8FF"> -c</span><span style="color:#79B8FF"> 4</span></span></code></pre>
+</li>
+<li>
+<p><strong>All Flags</strong></p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="sh"><code><span class="line"><span style="color:#B392F0">proteomiqon-alignmentbasedquantification</span><span style="color:#79B8FF"> --help</span></span></code></pre>
+</li>
+</ol>
+<h2 id="limitations">Limitations</h2>
+<ul>
+<li>MinScanTimeWindow (1 min) and ScanTimeWindow (2 min) are fixed in minutes and do not scale with the gradient length.</li>
+<li>The fixed score uses the same weights in every run.</li>
+<li>The right peak must be among the detected peaks. Shoulders that the peak detection merges with a neighbour cannot be chosen separately.</li>
+</ul>
+</article><nav class="tool-pagination" aria-label="Browse tools"><a href="/ProteomIQon/tools/quant-based-alignment/"><small>Previous tool</small><span>← QuantBasedAlignment</span></a><a class="next" href="/ProteomIQon/tools/alignment-based-quant-statistics/"><small>Next tool</small><span>AlignmentBasedQuantStatistics →</span></a></nav></main></div></main><footer class="site-bottom mx-auto w-[min(1180px,calc(100%-48px))] border-t border-line pt-[22px] pb-[34px] text-xs max-md:w-[min(100%-32px,640px)]" data-astro-cid-qup6pdxl><div class="institution-logos" data-astro-cid-pe4ulxjw><span class="rptu-logo" data-astro-cid-pe4ulxjw><img src="/ProteomIQon/images/RPTU%20Logo_1c-1.svg" alt="RPTU Kaiserslautern-Landau" width="152" height="42" data-astro-cid-pe4ulxjw></span><img class="csb-logo" src="/ProteomIQon/images/csb-narrow-black.svg" alt="CSB" width="96" height="39" data-astro-cid-pe4ulxjw></div><a class="footer-github text-red! no-underline" href="https://github.com/CSBiology/ProteomIQon/" data-astro-cid-qup6pdxl>View the project on GitHub ↗</a></footer></div><script type="module">var e=`<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>`;for(let t of document.querySelectorAll(`main pre`)){let n=document.createElement(`div`);n.className=`copy-command-block`,t.before(n),n.append(t);let r=document.createElement(`button`);r.type=`button`,r.className=`copy-command-button`,r.setAttribute(`aria-label`,`Copy command`),r.title=`Copy command`,r.innerHTML=e,n.append(r);let i;r.addEventListener(`click`,async()=>{let n=t.textContent?.trim()??``;try{try{if(!navigator.clipboard?.writeText)throw Error(`Clipboard API unavailable`);await navigator.clipboard.writeText(n)}catch{let e=document.createElement(`textarea`);e.value=n,e.setAttribute(`readonly`,``),e.style.position=`fixed`,e.style.opacity=`0`,document.body.append(e),e.select();let t=!1;try{t=document.execCommand?.(`copy`)??!1}finally{e.remove()}if(!t)throw Error(`Copy failed`)}r.innerHTML=`<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m5 12 4 4L19 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`,r.setAttribute(`aria-label`,`Copied to clipboard`),r.title=`Copied to clipboard`}catch{r.setAttribute(`aria-label`,`Could not copy command`),r.title=`Could not copy command`}window.clearTimeout(i),i=window.setTimeout(()=>{r.innerHTML=e,r.setAttribute(`aria-label`,`Copy command`),r.title=`Copy command`},1800)})}</script></body></html>

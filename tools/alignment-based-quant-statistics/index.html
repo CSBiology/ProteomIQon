@@ -1,0 +1,338 @@
+<!DOCTYPE html><html lang="en" data-theme="light"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="icon" type="image/svg+xml" href="/ProteomIQon/favicon.svg"><link rel="icon" href="/ProteomIQon/favicon.ico"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap"><meta name="description" content="AlignmentBasedQuantStatistics gives every transferred quantification an alignment score and an alignment Q-value."><meta name="generator" content="Astro v7.3.8"><title>AlignmentBasedQuantStatistics · ProteomIQon</title><link rel="stylesheet" href="/ProteomIQon/_astro/global.LELvuLUR.css"><link rel="stylesheet" href="/ProteomIQon/_astro/Layout.BzR0PIOI.css"></head><body><div class="site-shell"><header class="site-masthead mx-auto flex w-[min(1180px,calc(100%-48px))] items-center justify-between gap-x-6 border-b border-line pt-6 pb-5 max-md:w-[min(100%-32px,640px)] max-[520px]:block"><a class="inline-flex items-center gap-[11px] text-[1.16rem] font-bold tracking-[-.04em] no-underline" href="/ProteomIQon/" aria-label="ProteomIQon home"><span class="inline-flex h-[21px] items-end gap-0.5" aria-hidden="true"><span class="block h-3 w-[5px] rounded-t-[1px] bg-sky"></span><span class="block h-5 w-[5px] rounded-t-[1px] bg-orange"></span><span class="block h-[15px] w-[5px] rounded-t-[1px] bg-teal"></span></span><span>Proteom<span class="text-orange">IQ</span>on</span></a><nav class="desktop-site-nav flex items-center gap-[25px] max-[520px]:mt-[18px] max-[520px]:flex-wrap max-[520px]:gap-x-4 max-[520px]:gap-y-2" aria-label="Main navigation"><a class="group relative py-1 text-[.8rem] whitespace-nowrap no-underline transition-colors duration-200 hover:text-navy! text-navy!" href="/ProteomIQon/tools/" aria-current="true">Tools<span class="absolute inset-x-0 bottom-0 h-0.5 origin-right scale-x-0 bg-red transition-transform duration-200 group-hover:origin-left group-hover:scale-x-100 origin-left scale-x-100"></span></a><a class="group relative py-1 text-[.8rem] whitespace-nowrap no-underline transition-colors duration-200 hover:text-navy! text-steel!" href="/ProteomIQon/guide/installation/">Installation<span class="absolute inset-x-0 bottom-0 h-0.5 origin-right scale-x-0 bg-red transition-transform duration-200 group-hover:origin-left group-hover:scale-x-100"></span></a><a class="group relative py-1 text-[.8rem] whitespace-nowrap no-underline transition-colors duration-200 hover:text-navy! text-steel!" href="/ProteomIQon/guide/getting-started/">Getting started<span class="absolute inset-x-0 bottom-0 h-0.5 origin-right scale-x-0 bg-red transition-transform duration-200 group-hover:origin-left group-hover:scale-x-100"></span></a><a class="group relative py-1 text-[.8rem] whitespace-nowrap no-underline transition-colors duration-200 hover:text-navy! text-steel!" href="/ProteomIQon/guide/developer-information/">Developer Information<span class="absolute inset-x-0 bottom-0 h-0.5 origin-right scale-x-0 bg-red transition-transform duration-200 group-hover:origin-left group-hover:scale-x-100"></span></a><a class="group relative py-1 text-[.8rem] whitespace-nowrap no-underline transition-colors duration-200 hover:text-navy! text-red!" href="/ProteomIQon/guide/help/">Help<span class="absolute inset-x-0 bottom-0 h-0.5 origin-right scale-x-0 bg-red transition-transform duration-200 group-hover:origin-left group-hover:scale-x-100"></span></a><a class="group relative py-1 text-[.8rem] whitespace-nowrap no-underline transition-colors duration-200 hover:text-navy! text-steel!" href="/ProteomIQon/guide/further-information/">Learn more<span class="absolute inset-x-0 bottom-0 h-0.5 origin-right scale-x-0 bg-red transition-transform duration-200 group-hover:origin-left group-hover:scale-x-100"></span></a></nav><details class="mobile-site-nav"><summary><span>Menu</span><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"></path></svg></summary><nav aria-label="Main navigation"><a href="/ProteomIQon/tools/" aria-current="true">Tools</a><a href="/ProteomIQon/guide/installation/">Installation</a><a href="/ProteomIQon/guide/getting-started/">Getting started</a><a href="/ProteomIQon/guide/developer-information/">Developer Information</a><a href="/ProteomIQon/guide/help/">Help</a><a href="/ProteomIQon/guide/further-information/">Learn more</a></nav></details></header><script type="module">var e=document.querySelector(`.mobile-site-nav`);document.addEventListener(`click`,t=>{e?.open&&t.target instanceof Node&&!e.contains(t.target)&&(e.open=!1)}),e?.addEventListener(`keydown`,t=>{t.key===`Escape`&&(e.open=!1,e.querySelector(`summary`)?.focus())});</script><main class="tool-page-wide"><div class="tool-detail-layout phase-alignment"><aside class="tool-sidebar"><a class="back-link" href="/ProteomIQon/tools/">← All tools</a><div class="sidebar-rule"></div><p class="sidebar-label">In this stage</p><nav aria-label="Alignment tools"><a href="/ProteomIQon/tools/quant-based-alignment/">QuantBasedAlignment</a><a href="/ProteomIQon/tools/alignment-based-quantification/">AlignmentBasedQuantification</a><a class="active" aria-current="page" href="/ProteomIQon/tools/alignment-based-quant-statistics/">AlignmentBasedQuantStatistics</a><a href="/ProteomIQon/tools/add-deduced-peptides/">AddDeducedPeptides</a></nav><details class="mobile-stage-navigation"><summary>In this stage <span>4 tools</span></summary><nav aria-label="Alignment tools"><a href="/ProteomIQon/tools/quant-based-alignment/">QuantBasedAlignment</a><a href="/ProteomIQon/tools/alignment-based-quantification/">AlignmentBasedQuantification</a><a class="active" aria-current="page" href="/ProteomIQon/tools/alignment-based-quant-statistics/">AlignmentBasedQuantStatistics</a><a href="/ProteomIQon/tools/add-deduced-peptides/">AddDeducedPeptides</a></nav></details></aside><main class="tool-detail"><section class="tool-detail-hero"><h1>Alignment<wbr>Based<wbr>Quant<wbr>Statistics</h1></section><article class="legacy-content tool-legacy-content prose max-w-none prose-a:font-semibold prose-code:before:content-none prose-code:after:content-none tool-alignment-content"><h2 id="tool-description">Tool description</h2>
+<p>A peptide ion transferred by QuantBasedAlignment and quantified by AlignmentBasedQuantification has no identification in the run, so nothing yet says whether the quantified peak is the ion. AlignmentBasedQuantStatistics gives every such ion two values:</p>
+<ul class="alignment-score-definitions">
+<li><code>AlignmentScore</code>: the probability that the quantified peak is the ion's peak, given that the analyte is present in the run.</li>
+<li><code>AlignmentQValue</code>: the estimated share of false quantifications among the new ions of the run that score at least as well. A quantification is false when the chosen peak is not the ion's peak or, unless <code>AbsentAnalyteFdr</code> is <code>Off</code>, when the analyte is absent from the run.</li>
+</ul>
+<p>New ions are the transferred ions without a PSM based quantification in the run. <a href="/ProteomIQon/tools/join-quant-with-peptide-ions/">JoinQuantPepIonsWithProteins</a> reads the output. <a href="/ProteomIQon/tools/label-free-protein-quantification/">LabelFreeProteinQuantification</a> and <a href="/ProteomIQon/tools/labeled-protein-quantification/">LabeledProteinQuantification</a> filter on the Q-value only if their <code>Alignment_QValue</code> parameter is set. They then drop transferred rows with a q-value at or above it. All their default files set it to Some 0.05, and None keeps every transferred row.</p>
+<figure class="alignment-figure alignment-figure-overview"><img alt="AlignmentBasedQuantStatistics" loading="lazy" decoding="async" width="2172" height="724" src="/ProteomIQon/_astro/quantbasedalignment.CB0Z_N8-_2q2tye.webp"></figure>
+<h2 id="training-data-and-label">Training data and label</h2>
+<p>The tool learns from overlap ions: ions that a run identified and quantified itself and that were also transferred to it. For them the run's own PSM based peak is the reference. Let z be the distance between the transferred peak and the own peak, in units of the own peak's standard deviation.</p>
+<div class="content-table-scroll" tabindex="0" role="region" aria-label="Label, Condition, Use table"><table class="responsive-table" role="table">
+<thead role="rowgroup">
+<tr role="row">
+<th scope="col" role="columnheader">Label</th>
+<th scope="col" role="columnheader">Condition</th>
+<th scope="col" role="columnheader">Use</th>
+</tr>
+</thead>
+<tbody role="rowgroup">
+<tr role="row">
+<td role="cell" data-label="Label">Right</td>
+<td role="cell" data-label="Condition">z ≤ <code>PositiveRtSdFactor</code> and |log2 (transferred / own quantity)| ≤ <code>MaxAbsLog2QuantRatio</code></td>
+<td role="cell" data-label="Use">training</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Label">Ambiguous</td>
+<td role="cell" data-label="Condition"><code>PositiveRtSdFactor</code> &lt; z ≤ <code>NegativeRtSdFactor</code>, same quantity bound</td>
+<td role="cell" data-label="Use">left out of training</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Label">Wrong</td>
+<td role="cell" data-label="Condition">everything else</td>
+<td role="cell" data-label="Use">training</td>
+</tr>
+</tbody>
+</table></div>
+<p>Overlap ions whose own peak cannot serve as reference (no fitted peak, or a width or quantity that is not positive) get no label.</p>
+<h2 id="features">Features</h2>
+<p>All features come from the transferred row of <code>AlignmentBasedQuantification</code> and the <code>.align</code> row. None uses the ion's own PSM row, so the features of an overlap ion look like those of a new ion.</p>
+<div class="content-table-scroll" tabindex="0" role="region" aria-label="Group, Features table"><table class="responsive-table" role="table">
+<thead role="rowgroup">
+<tr role="row">
+<th scope="col" role="columnheader">Group</th>
+<th scope="col" role="columnheader">Features</th>
+</tr>
+</thead>
+<tbody role="rowgroup">
+<tr role="row">
+<td role="cell" data-label="Group">Scan time</td>
+<td role="cell" data-label="Features">residual to <code>PredictedScanTime</code> (signed, absolute, per peak sd, per local alignment error), the local alignment error, peak width and its ratio to the source peak</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Group">Mass and isotopes</td>
+<td role="cell" data-label="Features"><code>|ppm|</code> of the monoisotopic peak, intensity weighted <code>|ppm|</code> over the isotope peaks, number of isotope peaks, similarity of the isotope pattern to the source, KL divergences to the theoretical pattern</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Group">Chromatogram</td>
+<td role="cell" data-label="Features">correlation with the source trace (around the peak and over the whole XIC), DTW distance to the source trace, competing peaks in the XIC, share of the XIC maximum at the apex, XIC length, relative SEO</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Group">Ion</td>
+<td role="cell" data-label="Features">source quantity and apex intensity, source scan time, m/z, charge</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Group">Selection</td>
+<td role="cell" data-label="Features">from <code>&lt;run&gt;.alignfeatures</code>: <code>Sel_NCandidates</code>, <code>Sel_IsoCorr</code>, <code>Sel_IsoRatioLog2</code>, <code>Sel_ShapeCorr</code>, <code>Sel_RtZ</code>, <code>Sel_ImZ</code>, <code>Sel_LogRelHeight</code>, <code>Sel_AbsLog2FwhmRatio</code>, and <code>Sel_CandidateProbability</code>, <code>Sel_CandidateMargin</code> when all runs used the same selection model</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Group">Ion Mobility</td>
+<td role="cell" data-label="Features"><code>|IonMobility − PredictedIonMobility| / PredictedIonMobilitySd</code> (timsTOF only)</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li>The local alignment error of an ion is the median <code>|own PSM scan time − PredictedScanTime|</code> of the run's overlap ions predicted within ±2 min. Every run needs <code>&lt;run&gt;.alignfeatures</code> next to its aligned <code>.quant</code>.</li>
+<li><code>UseIntensityRatioFeatures</code> adds four features:
+<ul>
+<li>Log₂ of the target-to-source quantity ratio.</li>
+<li>Log₂ of the target-to-source apex intensity ratio.</li>
+<li>Log₁₀ of the target quantity.</li>
+<li>Log₁₀ of the target apex intensity.</li>
+</ul>
+</li>
+</ul>
+<p>These features are off by default because a model that prefers a ratio near 1 penalises peptides that really changed between samples.</p>
+<h2 class="tool-workflow-heading" id="model-calibration-and-q-values">Model, calibration and Q-Values</h2>
+<ol class="tool-explanation-steps" role="list">
+<li><div class="tool-step-copy">
+<p class="tool-step-heading"><strong>Split overlap ions into five folds</strong></p>
+<p>The overlap ions of all learning runs are pooled and split into 5 folds by peptide sequence, so the forms of a peptide stay together.</p>
+</div></li>
+<li><div class="tool-step-copy">
+<p class="tool-step-heading"><strong>Train a model per fold</strong></p>
+<p>Per fold, a gradient boosted tree model (ML.NET FastTree) is trained on the right and wrong ions of the other four folds. Unless AbsentAnalyteFdr is Off, the decoys of the learning runs join this training as wrong examples, in the fold of their peptide.</p>
+</div></li>
+<li><div class="tool-step-copy">
+<p class="tool-step-heading"><strong>Calibrate model scores</strong></p>
+<p>Per fold, an isotonic calibration (the share of right ions as a non-decreasing function of the raw score) is fitted on the right and wrong overlap ions of the held-out fold. It turns scores into probabilities. Below the lowest fitted score the probability follows a logistic fit of the label on the raw score. A fold with fewer than 200 such ions, or with one label only, is calibrated on the held-out ions of all folds. If those are too few or of one label as well, the logistic fit alone is used.</p>
+</div></li>
+<li><div class="tool-step-copy">
+<p class="tool-step-heading"><strong>Calculate the alignment score</strong></p>
+<p>The <code>AlignmentScore</code> p of a new peptide ion is the mean of the calibrated probabilities of the 5 fold models.</p>
+</div></li>
+<li><div class="tool-step-copy">
+<p class="tool-step-heading"><strong>Estimate the Q-value</strong></p>
+<p>The posterior error probability of a new ion is 1 − p. Per run, the new ions are sorted by p in descending order. The <code>AlignmentQValue</code> of an ion is the mean posterior error probability of all new ions with at least its p, made monotone.</p>
+</div></li>
+<li><div class="tool-step-copy">
+<p class="tool-step-heading"><strong>Account for absent analytes</strong></p>
+<p>Unless AbsentAnalyteFdr is Off, the absent-analyte rate at the ion's score (see Absent analytes) is added to the q-value, which is made monotone again.</p>
+</div></li>
+</ol>
+<p class="alignment-note">The highest probability the isotonic calibration can give grows with the number of right and wrong overlap ions it is fitted on: about 0.99 up to 2,000 ions, 0.999 from 20,000. With few overlap ions a cutoff of q ≤ 0.01 can therefore keep few or no transferred ions.</p>
+<p>The log reports an out-of-fold check. Each overlap ion is scored by the fold model that did not see it and calibrated on the held-out ions of the other folds (by the logistic fit alone if those are too few or of one label). The true share of wrong peaks is given at q ≤ 0.01, 0.05 and 0.1, once with the ambiguous ions counted as wrong and once without them.</p>
+<h2 id="absent-analytes">Absent analytes</h2>
+<p>The overlap ions are present in the run, so they cannot show how the model scores an ion whose analyte is absent. The decoy transfers of AlignmentBasedQuantification (<code>&lt;run&gt;.aligndecoy</code>) are used for that.</p>
+<p>The false discovery rate (FDR) for absent analytes is calculated as follows:</p>
+<div class="tool-math-block" tabindex="0" role="region" aria-label="Mathematical formula"><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mrow><mi mathvariant="normal">FDR</mi><mo>⁡</mo></mrow><mtext>absent</mtext></msub><mo stretchy="false">(</mo><mi>t</mi><mo stretchy="false">)</mo><mo>=</mo><mi>π</mi><mo>⋅</mo><mfrac><mrow><mtext>Decoys with </mtext><mi>p</mi><mo>≥</mo><mi>t</mi></mrow><mtext>All decoys</mtext></mfrac><mo>⋅</mo><mfrac><msub><mi>N</mi><mtext>new</mtext></msub><mrow><msub><mi>N</mi><mtext>new</mtext></msub><mo stretchy="false">(</mo><mi>p</mi><mo>≥</mo><mi>t</mi><mo stretchy="false">)</mo></mrow></mfrac></mrow><annotation encoding="application/x-tex">\operatorname{FDR}_{\text{absent}}(t)
+=
+\pi \cdot
+\frac{\text{Decoys with } p \geq t}{\text{All decoys}}
+\cdot
+\frac{N_{\text{new}}}{N_{\text{new}}(p \geq t)}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="katex-base"><span class="katex-strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mop"><span class="mop"><span class="mord mathrm">FDR</span></span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361em;"><span style="top:-2.55em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="katex-sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord text mtight"><span class="mord mtight">absent</span></span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mopen">(</span><span class="mord mathnormal">t</span><span class="mclose">)</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="katex-base"><span class="katex-strut" style="height:0.4445em;"></span><span class="mord mathnormal" style="margin-right:0.0359em;">π</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">⋅</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="katex-base"><span class="katex-strut" style="height:2.2519em;vertical-align:-0.8804em;"></span><span class="mord"><span class="mopen nulldelimiter"></span><span class="mfrac"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.3714em;"><span style="top:-2.314em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord text"><span class="mord">All decoys</span></span></span></span><span style="top:-3.23em;"><span class="pstrut" style="height:3em;"></span><span class="frac-line" style="border-bottom-width:0.04em;"></span></span><span style="top:-3.677em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord text"><span class="mord">Decoys with </span></span><span class="mord mathnormal">p</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">≥</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mord mathnormal">t</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.8804em;"><span></span></span></span></span></span><span class="mclose nulldelimiter"></span></span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">⋅</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="katex-base"><span class="katex-strut" style="height:2.2963em;vertical-align:-0.936em;"></span><span class="mord"><span class="mopen nulldelimiter"></span><span class="mfrac"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.3603em;"><span style="top:-2.314em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord"><span class="mord mathnormal" style="margin-right:0.109em;">N</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1514em;"><span style="top:-2.55em;margin-left:-0.109em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="katex-sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord text mtight"><span class="mord mtight">new</span></span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mopen">(</span><span class="mord mathnormal">p</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">≥</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mord mathnormal">t</span><span class="mclose">)</span></span></span><span style="top:-3.23em;"><span class="pstrut" style="height:3em;"></span><span class="frac-line" style="border-bottom-width:0.04em;"></span></span><span style="top:-3.677em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord"><span class="mord mathnormal" style="margin-right:0.109em;">N</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1514em;"><span style="top:-2.55em;margin-left:-0.109em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="katex-sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord text mtight"><span class="mord mtight">new</span></span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.936em;"><span></span></span></span></span></span><span class="mclose nulldelimiter"></span></span></span></span></span></span></div>
+<p>Where:</p>
+<ul>
+<li><strong><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>N</mi><mtext>new</mtext></msub></mrow><annotation encoding="application/x-tex">N_{\text{new}}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="katex-base"><span class="katex-strut" style="height:0.8333em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.109em;">N</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1514em;"><span style="top:-2.55em;margin-left:-0.109em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="katex-sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord text mtight"><span class="mord mtight">new</span></span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span>:</strong> Total number of new ions in the run.</li>
+<li><strong><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>π</mi></mrow><annotation encoding="application/x-tex">\pi</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="katex-base"><span class="katex-strut" style="height:0.4306em;"></span><span class="mord mathnormal" style="margin-right:0.0359em;">π</span></span></span></span>:</strong> Fraction of new ions whose analyte is absent.</li>
+<li><strong><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>t</mi></mrow><annotation encoding="application/x-tex">t</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="katex-base"><span class="katex-strut" style="height:0.6151em;"></span><span class="mord mathnormal">t</span></span></span></span>:</strong> Score threshold.</li>
+<li><strong><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi></mrow><annotation encoding="application/x-tex">p</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="katex-base"><span class="katex-strut" style="height:0.625em;vertical-align:-0.1944em;"></span><span class="mord mathnormal">p</span></span></span></span>:</strong> Score used to evaluate an ion or decoy.</li>
+</ul>
+<p>Two methods are available to determine <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>π</mi></mrow><annotation encoding="application/x-tex">\pi</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="katex-base"><span class="katex-strut" style="height:0.4306em;"></span><span class="mord mathnormal" style="margin-right:0.0359em;">π</span></span></span></span>:</p>
+<ul>
+<li><strong><code>Estimated</code>:</strong> Estimates <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>π</mi></mrow><annotation encoding="application/x-tex">\pi</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="katex-base"><span class="katex-strut" style="height:0.4306em;"></span><span class="mord mathnormal" style="margin-right:0.0359em;">π</span></span></span></span> separately for each run using Storey's method with <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>λ</mi><mo>=</mo><mn>0.5</mn></mrow><annotation encoding="application/x-tex">\lambda = 0.5</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="katex-base"><span class="katex-strut" style="height:0.6944em;"></span><span class="mord mathnormal">λ</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="katex-base"><span class="katex-strut" style="height:0.6444em;"></span><span class="mord">0.5</span></span></span></span>.</li>
+<li><strong><code>Conservative</code>:</strong> Sets <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>π</mi><mo>=</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">\pi = 1</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="katex-base"><span class="katex-strut" style="height:0.4306em;"></span><span class="mord mathnormal" style="margin-right:0.0359em;">π</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="katex-base"><span class="katex-strut" style="height:0.6444em;"></span><span class="mord">1</span></span></span></span>.</li>
+</ul>
+<p><strong>Additional considerations:</strong></p>
+<ul>
+<li>Runs with fewer than 200 decoys use the combined decoys from all runs for scoring.</li>
+<li>Decoys without a fitted peak and new ions without an alignment row are assigned <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">p = 0</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="katex-base"><span class="katex-strut" style="height:0.625em;vertical-align:-0.1944em;"></span><span class="mord mathnormal">p</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="katex-base"><span class="katex-strut" style="height:0.6444em;"></span><span class="mord">0</span></span></span></span>.</li>
+<li>If a run lacks a corresponding <code>&lt;run&gt;.aligndecoy</code> file next to its aligned <code>.quant</code> file, or if no decoy has a fitted peak, the tool issues a warning and behaves as <code>Off</code>. This also applies when <code>AlignmentBasedQuantification</code> was run with <code>DecoyFraction = 0</code>.</li>
+</ul>
+<details id="inputs" class="accordion tool-io-accordion tool-io-inputs"><summary class="accordion-header"><span class="accordion-icon" aria-hidden="true">IN</span><span class="accordion-heading"><strong role="heading" aria-level="2">Inputs</strong><small>Files and command-line flags</small></span><span class="accordion-chevron" aria-hidden="true"></span></summary><div class="accordion-content">
+<p>These inputs are needed to execute the tool:</p>
+<div class="tool-io-table-scroll" tabindex="0" role="region" aria-label="Inputs table"><table class="responsive-table" role="table">
+<thead role="rowgroup">
+<tr role="row">
+<th scope="col" role="columnheader">Flag</th>
+<th scope="col" role="columnheader">Description</th>
+<th scope="col" role="columnheader">Comes from</th>
+</tr>
+</thead>
+<tbody role="rowgroup">
+<tr role="row">
+<td role="cell" data-label="Flag"><code>-i</code></td>
+<td role="cell" data-label="Description">PSM based <code>.quant</code> of the runs to score</td>
+<td role="cell" data-label="Comes from"><a href="/ProteomIQon/tools/psm-based-quantification/">PSMBasedQuantification</a> or <a href="/ProteomIQon/tools/psm-based-quantification-tims/">PSMBasedQuantificationTIMs</a></td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Flag"><code>-ii</code></td>
+<td role="cell" data-label="Description"><code>.align</code> of the runs to score</td>
+<td role="cell" data-label="Comes from"><a href="/ProteomIQon/tools/quant-based-alignment/">QuantBasedAlignment</a></td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Flag"><code>-iii</code></td>
+<td role="cell" data-label="Description">aligned <code>.quant</code> of the runs to score</td>
+<td role="cell" data-label="Comes from"><a href="/ProteomIQon/tools/alignment-based-quantification/">AlignmentBasedQuantification</a></td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Flag"><code>-l</code></td>
+<td role="cell" data-label="Description">PSM based <code>.quant</code> of the runs to learn from</td>
+<td role="cell" data-label="Comes from"><a href="/ProteomIQon/tools/psm-based-quantification/">PSMBasedQuantification</a> or <a href="/ProteomIQon/tools/psm-based-quantification-tims/">PSMBasedQuantificationTIMs</a></td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Flag"><code>-ll</code></td>
+<td role="cell" data-label="Description"><code>.align</code> of the runs to learn from</td>
+<td role="cell" data-label="Comes from"><a href="/ProteomIQon/tools/quant-based-alignment/">QuantBasedAlignment</a></td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Flag"><code>-lll</code></td>
+<td role="cell" data-label="Description">aligned <code>.quant</code> of the runs to learn from</td>
+<td role="cell" data-label="Comes from"><a href="/ProteomIQon/tools/alignment-based-quantification/">AlignmentBasedQuantification</a></td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Flag"><code>-o</code></td>
+<td role="cell" data-label="Description">Output directory, created when missing</td>
+<td role="cell" data-label="Comes from">—</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Flag"><code>-p</code></td>
+<td role="cell" data-label="Description">Parameter file (JSON)</td>
+<td role="cell" data-label="Comes from"><a href="https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/AlignmentBasedQuantStatisticsParams.json">AlignmentBasedQuantStatisticsParams.json</a></td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Flag"><code>-c</code></td>
+<td role="cell" data-label="Description">number of runs read and written in parallel, one core each, default 1</td>
+<td role="cell" data-label="Comes from">—</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Flag"><code>-ts</code></td>
+<td role="cell" data-label="Description">switch: write the training ions of each learning run</td>
+<td role="cell" data-label="Comes from">—</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Flag"><code>-dc</code></td>
+<td role="cell" data-label="Description">Switch: write <code>AlignmentScoreHistogram.html</code></td>
+<td role="cell" data-label="Comes from">—</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Flag"><code>-mf</code></td>
+<td role="cell" data-label="Description">Switch: pair input files by name instead of position</td>
+<td role="cell" data-label="Comes from">—</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li>Each of the six run-input flags takes one file, several files, or a directory. Keep the <code>.alignfeatures</code> and, when present, <code>.aligndecoy</code> files beside their corresponding aligned <code>.quant</code> files. The runs to learn from are usually the runs to score. Without <code>-mf</code> the files are paired by position, the files of a directory sorted by name, and the numbers of files must agree.</li>
+<li>For every scored run the tool writes <code>&lt;run&gt;.quant</code> with the layout of the input <code>.quant</code> files: the PSM based rows of <code>-i</code> and one row per new peptide ion with <code>AlignmentScore</code> and <code>AlignmentQValue</code>.</li>
+<li>When the PSM row of an overlap ion has no fitted peak, the transferred row replaces it and is scored like a new ion. <code>-ts</code> writes <code>&lt;run&gt;.quanttestset</code> per learning run, with the overlap ions, their label, fold, raw and calibrated out-of-fold score, out-of-fold Q-value and features.</li>
+<li>Logs go to <code>AlignmentBasedQuantStatistics_log.txt</code>, with the features, the out-of-fold check and the calibration per score bin and per source intensity quartile, and to one <code>&lt;run&gt;_log.txt</code> per run.</li>
+</ul>
+</div></details><details id="parameters" class="accordion tool-io-accordion tool-io-parameters"><summary class="accordion-header"><span class="accordion-icon" aria-hidden="true">CFG</span><span class="accordion-heading"><strong role="heading" aria-level="2">Parameters</strong><small>Default values and tool settings</small></span><span class="accordion-chevron" aria-hidden="true"></span></summary><div class="accordion-content">
+<div class="tool-io-table-scroll" tabindex="0" role="region" aria-label="Parameters table"><table class="responsive-table" role="table">
+<thead role="rowgroup">
+<tr role="row">
+<th scope="col" role="columnheader">Parameter</th>
+<th scope="col" role="columnheader">Default</th>
+<th scope="col" role="columnheader">Description</th>
+</tr>
+</thead>
+<tbody role="rowgroup">
+<tr role="row">
+<td role="cell" data-label="Parameter">PositiveRtSdFactor</td>
+<td role="cell" data-label="Default"><code>1.0</code></td>
+<td role="cell" data-label="Description">A peak within this many own peak sd is right.</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Parameter">NegativeRtSdFactor</td>
+<td role="cell" data-label="Default"><code>3.0</code></td>
+<td role="cell" data-label="Description">Up to this many sd a peak is ambiguous, beyond it wrong.</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Parameter">MaxAbsLog2QuantRatio</td>
+<td role="cell" data-label="Default"><code>1.0</code></td>
+<td role="cell" data-label="Description">Right and ambiguous peaks need |log2 (transferred / own quantity)| at most this.</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Parameter">UseIntensityRatioFeatures</td>
+<td role="cell" data-label="Default"><code>false</code></td>
+<td role="cell" data-label="Description">Include the log₂ target-to-source ratios and log₁₀ target values for quantity and apex intensity.</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Parameter">UseIonMobility</td>
+<td role="cell" data-label="Default"><code>true</code></td>
+<td role="cell" data-label="Description">Add the ion mobility feature when the rows have a finite <code>IonMobility</code> and the <code>.align</code> file a <code>PredictedIonMobilitySd</code> above 0.</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Parameter">NumberOfFolds</td>
+<td role="cell" data-label="Default"><code>5</code></td>
+<td role="cell" data-label="Description">Cross-validation folds.</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Parameter">Trainer</td>
+<td role="cell" data-label="Default"><code>FastTree</code></td>
+<td role="cell" data-label="Description">FastTree or LightGbm. LightGbm needs the native library lib_lightgbm, which the package ships for win-x64, linux-x64 and osx-x64.</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Parameter">NumberOfLeaves, NumberOfTrees, MinimumExampleCountPerLeaf, LearningRate</td>
+<td role="cell" data-label="Default"><code>null</code></td>
+<td role="cell" data-label="Description">null takes the trainer's defaults: 20, 100, 10, 0.2 for FastTree; 31, 100, 20, 0.1 for LightGbm.</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Parameter">AbsentAnalyteFdr</td>
+<td role="cell" data-label="Default"><code>Estimated</code></td>
+<td role="cell" data-label="Description"><code>Off</code>, <code>Estimated</code> or <code>Conservative</code>: whether and how the absent-analyte rate enters the q-value (see Absent analytes).</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Parameter">Seed</td>
+<td role="cell" data-label="Default"><code>1</code></td>
+<td role="cell" data-label="Description">Seed of the folds and of the trainer.</td>
+</tr>
+</tbody>
+</table></div>
+</div></details><details id="parameter-generation" class="accordion tool-io-accordion tool-io-parameters"><summary class="accordion-header"><span class="accordion-icon" aria-hidden="true">CFG</span><span class="accordion-heading"><strong role="heading" aria-level="2">Parameter generation</strong><small>JSON and parameter-generation examples</small></span><span class="accordion-chevron" aria-hidden="true"></span></summary><div class="accordion-content">
+<p>From the ProteomIQon repository root, build the library with <code>dotnet build src/ProteomIQon/ProteomIQon.fsproj -c Release</code>. Save the following as <code>generate-params.fsx</code> in that same directory and run <code>dotnet fsi generate-params.fsx</code>. The script writes the JSON file to the system temporary directory.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="fsharp"><code><span class="line"><span style="color:#E1E4E8">#r </span><span style="color:#9ECBFF">"nuget: Newtonsoft.Json, 13.0.4"</span></span>
+<span class="line"><span style="color:#E1E4E8">#r </span><span style="color:#9ECBFF">"./src/ProteomIQon/bin/Release/net10.0/ProteomIQon.dll"</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">open</span><span style="color:#B392F0"> ProteomIQon</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">let</span><span style="color:#FFAB70"> alignmentBasedQuantStatisticsParams </span><span style="color:#F97583">:</span><span style="color:#B392F0"> Dto.AlignmentBasedQuantStatisticsParams </span><span style="color:#F97583">=</span></span>
+<span class="line"><span style="color:#F97583">    {</span></span>
+<span class="line"><span style="color:#E1E4E8">        PositiveRtSdFactor         </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 1.</span></span>
+<span class="line"><span style="color:#E1E4E8">        NegativeRtSdFactor         </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 3.</span></span>
+<span class="line"><span style="color:#E1E4E8">        MaxAbsLog2QuantRatio       </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 1.</span></span>
+<span class="line"><span style="color:#E1E4E8">        UseIntensityRatioFeatures  </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> false</span></span>
+<span class="line"><span style="color:#E1E4E8">        UseIonMobility             </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> true</span></span>
+<span class="line"><span style="color:#E1E4E8">        NumberOfFolds              </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 5</span></span>
+<span class="line"><span style="color:#E1E4E8">        Trainer                    </span><span style="color:#F97583">=</span><span style="color:#9ECBFF"> "FastTree"</span></span>
+<span class="line"><span style="color:#6A737D">        // empty: the defaults of the trainer</span></span>
+<span class="line"><span style="color:#E1E4E8">        NumberOfLeaves             </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> System.Nullable</span><span style="color:#F97583">()</span></span>
+<span class="line"><span style="color:#E1E4E8">        NumberOfTrees              </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> System.Nullable</span><span style="color:#F97583">()</span></span>
+<span class="line"><span style="color:#E1E4E8">        MinimumExampleCountPerLeaf </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> System.Nullable</span><span style="color:#F97583">()</span></span>
+<span class="line"><span style="color:#E1E4E8">        LearningRate               </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> System.Nullable</span><span style="color:#F97583">()</span></span>
+<span class="line"><span style="color:#E1E4E8">        AbsentAnalyteFdr           </span><span style="color:#F97583">=</span><span style="color:#9ECBFF"> "Estimated"</span></span>
+<span class="line"><span style="color:#E1E4E8">        Seed                       </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 1</span></span>
+<span class="line"><span style="color:#F97583">    }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D">// Replace the temp folder with your project folder.</span></span>
+<span class="line"><span style="color:#F97583">let</span><span style="color:#FFAB70"> outputPath</span><span style="color:#F97583"> =</span></span>
+<span class="line"><span style="color:#E1E4E8">    System.IO.Path.Combine</span><span style="color:#F97583">(</span><span style="color:#E1E4E8">System.IO.Path.GetTempPath</span><span style="color:#F97583">(),</span><span style="color:#9ECBFF"> "AlignmentBasedQuantStatisticsParams.json"</span><span style="color:#F97583">)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#E1E4E8">Json.serializeAndWrite outputPath alignmentBasedQuantStatisticsParams</span></span></code></pre>
+</div></details><h2 id="running-the-tool">Running the tool</h2>
+<ol>
+<li>
+<p><strong>Installing</strong></p>
+<p>Install the tool globally with the .NET CLI.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="sh"><code><span class="line"><span style="color:#B392F0">dotnet</span><span style="color:#9ECBFF"> tool</span><span style="color:#9ECBFF"> install</span><span style="color:#79B8FF"> --global</span><span style="color:#9ECBFF"> ProteomIQon.AlignmentBasedQuantStatistics</span></span></code></pre>
+</li>
+<li>
+<p><strong>Score every run, learn from all of them, pair the files by name, and work on four runs at a time</strong></p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="sh"><code><span class="line"><span style="color:#B392F0">proteomiqon-alignmentbasedquantstatistics</span><span style="color:#79B8FF"> -i</span><span style="color:#9ECBFF"> path/to/quant</span><span style="color:#79B8FF"> -ii</span><span style="color:#9ECBFF"> path/to/align</span><span style="color:#79B8FF"> -iii</span><span style="color:#9ECBFF"> path/to/aligned</span><span style="color:#79B8FF"> -l</span><span style="color:#9ECBFF"> path/to/quant</span><span style="color:#79B8FF"> -ll</span><span style="color:#9ECBFF"> path/to/align</span><span style="color:#79B8FF"> -lll</span><span style="color:#9ECBFF"> path/to/aligned</span><span style="color:#79B8FF"> -o</span><span style="color:#9ECBFF"> path/to/output</span><span style="color:#79B8FF"> -p</span><span style="color:#9ECBFF"> path/to/AlignmentBasedQuantStatisticsParams.json</span><span style="color:#79B8FF"> -mf</span><span style="color:#79B8FF"> -c</span><span style="color:#79B8FF"> 4</span></span></code></pre>
+</li>
+<li>
+<p><strong>Save training examples and diagnostics</strong></p>
+<p>Add <code>-ts</code> to write the training ions and <code>-dc</code> to write the alignment-score histogram.</p>
+</li>
+<li>
+<p><strong>All flags</strong></p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="sh"><code><span class="line"><span style="color:#B392F0">proteomiqon-alignmentbasedquantstatistics</span><span style="color:#79B8FF"> --help</span></span></code></pre>
+</li>
+</ol>
+<h2 id="limitations">Limitations</h2>
+<ul>
+<li>The false discovery rate of absent analytes is an estimate from decoys at a shifted scan time. Analytes near the detection limit are not modelled.</li>
+<li>The model needs overlap ions. With few identifications per run, or runs that share few ions, there is little to learn from.</li>
+</ul>
+</article><nav class="tool-pagination" aria-label="Browse tools"><a href="/ProteomIQon/tools/alignment-based-quantification/"><small>Previous tool</small><span>← AlignmentBasedQuantification</span></a><a class="next" href="/ProteomIQon/tools/add-deduced-peptides/"><small>Next tool</small><span>AddDeducedPeptides →</span></a></nav></main></div></main><footer class="site-bottom mx-auto w-[min(1180px,calc(100%-48px))] border-t border-line pt-[22px] pb-[34px] text-xs max-md:w-[min(100%-32px,640px)]" data-astro-cid-qup6pdxl><div class="institution-logos" data-astro-cid-pe4ulxjw><span class="rptu-logo" data-astro-cid-pe4ulxjw><img src="/ProteomIQon/images/RPTU%20Logo_1c-1.svg" alt="RPTU Kaiserslautern-Landau" width="152" height="42" data-astro-cid-pe4ulxjw></span><img class="csb-logo" src="/ProteomIQon/images/csb-narrow-black.svg" alt="CSB" width="96" height="39" data-astro-cid-pe4ulxjw></div><a class="footer-github text-red! no-underline" href="https://github.com/CSBiology/ProteomIQon/" data-astro-cid-qup6pdxl>View the project on GitHub ↗</a></footer></div><script type="module">var e=`<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>`;for(let t of document.querySelectorAll(`main pre`)){let n=document.createElement(`div`);n.className=`copy-command-block`,t.before(n),n.append(t);let r=document.createElement(`button`);r.type=`button`,r.className=`copy-command-button`,r.setAttribute(`aria-label`,`Copy command`),r.title=`Copy command`,r.innerHTML=e,n.append(r);let i;r.addEventListener(`click`,async()=>{let n=t.textContent?.trim()??``;try{try{if(!navigator.clipboard?.writeText)throw Error(`Clipboard API unavailable`);await navigator.clipboard.writeText(n)}catch{let e=document.createElement(`textarea`);e.value=n,e.setAttribute(`readonly`,``),e.style.position=`fixed`,e.style.opacity=`0`,document.body.append(e),e.select();let t=!1;try{t=document.execCommand?.(`copy`)??!1}finally{e.remove()}if(!t)throw Error(`Copy failed`)}r.innerHTML=`<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m5 12 4 4L19 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`,r.setAttribute(`aria-label`,`Copied to clipboard`),r.title=`Copied to clipboard`}catch{r.setAttribute(`aria-label`,`Could not copy command`),r.title=`Could not copy command`}window.clearTimeout(i),i=window.setTimeout(()=>{r.innerHTML=e,r.setAttribute(`aria-label`,`Copy command`),r.title=`Copy command`},1800)})}</script></body></html>

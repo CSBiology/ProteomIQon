@@ -1,0 +1,193 @@
+<!DOCTYPE html><html lang="en" data-theme="light"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="icon" type="image/svg+xml" href="/ProteomIQon/favicon.svg"><link rel="icon" href="/ProteomIQon/favicon.ico"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap"><meta name="description" content="PeptideDB digests the proteins of a FASTA file in silico and stores the resulting peptides, with their masses and modifications, in a SQLite database."><meta name="generator" content="Astro v7.3.8"><title>PeptideDB · ProteomIQon</title><link rel="stylesheet" href="/ProteomIQon/_astro/global.LELvuLUR.css"><link rel="stylesheet" href="/ProteomIQon/_astro/Layout.BzR0PIOI.css"></head><body><div class="site-shell"><header class="site-masthead mx-auto flex w-[min(1180px,calc(100%-48px))] items-center justify-between gap-x-6 border-b border-line pt-6 pb-5 max-md:w-[min(100%-32px,640px)] max-[520px]:block"><a class="inline-flex items-center gap-[11px] text-[1.16rem] font-bold tracking-[-.04em] no-underline" href="/ProteomIQon/" aria-label="ProteomIQon home"><span class="inline-flex h-[21px] items-end gap-0.5" aria-hidden="true"><span class="block h-3 w-[5px] rounded-t-[1px] bg-sky"></span><span class="block h-5 w-[5px] rounded-t-[1px] bg-orange"></span><span class="block h-[15px] w-[5px] rounded-t-[1px] bg-teal"></span></span><span>Proteom<span class="text-orange">IQ</span>on</span></a><nav class="desktop-site-nav flex items-center gap-[25px] max-[520px]:mt-[18px] max-[520px]:flex-wrap max-[520px]:gap-x-4 max-[520px]:gap-y-2" aria-label="Main navigation"><a class="group relative py-1 text-[.8rem] whitespace-nowrap no-underline transition-colors duration-200 hover:text-navy! text-navy!" href="/ProteomIQon/tools/" aria-current="true">Tools<span class="absolute inset-x-0 bottom-0 h-0.5 origin-right scale-x-0 bg-red transition-transform duration-200 group-hover:origin-left group-hover:scale-x-100 origin-left scale-x-100"></span></a><a class="group relative py-1 text-[.8rem] whitespace-nowrap no-underline transition-colors duration-200 hover:text-navy! text-steel!" href="/ProteomIQon/guide/installation/">Installation<span class="absolute inset-x-0 bottom-0 h-0.5 origin-right scale-x-0 bg-red transition-transform duration-200 group-hover:origin-left group-hover:scale-x-100"></span></a><a class="group relative py-1 text-[.8rem] whitespace-nowrap no-underline transition-colors duration-200 hover:text-navy! text-steel!" href="/ProteomIQon/guide/getting-started/">Getting started<span class="absolute inset-x-0 bottom-0 h-0.5 origin-right scale-x-0 bg-red transition-transform duration-200 group-hover:origin-left group-hover:scale-x-100"></span></a><a class="group relative py-1 text-[.8rem] whitespace-nowrap no-underline transition-colors duration-200 hover:text-navy! text-steel!" href="/ProteomIQon/guide/developer-information/">Developer Information<span class="absolute inset-x-0 bottom-0 h-0.5 origin-right scale-x-0 bg-red transition-transform duration-200 group-hover:origin-left group-hover:scale-x-100"></span></a><a class="group relative py-1 text-[.8rem] whitespace-nowrap no-underline transition-colors duration-200 hover:text-navy! text-red!" href="/ProteomIQon/guide/help/">Help<span class="absolute inset-x-0 bottom-0 h-0.5 origin-right scale-x-0 bg-red transition-transform duration-200 group-hover:origin-left group-hover:scale-x-100"></span></a><a class="group relative py-1 text-[.8rem] whitespace-nowrap no-underline transition-colors duration-200 hover:text-navy! text-steel!" href="/ProteomIQon/guide/further-information/">Learn more<span class="absolute inset-x-0 bottom-0 h-0.5 origin-right scale-x-0 bg-red transition-transform duration-200 group-hover:origin-left group-hover:scale-x-100"></span></a></nav><details class="mobile-site-nav"><summary><span>Menu</span><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"></path></svg></summary><nav aria-label="Main navigation"><a href="/ProteomIQon/tools/" aria-current="true">Tools</a><a href="/ProteomIQon/guide/installation/">Installation</a><a href="/ProteomIQon/guide/getting-started/">Getting started</a><a href="/ProteomIQon/guide/developer-information/">Developer Information</a><a href="/ProteomIQon/guide/help/">Help</a><a href="/ProteomIQon/guide/further-information/">Learn more</a></nav></details></header><script type="module">var e=document.querySelector(`.mobile-site-nav`);document.addEventListener(`click`,t=>{e?.open&&t.target instanceof Node&&!e.contains(t.target)&&(e.open=!1)}),e?.addEventListener(`keydown`,t=>{t.key===`Escape`&&(e.open=!1,e.querySelector(`summary`)?.focus())});</script><main class="tool-page-wide"><div class="tool-detail-layout phase-preprocessing"><aside class="tool-sidebar"><a class="back-link" href="/ProteomIQon/tools/">← All tools</a><div class="sidebar-rule"></div><p class="sidebar-label">In this stage</p><nav aria-label="Preprocessing tools"><a href="/ProteomIQon/tools/mzml-to-mzlite/">MzMLToMzLite</a><a href="/ProteomIQon/tools/mzml-to-mzlite-ion-mobility/">MzMLToMzLiteIonMobility</a><a class="active" aria-current="page" href="/ProteomIQon/tools/peptide-db/">PeptideDB</a></nav><details class="mobile-stage-navigation"><summary>In this stage <span>3 tools</span></summary><nav aria-label="Preprocessing tools"><a href="/ProteomIQon/tools/mzml-to-mzlite/">MzMLToMzLite</a><a href="/ProteomIQon/tools/mzml-to-mzlite-ion-mobility/">MzMLToMzLiteIonMobility</a><a class="active" aria-current="page" href="/ProteomIQon/tools/peptide-db/">PeptideDB</a></nav></details></aside><main class="tool-detail"><section class="tool-detail-hero"><h1>Peptide<wbr>DB</h1></section><article class="legacy-content tool-legacy-content prose max-w-none prose-a:font-semibold prose-code:before:content-none prose-code:after:content-none"><h2 id="tool-description">Tool Description</h2>
+<p>PeptideDB digests the proteins of a FASTA file in silico and stores the resulting peptides, with their masses and modifications, in a SQLite database.</p>
+<h2 class="tool-workflow-heading" id="how-does-peptidedb-work">How does PeptideDB work?</h2>
+<ol class="tool-explanation-steps" role="list">
+<li><div class="tool-step-copy">
+<p class="tool-step-heading"><strong>Search space</strong></p>
+<p>The search tools compare measured spectra against these peptides, so the digestion settings define the search space of the whole analysis.</p>
+</div></li>
+<li><div class="tool-step-copy">
+<p class="tool-step-heading"><strong>Algorithm</strong></p>
+<p>The protease, missed-cleavage limits, peptide lengths and modifications define the search space. BioFSharp.Mz describes the <a href="https://www.biofsharp.com/BioFSharp.Mz/02_02_search_databases.html#Describing-the-search-space">search-space settings</a> and the <a href="https://www.biofsharp.com/BioFSharp.Mz/02_02_search_databases.html#Building-and-connecting-to-the-database">database layout</a>.</p>
+</div></li>
+</ol>
+<details id="inputs" class="accordion tool-io-accordion tool-io-inputs"><summary class="accordion-header"><span class="accordion-icon" aria-hidden="true">IN</span><span class="accordion-heading"><strong role="heading" aria-level="2">Inputs</strong><small>Files and command-line flags</small></span><span class="accordion-chevron" aria-hidden="true"></span></summary><div class="accordion-content">
+<p>These inputs are needed to execute the tool:</p>
+<div class="tool-io-table-scroll" tabindex="0" role="region" aria-label="Inputs table"><table class="responsive-table" role="table">
+<thead role="rowgroup">
+<tr role="row">
+<th scope="col" role="columnheader">Flag</th>
+<th scope="col" role="columnheader">Meaning</th>
+<th scope="col" role="columnheader">Comes from</th>
+</tr>
+</thead>
+<tbody role="rowgroup">
+<tr role="row">
+<td role="cell" data-label="Flag"><code>-i</code></td>
+<td role="cell" data-label="Meaning">one FASTA file (no directories)</td>
+<td role="cell" data-label="Comes from">Chosen proteome</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Flag"><code>-o</code></td>
+<td role="cell" data-label="Meaning">the output directory, created when missing</td>
+<td role="cell" data-label="Comes from">-</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Flag"><code>-p</code></td>
+<td role="cell" data-label="Meaning">the parameter file in JSON</td>
+<td role="cell" data-label="Comes from"><a href="https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/peptideDBParams.json">peptideDBParams.json</a></td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li>
+<p>The tool writes <code>&lt;Name&gt;.db</code> into the output directory, using <code>Name</code> from the parameter file. <a href="/ProteomIQon/tools/peptide-spectrum-matching-tims/">PeptideSpectrumMatchingTIMs</a> requires a database with monoisotopic masses.</p>
+</li>
+<li>
+<p>The database is read by</p>
+<ul>
+<li><a href="/ProteomIQon/tools/peptide-spectrum-matching/">PeptideSpectrumMatching</a></li>
+<li><a href="/ProteomIQon/tools/peptide-spectrum-matching-tims/">PeptideSpectrumMatchingTIMs</a></li>
+<li><a href="/ProteomIQon/tools/psm-statistics/">PSMStatistics</a></li>
+<li><a href="/ProteomIQon/tools/ms-fragger-to-psm/">MsFraggerToPSM</a></li>
+<li><a href="/ProteomIQon/tools/psm-based-quantification/">PSMBasedQuantification</a></li>
+<li><a href="/ProteomIQon/tools/psm-based-quantification-tims/">PSMBasedQuantificationTIMs</a></li>
+<li><a href="/ProteomIQon/tools/alignment-based-quantification/">AlignmentBasedQuantification</a></li>
+<li><a href="/ProteomIQon/tools/protein-inference/">ProteinInference</a></li>
+</ul>
+</li>
+<li>
+<p>When a <code>&lt;Name&gt;.db</code> already exists in the output directory and the parameters stored inside it equal the parameter file, the tool reuses that database and only makes sure its index is present.</p>
+</li>
+<li>
+<p>The output directory also receives <code>PeptideDB_log.txt</code> and <code>PeptideDB_&lt;Name&gt;_log.txt</code>.</p>
+</li>
+</ul>
+</div></details><details id="parameter-file" class="accordion tool-io-accordion tool-io-parameters"><summary class="accordion-header"><span class="accordion-icon" aria-hidden="true">CFG</span><span class="accordion-heading"><strong role="heading" aria-level="2">Parameter file</strong><small>Default values and tool settings</small></span><span class="accordion-chevron" aria-hidden="true"></span></summary><div class="accordion-content">
+<div class="tool-io-table-scroll" tabindex="0" role="region" aria-label="Parameter file table"><table class="responsive-table" role="table">
+<thead role="rowgroup">
+<tr role="row">
+<th scope="col" role="columnheader">Parameter</th>
+<th scope="col" role="columnheader">Default</th>
+<th scope="col" role="columnheader">Meaning</th>
+</tr>
+</thead>
+<tbody role="rowgroup">
+<tr role="row">
+<td role="cell" data-label="Parameter">Name</td>
+<td role="cell" data-label="Default">"AraTest"</td>
+<td role="cell" data-label="Meaning">Name of the database and stem of the output file.</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Parameter">ParseProteinIDRegexPattern</td>
+<td role="cell" data-label="Default">"id"</td>
+<td role="cell" data-label="Meaning">How protein identifiers are taken from the FASTA headers. "id" (in any letter case, or an empty string) keeps the whole header line as the identifier. Any other value is a regular expression, and the matched part of the header becomes the identifier, for example "^\S+" for the first word.</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Parameter">Protease</td>
+<td role="cell" data-label="Default">Protease.Trypsin</td>
+<td role="cell" data-label="Meaning">Enzyme used for the digestion. Other values are Protease.Trypsin_P, Protease.LysC, Protease.LysC_P, Protease.Chymotrypsin and Protease.PepsinA.</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Parameter">MinMissedCleavages</td>
+<td role="cell" data-label="Default">0</td>
+<td role="cell" data-label="Meaning">Lowest number of missed cleavage sites a peptide may have.</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Parameter">MaxMissedCleavages</td>
+<td role="cell" data-label="Default">2</td>
+<td role="cell" data-label="Meaning">Highest number of missed cleavage sites a peptide may have.</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Parameter">MaxMass</td>
+<td role="cell" data-label="Default">15000.0</td>
+<td role="cell" data-label="Meaning">Peptides above this mass in Da are dropped.</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Parameter">MinPepLength</td>
+<td role="cell" data-label="Default">6</td>
+<td role="cell" data-label="Meaning">Shortest peptide length kept, in residues.</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Parameter">MaxPepLength</td>
+<td role="cell" data-label="Default">65</td>
+<td role="cell" data-label="Meaning">Longest peptide length kept, in residues.</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Parameter">IsotopicMod</td>
+<td role="cell" data-label="Default">[IsotopicMod.N15]</td>
+<td role="cell" data-label="Meaning">Isotopic labels of the experiment. Each label adds a labeled variant of every peptide next to the unlabeled one. Use [] for an unlabeled experiment. Other values are IsotopicMod.C13, IsotopicMod.O17, IsotopicMod.O18 and IsotopicMod.D.</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Parameter">MassMode</td>
+<td role="cell" data-label="Default">MassMode.Monoisotopic</td>
+<td role="cell" data-label="Meaning">Mass calculation, MassMode.Monoisotopic or MassMode.Average.</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Parameter">FixedMods</td>
+<td role="cell" data-label="Default">[]</td>
+<td role="cell" data-label="Meaning">Modifications applied to every matching residue.</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Parameter">VariableMods</td>
+<td role="cell" data-label="Default">[Modification.Oxidation'Met'; Modification.Acetylation'ProtNTerm']</td>
+<td role="cell" data-label="Meaning">Modifications that may or may not be present. Every allowed combination becomes its own database entry.</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Parameter">VarModThreshold</td>
+<td role="cell" data-label="Default">4</td>
+<td role="cell" data-label="Meaning">Maximum number of variable modifications on one peptide.</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li>The available modifications are the cases of <code>ProteomIQon.Modification</code>, for example <code>Modification.Carbamidomethyl'Cys'</code> or <code>Modification.Phosphorylation'Ser'Thr'Tyr'</code>.</li>
+<li>The default file is <a href="https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/peptideDBParams.json">peptideDBParams.json</a>. The <a href="https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/peptideDBParamsThermo.json">Thermo preset</a> includes carbamidomethylation as a variable modification.</li>
+</ul>
+</div></details><details id="parameter-generation" class="accordion tool-io-accordion tool-io-parameters"><summary class="accordion-header"><span class="accordion-icon" aria-hidden="true">CFG</span><span class="accordion-heading"><strong role="heading" aria-level="2">Parameter generation</strong><small>JSON and parameter-generation examples</small></span><span class="accordion-chevron" aria-hidden="true"></span></summary><div class="accordion-content">
+<p>From the ProteomIQon repository root, build the library with <code>dotnet build src/ProteomIQon/ProteomIQon.fsproj -c Release</code>. Save the following as <code>generate-params.fsx</code> in that same directory and run <code>dotnet fsi generate-params.fsx</code>. The script writes the JSON file to the system temporary directory.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="fsharp"><code><span class="line"><span style="color:#E1E4E8">#r </span><span style="color:#9ECBFF">"nuget: BioFSharp.Mz, 0.2.3"</span></span>
+<span class="line"><span style="color:#E1E4E8">#r </span><span style="color:#9ECBFF">"nuget: Newtonsoft.Json, 13.0.4"</span></span>
+<span class="line"><span style="color:#E1E4E8">#r </span><span style="color:#9ECBFF">"./src/ProteomIQon/bin/Release/net10.0/ProteomIQon.dll"</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">open</span><span style="color:#B392F0"> BioFSharp.Mz.SearchDB</span></span>
+<span class="line"><span style="color:#F97583">open</span><span style="color:#B392F0"> ProteomIQon</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">let</span><span style="color:#FFAB70"> peptideDBParams </span><span style="color:#F97583">:</span><span style="color:#B392F0"> Dto.PeptideDBParams </span><span style="color:#F97583">=</span></span>
+<span class="line"><span style="color:#F97583">    {</span></span>
+<span class="line"><span style="color:#E1E4E8">        Name                       </span><span style="color:#F97583">=</span><span style="color:#9ECBFF"> "AraTest"</span></span>
+<span class="line"><span style="color:#E1E4E8">        ParseProteinIDRegexPattern </span><span style="color:#F97583">=</span><span style="color:#9ECBFF"> "id"</span></span>
+<span class="line"><span style="color:#E1E4E8">        Protease                   </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> Protease.Trypsin</span></span>
+<span class="line"><span style="color:#E1E4E8">        MinMissedCleavages         </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span></span>
+<span class="line"><span style="color:#E1E4E8">        MaxMissedCleavages         </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 2</span></span>
+<span class="line"><span style="color:#E1E4E8">        MaxMass                    </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 15000.0</span></span>
+<span class="line"><span style="color:#E1E4E8">        MinPepLength               </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 6</span></span>
+<span class="line"><span style="color:#E1E4E8">        MaxPepLength               </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 65</span></span>
+<span class="line"><span style="color:#E1E4E8">        IsotopicMod                </span><span style="color:#F97583">=</span><span style="color:#F97583"> [</span><span style="color:#E1E4E8">IsotopicMod.N15</span><span style="color:#F97583">]</span></span>
+<span class="line"><span style="color:#E1E4E8">        MassMode                   </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> MassMode.Monoisotopic</span></span>
+<span class="line"><span style="color:#E1E4E8">        FixedMods                  </span><span style="color:#F97583">=</span><span style="color:#F97583"> []</span></span>
+<span class="line"><span style="color:#E1E4E8">        VariableMods               </span><span style="color:#F97583">=</span><span style="color:#F97583"> [</span><span style="color:#E1E4E8">Modification.Oxidation'Met'</span><span style="color:#F97583">;</span><span style="color:#E1E4E8"> Modification.Acetylation'ProtNTerm'</span><span style="color:#F97583">]</span></span>
+<span class="line"><span style="color:#E1E4E8">        VarModThreshold            </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 4</span></span>
+<span class="line"><span style="color:#F97583">    }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D">// Replace the temp folder with your project folder.</span></span>
+<span class="line"><span style="color:#F97583">let</span><span style="color:#FFAB70"> outputPath</span><span style="color:#F97583"> =</span><span style="color:#E1E4E8"> System.IO.Path.Combine</span><span style="color:#F97583">(</span><span style="color:#E1E4E8">System.IO.Path.GetTempPath</span><span style="color:#F97583">(),</span><span style="color:#9ECBFF"> "peptideDBParams.json"</span><span style="color:#F97583">)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#E1E4E8">Json.serializeAndWrite outputPath peptideDBParams</span></span></code></pre>
+</div></details><h2 id="installing-and-executing-the-tool">Installing and executing the tool</h2>
+<ol>
+<li>
+<p><strong>Installing</strong></p>
+<p>Install the tool globally with the .NET CLI.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="sh"><code><span class="line"><span style="color:#B392F0">dotnet</span><span style="color:#9ECBFF"> tool</span><span style="color:#9ECBFF"> install</span><span style="color:#79B8FF"> --global</span><span style="color:#9ECBFF"> ProteomIQon.PeptideDB</span></span></code></pre>
+</li>
+<li>
+<p><strong>Execute</strong></p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="sh"><code><span class="line"><span style="color:#B392F0">proteomiqon-peptidedb</span><span style="color:#79B8FF"> -i</span><span style="color:#9ECBFF"> path/to/proteome.fasta</span><span style="color:#79B8FF"> -o</span><span style="color:#9ECBFF"> path/to/output</span><span style="color:#79B8FF"> -p</span><span style="color:#9ECBFF"> path/to/peptideDBParams.json</span></span></code></pre>
+</li>
+<li>
+<p><strong>All Flags</strong></p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="sh"><code><span class="line"><span style="color:#B392F0">proteomiqon-peptidedb</span><span style="color:#79B8FF"> --help</span></span></code></pre>
+</li>
+</ol>
+</article><nav class="tool-pagination" aria-label="Browse tools"><a href="/ProteomIQon/tools/mzml-to-mzlite-ion-mobility/"><small>Previous tool</small><span>← MzMLToMzLiteIonMobility</span></a><a class="next" href="/ProteomIQon/tools/peptide-spectrum-matching/"><small>Next tool</small><span>PeptideSpectrumMatching →</span></a></nav></main></div></main><footer class="site-bottom mx-auto w-[min(1180px,calc(100%-48px))] border-t border-line pt-[22px] pb-[34px] text-xs max-md:w-[min(100%-32px,640px)]" data-astro-cid-qup6pdxl><div class="institution-logos" data-astro-cid-pe4ulxjw><span class="rptu-logo" data-astro-cid-pe4ulxjw><img src="/ProteomIQon/images/RPTU%20Logo_1c-1.svg" alt="RPTU Kaiserslautern-Landau" width="152" height="42" data-astro-cid-pe4ulxjw></span><img class="csb-logo" src="/ProteomIQon/images/csb-narrow-black.svg" alt="CSB" width="96" height="39" data-astro-cid-pe4ulxjw></div><a class="footer-github text-red! no-underline" href="https://github.com/CSBiology/ProteomIQon/" data-astro-cid-qup6pdxl>View the project on GitHub ↗</a></footer></div><script type="module">var e=`<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>`;for(let t of document.querySelectorAll(`main pre`)){let n=document.createElement(`div`);n.className=`copy-command-block`,t.before(n),n.append(t);let r=document.createElement(`button`);r.type=`button`,r.className=`copy-command-button`,r.setAttribute(`aria-label`,`Copy command`),r.title=`Copy command`,r.innerHTML=e,n.append(r);let i;r.addEventListener(`click`,async()=>{let n=t.textContent?.trim()??``;try{try{if(!navigator.clipboard?.writeText)throw Error(`Clipboard API unavailable`);await navigator.clipboard.writeText(n)}catch{let e=document.createElement(`textarea`);e.value=n,e.setAttribute(`readonly`,``),e.style.position=`fixed`,e.style.opacity=`0`,document.body.append(e),e.select();let t=!1;try{t=document.execCommand?.(`copy`)??!1}finally{e.remove()}if(!t)throw Error(`Copy failed`)}r.innerHTML=`<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m5 12 4 4L19 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`,r.setAttribute(`aria-label`,`Copied to clipboard`),r.title=`Copied to clipboard`}catch{r.setAttribute(`aria-label`,`Could not copy command`),r.title=`Could not copy command`}window.clearTimeout(i),i=window.setTimeout(()=>{r.innerHTML=e,r.setAttribute(`aria-label`,`Copy command`),r.title=`Copy command`},1800)})}</script></body></html>

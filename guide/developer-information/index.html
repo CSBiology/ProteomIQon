@@ -1,0 +1,102 @@
+<!DOCTYPE html><html lang="en" data-theme="light"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="icon" type="image/svg+xml" href="/ProteomIQon/favicon.svg"><link rel="icon" href="/ProteomIQon/favicon.ico"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap"><meta name="description" content="Developer documentation for building, packaging, testing and documenting ProteomIQon tools."><meta name="generator" content="Astro v7.3.8"><title>Developer Information · ProteomIQon</title><link rel="stylesheet" href="/ProteomIQon/_astro/global.LELvuLUR.css"><link rel="stylesheet" href="/ProteomIQon/_astro/Layout.BzR0PIOI.css"></head><body><div class="site-shell"><header class="site-masthead mx-auto flex w-[min(1180px,calc(100%-48px))] items-center justify-between gap-x-6 border-b border-line pt-6 pb-5 max-md:w-[min(100%-32px,640px)] max-[520px]:block"><a class="inline-flex items-center gap-[11px] text-[1.16rem] font-bold tracking-[-.04em] no-underline" href="/ProteomIQon/" aria-label="ProteomIQon home"><span class="inline-flex h-[21px] items-end gap-0.5" aria-hidden="true"><span class="block h-3 w-[5px] rounded-t-[1px] bg-sky"></span><span class="block h-5 w-[5px] rounded-t-[1px] bg-orange"></span><span class="block h-[15px] w-[5px] rounded-t-[1px] bg-teal"></span></span><span>Proteom<span class="text-orange">IQ</span>on</span></a><nav class="desktop-site-nav flex items-center gap-[25px] max-[520px]:mt-[18px] max-[520px]:flex-wrap max-[520px]:gap-x-4 max-[520px]:gap-y-2" aria-label="Main navigation"><a class="group relative py-1 text-[.8rem] whitespace-nowrap no-underline transition-colors duration-200 hover:text-navy! text-steel!" href="/ProteomIQon/tools/">Tools<span class="absolute inset-x-0 bottom-0 h-0.5 origin-right scale-x-0 bg-red transition-transform duration-200 group-hover:origin-left group-hover:scale-x-100"></span></a><a class="group relative py-1 text-[.8rem] whitespace-nowrap no-underline transition-colors duration-200 hover:text-navy! text-steel!" href="/ProteomIQon/guide/installation/">Installation<span class="absolute inset-x-0 bottom-0 h-0.5 origin-right scale-x-0 bg-red transition-transform duration-200 group-hover:origin-left group-hover:scale-x-100"></span></a><a class="group relative py-1 text-[.8rem] whitespace-nowrap no-underline transition-colors duration-200 hover:text-navy! text-steel!" href="/ProteomIQon/guide/getting-started/">Getting started<span class="absolute inset-x-0 bottom-0 h-0.5 origin-right scale-x-0 bg-red transition-transform duration-200 group-hover:origin-left group-hover:scale-x-100"></span></a><a class="group relative py-1 text-[.8rem] whitespace-nowrap no-underline transition-colors duration-200 hover:text-navy! text-navy!" href="/ProteomIQon/guide/developer-information/" aria-current="page">Developer Information<span class="absolute inset-x-0 bottom-0 h-0.5 origin-right scale-x-0 bg-red transition-transform duration-200 group-hover:origin-left group-hover:scale-x-100 origin-left scale-x-100"></span></a><a class="group relative py-1 text-[.8rem] whitespace-nowrap no-underline transition-colors duration-200 hover:text-navy! text-red!" href="/ProteomIQon/guide/help/">Help<span class="absolute inset-x-0 bottom-0 h-0.5 origin-right scale-x-0 bg-red transition-transform duration-200 group-hover:origin-left group-hover:scale-x-100"></span></a><a class="group relative py-1 text-[.8rem] whitespace-nowrap no-underline transition-colors duration-200 hover:text-navy! text-steel!" href="/ProteomIQon/guide/further-information/">Learn more<span class="absolute inset-x-0 bottom-0 h-0.5 origin-right scale-x-0 bg-red transition-transform duration-200 group-hover:origin-left group-hover:scale-x-100"></span></a></nav><details class="mobile-site-nav"><summary><span>Menu</span><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"></path></svg></summary><nav aria-label="Main navigation"><a href="/ProteomIQon/tools/">Tools</a><a href="/ProteomIQon/guide/installation/">Installation</a><a href="/ProteomIQon/guide/getting-started/">Getting started</a><a href="/ProteomIQon/guide/developer-information/" aria-current="page">Developer Information</a><a href="/ProteomIQon/guide/help/">Help</a><a href="/ProteomIQon/guide/further-information/">Learn more</a></nav></details></header><script type="module">var e=document.querySelector(`.mobile-site-nav`);document.addEventListener(`click`,t=>{e?.open&&t.target instanceof Node&&!e.contains(t.target)&&(e.open=!1)}),e?.addEventListener(`keydown`,t=>{t.key===`Escape`&&(e.open=!1,e.querySelector(`summary`)?.focus())});</script><main><section class="page-hero compact-page-hero"><div><h1>Developer Information</h1></div></section><div class="content-column"><article class="legacy-content prose max-w-none prose-a:font-semibold"><h2 id="how-to-build-binaries-or-packages">How to build binaries or packages</h2>
+<p>The build is a FAKE project in the <code>./build</code> folder with the <code>build.cmd</code> and the <code>build.sh</code> run it with the target name as the first argument. Without a target it builds the whole solution.</p>
+<h2 id="building">Building</h2>
+<p>The Build target compiles every released tool listed in build/ProjectInfo.fs.</p>
+<p>- For Windows</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="sh"><code><span class="line"><span style="color:#79B8FF">.</span><span style="color:#E1E4E8">\</span><span style="color:#9ECBFF">build.cmd</span><span style="color:#9ECBFF"> build</span></span></code></pre>
+<p>- For Linux:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="sh"><code><span class="line"><span style="color:#79B8FF">.</span><span style="color:#E1E4E8">\</span><span style="color:#9ECBFF">build.sh</span><span style="color:#9ECBFF"> build</span></span></code></pre>
+<p>The Preprocessing project references packages from the CSBiology feed on GitHub Packages. nuget.config reads the credentials for that feed from the environment variables GithubUser and PackageToken. Set both before building the full solution, which includes that project. The released tools restore from nuget.org alone. To build a single tool, call dotnet on its project file:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="sh"><code><span class="line"><span style="color:#B392F0">dotnet</span><span style="color:#9ECBFF"> build</span><span style="color:#9ECBFF"> src/PeptideDB/PeptideDB.fsproj</span><span style="color:#79B8FF"> -c</span><span style="color:#9ECBFF"> Release</span></span></code></pre>
+<h2 id="packing">Packing</h2>
+<p>The Pack target creates a NuGet package for every released project in pkg/. The version comes from the top entry of each project's RELEASE_NOTES.md that has a version, so bump that file first. A leading #### Unreleased section without a version collects changes until the next release and is skipped; replace it with the version and the date when you release: For Windows:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="sh"><code><span class="line"><span style="color:#79B8FF">.</span><span style="color:#E1E4E8">\</span><span style="color:#9ECBFF">build.cmd</span><span style="color:#9ECBFF"> pack</span></span></code></pre>
+<p>For Linux:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="sh"><code><span class="line"><span style="color:#79B8FF">.</span><span style="color:#E1E4E8">\</span><span style="color:#9ECBFF">build.sh</span><span style="color:#9ECBFF"> pack</span></span></code></pre>
+<p>PackPrerelease does the same with a suffix it asks for on the console. Every tool packs as a .NET tool with the package id ProteomIQon.<code>&lt;ToolName&gt;</code> and the command name proteomiqon-<code>&lt;toolname&gt;</code>. A package from pkg/ can be installed locally to try it out before publishing:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="sh"><code><span class="line"><span style="color:#B392F0">dotnet</span><span style="color:#9ECBFF"> tool</span><span style="color:#9ECBFF"> install</span><span style="color:#79B8FF"> --global</span><span style="color:#9ECBFF"> ProteomIQon.PeptideDB</span><span style="color:#79B8FF"> --add-source</span><span style="color:#9ECBFF"> ./pkg</span><span style="color:#79B8FF"> --version</span><span style="color:#79B8FF"> 0.0.10</span></span></code></pre>
+<p>Published versions are on <a href="https://www.nuget.org/">Nuget.org</a></p>
+<h2 id="tests">Tests</h2>
+<p>RunTests builds and runs tests/ProteomIQon.Tests.fsproj. The end to end pipeline tests start the tool assemblies, so this target needs the full build to succeed first: For Windows:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="sh"><code><span class="line"><span style="color:#79B8FF">.</span><span style="color:#E1E4E8">\</span><span style="color:#9ECBFF">build.cmd</span><span style="color:#9ECBFF"> runtests</span></span></code></pre>
+<p>For Linux:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="sh"><code><span class="line"><span style="color:#79B8FF">.</span><span style="color:#E1E4E8">\</span><span style="color:#9ECBFF">build.sh</span><span style="color:#9ECBFF"> runtests</span></span></code></pre>
+<h2 id="how-to-create-your-own-tool">How to create your own tool</h2>
+<p>Every ProteomIQon tool is a small console project located in <code>src/</code>, containing three files with distinct responsibilities.</p>
+<ol>
+<li>
+<p><code>CLIArgumentParsing.fs</code></p>
+<p>Declares command-line arguments using Argu.</p>
+</li>
+<li>
+<p><code>Program.fs</code></p>
+<p>Parses arguments, reads the parameter JSON and loops over input files.</p>
+</li>
+<li>
+<p>Tool-specific implementation</p>
+<p>Contains the actual processing logic.</p>
+</li>
+</ol>
+<p><strong>Shared components</strong></p>
+<p>Parameter records and result row types shared between tools are located in <code>src/ProteomIQon/</code> in the core project.</p>
+<h2 id="scaffolding-from-the-template">Scaffolding from the template</h2>
+<p>The repository ships a <code>dotnet new</code> template that creates this layout. Follow these steps to set up your new tool.</p>
+<ol>
+<li>
+<p><strong>Install the template</strong></p>
+<p>Run the following command once from the repository root:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>dotnet new install ./ConsoleTemplate/template</span></span></code></pre>
+</li>
+<li>
+<p><strong>Create your project</strong></p>
+<p>Run <code>dotnet new list</code> to verify that <code>pct</code> (the prototypical ProteomIQon console project) is available.</p>
+<p>Then create your project inside <code>src/</code> and add it to the solution:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>cd src</span></span>
+<span class="line"><span>dotnet new pct -n MyTool --force</span></span>
+<span class="line"><span>cd ..</span></span>
+<span class="line"><span>dotnet sln ProteomIQon.sln add src/MyTool/MyTool.fsproj</span></span></code></pre>
+</li>
+</ol>
+<p><strong>Information</strong></p>
+<p>Compare the new <code>.fsproj</code> with an existing tool such as <code>src/PeptideDB/PeptideDB.fsproj</code>. Use its target framework, package versions, <code>PackAsTool</code> and <code>ToolCommandName</code> properties as references.</p>
+<h2 id="wiring-the-tool-in">Wiring the tool in</h2>
+<p>Four more places need to know about the tool:</p>
+<ol>
+<li>A parameter record in <code>src/ProteomIQon/DTO.fs</code> with a <code>toDomain</code> conversion, plus a default JSON file in <code>src/ProteomIQon/defaultParams/</code>. The tools read parameters with <code>Json.ReadAndDeserialize</code>.</li>
+<li>A <code>RELEASE_NOTES.md</code> in the project folder. The build reads the package version from it.</li>
+<li>An entry in the projects list of <code>build/ProjectInfo.fs</code>, so Build and Pack include it.</li>
+<li>A page in <code>docs/tools/</code>; see <em>How to document your work</em>.</li>
+</ol>
+<p><strong>Next step</strong></p>
+<p>Then open a pull request against <code>dev</code>.</p>
+<h2 id="how-to-document-your-work">How to document your work</h2>
+<ol>
+<li>The pages on this site are literate F# scripts under <code>docs/</code>, rendered with the fsdocs tool.</li>
+<li>Prose lives in <code>(** ... *)</code> comment blocks as Markdown; code between the blocks is shown with syntax highlighting and tooltips.</li>
+</ol>
+<h2 id="building-the-docs-locally">Building the docs locally</h2>
+<ol>
+<li>
+<p>From the repository root, restore the tools once and then run the docs target. It builds the core project in Release and renders the site into <code>output/</code>:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>dotnet tool restore</span></span>
+<span class="line"><span>.\build.cmd builddocs</span></span></code></pre>
+</li>
+<li>
+<p>On Linux or macOS use <code>./build.sh builddocs</code>. For editing with hot reload use the watch target. It serves the site on a local port and re-renders a page whenever you save it:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>.\build.cmd watchdocs</span></span></code></pre>
+</li>
+</ol>
+<h2 id="adding-a-page-for-a-tool">Adding a page for a tool</h2>
+<ol>
+<li>
+<p>Copy an existing file from <code>docs/tools/</code>, for example <code>PeptideDB.fsx</code>, rename it after the tool folder in <code>src/</code>, and adjust the frontmatter at the top. The <code>index</code> value sets the position in the sidebar. The pages are ordered along the processing chain, so pick the slot where the new tool fits and shift the later ones if needed.</p>
+</li>
+<li>
+<p>Each tool page has the same four parts: a short description of what the tool does and where it sits in the chain, an inputs and outputs section, the parameter table with the defaults from <code>src/ProteomIQon/defaultParams/</code>, and the script that writes a parameter file followed by the command line calls. Tools without a parameter file skip the table and the script.</p>
+</li>
+<li>
+<p>Keep the parameter script runnable. It references the core assembly built by builddocs, so this proves it before you publish:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>dotnet fsi docs/tools/YourTool.fsx</span></span></code></pre>
+</li>
+</ol>
+</article></div></main><footer class="site-bottom mx-auto w-[min(1180px,calc(100%-48px))] border-t border-line pt-[22px] pb-[34px] text-xs max-md:w-[min(100%-32px,640px)]" data-astro-cid-qup6pdxl><div class="institution-logos" data-astro-cid-pe4ulxjw><span class="rptu-logo" data-astro-cid-pe4ulxjw><img src="/ProteomIQon/images/RPTU%20Logo_1c-1.svg" alt="RPTU Kaiserslautern-Landau" width="152" height="42" data-astro-cid-pe4ulxjw></span><img class="csb-logo" src="/ProteomIQon/images/csb-narrow-black.svg" alt="CSB" width="96" height="39" data-astro-cid-pe4ulxjw></div><a class="footer-github text-red! no-underline" href="https://github.com/CSBiology/ProteomIQon/" data-astro-cid-qup6pdxl>View the project on GitHub ↗</a></footer></div><script type="module">var e=`<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>`;for(let t of document.querySelectorAll(`main pre`)){let n=document.createElement(`div`);n.className=`copy-command-block`,t.before(n),n.append(t);let r=document.createElement(`button`);r.type=`button`,r.className=`copy-command-button`,r.setAttribute(`aria-label`,`Copy command`),r.title=`Copy command`,r.innerHTML=e,n.append(r);let i;r.addEventListener(`click`,async()=>{let n=t.textContent?.trim()??``;try{try{if(!navigator.clipboard?.writeText)throw Error(`Clipboard API unavailable`);await navigator.clipboard.writeText(n)}catch{let e=document.createElement(`textarea`);e.value=n,e.setAttribute(`readonly`,``),e.style.position=`fixed`,e.style.opacity=`0`,document.body.append(e),e.select();let t=!1;try{t=document.execCommand?.(`copy`)??!1}finally{e.remove()}if(!t)throw Error(`Copy failed`)}r.innerHTML=`<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m5 12 4 4L19 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`,r.setAttribute(`aria-label`,`Copied to clipboard`),r.title=`Copied to clipboard`}catch{r.setAttribute(`aria-label`,`Could not copy command`),r.title=`Could not copy command`}window.clearTimeout(i),i=window.setTimeout(()=>{r.innerHTML=e,r.setAttribute(`aria-label`,`Copy command`),r.title=`Copy command`},1800)})}</script></body></html>

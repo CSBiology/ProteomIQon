@@ -1,0 +1,123 @@
+<!DOCTYPE html><html lang="en" data-theme="light"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="icon" type="image/svg+xml" href="/ProteomIQon/favicon.svg"><link rel="icon" href="/ProteomIQon/favicon.ico"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap"><meta name="description" content="AddDeducedPeptides assigns the protein groups of the combined inference to every peptide present in each aligned .quant file."><meta name="generator" content="Astro v7.3.8"><title>AddDeducedPeptides · ProteomIQon</title><link rel="stylesheet" href="/ProteomIQon/_astro/global.LELvuLUR.css"><link rel="stylesheet" href="/ProteomIQon/_astro/Layout.BzR0PIOI.css"></head><body><div class="site-shell"><header class="site-masthead mx-auto flex w-[min(1180px,calc(100%-48px))] items-center justify-between gap-x-6 border-b border-line pt-6 pb-5 max-md:w-[min(100%-32px,640px)] max-[520px]:block"><a class="inline-flex items-center gap-[11px] text-[1.16rem] font-bold tracking-[-.04em] no-underline" href="/ProteomIQon/" aria-label="ProteomIQon home"><span class="inline-flex h-[21px] items-end gap-0.5" aria-hidden="true"><span class="block h-3 w-[5px] rounded-t-[1px] bg-sky"></span><span class="block h-5 w-[5px] rounded-t-[1px] bg-orange"></span><span class="block h-[15px] w-[5px] rounded-t-[1px] bg-teal"></span></span><span>Proteom<span class="text-orange">IQ</span>on</span></a><nav class="desktop-site-nav flex items-center gap-[25px] max-[520px]:mt-[18px] max-[520px]:flex-wrap max-[520px]:gap-x-4 max-[520px]:gap-y-2" aria-label="Main navigation"><a class="group relative py-1 text-[.8rem] whitespace-nowrap no-underline transition-colors duration-200 hover:text-navy! text-navy!" href="/ProteomIQon/tools/" aria-current="true">Tools<span class="absolute inset-x-0 bottom-0 h-0.5 origin-right scale-x-0 bg-red transition-transform duration-200 group-hover:origin-left group-hover:scale-x-100 origin-left scale-x-100"></span></a><a class="group relative py-1 text-[.8rem] whitespace-nowrap no-underline transition-colors duration-200 hover:text-navy! text-steel!" href="/ProteomIQon/guide/installation/">Installation<span class="absolute inset-x-0 bottom-0 h-0.5 origin-right scale-x-0 bg-red transition-transform duration-200 group-hover:origin-left group-hover:scale-x-100"></span></a><a class="group relative py-1 text-[.8rem] whitespace-nowrap no-underline transition-colors duration-200 hover:text-navy! text-steel!" href="/ProteomIQon/guide/getting-started/">Getting started<span class="absolute inset-x-0 bottom-0 h-0.5 origin-right scale-x-0 bg-red transition-transform duration-200 group-hover:origin-left group-hover:scale-x-100"></span></a><a class="group relative py-1 text-[.8rem] whitespace-nowrap no-underline transition-colors duration-200 hover:text-navy! text-steel!" href="/ProteomIQon/guide/developer-information/">Developer Information<span class="absolute inset-x-0 bottom-0 h-0.5 origin-right scale-x-0 bg-red transition-transform duration-200 group-hover:origin-left group-hover:scale-x-100"></span></a><a class="group relative py-1 text-[.8rem] whitespace-nowrap no-underline transition-colors duration-200 hover:text-navy! text-red!" href="/ProteomIQon/guide/help/">Help<span class="absolute inset-x-0 bottom-0 h-0.5 origin-right scale-x-0 bg-red transition-transform duration-200 group-hover:origin-left group-hover:scale-x-100"></span></a><a class="group relative py-1 text-[.8rem] whitespace-nowrap no-underline transition-colors duration-200 hover:text-navy! text-steel!" href="/ProteomIQon/guide/further-information/">Learn more<span class="absolute inset-x-0 bottom-0 h-0.5 origin-right scale-x-0 bg-red transition-transform duration-200 group-hover:origin-left group-hover:scale-x-100"></span></a></nav><details class="mobile-site-nav"><summary><span>Menu</span><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"></path></svg></summary><nav aria-label="Main navigation"><a href="/ProteomIQon/tools/" aria-current="true">Tools</a><a href="/ProteomIQon/guide/installation/">Installation</a><a href="/ProteomIQon/guide/getting-started/">Getting started</a><a href="/ProteomIQon/guide/developer-information/">Developer Information</a><a href="/ProteomIQon/guide/help/">Help</a><a href="/ProteomIQon/guide/further-information/">Learn more</a></nav></details></header><script type="module">var e=document.querySelector(`.mobile-site-nav`);document.addEventListener(`click`,t=>{e?.open&&t.target instanceof Node&&!e.contains(t.target)&&(e.open=!1)}),e?.addEventListener(`keydown`,t=>{t.key===`Escape`&&(e.open=!1,e.querySelector(`summary`)?.focus())});</script><main class="tool-page-wide"><div class="tool-detail-layout phase-alignment"><aside class="tool-sidebar"><a class="back-link" href="/ProteomIQon/tools/">← All tools</a><div class="sidebar-rule"></div><p class="sidebar-label">In this stage</p><nav aria-label="Alignment tools"><a href="/ProteomIQon/tools/quant-based-alignment/">QuantBasedAlignment</a><a href="/ProteomIQon/tools/alignment-based-quantification/">AlignmentBasedQuantification</a><a href="/ProteomIQon/tools/alignment-based-quant-statistics/">AlignmentBasedQuantStatistics</a><a class="active" aria-current="page" href="/ProteomIQon/tools/add-deduced-peptides/">AddDeducedPeptides</a></nav><details class="mobile-stage-navigation"><summary>In this stage <span>4 tools</span></summary><nav aria-label="Alignment tools"><a href="/ProteomIQon/tools/quant-based-alignment/">QuantBasedAlignment</a><a href="/ProteomIQon/tools/alignment-based-quantification/">AlignmentBasedQuantification</a><a href="/ProteomIQon/tools/alignment-based-quant-statistics/">AlignmentBasedQuantStatistics</a><a class="active" aria-current="page" href="/ProteomIQon/tools/add-deduced-peptides/">AddDeducedPeptides</a></nav></details></aside><main class="tool-detail"><section class="tool-detail-hero"><h1>Add<wbr>Deduced<wbr>Peptides</h1></section><article class="legacy-content tool-legacy-content prose max-w-none prose-a:font-semibold prose-code:before:content-none prose-code:after:content-none"><h2 id="tool-description">Tool Description</h2>
+<p>AddDeducedPeptides takes the protein groups of the combined inference and assigns them to every peptide present in each aligned <code>.quant</code> file, so that <a href="/ProteomIQon/tools/join-quant-with-peptide-ions/">JoinQuantPepIonsWithProteins</a> can join the transferred quantifications to proteins.</p>
+<p>After alignment and <a href="/ProteomIQon/tools/alignment-based-quantification/">AlignmentBasedQuantification</a>, a run's <code>.quant</code> file holds peptides that were never identified in that run, so the run's <code>.prot</code> file from <a href="/ProteomIQon/tools/protein-inference/">ProteinInference</a> does not list them.</p>
+<h2 class="tool-workflow-heading" id="how-does-adddeducedpeptides-work">How does AddDeducedPeptides work?</h2>
+<ol class="tool-explanation-steps" role="list">
+<li><div class="tool-step-copy">
+<p class="tool-step-heading"><strong>Combine protein inference results</strong></p>
+<p>The tool reads all <code>.prot</code> files as one combined inference and does not pair them with <code>.quant</code> files by name.</p>
+<p>This requires ProteinInference to run over all runs together (<code>GroupFiles = true</code>). Each run's <code>.prot</code> file must carry identical scores and Q-values for a protein group.</p>
+</div></li>
+<li><div class="tool-step-copy">
+<p class="tool-step-heading"><strong>Validate protein group scores</strong></p>
+<p>If a protein group has different scores, the tool stops with the message:</p>
+<blockquote>
+<p>If you are running this tool please infer proteins over all files</p>
+</blockquote>
+</div></li>
+<li><div class="tool-step-copy">
+<p class="tool-step-heading"><strong>Generate run-specific protein files</strong></p>
+<p>For every input <code>.quant</code> file, the tool creates <code>&lt;quant&gt;.prot</code> in the output directory. For example, <code>run.quant</code> produces <code>run.prot</code>.</p>
+<p>Each output is a tab-separated table with the columns of a ProteinInference result.</p>
+</div></li>
+<li><div class="tool-step-copy">
+<p class="tool-step-heading"><strong>Filter peptide associations</strong></p>
+<p>Each protein group retains its scores and Q-value. The <code>PeptideSequence</code> column lists only peptides present in the corresponding <code>.quant</code> file.</p>
+<p>Protein groups without matching peptides are removed.</p>
+</div></li>
+<li><div class="tool-step-copy">
+<p class="tool-step-heading"><strong>Continue downstream processing</strong></p>
+<p>JoinQuantPepIonsWithProteins reads the newly generated <code>.prot</code> file together with the same <code>.quant</code> file used here. When scoring transfers, run <a href="/ProteomIQon/tools/alignment-based-quant-statistics/">AlignmentBasedQuantStatistics</a> first and use its output in both steps.</p>
+</div></li>
+</ol>
+<details id="inputs" class="accordion tool-io-accordion tool-io-inputs"><summary class="accordion-header"><span class="accordion-icon" aria-hidden="true">IN</span><span class="accordion-heading"><strong role="heading" aria-level="2">Inputs</strong><small>Files and command-line flags</small></span><span class="accordion-chevron" aria-hidden="true"></span></summary><div class="accordion-content">
+<p>These inputs are needed to execute the tool:</p>
+<div class="tool-io-table-scroll" tabindex="0" role="region" aria-label="Inputs table"><table class="responsive-table" role="table">
+<thead role="rowgroup">
+<tr role="row">
+<th scope="col" role="columnheader">Flag</th>
+<th scope="col" role="columnheader">Meaning</th>
+<th scope="col" role="columnheader">Comes from</th>
+</tr>
+</thead>
+<tbody role="rowgroup">
+<tr role="row">
+<td role="cell" data-label="Flag"><code>-i</code></td>
+<td role="cell" data-label="Meaning">One or more aligned <code>.quant</code> files, or a directory searched for <code>*.quant</code></td>
+<td role="cell" data-label="Comes from"><a href="/ProteomIQon/tools/alignment-based-quantification/">AlignmentBasedQuantification</a> or <a href="/ProteomIQon/tools/alignment-based-quant-statistics/">AlignmentBasedQuantStatistics</a></td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Flag"><code>-ii</code></td>
+<td role="cell" data-label="Meaning">One or more <code>.prot</code> files, or a directory searched for <code>*.prot</code></td>
+<td role="cell" data-label="Comes from"><a href="/ProteomIQon/tools/protein-inference/">ProteinInference</a></td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Flag"><code>-o</code></td>
+<td role="cell" data-label="Meaning">The output directory, created when missing</td>
+<td role="cell" data-label="Comes from">—</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li>For AddDeducedPeptides there is no parameter file needed.</li>
+<li>Delete an existing output <code>&lt;quant&gt;.prot</code> file before a rerun, because the tool appends to it.</li>
+<li>Logs go to <code>AddDeducedPeptides_log.txt</code>.</li>
+</ul>
+</div></details><details id="outputs" class="accordion tool-io-accordion tool-io-outputs"><summary class="accordion-header"><span class="accordion-icon" aria-hidden="true">OUT</span><span class="accordion-heading"><strong role="heading" aria-level="2">Outputs</strong><small>Generated data and log files</small></span><span class="accordion-chevron" aria-hidden="true"></span></summary><div class="accordion-content">
+<p>Each <code>&lt;quant&gt;.prot</code> file contains these columns.</p>
+<div class="tool-io-table-scroll" tabindex="0" role="region" aria-label="Outputs table"><table class="responsive-table" role="table">
+<thead role="rowgroup">
+<tr role="row">
+<th scope="col" role="columnheader">Column</th>
+<th scope="col" role="columnheader">Description</th>
+</tr>
+</thead>
+<tbody role="rowgroup">
+<tr role="row">
+<td role="cell" data-label="Column">ProteinGroup</td>
+<td role="cell" data-label="Description">Protein Identifier Collection</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Column">PeptideSequence</td>
+<td role="cell" data-label="Description">Peptide sequences assigned to this group and present in the corresponding <code>.quant</code>, separated by semicolons</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Column">Class</td>
+<td role="cell" data-label="Description">Peptide Evidence Classes (C1a, C1b, C2a, C2b, C3a, C3b, or Unknown) which define how a peptide has been assigned to its corresponding protein</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Column">TargetScore</td>
+<td role="cell" data-label="Description">Target Score calculated based on the individual peptide scores of PSM</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Column">DecoyScore</td>
+<td role="cell" data-label="Description">Decoy Score calculated based on the individual peptide scores of PSM</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Column">QValue</td>
+<td role="cell" data-label="Description">Q-value (False-Discovery-Rate) for every identified protein</td>
+</tr>
+</tbody>
+</table></div>
+</div></details><h2 id="running-the-tool">Running the tool</h2>
+<ol>
+<li>
+<p><strong>Installing</strong></p>
+<p>Install the tool globally with the .NET CLI.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="sh"><code><span class="line"><span style="color:#B392F0">dotnet</span><span style="color:#9ECBFF"> tool</span><span style="color:#9ECBFF"> install</span><span style="color:#79B8FF"> --global</span><span style="color:#9ECBFF"> ProteomIQon.AddDeducedPeptides</span></span></code></pre>
+</li>
+<li>
+<p><strong>A single run</strong></p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="sh"><code><span class="line"><span style="color:#B392F0">proteomiqon-adddeducedpeptides</span><span style="color:#79B8FF"> -i</span><span style="color:#9ECBFF"> path/to/run.quant</span><span style="color:#79B8FF"> -ii</span><span style="color:#9ECBFF"> path/to/run.prot</span><span style="color:#79B8FF"> -o</span><span style="color:#9ECBFF"> path/to/output</span></span></code></pre>
+</li>
+<li>
+<p><strong>All runs of an experiment</strong></p>
+<p>The tool reads every <code>.prot</code> file from the input directory and writes a new <code>.prot</code> file for each <code>.quant</code> file.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="sh"><code><span class="line"><span style="color:#B392F0">proteomiqon-adddeducedpeptides</span><span style="color:#79B8FF"> -i</span><span style="color:#9ECBFF"> path/to/quant</span><span style="color:#79B8FF"> -ii</span><span style="color:#9ECBFF"> path/to/prot</span><span style="color:#79B8FF"> -o</span><span style="color:#9ECBFF"> path/to/output</span></span></code></pre>
+</li>
+<li>
+<p><strong>Help</strong></p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="sh"><code><span class="line"><span style="color:#B392F0">proteomiqon-adddeducedpeptides</span><span style="color:#79B8FF"> --help</span></span></code></pre>
+</li>
+</ol>
+</article><nav class="tool-pagination" aria-label="Browse tools"><a href="/ProteomIQon/tools/alignment-based-quant-statistics/"><small>Previous tool</small><span>← AlignmentBasedQuantStatistics</span></a><a class="next" href="/ProteomIQon/tools/join-quant-with-peptide-ions/"><small>Next tool</small><span>JoinQuantPepIonsWithProteins →</span></a></nav></main></div></main><footer class="site-bottom mx-auto w-[min(1180px,calc(100%-48px))] border-t border-line pt-[22px] pb-[34px] text-xs max-md:w-[min(100%-32px,640px)]" data-astro-cid-qup6pdxl><div class="institution-logos" data-astro-cid-pe4ulxjw><span class="rptu-logo" data-astro-cid-pe4ulxjw><img src="/ProteomIQon/images/RPTU%20Logo_1c-1.svg" alt="RPTU Kaiserslautern-Landau" width="152" height="42" data-astro-cid-pe4ulxjw></span><img class="csb-logo" src="/ProteomIQon/images/csb-narrow-black.svg" alt="CSB" width="96" height="39" data-astro-cid-pe4ulxjw></div><a class="footer-github text-red! no-underline" href="https://github.com/CSBiology/ProteomIQon/" data-astro-cid-qup6pdxl>View the project on GitHub ↗</a></footer></div><script type="module">var e=`<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>`;for(let t of document.querySelectorAll(`main pre`)){let n=document.createElement(`div`);n.className=`copy-command-block`,t.before(n),n.append(t);let r=document.createElement(`button`);r.type=`button`,r.className=`copy-command-button`,r.setAttribute(`aria-label`,`Copy command`),r.title=`Copy command`,r.innerHTML=e,n.append(r);let i;r.addEventListener(`click`,async()=>{let n=t.textContent?.trim()??``;try{try{if(!navigator.clipboard?.writeText)throw Error(`Clipboard API unavailable`);await navigator.clipboard.writeText(n)}catch{let e=document.createElement(`textarea`);e.value=n,e.setAttribute(`readonly`,``),e.style.position=`fixed`,e.style.opacity=`0`,document.body.append(e),e.select();let t=!1;try{t=document.execCommand?.(`copy`)??!1}finally{e.remove()}if(!t)throw Error(`Copy failed`)}r.innerHTML=`<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m5 12 4 4L19 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`,r.setAttribute(`aria-label`,`Copied to clipboard`),r.title=`Copied to clipboard`}catch{r.setAttribute(`aria-label`,`Could not copy command`),r.title=`Could not copy command`}window.clearTimeout(i),i=window.setTimeout(()=>{r.innerHTML=e,r.setAttribute(`aria-label`,`Copy command`),r.title=`Copy command`},1800)})}</script></body></html>

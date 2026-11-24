@@ -1,0 +1,300 @@
+<!DOCTYPE html><html lang="en" data-theme="light"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="icon" type="image/svg+xml" href="/ProteomIQon/favicon.svg"><link rel="icon" href="/ProteomIQon/favicon.ico"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap"><meta name="description" content="LabeledProteinQuantification combines light and heavy peptide-ion intensities into protein-group intensities and light-to-heavy ratios for each run."><meta name="generator" content="Astro v7.3.8"><title>LabeledProteinQuantification · ProteomIQon</title><link rel="stylesheet" href="/ProteomIQon/_astro/global.LELvuLUR.css"><link rel="stylesheet" href="/ProteomIQon/_astro/Layout.BzR0PIOI.css"></head><body><div class="site-shell"><header class="site-masthead mx-auto flex w-[min(1180px,calc(100%-48px))] items-center justify-between gap-x-6 border-b border-line pt-6 pb-5 max-md:w-[min(100%-32px,640px)] max-[520px]:block"><a class="inline-flex items-center gap-[11px] text-[1.16rem] font-bold tracking-[-.04em] no-underline" href="/ProteomIQon/" aria-label="ProteomIQon home"><span class="inline-flex h-[21px] items-end gap-0.5" aria-hidden="true"><span class="block h-3 w-[5px] rounded-t-[1px] bg-sky"></span><span class="block h-5 w-[5px] rounded-t-[1px] bg-orange"></span><span class="block h-[15px] w-[5px] rounded-t-[1px] bg-teal"></span></span><span>Proteom<span class="text-orange">IQ</span>on</span></a><nav class="desktop-site-nav flex items-center gap-[25px] max-[520px]:mt-[18px] max-[520px]:flex-wrap max-[520px]:gap-x-4 max-[520px]:gap-y-2" aria-label="Main navigation"><a class="group relative py-1 text-[.8rem] whitespace-nowrap no-underline transition-colors duration-200 hover:text-navy! text-navy!" href="/ProteomIQon/tools/" aria-current="true">Tools<span class="absolute inset-x-0 bottom-0 h-0.5 origin-right scale-x-0 bg-red transition-transform duration-200 group-hover:origin-left group-hover:scale-x-100 origin-left scale-x-100"></span></a><a class="group relative py-1 text-[.8rem] whitespace-nowrap no-underline transition-colors duration-200 hover:text-navy! text-steel!" href="/ProteomIQon/guide/installation/">Installation<span class="absolute inset-x-0 bottom-0 h-0.5 origin-right scale-x-0 bg-red transition-transform duration-200 group-hover:origin-left group-hover:scale-x-100"></span></a><a class="group relative py-1 text-[.8rem] whitespace-nowrap no-underline transition-colors duration-200 hover:text-navy! text-steel!" href="/ProteomIQon/guide/getting-started/">Getting started<span class="absolute inset-x-0 bottom-0 h-0.5 origin-right scale-x-0 bg-red transition-transform duration-200 group-hover:origin-left group-hover:scale-x-100"></span></a><a class="group relative py-1 text-[.8rem] whitespace-nowrap no-underline transition-colors duration-200 hover:text-navy! text-steel!" href="/ProteomIQon/guide/developer-information/">Developer Information<span class="absolute inset-x-0 bottom-0 h-0.5 origin-right scale-x-0 bg-red transition-transform duration-200 group-hover:origin-left group-hover:scale-x-100"></span></a><a class="group relative py-1 text-[.8rem] whitespace-nowrap no-underline transition-colors duration-200 hover:text-navy! text-red!" href="/ProteomIQon/guide/help/">Help<span class="absolute inset-x-0 bottom-0 h-0.5 origin-right scale-x-0 bg-red transition-transform duration-200 group-hover:origin-left group-hover:scale-x-100"></span></a><a class="group relative py-1 text-[.8rem] whitespace-nowrap no-underline transition-colors duration-200 hover:text-navy! text-steel!" href="/ProteomIQon/guide/further-information/">Learn more<span class="absolute inset-x-0 bottom-0 h-0.5 origin-right scale-x-0 bg-red transition-transform duration-200 group-hover:origin-left group-hover:scale-x-100"></span></a></nav><details class="mobile-site-nav"><summary><span>Menu</span><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"></path></svg></summary><nav aria-label="Main navigation"><a href="/ProteomIQon/tools/" aria-current="true">Tools</a><a href="/ProteomIQon/guide/installation/">Installation</a><a href="/ProteomIQon/guide/getting-started/">Getting started</a><a href="/ProteomIQon/guide/developer-information/">Developer Information</a><a href="/ProteomIQon/guide/help/">Help</a><a href="/ProteomIQon/guide/further-information/">Learn more</a></nav></details></header><script type="module">var e=document.querySelector(`.mobile-site-nav`);document.addEventListener(`click`,t=>{e?.open&&t.target instanceof Node&&!e.contains(t.target)&&(e.open=!1)}),e?.addEventListener(`keydown`,t=>{t.key===`Escape`&&(e.open=!1,e.querySelector(`summary`)?.focus())});</script><main class="tool-page-wide"><div class="tool-detail-layout phase-protein-quantification"><aside class="tool-sidebar"><a class="back-link" href="/ProteomIQon/tools/">← All tools</a><div class="sidebar-rule"></div><p class="sidebar-label">In this stage</p><nav aria-label="Protein Quantification tools"><a href="/ProteomIQon/tools/join-quant-with-peptide-ions/">JoinQuantPepIonsWithProteins</a><a href="/ProteomIQon/tools/label-free-protein-quantification/">LabelFreeProteinQuantification</a><a class="active" aria-current="page" href="/ProteomIQon/tools/labeled-protein-quantification/">LabeledProteinQuantification</a><a href="/ProteomIQon/tools/ratio-lfq/">RatioLFQ</a></nav><details class="mobile-stage-navigation"><summary>In this stage <span>4 tools</span></summary><nav aria-label="Protein Quantification tools"><a href="/ProteomIQon/tools/join-quant-with-peptide-ions/">JoinQuantPepIonsWithProteins</a><a href="/ProteomIQon/tools/label-free-protein-quantification/">LabelFreeProteinQuantification</a><a class="active" aria-current="page" href="/ProteomIQon/tools/labeled-protein-quantification/">LabeledProteinQuantification</a><a href="/ProteomIQon/tools/ratio-lfq/">RatioLFQ</a></nav></details></aside><main class="tool-detail"><section class="tool-detail-hero"><h1>Labeled<wbr>Protein<wbr>Quantification</h1></section><article class="legacy-content tool-legacy-content prose max-w-none prose-a:font-semibold prose-code:before:content-none prose-code:after:content-none"><h2 id="tool-description">Tool Description</h2>
+<p>In <strong>15N metabolic labeling</strong>, a sample containing heavy (15N-labeled) peptides is mixed with a light (14N) sample. Both forms are measured in the same mass spectrometry run. Comparing their intensities makes it possible to quantify differences between the two samples.</p>
+<p>After <a href="/ProteomIQon/tools/join-quant-with-peptide-ions/">JoinQuantPepIonsWithProteins</a>, each quantified peptide ion is assigned to a protein group. <strong>LabeledProteinQuantification</strong> combines the light and heavy peptide intensities and calculates a light-to-heavy ratio for each protein group and run.</p>
+<p>The results can be passed to <a href="/ProteomIQon/tools/ratio-lfq/">RatioLFQ</a> for further analysis.</p>
+<p>BioFSharp.Mz explains how <a href="https://www.biofsharp.com/BioFSharp.Mz/02_02_search_databases.html#Describing-the-search-space">isotopic labels enter the search</a> and how the <a href="https://www.biofsharp.com/BioFSharp.Mz/03_01_quantification.html#From-one-peak-to-a-pipeline">two peaks are quantified</a>.</p>
+<p><img alt="Overview of light and heavy peptide quantification" loading="lazy" decoding="async" width="1131" height="337" src="/ProteomIQon/_astro/LabeledQuant.CU2_xQcX_1FQE59.webp"></p>
+<h2 class="tool-workflow-heading" id="how-does-labeled-protein-quantification-work">How does Labeled Protein Quantification work?</h2>
+<p>The tool applies <code>ModificationFilter</code> when it reads the input rows, before any aggregation.</p>
+<p>The tool processes peptide-ion quantifications in <strong>four aggregation steps</strong>. The first and last steps are mandatory; the two intermediate steps are optional.</p>
+<ol class="tool-explanation-steps" role="list">
+<li><div class="tool-step-copy">
+<p class="tool-step-heading"><strong>Aggregate light and heavy peptide forms (mandatory)</strong></p>
+<p>For each peptide ion, the tool calculates <code>Ratio_LightByHeavy</code> from the light and heavy intensities. It also combines rows identified from the light and heavy versions of the same peptide ion.</p>
+<p>An optional correlation threshold can remove rows whose light and heavy elution profiles do not agree sufficiently.</p>
+</div></li>
+<li><div class="tool-step-copy">
+<p class="tool-step-heading"><strong>Aggregate peptide charge states (optional)</strong></p>
+<p>Peptide ions with the same sequence and modifications but different precursor charge states can be combined into one set of light, heavy and ratio values.</p>
+</div></li>
+<li><div class="tool-step-copy">
+<p class="tool-step-heading"><strong>Aggregate modified peptides (optional)</strong></p>
+<p>Different modified versions of the same peptide sequence can be combined.</p>
+</div></li>
+<li><div class="tool-step-copy">
+<p class="tool-step-heading"><strong>Aggregate to protein groups (mandatory)</strong></p>
+<p>The remaining peptide-level measurements are combined for each protein group and run, producing aggregated light intensity, heavy intensity and light-to-heavy ratio.</p>
+</div></li>
+</ol>
+<p>Each aggregation step can <strong>transform values, filter individual measurements, remove outliers within groups and aggregate the remaining values</strong>. The filters are configured per series, but a row that any filter rejects is removed from all three series.</p>
+<h3 id="what-happens-when-stages-are-skipped">What happens when stages are skipped?</h3>
+<p>If charge-state aggregation is disabled, charge states remain separate during the following steps. If modification aggregation is disabled, modified forms are not merged at that stage. When both are disabled, protein-group aggregation works directly on the results of the mandatory light/heavy aggregation step.</p>
+<details id="inputs" class="accordion tool-io-accordion tool-io-inputs"><summary class="accordion-header"><span class="accordion-icon" aria-hidden="true">IN</span><span class="accordion-heading"><strong role="heading" aria-level="2">Inputs</strong><small>Files and command-line flags</small></span><span class="accordion-chevron" aria-hidden="true"></span></summary><div class="accordion-content">
+<div class="tool-io-table-scroll" tabindex="0" role="region" aria-label="Inputs table"><table class="responsive-table" role="table">
+<thead role="rowgroup">
+<tr role="row">
+<th scope="col" role="columnheader">Flag</th>
+<th scope="col" role="columnheader">Meaning</th>
+<th scope="col" role="columnheader">Comes from</th>
+</tr>
+</thead>
+<tbody role="rowgroup">
+<tr role="row">
+<td role="cell" data-label="Flag"><code>-i</code></td>
+<td role="cell" data-label="Meaning">One or more <code>.quantAndProt</code> files, or a directory containing these files. Each row contains peptide quantification together with a protein-group assignment.</td>
+<td role="cell" data-label="Comes from"><a href="/ProteomIQon/tools/join-quant-with-peptide-ions/">JoinQuantPepIonsWithProteins</a></td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Flag"><code>-o</code></td>
+<td role="cell" data-label="Meaning">Directory in which the output tables and log files are saved. The directory is created if necessary.</td>
+<td role="cell" data-label="Comes from">Chosen output location</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Flag"><code>-p</code></td>
+<td role="cell" data-label="Meaning">JSON parameter file controlling filtering, transformations and aggregation.</td>
+<td role="cell" data-label="Comes from"><a href="https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/LabeledQuantificationParams.json">Default parameter file</a></td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Important:</strong> Protein-group assignments must already be present in the <code>.quantAndProt</code> input. The tool does not perform peptide identification or protein inference itself.</p>
+</div></details><details id="parameter-file" class="accordion tool-io-accordion tool-io-parameters"><summary class="accordion-header"><span class="accordion-icon" aria-hidden="true">CFG</span><span class="accordion-heading"><strong role="heading" aria-level="2">Parameter file</strong><small>Default values and tool settings</small></span><span class="accordion-chevron" aria-hidden="true"></span></summary><div class="accordion-content">
+<h3 id="general-settings">General settings</h3>
+<div class="tool-io-table-scroll" tabindex="0" role="region" aria-label="Parameter file table"><table class="responsive-table" role="table">
+<thead role="rowgroup">
+<tr role="row">
+<th scope="col" role="columnheader">Parameter</th>
+<th scope="col" role="columnheader">Default</th>
+<th scope="col" role="columnheader">Description</th>
+</tr>
+</thead>
+<tbody role="rowgroup">
+<tr role="row">
+<td role="cell" data-label="Parameter"><code>Correlation_Light_Heavy_Threshold</code></td>
+<td role="cell" data-label="Default"><code>None</code></td>
+<td role="cell" data-label="Description">Optional minimum correlation between light and heavy elution profiles. For example, <code>Some 0.9</code> retains rows with a correlation above 0.9. The filter runs during the first aggregation step.</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Parameter"><code>Alignment_QValue</code></td>
+<td role="cell" data-label="Default"><code>Some 0.05</code></td>
+<td role="cell" data-label="Description">Excludes transferred rows with an alignment q-value at or above the threshold. PSM-based rows carry an alignment q-value of <code>0</code>, and rows with no alignment q-value are kept. <code>None</code> disables the filter.</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Parameter"><code>ModificationFilter</code></td>
+<td role="cell" data-label="Default"><code>UseModifiedPeptides.All</code></td>
+<td role="cell" data-label="Description">Filters peptides when reading the input. <code>All</code> accepts all peptides, <code>No</code> excludes modified peptides, and <code>UseOnly</code> accepts unmodified peptides plus peptides carrying only the specified modifications.</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Parameter"><code>AggregateGlobalModificationsParams</code></td>
+<td role="cell" data-label="Default">Mean for light, heavy and ratio; no transformations or filters</td>
+<td role="cell" data-label="Description">Settings for combining identifications of the light and heavy versions of each ion. This step always runs.</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Parameter"><code>AggregatePeptideChargeStatesParams</code></td>
+<td role="cell" data-label="Default"><code>None</code></td>
+<td role="cell" data-label="Description">When set to <code>Some AggregationParams</code>, combines different charge states. <code>None</code> skips this step.</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Parameter"><code>AggregateModifiedPeptidesParams</code></td>
+<td role="cell" data-label="Default"><code>None</code></td>
+<td role="cell" data-label="Description">When set to <code>Some AggregationParams</code>, combines different modified peptide forms. <code>None</code> skips this step.</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Parameter"><code>AggregateToProteinGroupsParams</code></td>
+<td role="cell" data-label="Default">Mean for light, heavy and ratio; no transformations or filters</td>
+<td role="cell" data-label="Description">Settings for the final protein-group aggregation. This step always runs.</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="lightheavy-aggregation">Light/heavy aggregation</h3>
+<p><code>AggregateGlobalModificationsParams</code> controls the <strong>mandatory first step</strong>. It combines peptide-ion identifications originating from either labeled form and produces three measurements:</p>
+<ul>
+<li><code>Quant_Light</code>: Intensity of the light peptide form.</li>
+<li><code>Quant_Heavy</code>: Intensity of the heavy peptide form.</li>
+<li><code>Ratio_LightByHeavy</code>: Ratio calculated from light and heavy intensities.</li>
+</ul>
+<p>The optional <code>Correlation_Light_Heavy_Threshold</code> is applied at this stage.</p>
+<h3 id="charge-state-aggregation">Charge-state aggregation</h3>
+<p>Set <code>AggregatePeptideChargeStatesParams</code> to <code>Some AggregationParams</code> to merge measurements of the same modified peptide across different charge states.</p>
+<p>Set it to <code>None</code> (JSON <code>null</code>) to skip this step. The official charge-aggregation presets use the <strong>mean</strong> of light, heavy and ratio values without additional filtering or transformations.</p>
+<h3 id="modification-aggregation">Modification aggregation</h3>
+<p>Set <code>AggregateModifiedPeptidesParams</code> to <code>Some AggregationParams</code> to merge different modified forms of the same peptide sequence.</p>
+<p>Set it to <code>None</code> (JSON <code>null</code>) to skip the step. In the supplied preset that enables both optional stages, the light, heavy and ratio series are each aggregated using the <strong>mean</strong>.</p>
+<h3 id="protein-group-aggregation">Protein-group aggregation</h3>
+<p><code>AggregateToProteinGroupsParams</code> controls the <strong>mandatory final step</strong>. Peptide measurements associated with the same protein group and run are combined into protein-level light, heavy and ratio values.</p>
+<p>Unlike the two optional intermediate stages, this parameter must contain an aggregation configuration.</p>
+<h3 id="shared-aggregation-settings">Shared aggregation settings</h3>
+<p>Every enabled stage uses the same four-field <code>LabeledProteinQuantification.AggregationParams</code> structure. Each setting can be configured independently for <strong>Light</strong>, <strong>Heavy</strong> and <strong>Ratio</strong>.</p>
+<div class="tool-io-table-scroll" tabindex="0" role="region" aria-label="Parameter file table"><table class="responsive-table" role="table">
+<thead role="rowgroup">
+<tr role="row">
+<th scope="col" role="columnheader">Parameter</th>
+<th scope="col" role="columnheader">Default</th>
+<th scope="col" role="columnheader">Description</th>
+</tr>
+</thead>
+<tbody role="rowgroup">
+<tr role="row">
+<td role="cell" data-label="Parameter"><code>LabeledTransform</code></td>
+<td role="cell" data-label="Default"><code>None</code></td>
+<td role="cell" data-label="Description">Optional numeric transformation applied before filtering. Supported operations: <code>Log2</code>, <code>Add</code>, <code>Substract</code>, <code>MultiplyBy</code> and <code>DivideBy</code>. A series set to <code>None</code> remains unchanged.</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Parameter"><code>LabeledSingleFilters</code></td>
+<td role="cell" data-label="Default"><code>None</code></td>
+<td role="cell" data-label="Description">Filters individual measurements using <code>IsBiggerThan</code> or <code>IsSmallerThan</code>. A row must pass every configured filter of all three series.</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Parameter"><code>LabeledGroupFilters</code></td>
+<td role="cell" data-label="Default"><code>None</code></td>
+<td role="cell" data-label="Description">Filters each aggregation group. <code>Tukey factor</code> uses the interquartile-range multiplier, <code>Stdev factor</code> keeps values within that many standard deviations of the mean, and <code>TopX count</code> selects the highest values using an integer count.</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="Parameter"><code>LabeledAggregation</code></td>
+<td role="cell" data-label="Default"><code>{ Light = Mean; Heavy = Mean; Ratio = Mean }</code></td>
+<td role="cell" data-label="Description">Specifies how the remaining values are combined independently for each series. Choices: <code>Mean</code>, <code>Median</code> and <code>Sum</code>.</td>
+</tr>
+</tbody>
+</table></div>
+<p>This F# configuration log₂-transforms all three series, keeps only rows whose transformed ratio is below zero, removes rows that are Tukey outliers in the transformed light values, and averages each series. A row that any filter rejects is removed from all three series.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="fsharp"><code><span class="line"><span style="color:#F97583">let</span><span style="color:#FFAB70"> example </span><span style="color:#F97583">:</span><span style="color:#B392F0"> Common.LabeledProteinQuantification.AggregationParams </span><span style="color:#F97583">=</span></span>
+<span class="line"><span style="color:#F97583">    {</span></span>
+<span class="line"><span style="color:#E1E4E8">        LabeledTransform </span><span style="color:#F97583">=</span></span>
+<span class="line"><span style="color:#E1E4E8">            Some </span><span style="color:#F97583">{</span><span style="color:#E1E4E8"> Light </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> Some Log2</span><span style="color:#F97583">;</span><span style="color:#E1E4E8"> Heavy </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> Some Log2</span><span style="color:#F97583">;</span><span style="color:#E1E4E8"> Ratio </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> Some Log2 </span><span style="color:#F97583">}</span></span>
+<span class="line"><span style="color:#E1E4E8">        LabeledSingleFilters </span><span style="color:#F97583">=</span></span>
+<span class="line"><span style="color:#E1E4E8">            Some </span><span style="color:#F97583">{</span><span style="color:#E1E4E8"> Light </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> None</span><span style="color:#F97583">;</span><span style="color:#E1E4E8"> Heavy </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> None</span><span style="color:#F97583">;</span><span style="color:#E1E4E8"> Ratio </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> Some </span><span style="color:#F97583">(</span><span style="color:#E1E4E8">seq </span><span style="color:#F97583">[</span><span style="color:#E1E4E8">IsSmallerThan </span><span style="color:#79B8FF">0.0</span><span style="color:#F97583">])</span><span style="color:#F97583"> }</span></span>
+<span class="line"><span style="color:#E1E4E8">        LabeledGroupFilters </span><span style="color:#F97583">=</span></span>
+<span class="line"><span style="color:#E1E4E8">            Some </span><span style="color:#F97583">{</span><span style="color:#E1E4E8"> Light </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> Some </span><span style="color:#F97583">(</span><span style="color:#E1E4E8">seq </span><span style="color:#F97583">[</span><span style="color:#E1E4E8">Tukey </span><span style="color:#79B8FF">1.5</span><span style="color:#F97583">]);</span><span style="color:#E1E4E8"> Heavy </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> None</span><span style="color:#F97583">;</span><span style="color:#E1E4E8"> Ratio </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> None </span><span style="color:#F97583">}</span></span>
+<span class="line"><span style="color:#E1E4E8">        LabeledAggregation </span><span style="color:#F97583">=</span></span>
+<span class="line"><span style="color:#F97583">            {</span><span style="color:#E1E4E8"> Light </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> Mean</span><span style="color:#F97583">;</span><span style="color:#E1E4E8"> Heavy </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> Mean</span><span style="color:#F97583">;</span><span style="color:#E1E4E8"> Ratio </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> Mean </span><span style="color:#F97583">}</span></span>
+<span class="line"><span style="color:#F97583">    }</span></span></code></pre>
+<p><strong>JSON format:</strong> Optional F# values set to <code>None</code> are stored as <code>null</code>. An aggregation choice such as <code>Mean</code> is represented by an object like <code>{"Case": "Mean"}</code>.</p>
+<h3 id="default-parameter-files">Default parameter files</h3>
+<p>The repository provides <strong>five presets</strong>:</p>
+<ol>
+<li><a href="https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/LabeledQuantificationParams.json">LabeledQuantificationParams.json</a> — Runs the mandatory light/heavy and protein-group aggregation steps, using the mean for each series.</li>
+<li><a href="https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/LabeledQuantificationParams_withCorrFilter.json">LabeledQuantificationParams_withCorrFilter.json</a> — Adds a light/heavy correlation threshold of <code>0.9</code>.</li>
+<li><a href="https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/LabeledQuantificationParams_CorrFilter_ChargeAgg.json">LabeledQuantificationParams_CorrFilter_ChargeAgg.json</a> — Uses a correlation threshold of <code>0.0</code> and enables charge-state aggregation with the mean.</li>
+<li><a href="https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/LabeledQuantificationParams_CorrFilter_ChargeAgg_ModAgg.json">LabeledQuantificationParams_CorrFilter_ChargeAgg_ModAgg.json</a> — Uses a correlation threshold of <code>0.0</code> and enables both charge-state and modification aggregation with the mean.</li>
+<li><a href="https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/LabeledQuantificationParams_Transform_Filter_Sum.json">LabeledQuantificationParams_Transform_Filter_Sum.json</a> — Applies <code>Log2</code> to light, heavy and ratio in the first step, retains log2 ratios below <code>0.0</code>, and aggregates protein-level light and heavy values with <code>Sum</code> while ratios use <code>Mean</code>.</li>
+</ol>
+<p>All five linked presets specify an alignment Q-value threshold of <code>0.05</code>.</p>
+</div></details><details id="outputs" class="accordion tool-io-accordion tool-io-outputs"><summary class="accordion-header"><span class="accordion-icon" aria-hidden="true">OUT</span><span class="accordion-heading"><strong role="heading" aria-level="2">Outputs</strong><small>Generated data and log files</small></span><span class="accordion-chevron" aria-hidden="true"></span></summary><div class="accordion-content">
+<p>The tool writes <strong>three mandatory</strong> and <strong>up to two optional</strong> tab-separated result tables.</p>
+<div class="tool-io-table-scroll" tabindex="0" role="region" aria-label="Outputs table"><table class="responsive-table" role="table">
+<thead role="rowgroup">
+<tr role="row">
+<th scope="col" role="columnheader">File</th>
+<th scope="col" role="columnheader">Output content</th>
+<th scope="col" role="columnheader">When produced</th>
+</tr>
+</thead>
+<tbody role="rowgroup">
+<tr role="row">
+<td role="cell" data-label="File"><code>GlobModAggregation.txt</code></td>
+<td role="cell" data-label="Output content">Peptide-ion values after combining light/heavy identifications, including <code>Quant_Light</code>, <code>Quant_Heavy</code> and <code>Ratio_LightByHeavy</code>.</td>
+<td role="cell" data-label="When produced">Always</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="File"><code>ChargeAggregation.txt</code></td>
+<td role="cell" data-label="Output content">Measurements after aggregation across charge states.</td>
+<td role="cell" data-label="When produced">Only if <code>AggregatePeptideChargeStatesParams</code> is enabled</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="File"><code>ModificationAggregation.txt</code></td>
+<td role="cell" data-label="Output content">Measurements after aggregation across modified peptide forms.</td>
+<td role="cell" data-label="When produced">Only if <code>AggregateModifiedPeptidesParams</code> is enabled</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="File"><code>ProteinAggregation.txt</code></td>
+<td role="cell" data-label="Output content">One row per protein group and run, with aggregated light, heavy and ratio values. Includes the number of observations used, coefficient of variation (CV), standard deviation and standard error of the mean (SEM) for each series.</td>
+<td role="cell" data-label="When produced">Always</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="File"><code>LabeledQuant.txt</code></td>
+<td role="cell" data-label="Output content">Protein-group results in a wide table: one row per protein group and a set of columns for each input run. Column names follow patterns such as <code>&lt;run&gt;.Ratio_LightByHeavy</code> and <code>&lt;run&gt;.Quant_Heavy</code>.</td>
+<td role="cell" data-label="When produced">Always</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Next step:</strong> <a href="/ProteomIQon/tools/ratio-lfq/">RatioLFQ</a> uses <code>LabeledQuant.txt</code> to derive comparable run-level intensities from the ratios.</p>
+<h3 id="log-files">Log files</h3>
+<p>Two additional files are written to the output directory:</p>
+<div class="tool-io-table-scroll" tabindex="0" role="region" aria-label="Outputs table"><table class="responsive-table" role="table">
+<thead role="rowgroup">
+<tr role="row">
+<th scope="col" role="columnheader">File</th>
+<th scope="col" role="columnheader">Description</th>
+</tr>
+</thead>
+<tbody role="rowgroup">
+<tr role="row">
+<td role="cell" data-label="File"><code>LabeledProteinQuantification_log.txt</code></td>
+<td role="cell" data-label="Description">Log messages from the protein quantification tool.</td>
+</tr>
+<tr role="row">
+<td role="cell" data-label="File"><code>LabeledQuantification_log.txt</code></td>
+<td role="cell" data-label="Description">Additional log messages from the labeled quantification process.</td>
+</tr>
+</tbody>
+</table></div>
+</div></details><details id="parameter-generation" class="accordion tool-io-accordion tool-io-parameters"><summary class="accordion-header"><span class="accordion-icon" aria-hidden="true">CFG</span><span class="accordion-heading"><strong role="heading" aria-level="2">Parameter generation</strong><small>JSON and parameter-generation examples</small></span><span class="accordion-chevron" aria-hidden="true"></span></summary><div class="accordion-content">
+<p>From the ProteomIQon repository root, build the library with <code>dotnet build src/ProteomIQon/ProteomIQon.fsproj -c Release</code>. Save the following as <code>generate-params.fsx</code> in that same directory and run <code>dotnet fsi generate-params.fsx</code>. The script writes the JSON file to the system temporary directory.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="fsharp"><code><span class="line"><span style="color:#E1E4E8">#r </span><span style="color:#9ECBFF">"nuget: Newtonsoft.Json, 13.0.4"</span></span>
+<span class="line"><span style="color:#E1E4E8">#r </span><span style="color:#9ECBFF">"./src/ProteomIQon/bin/Release/net10.0/ProteomIQon.dll"</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">open</span><span style="color:#B392F0"> System.IO</span></span>
+<span class="line"><span style="color:#F97583">open</span><span style="color:#B392F0"> ProteomIQon</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D">// Used for the first step and the protein step of the default file: no transform, no filters, mean of light, heavy and ratio.</span></span>
+<span class="line"><span style="color:#F97583">let</span><span style="color:#FFAB70"> meanOfAll </span><span style="color:#F97583">:</span><span style="color:#B392F0"> Common.LabeledProteinQuantification.AggregationParams </span><span style="color:#F97583">=</span></span>
+<span class="line"><span style="color:#F97583">    {</span></span>
+<span class="line"><span style="color:#E1E4E8">        LabeledTransform     </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> None</span></span>
+<span class="line"><span style="color:#E1E4E8">        LabeledSingleFilters </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> None</span></span>
+<span class="line"><span style="color:#E1E4E8">        LabeledGroupFilters  </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> None</span></span>
+<span class="line"><span style="color:#E1E4E8">        LabeledAggregation   </span><span style="color:#F97583">=</span></span>
+<span class="line"><span style="color:#F97583">            {</span></span>
+<span class="line"><span style="color:#E1E4E8">                Light </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> NumericAggregation.Mean</span></span>
+<span class="line"><span style="color:#E1E4E8">                Heavy </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> NumericAggregation.Mean</span></span>
+<span class="line"><span style="color:#E1E4E8">                Ratio </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> NumericAggregation.Mean</span></span>
+<span class="line"><span style="color:#F97583">            }</span></span>
+<span class="line"><span style="color:#F97583">    }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">let</span><span style="color:#FFAB70"> labeledQuantificationParams </span><span style="color:#F97583">:</span><span style="color:#B392F0"> Dto.LabeledQuantificationParams </span><span style="color:#F97583">=</span></span>
+<span class="line"><span style="color:#F97583">    {</span></span>
+<span class="line"><span style="color:#E1E4E8">        Correlation</span><span style="color:#F97583">_</span><span style="color:#E1E4E8">Light</span><span style="color:#F97583">_</span><span style="color:#E1E4E8">Heavy</span><span style="color:#F97583">_</span><span style="color:#E1E4E8">Threshold  </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> None</span></span>
+<span class="line"><span style="color:#E1E4E8">        Alignment</span><span style="color:#F97583">_</span><span style="color:#E1E4E8">QValue                   </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> Some </span><span style="color:#79B8FF">0.05</span></span>
+<span class="line"><span style="color:#E1E4E8">        ModificationFilter                 </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> UseModifiedPeptides.All</span></span>
+<span class="line"><span style="color:#E1E4E8">        AggregateGlobalModificationsParams </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> meanOfAll</span></span>
+<span class="line"><span style="color:#E1E4E8">        AggregatePeptideChargeStatesParams </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> None</span></span>
+<span class="line"><span style="color:#E1E4E8">        AggregateModifiedPeptidesParams    </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> None</span></span>
+<span class="line"><span style="color:#E1E4E8">        AggregateToProteinGroupsParams     </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> meanOfAll</span></span>
+<span class="line"><span style="color:#F97583">    }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D">// Replace the temp folder with your project folder.</span></span>
+<span class="line"><span style="color:#F97583">let</span><span style="color:#FFAB70"> outputPath</span><span style="color:#F97583"> =</span><span style="color:#E1E4E8"> Path.Combine</span><span style="color:#F97583">(</span><span style="color:#E1E4E8">Path.GetTempPath</span><span style="color:#F97583">(),</span><span style="color:#9ECBFF"> "LabeledQuantificationParams.json"</span><span style="color:#F97583">)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#E1E4E8">Json.serializeAndWrite outputPath labeledQuantificationParams</span></span></code></pre>
+</div></details><h2 id="installing-and-executing-the-tool">Installing and executing the tool</h2>
+<ol>
+<li>
+<p><strong>Installing</strong></p>
+<p>Install the tool globally with the .NET CLI:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="sh"><code><span class="line"><span style="color:#B392F0">dotnet</span><span style="color:#9ECBFF"> tool</span><span style="color:#9ECBFF"> install</span><span style="color:#79B8FF"> --global</span><span style="color:#9ECBFF"> ProteomIQon.LabeledProteinQuantification</span></span></code></pre>
+</li>
+<li>
+<p><strong>Execute a single run</strong></p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="sh"><code><span class="line"><span style="color:#B392F0">proteomiqon-labeledproteinquantification</span><span style="color:#79B8FF"> -i</span><span style="color:#9ECBFF"> path/to/run.quantAndProt</span><span style="color:#79B8FF"> -o</span><span style="color:#9ECBFF"> path/to/output</span><span style="color:#79B8FF"> -p</span><span style="color:#9ECBFF"> path/to/LabeledQuantificationParams.json</span></span></code></pre>
+</li>
+<li>
+<p><strong>Several runs in one table, from a list or from a directory</strong></p>
+<p>Provide several input files or a directory containing <code>.quantAndProt</code> files:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="sh"><code><span class="line"><span style="color:#B392F0">proteomiqon-labeledproteinquantification</span><span style="color:#79B8FF"> -i</span><span style="color:#9ECBFF"> path/to/run1.quantAndProt</span><span style="color:#9ECBFF"> path/to/run2.quantAndProt</span><span style="color:#79B8FF"> -o</span><span style="color:#9ECBFF"> path/to/output</span><span style="color:#79B8FF"> -p</span><span style="color:#9ECBFF"> path/to/LabeledQuantificationParams.json</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#B392F0">proteomiqon-labeledproteinquantification</span><span style="color:#79B8FF"> -i</span><span style="color:#9ECBFF"> path/to/quantAndProt</span><span style="color:#79B8FF"> -o</span><span style="color:#9ECBFF"> path/to/output</span><span style="color:#79B8FF"> -p</span><span style="color:#9ECBFF"> path/to/LabeledQuantificationParams.json</span></span></code></pre>
+</li>
+<li>
+<p><strong>All flags</strong></p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="sh"><code><span class="line"><span style="color:#B392F0">proteomiqon-labeledproteinquantification</span><span style="color:#79B8FF"> --help</span></span></code></pre>
+</li>
+</ol>
+</article><nav class="tool-pagination" aria-label="Browse tools"><a href="/ProteomIQon/tools/label-free-protein-quantification/"><small>Previous tool</small><span>← LabelFreeProteinQuantification</span></a><a class="next" href="/ProteomIQon/tools/ratio-lfq/"><small>Next tool</small><span>RatioLFQ →</span></a></nav></main></div></main><footer class="site-bottom mx-auto w-[min(1180px,calc(100%-48px))] border-t border-line pt-[22px] pb-[34px] text-xs max-md:w-[min(100%-32px,640px)]" data-astro-cid-qup6pdxl><div class="institution-logos" data-astro-cid-pe4ulxjw><span class="rptu-logo" data-astro-cid-pe4ulxjw><img src="/ProteomIQon/images/RPTU%20Logo_1c-1.svg" alt="RPTU Kaiserslautern-Landau" width="152" height="42" data-astro-cid-pe4ulxjw></span><img class="csb-logo" src="/ProteomIQon/images/csb-narrow-black.svg" alt="CSB" width="96" height="39" data-astro-cid-pe4ulxjw></div><a class="footer-github text-red! no-underline" href="https://github.com/CSBiology/ProteomIQon/" data-astro-cid-qup6pdxl>View the project on GitHub ↗</a></footer></div><script type="module">var e=`<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>`;for(let t of document.querySelectorAll(`main pre`)){let n=document.createElement(`div`);n.className=`copy-command-block`,t.before(n),n.append(t);let r=document.createElement(`button`);r.type=`button`,r.className=`copy-command-button`,r.setAttribute(`aria-label`,`Copy command`),r.title=`Copy command`,r.innerHTML=e,n.append(r);let i;r.addEventListener(`click`,async()=>{let n=t.textContent?.trim()??``;try{try{if(!navigator.clipboard?.writeText)throw Error(`Clipboard API unavailable`);await navigator.clipboard.writeText(n)}catch{let e=document.createElement(`textarea`);e.value=n,e.setAttribute(`readonly`,``),e.style.position=`fixed`,e.style.opacity=`0`,document.body.append(e),e.select();let t=!1;try{t=document.execCommand?.(`copy`)??!1}finally{e.remove()}if(!t)throw Error(`Copy failed`)}r.innerHTML=`<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m5 12 4 4L19 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`,r.setAttribute(`aria-label`,`Copied to clipboard`),r.title=`Copied to clipboard`}catch{r.setAttribute(`aria-label`,`Could not copy command`),r.title=`Could not copy command`}window.clearTimeout(i),i=window.setTimeout(()=>{r.innerHTML=e,r.setAttribute(`aria-label`,`Copy command`),r.title=`Copy command`},1800)})}</script></body></html>
