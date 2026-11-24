@@ -90,7 +90,7 @@ An ion that the run did not quantify itself is not transferred when the PSM base
 | `-iv` | `.quant` of the same run, or a directory | [PSMBasedQuantification](./psm-based-quantification.md) or [PSMBasedQuantificationTIMs](./psm-based-quantification-tims.md) |
 | `-d`| peptide database (SQLite) | [PeptideDB](./peptide-db.md) | 
 | `-o` | output directory, created when missing | - | 
-| `-p` | the parameter file (JSON) | [AlignmentBasedQuantificationParams.json](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/AlignmentBasedQuantificationParams.json) |
+| `-p` | the parameter file (JSON) | [AlignmentBasedQuantificationParams.json](https://github.com/CSBiology/ProteomIQon/blob/main/src/ProteomIQon/defaultParams/AlignmentBasedQuantificationParams.json) |
 | `-mf` | switch: pair the files by base name instead of by position | - | 
 | `-dc` | switch: write `<run>_mzCorrection.html` with the m/z offsets and their correction | - |
 | `-c`|  number of runs processed in parallel, one core each, default 1 | - | 
@@ -144,7 +144,7 @@ The tool overwrites its `.quant` and `.alignfeatures` outputs for the run. If de
 | TopKPSMs | `None` | Not used | 
 | IonMobilityWindow | `Window.Estimate` | `Estimate` or `Window.Fixed v`, in 1/K0 (see Ion mobility). | 
 
-For timsTOF runs, [AlignmentBasedQuantificationTIMsParams.json](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/AlignmentBasedQuantificationTIMsParams.json) sets the m/z half width to `Window.Fixed 0.008` Da and the ion mobility half width to `Window.Fixed 0.025` in 1/K0. These match the defaults in [PSMBasedQuantificationTIMs](./psm-based-quantification-tims.md). Suitable windows depend on the instrument and acquisition method.
+For timsTOF runs, [AlignmentBasedQuantificationTIMsParams.json](https://github.com/CSBiology/ProteomIQon/blob/main/src/ProteomIQon/defaultParams/AlignmentBasedQuantificationTIMsParams.json) sets the m/z half width to `Window.Fixed 0.008` Da and the ion mobility half width to `Window.Fixed 0.025` in 1/K0. These match the defaults in [PSMBasedQuantificationTIMs](./psm-based-quantification-tims.md). Suitable windows depend on the instrument and acquisition method.
 
 ## Parameter generation
 

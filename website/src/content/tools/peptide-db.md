@@ -29,7 +29,7 @@ These inputs are needed to execute the tool:
 | --- | --- | --- |
 | `-i` | one FASTA file (no directories) | Chosen proteome |
 | `-o` | the output directory, created when missing | - |
-| `-p` | the parameter file in JSON | [peptideDBParams.json](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/peptideDBParams.json) |
+| `-p` | the parameter file in JSON | [peptideDBParams.json](https://github.com/CSBiology/ProteomIQon/blob/main/src/ProteomIQon/defaultParams/peptideDBParams.json) |
 
 - The tool writes `<Name>.db` into the output directory, using `Name` from the parameter file. [PeptideSpectrumMatchingTIMs](./peptide-spectrum-matching-tims.md) requires a database with monoisotopic masses.
 
@@ -67,7 +67,7 @@ These inputs are needed to execute the tool:
 | VarModThreshold | 4 | Maximum number of variable modifications on one peptide. |
 
 - The available modifications are the cases of `ProteomIQon.Modification`, for example `Modification.Carbamidomethyl'Cys'` or `Modification.Phosphorylation'Ser'Thr'Tyr'`.
-- The default file is [peptideDBParams.json](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/peptideDBParams.json). The [Thermo preset](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/peptideDBParamsThermo.json) includes carbamidomethylation as a variable modification.
+- The default file is [peptideDBParams.json](https://github.com/CSBiology/ProteomIQon/blob/main/src/ProteomIQon/defaultParams/peptideDBParams.json). The [Thermo preset](https://github.com/CSBiology/ProteomIQon/blob/main/src/ProteomIQon/defaultParams/peptideDBParamsThermo.json) includes carbamidomethylation as a variable modification.
 
 ## Parameter generation
 

@@ -37,7 +37,7 @@ If charge-state aggregation is disabled, differently charged versions of the sam
 | --- | --- | --- |
 | `-i` | One or more `.quantAndProt` files, or a directory containing those files. Each file contains peptide quantification and protein-group assignments. | [JoinQuantPepIonsWithProteins](./join-quant-with-peptide-ions.md) |
 | `-o` | Directory in which the aggregation results are written. It is created when missing. | Chosen output location |
-| `-p` | the parameter file in JSON | [Default parameter file](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/LabelFreeQuantificationParams.json) |
+| `-p` | the parameter file in JSON | [Default parameter file](https://github.com/CSBiology/ProteomIQon/blob/main/src/ProteomIQon/defaultParams/LabelFreeQuantificationParams.json) |
 
 **Important:** The input must already combine peptide-level quantification with protein inference. The tool does not perform those upstream steps itself.
 
@@ -65,13 +65,13 @@ An `AggregationParams` record describes one step.
 
 All four presets use `Alignment_QValue = Some 0.05`.
 
-1. [LabelFreeQuantificationParams.json](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/LabelFreeQuantificationParams.json) only runs the protein step.
+1. [LabelFreeQuantificationParams.json](https://github.com/CSBiology/ProteomIQon/blob/main/src/ProteomIQon/defaultParams/LabelFreeQuantificationParams.json) only runs the protein step.
 
-2. [LabelFreeQuantificationParams_ChargeAgg.json](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/LabelFreeQuantificationParams_ChargeAgg.json) adds the charge step with Mean.
+2. [LabelFreeQuantificationParams_ChargeAgg.json](https://github.com/CSBiology/ProteomIQon/blob/main/src/ProteomIQon/defaultParams/LabelFreeQuantificationParams_ChargeAgg.json) adds the charge step with Mean.
 
-3. [LabelFreeQuantificationParams_ChargeAgg_ModAgg.json](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/LabelFreeQuantificationParams_ChargeAgg_ModAgg.json) adds the charge and the modification step, both with Mean. 
+3. [LabelFreeQuantificationParams_ChargeAgg_ModAgg.json](https://github.com/CSBiology/ProteomIQon/blob/main/src/ProteomIQon/defaultParams/LabelFreeQuantificationParams_ChargeAgg_ModAgg.json) adds the charge and the modification step, both with Mean. 
 
-4. [LabelFreeQuantificationParams_Transform_Filter_Sum.json](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/LabelFreeQuantificationParams_Transform_Filter_Sum.json) runs only the protein step, but log2 transforms the intensities, keeps those above 4.0 and sums them. 
+4. [LabelFreeQuantificationParams_Transform_Filter_Sum.json](https://github.com/CSBiology/ProteomIQon/blob/main/src/ProteomIQon/defaultParams/LabelFreeQuantificationParams_Transform_Filter_Sum.json) runs only the protein step, but log2 transforms the intensities, keeps those above 4.0 and sums them. 
 
 ## Outputs
 

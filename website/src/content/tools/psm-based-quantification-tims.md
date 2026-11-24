@@ -36,7 +36,7 @@ These inputs are needed to execute the tool:
 | `-ii` | one or more `.qpsm` files in the PSMStatistics layout, or a directory searched for `*.qpsm` | [PSMStatistics](./psm-statistics.md) or [MsFraggerToPSM](./ms-fragger-to-psm.md) |
 | `-o` | the output directory, created when missing | - |
 | `-d` | the SQLite peptide database | [PeptideDB](./peptide-db.md) |
-| `-p` | the parameter file in JSON | [QuantificationTIMsParams.json](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/QuantificationTIMsParams.json) |
+| `-p` | the parameter file in JSON | [QuantificationTIMsParams.json](https://github.com/CSBiology/ProteomIQon/blob/main/src/ProteomIQon/defaultParams/QuantificationTIMsParams.json) |
 | `-mf` | switch: pair files by base name instead of by position | - |
 | `-dc` | switch: write diagnostic charts | - |
 | `-z` | switch: pack the chart directory into a zip file and delete it | - |
@@ -82,7 +82,7 @@ The wavelet parameters:
 | `NoiseQuantile` | `0.01` | Quantile of the wavelet correlation used as noise level. |
 | `MinSNR` | `0.01` | A peak needs a correlation above `MinSNR` times the noise level. |
 
-**Default parameter file:** [Default JSON File](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/QuantificationTIMsParams.json)
+**Default parameter file:** [Default JSON File](https://github.com/CSBiology/ProteomIQon/blob/main/src/ProteomIQon/defaultParams/QuantificationTIMsParams.json)
 
 For a given dataset, use the same fixed m/z and ion mobility windows in [AlignmentBasedQuantification](./alignment-based-quantification.md). The appropriate windows depend on the instrument and acquisition method.
 

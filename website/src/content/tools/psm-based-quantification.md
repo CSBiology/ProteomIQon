@@ -32,7 +32,7 @@ These inputs are needed to execute the tool:
 | `-ii` | one or more `.qpsm` files, or a directory that is searched for `*.qpsm` |[PSMStatistics](./psm-statistics.md)  |
 | `-o` | the output directory, created when missing | - |
 | `-d` | the SQLite peptide database | [PeptideDB](./peptide-db.md) |
-| `-p` | the parameter file in JSON | [QuantificationParams.json](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/QuantificationParams.json) |
+| `-p` | the parameter file in JSON | [QuantificationParams.json](https://github.com/CSBiology/ProteomIQon/blob/main/src/ProteomIQon/defaultParams/QuantificationParams.json) |
 | `-mf` | switch: pair files by base name instead of by position | - |
 | `-dc` | switch: write diagnostic charts | - |
 | `-z` | switch: pack the chart directory into a zip file and delete it | - |
@@ -86,7 +86,7 @@ The wavelet parameters:
 | `NoiseQuantile` | `0.01` | Quantile of the wavelet correlation used as noise level. |
 | `MinSNR` | `0.01` | A peak needs a correlation above `MinSNR` times the noise level. |
 
-**Default parameter file:** [Default JSON File](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/QuantificationParams.json)
+**Default parameter file:** [Default JSON File](https://github.com/CSBiology/ProteomIQon/blob/main/src/ProteomIQon/defaultParams/QuantificationParams.json)
 
 ## Outputs
 
