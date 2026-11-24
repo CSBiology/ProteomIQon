@@ -1,0 +1,14 @@
+---
+interface Props {
+	dot?: boolean;
+	dotTone?: 'red' | 'orange';
+	as?: string;
+	class?: string;
+}
+const { dot = true, dotTone = 'red', as: Tag = 'p', class: className } = Astro.props;
+---
+
+<Tag class:list={['flex items-center gap-2 font-mono text-[.66rem] tracking-[.1em] text-steel uppercase', className]}>
+	{dot && <span class:list={['inline-block size-[7px] rounded-[1px]', dotTone === 'orange' ? 'bg-orange' : 'bg-red']}></span>}
+	<slot />
+</Tag>

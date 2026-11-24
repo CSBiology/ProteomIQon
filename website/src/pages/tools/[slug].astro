@@ -1,0 +1,51 @@
+---
+import { render } from 'astro:content';
+import Layout from '../../layouts/Layout.astro';
+import { getPhase } from '../../lib/phases';
+import { getSortedTools, toolHref } from '../../lib/tools';
+import { withBase } from '../../lib/site';
+import { breakCamelCase } from '../../lib/text';
+
+export async function getStaticPaths() {
+	const tools = await getSortedTools();
+	return tools.map((entry, index) => ({
+		params: { slug: entry.id },
+		props: { entry, previousTool: tools[index - 1], nextTool: tools[index + 1], siblings: tools.filter((tool) => tool.data.phase === entry.data.phase) },
+	}));
+}
+
+const { entry, previousTool, nextTool, siblings } = Astro.props;
+const { Content } = await render(entry);
+const phase = getPhase(entry.data.phase);
+const isAlignmentTool = ['quant-based-alignment', 'alignment-based-quantification', 'alignment-based-quant-statistics'].includes(entry.id);
+---
+
+<Layout title={`${entry.data.name} · ProteomIQon`} description={entry.data.summary} mainClass="tool-page-wide">
+	<div class:list={['tool-detail-layout', `phase-${phase.id}`]}>
+		<aside class="tool-sidebar">
+			<a class="back-link" href={withBase('/tools/')}>← All tools</a><div class="sidebar-rule"></div><p class="sidebar-label">In this stage</p>
+			<nav aria-label={`${phase.label} tools`}>
+				{siblings.map((candidate) => (
+					<a class:list={{ active: candidate.id === entry.id }} aria-current={candidate.id === entry.id ? 'page' : undefined} href={toolHref(candidate.id)}>{candidate.data.name}</a>
+				))}
+			</nav>
+			<details class="mobile-stage-navigation">
+				<summary>In this stage <span>{siblings.length} tools</span></summary>
+				<nav aria-label={`${phase.label} tools`}>
+					{siblings.map((candidate) => (
+						<a class:list={{ active: candidate.id === entry.id }} aria-current={candidate.id === entry.id ? 'page' : undefined} href={toolHref(candidate.id)}>{candidate.data.name}</a>
+					))}
+				</nav>
+			</details>
+		</aside>
+
+		<main class="tool-detail">
+			<section class="tool-detail-hero"><h1>{breakCamelCase(entry.data.name).map((part, i) => (<Fragment>{i > 0 && <wbr />}{part}</Fragment>))}</h1></section>
+			<article class:list={['legacy-content tool-legacy-content prose max-w-none prose-a:font-semibold prose-code:before:content-none prose-code:after:content-none', { 'tool-alignment-content': isAlignmentTool }]}><Content /></article>
+			<nav class="tool-pagination" aria-label="Browse tools">
+				{previousTool ? <a href={toolHref(previousTool.id)}><small>Previous tool</small><span>← {previousTool.data.name}</span></a> : <span></span>}
+				{nextTool ? <a class="next" href={toolHref(nextTool.id)}><small>Next tool</small><span>{nextTool.data.name} →</span></a> : <a class="next" href={withBase('/tools/')}><small>Directory</small><span>Back to all tools →</span></a>}
+			</nav>
+		</main>
+	</div>
+</Layout>

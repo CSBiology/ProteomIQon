@@ -1,0 +1,47 @@
+---
+import { withBase } from '../../lib/site';
+
+interface Props {
+	class?: string;
+}
+
+const { class: className } = Astro.props;
+---
+
+<div class:list={['institution-logos', className]}>
+	<span class="rptu-logo">
+		<img src={withBase('/images/RPTU%20Logo_1c-1.svg')} alt="RPTU Kaiserslautern-Landau" width="152" height="42" />
+	</span>
+	<img class="csb-logo" src={withBase('/images/csb-narrow-black.svg')} alt="CSB" width="96" height="39" />
+</div>
+
+<style>
+	.institution-logos {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 14px 24px;
+	}
+
+	/* The RPTU file has a square viewBox with generous transparent margins. */
+	.rptu-logo {
+		position: relative;
+		display: block;
+		width: 98px;
+		height: 42px;
+		overflow: hidden;
+	}
+
+	.rptu-logo img {
+		position: absolute;
+		top: 0;
+		left: 50%;
+		width: 152px;
+		max-width: none;
+		height: 42px;
+		object-fit: cover;
+		transform: translateX(-50%);
+	}
+
+	.csb-logo { display: block; width: 96px; height: auto; }
+</style>
