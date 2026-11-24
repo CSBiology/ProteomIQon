@@ -31,7 +31,7 @@ MzMLToMzLite converts an mzML file into an mzlite file. It is the first tool of 
 | --- | --- | --- |
 | `-i` | One or more mzML files, or a directory searched for `*.mzML` and `*.mzml` (not recursively). | MSConvert |
 | `-o` | Output directory. Created if it does not exist. | — |
-| `-p` | JSON parameter file. | [ProteomIQon default parameters](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/mzMLToMzLiteParams.json) |
+| `-p` | JSON parameter file. | [ProteomIQon default parameters](https://github.com/CSBiology/ProteomIQon/blob/main/src/ProteomIQon/defaultParams/mzMLToMzLiteParams.json) |
 | `-c` | Number of files converted in parallel. Default: `1`; no effect for a single file. | — |
 | `-f` | switch: rewrite every input file in place and remove `&quot` | — |
 
@@ -73,7 +73,7 @@ The generated mzlite is read by [PeptideSpectrumMatching](./peptide-spectrum-mat
 - `Some p` pads gaps in sparse profile spectra before the transform. The `PaddingParams` record contains `MaximumPaddingPoints` (`int option`), `Padding_MzTolerance` (`float`), `WindowSize` (`int`) and `SpacingPerc` (`float`).
 - The MS2 settings in the ion mobility default file use `Some { MaximumPaddingPoints = Some 7; Padding_MzTolerance = 0.05; WindowSize = 150; SpacingPerc = 95.0 }` as an example.
 
-- The default file is [mzMLToMzLiteParams.json](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/mzMLToMzLiteParams.json). A file with wavelet centroiding on both levels is [TIMsMzMLtoMzLiteParams.json](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/TIMsMzMLtoMzLiteParams.json).
+- The default file is [mzMLToMzLiteParams.json](https://github.com/CSBiology/ProteomIQon/blob/main/src/ProteomIQon/defaultParams/mzMLToMzLiteParams.json). A file with wavelet centroiding on both levels is [TIMsMzMLtoMzLiteParams.json](https://github.com/CSBiology/ProteomIQon/blob/main/src/ProteomIQon/defaultParams/TIMsMzMLtoMzLiteParams.json).
 
 ## Parameter generation
 

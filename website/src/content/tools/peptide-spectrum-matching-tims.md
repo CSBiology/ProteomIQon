@@ -120,7 +120,7 @@ The search parameters are provided through the JSON file passed with `-p`. The t
 | `PMinPMax` | `4, 10` | Minimum and maximum count of strongest peaks per 100 Da window. Every count in the range is tested; the best result is chosen. |
 | `MatchingIonTolerancePPM` | 100.0 | Theoretical-to-observed fragment matching tolerance, in ppm |
 
-The default file is [peptideSpectrumMatchingTIMsParams.json](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/peptideSpectrumMatchingTIMsParams.json).
+The default file is [peptideSpectrumMatchingTIMsParams.json](https://github.com/CSBiology/ProteomIQon/blob/main/src/ProteomIQon/defaultParams/peptideSpectrumMatchingTIMsParams.json).
 
 ## Outputs
 
