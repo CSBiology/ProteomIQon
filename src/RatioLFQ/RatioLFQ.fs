@@ -45,18 +45,6 @@ module RatioLFQ =
             RunGroups    : int
         }
 
-    let private requiredColumns =
-        Reflection.FSharpType.GetRecordFields(typeof<Dto.GlobModAggregationResult>)
-        |> Array.map (fun field -> field.Name)
-
-    /// Fails when the header lacks a required column, which the reader would fill with a default value.
-    let private checkHeader (path: string) =
-        let header = File.ReadLines path |> Seq.tryHead |> Option.map (fun line -> line.Split '\t') |> Option.defaultValue [||]
-        let missing = requiredColumns |> Array.filter (fun c -> not (Array.contains c header))
-        if missing.Length > 0 then
-            failwithf "The ion table lacks the required column(s) %s. RatioLFQ reads GlobModAggregation.txt of LabeledProteinQuantification."
-                (String.Join(", ", missing))
-
     let private isValidIntensity (intensity: float) = Numerics.isFinite intensity && intensity > 0.
 
     /// The index of the key, a new key gets the next one.
@@ -74,7 +62,7 @@ module RatioLFQ =
     /// Reads the ion table by its column names. Runs, protein groups and ions become integer indices while reading,
     /// only the compact measurements are kept.
     let readIonTable (path: string) : IonTable =
-        checkHeader path
+        Core.TableHeader.checkColumns<Dto.GlobModAggregationResult> "the GlobModAggregation.txt of LabeledProteinQuantification" path
         let runs = Dictionary<string, int>()
         let proteinGroups = Dictionary<string, int>()
         let ions = ResizeArray<Dictionary<struct (string * int), int>>()

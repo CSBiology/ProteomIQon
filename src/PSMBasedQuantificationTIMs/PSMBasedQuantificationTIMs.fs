@@ -9,7 +9,6 @@ open Dto
 open FSharp.Stats
 open BioFSharp.Mz.Quantification
 open BioFSharp.Mz
-open FSharpAux.IO.SchemaReader
 open Plotly.NET
 open BioFSharp
 open MzIO.Processing
@@ -64,40 +63,8 @@ module PSMBasedQuantificationTIMs =
                     
             |]
 
-    /// Reading of the .qpsm of PSMStatistics and of the ion mobility of the PSM spectra.
+    /// Reading of the ion mobility of the PSM spectra.
     module QpsmInput =
-
-        /// Column names of the .qpsm in the order the positional reader expects them.
-        let expectedColumns =
-            Reflection.FSharpType.GetRecordFields(typeof<PSMStatisticsResult>)
-            |> Array.map (fun field -> field.Name)
-
-        /// Fails when the header of the file is not the column layout of PSMStatisticsResult,
-        /// for example a .qpsm in the former FragPipe layout of MsFraggerToPSM.
-        let checkHeader (path: string) =
-            let header =
-                use reader = new StreamReader(path)
-                match reader.ReadLine() with
-                | null -> [||]
-                | line -> line.TrimEnd('\r').Split('\t')
-            if header <> expectedColumns then
-                let missing = expectedColumns |> Array.filter (fun c -> not (Array.contains c header))
-                let unexpected = header |> Array.filter (fun c -> not (Array.contains c expectedColumns))
-                failwithf
-                    "%s does not have the column layout of the PSMStatistics .qpsm. Missing columns: [%s]. Unexpected columns: [%s]. Expected in this order: [%s]."
-                    path
-                    (String.Join(", ", missing))
-                    (String.Join(", ", unexpected))
-                    (String.Join(", ", expectedColumns))
-
-        /// Reads the .qpsm after checking its header. An empty file has no PSMs.
-        let read (path: string) =
-            if FileInfo(path).Length = 0L then
-                [||]
-            else
-                checkHeader path
-                Csv.CsvReader<PSMStatisticsResult>(SchemaMode=Csv.Fill).ReadFile(path,'\t',false,1)
-                |> Array.ofSeq
 
         /// The retention time index and the scan times of the MS1 spectra, both sorted by scan time (SpectrumIndex.readMs1Index),
         /// and the inverse reduced ion mobility (MS:1002815, NaN when absent) of the spectra in psmSpectrumIds, from one
@@ -1509,7 +1476,7 @@ module PSMBasedQuantificationTIMs =
         logger.Trace (sprintf "Now performing Quantification using: %s and %s, Results will be written to: %s" instrumentOutput scoredPSMs outputDir)
         logger.Trace "Read scored PSMs"
         ///
-        let qpsms = QpsmInput.read scoredPSMs
+        let qpsms = readQpsm scoredPSMs
         logger.Trace "Read scored PSMs:finished"
         // initialize Reader and Transaction
         let outFilePath =

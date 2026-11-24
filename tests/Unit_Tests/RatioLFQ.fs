@@ -271,5 +271,5 @@ let ratioLFQTests =
         testCase "the charge aggregated table of LabeledProteinQuantification is rejected" <| fun _ ->
             let path = repoPath [ "tests"; "data"; "LabeledProteinQuantification"; "out"; "corrFilterChargeAgg"; "minimalChargeReference.txt" ]
             let message = (try RatioLFQ.readIonTable path |> ignore; "" with e -> e.Message)
-            Expect.stringContains message "column(s) Charge" "the message names the column"
+            Expect.stringContains message "Missing columns: [Charge]" "the message names the column"
     ]

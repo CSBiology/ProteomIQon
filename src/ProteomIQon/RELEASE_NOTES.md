@@ -1,5 +1,6 @@
 #### Unreleased
-* Add the parameters of RatioLFQ and GlobModAggregationResult, a row of the ion table it reads
+* Add RatioLFQParams, the parameters of RatioLFQ, and its default parameters: Reference, MinSharedIons, CentreRuns, PairWeighting and ReferenceLevel
+* Add GlobModAggregationResult, a row of the ion table RatioLFQ reads
 
 #### 0.1.0 - Monday, November 16, 2026
 * Add StoreIsotopePatterns to the PSMStatistics parameters and the default parameters
