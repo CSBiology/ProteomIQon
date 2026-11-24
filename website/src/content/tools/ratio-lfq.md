@@ -3,39 +3,65 @@ name: "RatioLFQ"
 phase: protein-quantification
 subgroup: Ratio LFQ
 order: 4
-summary: "RatioLFQ turns the light to heavy ratios of different runs into one intensity per run and protein, the way label free quantification would report it."
+summary: "RatioLFQ turns the peptide ion table of LabeledProteinQuantification into one light-to-heavy ratio and one intensity per protein group and run."
 inputsFrom: [labeled-protein-quantification]
 ---
 
 ## Tool Description
 
-A labeled experiment gives one light-to-heavy ratio per protein and run. RatioLFQ uses the shared heavy reference to convert these ratios into one comparable intensity per protein and run.
+A labeled experiment gives a light and a heavy intensity for every peptide ion and run. One channel is the spike-in, which is the same in every run, and the other is the sample. RatioLFQ turns the peptide ion table of [LabeledProteinQuantification](./labeled-protein-quantification.md) into one light-to-heavy ratio and one intensity per protein group and run.
 
 ## How does RatioLFQ work?
 
-1. **Fit the differences between runs**
+1. **Compare the runs pairwise**
 
-   For each protein, the tool takes the log₂ of the available ratios and calculates the difference for every pair of runs. It fits one log₂ intensity per run by least squares.
+   For every protein group, the tool compares each pair of runs over the ions that both runs share. The difference of two runs is the median difference of the log₂ light-to-heavy ratios of these ions. An ion specific offset of the ratio cancels in a pairwise difference, so the ratios of different runs stay comparable when different ions were quantified in different runs.
 
-2. **Set the intensity scale**
+2. **Fit one ratio per run**
 
-   The differences leave one free parameter. The tool constrains the mean fitted log₂ intensity to equal the mean log₂ reference intensity for that protein. It exponentiates each fitted value with base 2 to obtain the LFQ intensity.
+   The tool finds by least squares one log₂ ratio per run that fits all pairwise differences. By default, a comparison counts with the number of ions the two runs share (`PairWeighting`). Runs that share fewer than `MinSharedIons` ions with every other run, directly or through other runs, form their own group and keep their own level.
+
+3. **Set the level of the ratios**
+
+   The tool places the result so that the median difference between the ion ratios and the result is zero. Every ion measurement counts once in this step. A protein group seen in one run keeps the median ratio of its ions.
+
+4. **Calculate the intensity**
+
+   The intensity is the ratio, oriented sample over reference, times one reference intensity per protein group. By default, that reference intensity is the mean of the per-ion medians of the reference channel (`ReferenceLevel`).
 
 ## Inputs
 
 | Flag | Meaning | Comes from |
 |------|---------|------------|
-| `-i` | One tab-separated protein table, typically `LabeledQuant.txt` | [LabeledProteinQuantification](./labeled-protein-quantification.md) |
-| `-o` | Path to the output file. Its parent directory must exist. | |
-| `-pc` | Protein identifier column, typically `ProteinGroup` | |
-| `-rac` | suffix that selects the ratio columns, `.Ratio_LightByHeavy` for that file | |
-| `-rfc` | suffix that selects the reference columns, `.Quant_Heavy` for that file | |
+| `-i` | The ion table `GlobModAggregation.txt`, one row per peptide ion and run | [LabeledProteinQuantification](./labeled-protein-quantification.md) |
+| `-o` | The output directory, created when missing | |
+| `-p` | The parameter file in JSON | [Default parameter file](https://github.com/CSBiology/ProteomIQon/blob/main/src/ProteomIQon/defaultParams/RatioLFQParams.json) |
 
-`-rac` and `-rfc` match column names by suffix. For `LabeledQuant.txt`, use the leading dot in both suffixes to match `<run>.Ratio_LightByHeavy` and `<run>.Quant_Heavy`. A reference suffix of `Quant_Heavy` also matches columns ending in `CV_Quant_Heavy`, `StDev_Quant_Heavy` and `SEM_Quant_Heavy` and includes them in the reference mean.
+The table needs the columns `FileName`, `ProteinGroup`, `StringSequence`, `Charge`, `Quant_Light` and `Quant_Heavy`. Sequence and charge together identify an ion.
+
+The intensities have to be linear, so the LabeledProteinQuantification parameter file must not set a `LabeledTransform`. The table also has to be written with a light-to-heavy correlation filter in LabeledProteinQuantification. Without the filter, ions whose light and heavy peaks do not belong together enter the comparison of runs. [LabeledQuantificationParams_withCorrFilter.json](https://github.com/CSBiology/ProteomIQon/blob/main/src/ProteomIQon/defaultParams/LabeledQuantificationParams_withCorrFilter.json) is an example that has one and no transform.
+
+Rows without two positive intensities are ignored. The tool stops with a message when the table has more than one row for the same ion and run or when a required column is missing. It also stops when the intensities look log transformed, which it detects when the largest intensity of a channel (light or heavy) is below 100.
+
+## Parameter file
+
+| Parameter | Default | Description |
+| --- | --- | --- |
+| `Reference` | `Heavy` | `Heavy` or `Light`. The channel that is spiked in at the same amount in every run. The other channel is the sample. |
+| `MinSharedIons` | `1` | The number of ions that two runs must share so that their comparison is used. |
+| `CentreRuns` | `false` | Shifts the log₂ ratios of every run so that the median over all its ions is 0. This removes differences in the mixing of sample and standard and is only meaningful when most proteins do not change between runs. |
+| `PairWeighting` | `SharedIonCount` | `SharedIonCount` weights the comparison of two runs by the number of ions they share. `Unweighted` gives every comparison the same weight. |
+| `ReferenceLevel` | `MeanOfIonMedians` | `MeanOfIonMedians` takes the mean of all per-ion medians of the reference channel as the reference intensity of a protein group, `TopThreeIonMedians` the mean of the up to three largest. The ratio does not depend on it. |
+
+The default file is [RatioLFQParams.json](https://github.com/CSBiology/ProteomIQon/blob/main/src/ProteomIQon/defaultParams/RatioLFQParams.json):
+
+```json
+{"Reference":{"Case":"Heavy"},"MinSharedIons":1,"CentreRuns":false,"PairWeighting":{"Case":"SharedIonCount"},"ReferenceLevel":{"Case":"MeanOfIonMedians"}}
+```
 
 ## Outputs
 
-The output is a tab-separated table with a `ProteinGroup` column and one intensity column per input ratio column. Each intensity column keeps the name of its input column and adds the suffix `_LFQ`. A protein needs ratios from at least two runs to appear in the table. Runs without a ratio for a protein get a 0 in that cell, which stands for no ratio, not for a zero intensity.
+The output is `RatioLFQ.txt` in the output directory, a tab-separated table with the column `ProteinGroup` and, for every run, the columns `<run>.Ratio_LightByHeavy` and `<run>.LFQ_Intensity`. The ratio is always light over heavy, and the intensity is that of the sample. An empty cell means that the protein group has no ion in that run. The log is `RatioLFQ_log.txt` in the output directory.
 
 ## Installing and executing the tool
 
@@ -45,10 +71,10 @@ The output is a tab-separated table with a `ProteinGroup` column and one intensi
    dotnet tool install --global ProteomIQon.RatioLFQ
    ```
 
-2. **Calculate LFQ intensities**
+2. **Calculate ratios and intensities**
 
    ```sh
-   proteomiqon-ratiolfq -i path/to/LabeledQuant.txt -o path/to/LabeledQuant_LFQ.txt -pc ProteinGroup -rac .Ratio_LightByHeavy -rfc .Quant_Heavy
+   proteomiqon-ratiolfq -i path/to/GlobModAggregation.txt -o path/to/out -p path/to/RatioLFQParams.json
    ```
 
 3. **All flags**

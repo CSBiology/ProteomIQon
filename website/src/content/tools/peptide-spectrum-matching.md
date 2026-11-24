@@ -44,7 +44,7 @@ These inputs are needed to execute the tool:
 | `-i` | one or more `.mzlite` or `.mzML` files, or a directory searched for `*.mzlite`, `*.mzML` and `*.mzml` (not recursive) | [MzMLToMzLite](./mzml-to-mzlite.md) |
 | `-d` | the SQLite peptide database | [PeptideDB](./peptide-db.md) |
 | `-o` | the output directory, created when missing | - |
-| `-p` | the parameter file in JSON | [peptideSpectrumMatchingParams.json](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/peptideSpectrumMatchingParams.json) |
+| `-p` | the parameter file in JSON | [peptideSpectrumMatchingParams.json](https://github.com/CSBiology/ProteomIQon/blob/main/src/ProteomIQon/defaultParams/peptideSpectrumMatchingParams.json) |
 | `-c` | number of runs scored at the same time, default 1 | - |
 
 - All four flags are mandatory. The reader opens files by extension and knows .mzlite and .mzML only, so an mzML file has to carry the extension in exactly that spelling. The tool stops when the database file does not exist.
@@ -89,7 +89,7 @@ These inputs are needed to execute the tool:
 
 Peptide mass and length limits, isotopic labels and peptide modifications are set when building the database with [PeptideDB](./peptide-db.md).
 
-- The default file is [peptideSpectrumMatchingParams.json](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/peptideSpectrumMatchingParams.json).
+- The default file is [peptideSpectrumMatchingParams.json](https://github.com/CSBiology/ProteomIQon/blob/main/src/ProteomIQon/defaultParams/peptideSpectrumMatchingParams.json).
 
 ## Outputs
 

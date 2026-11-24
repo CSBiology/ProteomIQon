@@ -120,7 +120,7 @@ These inputs are needed to execute the tool:
 | `-ll` | `.align` of the runs to learn from | [QuantBasedAlignment](./quant-based-alignment.md) |
 | `-lll` | aligned `.quant` of the runs to learn from | [AlignmentBasedQuantification](./alignment-based-quantification.md) |
 | `-o` | Output directory, created when missing | — |
-| `-p` | Parameter file (JSON) | [AlignmentBasedQuantStatisticsParams.json](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/AlignmentBasedQuantStatisticsParams.json) |
+| `-p` | Parameter file (JSON) | [AlignmentBasedQuantStatisticsParams.json](https://github.com/CSBiology/ProteomIQon/blob/main/src/ProteomIQon/defaultParams/AlignmentBasedQuantStatisticsParams.json) |
 | `-c` | number of runs read and written in parallel, one core each, default 1 | — |
 | `-ts` | switch: write the training ions of each learning run | — |
 | `-dc` | Switch: write `AlignmentScoreHistogram.html` | — |

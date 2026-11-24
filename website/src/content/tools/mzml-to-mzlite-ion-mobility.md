@@ -29,7 +29,7 @@ These inputs are needed to execute the tool:
 | --- | --- | --- |
 | `-i` | one or more mzML files with ion mobility data per peak, or a directory that is searched for `*.mzML` and `*.mzml` (not recursive) | MSConvert |
 | `-o` | the output directory, created when missing | - |
-| `-p` | the parameter file in JSON | [TIMsMzMLtoMzLiteParams.json](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/TIMsMzMLtoMzLiteParams.json) |
+| `-p` | the parameter file in JSON | [TIMsMzMLtoMzLiteParams.json](https://github.com/CSBiology/ProteomIQon/blob/main/src/ProteomIQon/defaultParams/TIMsMzMLtoMzLiteParams.json) |
 | `-c` | number of files converted at the same time, default 1, no effect on a single file | - |
 | `-f` | switch: rewrite every input file in place and remove `&quot` | - |
 
@@ -48,7 +48,7 @@ These inputs are needed to execute the tool:
 | `MS1PeakPicking` | PeakPicking.Centroid (CentroidizationMode.Wavelet ms1Wavelet) | Same field as in [MzMLToMzLite](./mzml-to-mzlite.md). The default file contains a wavelet record for MS1. The TIMs converter copies the MS1 peak arrays as they are. |
 | `MS2PeakPicking` | PeakPicking.Centroid (CentroidizationMode.Wavelet ms2Wavelet) | Same field as in [MzMLToMzLite](./mzml-to-mzlite.md), with padding settings in the default file. The MS2 peaks are copied as they are. |
 
-- The wavelet parameters are explained on the [MzMLToMzLite page](./mzml-to-mzlite.md). The default file is [TIMsMzMLtoMzLiteParams.json](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/TIMsMzMLtoMzLiteParams.json).
+- The wavelet parameters are explained on the [MzMLToMzLite page](./mzml-to-mzlite.md). The default file is [TIMsMzMLtoMzLiteParams.json](https://github.com/CSBiology/ProteomIQon/blob/main/src/ProteomIQon/defaultParams/TIMsMzMLtoMzLiteParams.json).
 
 ## Parameter generation
 

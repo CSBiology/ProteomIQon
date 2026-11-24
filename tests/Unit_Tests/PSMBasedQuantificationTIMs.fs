@@ -37,7 +37,7 @@ let gaborGridTest =
 
 [<Tests>]
 let qpsmHeaderTest =
-    testList "QpsmInput.checkHeader" [
+    testList "TableHeader.checkLayout" [
         testCase "accepts the PSMStatistics layout and rejects the former FragPipe layout" <| fun _ ->
             let withHeader (header: string) f =
                 let path = System.IO.Path.GetTempFileName()
@@ -46,21 +46,22 @@ let qpsmHeaderTest =
                     f path
                 finally
                     System.IO.File.Delete path
-            withHeader (String.concat "\t" QpsmInput.expectedColumns) QpsmInput.checkHeader
+            let check = Core.TableHeader.checkLayout<Dto.PSMStatisticsResult> "the PSMStatistics .qpsm"
+            withHeader (String.concat "\t" Core.TableHeader.columnNames<Dto.PSMStatisticsResult>) check
             let fragPipeHeader =
                 "PSMId\tPepSequenceID\tModSequenceID\tScanTime\tCharge\tPrecursorMZ\tTheoMass\tAbsDeltaMass\tIonMobility\tPeptideLength\tMissCleavages\tExpectscore\tHyperscore\tProbability\tStringSequence\tProteinNames\tGlobalMod"
             withHeader fragPipeHeader (fun path ->
-                Expect.throws (fun () -> QpsmInput.checkHeader path) "the FragPipe layout is rejected")
+                Expect.throws (fun () -> check path) "the FragPipe layout is rejected")
     ]
 [<Tests>]
 let qpsmEmptyTest =
-    testList "QpsmInput.read" [
+    testList "PSMQuantification.readQpsm" [
         testCase "an empty file and a file with the header only have no PSMs" <| fun _ ->
-            for content in [ ""; String.concat "\t" QpsmInput.expectedColumns + "\n" ] do
+            for content in [ ""; String.concat "\t" Core.TableHeader.columnNames<Dto.PSMStatisticsResult> + "\n" ] do
                 let path = System.IO.Path.GetTempFileName()
                 try
                     System.IO.File.WriteAllText(path, content)
-                    Expect.isEmpty (QpsmInput.read path) "no PSMs"
+                    Expect.isEmpty (PSMQuantification.readQpsm path) "no PSMs"
                 finally
                     System.IO.File.Delete path
     ]

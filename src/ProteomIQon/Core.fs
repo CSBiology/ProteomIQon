@@ -170,6 +170,42 @@ module Core =
             fileOrDirectoryPaths
             |> Seq.collect (parsePath getFiles)
 
+    /// The header of a tab separated file that is read with a row record.
+    module TableHeader =
+
+        /// The column names of the row record, which are its field names.
+        let columnNames<'Row> =
+            Reflection.FSharpType.GetRecordFields(typeof<'Row>)
+            |> Array.map (fun field -> field.Name)
+
+        /// The column names in the first line of the file.
+        let read (path: string) =
+            use reader = new StreamReader(path)
+            match reader.ReadLine() with
+            | null -> [||]
+            | line -> line.TrimEnd('\r').Split('\t')
+
+        /// Fails when the header is not the columns of the row record in their order, which reading by position needs.
+        /// The description of the file type goes into the message.
+        let checkLayout<'Row> (description: string) (path: string) =
+            let expected = columnNames<'Row>
+            let header = read path
+            if header <> expected then
+                failwithf
+                    "%s does not have the column layout of %s. Missing columns: [%s]. Unexpected columns: [%s]. Expected in this order: [%s]."
+                    path
+                    description
+                    (String.Join(", ", expected |> Array.except header))
+                    (String.Join(", ", header |> Array.except expected))
+                    (String.Join(", ", expected))
+
+        /// Fails when the header lacks a column of the row record. Reading by column names fills a missing column with a default value.
+        /// The description of the file type goes into the message.
+        let checkColumns<'Row> (description: string) (path: string) =
+            let missing = columnNames<'Row> |> Array.except (read path)
+            if missing.Length > 0 then
+                failwithf "%s lacks columns of %s. Missing columns: [%s]." path description (String.Join(", ", missing))
+
     module Zipping =
     
         open System.IO

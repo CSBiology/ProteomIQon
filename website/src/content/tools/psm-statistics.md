@@ -48,7 +48,7 @@ These inputs are needed to execute the tool:
 | `-i` | one or more `.psm` files, or a directory that is searched for `*.psm` (not recursive) | [PeptideSpectrumMatching](./peptide-spectrum-matching.md) or [PeptideSpectrumMatchingTIMs](./peptide-spectrum-matching-tims.md) |
 | `-d` | SQLite peptide database. Updated when `StoreIsotopePatterns` is enabled. | [PeptideDB](./peptide-db.md) |
 | `-o` | the output directory, created when missing | - |
-| `-p` | the parameter file in JSON | [pSMStatisticsParams.json](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/pSMStatisticsParams.json) |
+| `-p` | the parameter file in JSON | [pSMStatisticsParams.json](https://github.com/CSBiology/ProteomIQon/blob/main/src/ProteomIQon/defaultParams/pSMStatisticsParams.json) |
 | `-dc` | switch: save diagnostic charts to the output directory |  |
 | `-c` | number of files scored at the same time and the number of cores used to compute the isotope patterns, default 1 | - |
 
@@ -85,7 +85,7 @@ The fields of `Threshold.Estimate`:
 | `RetentionTimeFeature` | `true` | Add the features `RtDeviation` and `AbsRtDeviation`, the deviation of the scan time from the time predicted from the sequence. Parameter files without this field use `false`. |
 
 
-The default parameter file is [pSMStatisticsParams.json ↗](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/pSMStatisticsParams.json).
+The default parameter file is [pSMStatisticsParams.json ↗](https://github.com/CSBiology/ProteomIQon/blob/main/src/ProteomIQon/defaultParams/pSMStatisticsParams.json).
 
 ## Outputs
 

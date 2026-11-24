@@ -1,3 +1,7 @@
+#### Unreleased
+* Add RatioLFQParams, the parameters of RatioLFQ, and its default parameters: Reference, MinSharedIons, CentreRuns, PairWeighting and ReferenceLevel
+* Add GlobModAggregationResult, a row of the ion table RatioLFQ reads
+
 #### 0.1.0 - Monday, November 16, 2026
 * Add StoreIsotopePatterns to the PSMStatistics parameters and the default parameters
 * Add IsotopePatterns: the isotope pattern of a peptide at a charge (MIDA, resolution 0.01, minimum probability 0.001) for the quantification tools, its BLOB encoding, the table IsotopePattern of the peptide data base with a look up that reads the table and computes missing patterns, and the function that stores the patterns

@@ -8,6 +8,7 @@ open BioFSharp
 open BioFSharp.Mz
 open BioFSharp.Mz.Quantification
 open BioFSharp.Mz.SearchDB
+open FSharpAux.IO.SchemaReader
 open Dto
 open PeakQuantification
 
@@ -54,6 +55,16 @@ module PSMQuantification =
         let sum,n = Seq.fold2 (fun (sum,n) w i -> w*i+sum,n + w ) (0.,0.) weights items
         sum / n
         
+    /// Reads the .qpsm after checking its header, which rejects for example the former FragPipe layout of MsFraggerToPSM.
+    /// An empty file has no PSMs.
+    let readQpsm (path: string) =
+        if FileInfo(path).Length = 0L then
+            [||]
+        else
+            Core.TableHeader.checkLayout<PSMStatisticsResult> "the PSMStatistics .qpsm" path
+            Csv.CsvReader<PSMStatisticsResult>(SchemaMode=Csv.Fill).ReadFile(path,'\t',false,1)
+            |> Array.ofSeq
+
     /// The PSM with the lowest QValue. A PSM without QValue (NaN) is taken only when no PSM has one.
     let bestPsmByQValue (psms: PSMStatisticsResult []) =
         match psms |> Array.filter (fun x -> not (Double.IsNaN x.QValue)) with

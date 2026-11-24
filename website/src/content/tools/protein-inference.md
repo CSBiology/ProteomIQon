@@ -32,7 +32,7 @@ These inputs are needed to execute the tool:
 | `-d` | the SQLite peptide database | [PeptideDB](./peptide-db.md) |
 | `-g` | optional GFF3 annotation of the proteome | your genome annotation |
 | `-o` | the output directory, created when missing | - |
-| `-p` | the parameter file in JSON | [ProteinInferenceParams.json](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/ProteinInferenceParams.json) |
+| `-p` | the parameter file in JSON | [ProteinInferenceParams.json](https://github.com/CSBiology/ProteomIQon/blob/main/src/ProteomIQon/defaultParams/ProteinInferenceParams.json) |
 | `-dc` | switch: save diagnostic charts to the output directory |  |
 
 - The GFF3 file tells the tool which proteins are transcripts of the same gene.
@@ -52,7 +52,7 @@ These inputs are needed to execute the tool:
 | `GroupFiles` | `true` | Infer all input files together: the peptides of every run go into one inference and one q-value calculation, and every output file reports the same protein groups, each restricted to the peptides seen in that run. AddDeducedPeptides needs this. `false` infers each run on its own. |
 | `GetQValue` | `QValueMethod.LogisticRegression FDRMethod.MAYU` | Estimate the protein FDR with MAYU and turn it into q-values by logistic regression on the target and decoy scores. The other FDR estimates are `FDRMethod.DecoyTargetRatio` and `FDRMethod.Conservative` (an FDR of 1). `QValueMethod.Storey` uses the Storey estimate instead, `QValueMethod.NoQValue` writes `nan`. If the chosen calculation fails the tool falls back to `nan` and logs it. |
 
-- The default file is [ProteinInferenceParams.json](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/ProteinInferenceParams.json).
+- The default file is [ProteinInferenceParams.json](https://github.com/CSBiology/ProteomIQon/blob/main/src/ProteomIQon/defaultParams/ProteinInferenceParams.json).
 
 ## Outputs
 

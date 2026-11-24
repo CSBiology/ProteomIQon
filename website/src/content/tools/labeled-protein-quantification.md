@@ -55,7 +55,7 @@ If charge-state aggregation is disabled, charge states remain separate during th
 | --- | --- | --- |
 | `-i` | One or more `.quantAndProt` files, or a directory containing these files. Each row contains peptide quantification together with a protein-group assignment. | [JoinQuantPepIonsWithProteins](./join-quant-with-peptide-ions.md) |
 | `-o` | Directory in which the output tables and log files are saved. The directory is created if necessary. | Chosen output location |
-| `-p` | JSON parameter file controlling filtering, transformations and aggregation. | [Default parameter file](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/LabeledQuantificationParams.json) |
+| `-p` | JSON parameter file controlling filtering, transformations and aggregation. | [Default parameter file](https://github.com/CSBiology/ProteomIQon/blob/main/src/ProteomIQon/defaultParams/LabeledQuantificationParams.json) |
 
 **Important:** Protein-group assignments must already be present in the `.quantAndProt` input. The tool does not perform peptide identification or protein inference itself.
 
@@ -134,11 +134,11 @@ let example : Common.LabeledProteinQuantification.AggregationParams =
 
 The repository provides **five presets**:
 
-1. [LabeledQuantificationParams.json](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/LabeledQuantificationParams.json) — Runs the mandatory light/heavy and protein-group aggregation steps, using the mean for each series.
-2. [LabeledQuantificationParams_withCorrFilter.json](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/LabeledQuantificationParams_withCorrFilter.json) — Adds a light/heavy correlation threshold of `0.9`.
-3. [LabeledQuantificationParams_CorrFilter_ChargeAgg.json](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/LabeledQuantificationParams_CorrFilter_ChargeAgg.json) — Uses a correlation threshold of `0.0` and enables charge-state aggregation with the mean.
-4. [LabeledQuantificationParams_CorrFilter_ChargeAgg_ModAgg.json](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/LabeledQuantificationParams_CorrFilter_ChargeAgg_ModAgg.json) — Uses a correlation threshold of `0.0` and enables both charge-state and modification aggregation with the mean.
-5. [LabeledQuantificationParams_Transform_Filter_Sum.json](https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/LabeledQuantificationParams_Transform_Filter_Sum.json) — Applies `Log2` to light, heavy and ratio in the first step, retains log2 ratios below `0.0`, and aggregates protein-level light and heavy values with `Sum` while ratios use `Mean`.
+1. [LabeledQuantificationParams.json](https://github.com/CSBiology/ProteomIQon/blob/main/src/ProteomIQon/defaultParams/LabeledQuantificationParams.json) — Runs the mandatory light/heavy and protein-group aggregation steps, using the mean for each series.
+2. [LabeledQuantificationParams_withCorrFilter.json](https://github.com/CSBiology/ProteomIQon/blob/main/src/ProteomIQon/defaultParams/LabeledQuantificationParams_withCorrFilter.json) — Adds a light/heavy correlation threshold of `0.9`.
+3. [LabeledQuantificationParams_CorrFilter_ChargeAgg.json](https://github.com/CSBiology/ProteomIQon/blob/main/src/ProteomIQon/defaultParams/LabeledQuantificationParams_CorrFilter_ChargeAgg.json) — Uses a correlation threshold of `0.0` and enables charge-state aggregation with the mean.
+4. [LabeledQuantificationParams_CorrFilter_ChargeAgg_ModAgg.json](https://github.com/CSBiology/ProteomIQon/blob/main/src/ProteomIQon/defaultParams/LabeledQuantificationParams_CorrFilter_ChargeAgg_ModAgg.json) — Uses a correlation threshold of `0.0` and enables both charge-state and modification aggregation with the mean.
+5. [LabeledQuantificationParams_Transform_Filter_Sum.json](https://github.com/CSBiology/ProteomIQon/blob/main/src/ProteomIQon/defaultParams/LabeledQuantificationParams_Transform_Filter_Sum.json) — Applies `Log2` to light, heavy and ratio in the first step, retains log2 ratios below `0.0`, and aggregates protein-level light and heavy values with `Sum` while ratios use `Mean`.
 
 All five linked presets specify an alignment Q-value threshold of `0.05`.
 
@@ -155,7 +155,7 @@ The tool writes **three mandatory** and **up to two optional** tab-separated res
 | `ProteinAggregation.txt` | One row per protein group and run, with aggregated light, heavy and ratio values. Includes the number of observations used, coefficient of variation (CV), standard deviation and standard error of the mean (SEM) for each series. | Always |
 | `LabeledQuant.txt` | Protein-group results in a wide table: one row per protein group and a set of columns for each input run. Column names follow patterns such as `<run>.Ratio_LightByHeavy` and `<run>.Quant_Heavy`. | Always |
 
-**Next step:** [RatioLFQ](./ratio-lfq.md) uses `LabeledQuant.txt` to derive comparable run-level intensities from the ratios.
+**Next step:** [RatioLFQ](./ratio-lfq.md) reads `GlobModAggregation.txt`, written without a transform, and computes a ratio and an intensity per protein group and run.
 
 ### Log files
 
