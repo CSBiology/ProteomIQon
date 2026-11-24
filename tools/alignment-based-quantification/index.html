@@ -129,7 +129,7 @@
 <tr role="row">
 <td role="cell" data-label="Flag"><code>-p</code></td>
 <td role="cell" data-label="Description">the parameter file (JSON)</td>
-<td role="cell" data-label="Comes from"><a href="https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/AlignmentBasedQuantificationParams.json">AlignmentBasedQuantificationParams.json</a></td>
+<td role="cell" data-label="Comes from"><a href="https://github.com/CSBiology/ProteomIQon/blob/main/src/ProteomIQon/defaultParams/AlignmentBasedQuantificationParams.json">AlignmentBasedQuantificationParams.json</a></td>
 </tr>
 <tr role="row">
 <td role="cell" data-label="Flag"><code>-mf</code></td>
@@ -299,7 +299,7 @@
 </tr>
 </tbody>
 </table></div>
-<p>For timsTOF runs, <a href="https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/AlignmentBasedQuantificationTIMsParams.json">AlignmentBasedQuantificationTIMsParams.json</a> sets the m/z half width to <code>Window.Fixed 0.008</code> Da and the ion mobility half width to <code>Window.Fixed 0.025</code> in 1/K0. These match the defaults in <a href="/ProteomIQon/tools/psm-based-quantification-tims/">PSMBasedQuantificationTIMs</a>. Suitable windows depend on the instrument and acquisition method.</p>
+<p>For timsTOF runs, <a href="https://github.com/CSBiology/ProteomIQon/blob/main/src/ProteomIQon/defaultParams/AlignmentBasedQuantificationTIMsParams.json">AlignmentBasedQuantificationTIMsParams.json</a> sets the m/z half width to <code>Window.Fixed 0.008</code> Da and the ion mobility half width to <code>Window.Fixed 0.025</code> in 1/K0. These match the defaults in <a href="/ProteomIQon/tools/psm-based-quantification-tims/">PSMBasedQuantificationTIMs</a>. Suitable windows depend on the instrument and acquisition method.</p>
 </div></details><details id="parameter-generation" class="accordion tool-io-accordion tool-io-parameters"><summary class="accordion-header"><span class="accordion-icon" aria-hidden="true">CFG</span><span class="accordion-heading"><strong role="heading" aria-level="2">Parameter generation</strong><small>JSON and parameter-generation examples</small></span><span class="accordion-chevron" aria-hidden="true"></span></summary><div class="accordion-content">
 <p>From the ProteomIQon repository root, build the library with <code>dotnet build src/ProteomIQon/ProteomIQon.fsproj -c Release</code>. Save the following as <code>generate-params.fsx</code> in that same directory and run <code>dotnet fsi generate-params.fsx</code>. The script writes the JSON file to the system temporary directory.</p>
 <pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="fsharp"><code><span class="line"><span style="color:#E1E4E8">#r </span><span style="color:#9ECBFF">"nuget: FSharp.Stats, 0.6.0"</span></span>

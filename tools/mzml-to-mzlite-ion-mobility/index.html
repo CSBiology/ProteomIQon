@@ -35,7 +35,7 @@
 <tr role="row">
 <td role="cell" data-label="Flag"><code>-p</code></td>
 <td role="cell" data-label="Meaning">the parameter file in JSON</td>
-<td role="cell" data-label="Comes from"><a href="https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/TIMsMzMLtoMzLiteParams.json">TIMsMzMLtoMzLiteParams.json</a></td>
+<td role="cell" data-label="Comes from"><a href="https://github.com/CSBiology/ProteomIQon/blob/main/src/ProteomIQon/defaultParams/TIMsMzMLtoMzLiteParams.json">TIMsMzMLtoMzLiteParams.json</a></td>
 </tr>
 <tr role="row">
 <td role="cell" data-label="Flag"><code>-c</code></td>
@@ -93,7 +93,7 @@
 </tbody>
 </table></div>
 <ul>
-<li>The wavelet parameters are explained on the <a href="/ProteomIQon/tools/mzml-to-mzlite/">MzMLToMzLite page</a>. The default file is <a href="https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/TIMsMzMLtoMzLiteParams.json">TIMsMzMLtoMzLiteParams.json</a>.</li>
+<li>The wavelet parameters are explained on the <a href="/ProteomIQon/tools/mzml-to-mzlite/">MzMLToMzLite page</a>. The default file is <a href="https://github.com/CSBiology/ProteomIQon/blob/main/src/ProteomIQon/defaultParams/TIMsMzMLtoMzLiteParams.json">TIMsMzMLtoMzLiteParams.json</a>.</li>
 </ul>
 </div></details><details id="parameter-generation" class="accordion tool-io-accordion tool-io-parameters"><summary class="accordion-header"><span class="accordion-icon" aria-hidden="true">CFG</span><span class="accordion-heading"><strong role="heading" aria-level="2">Parameter generation</strong><small>JSON and parameter-generation examples</small></span><span class="accordion-chevron" aria-hidden="true"></span></summary><div class="accordion-content">
 <p>From the ProteomIQon repository root, build the library with <code>dotnet build src/ProteomIQon/ProteomIQon.fsproj -c Release</code>. Save the following as <code>generate-params.fsx</code> in that same directory and run <code>dotnet fsi generate-params.fsx</code>. The script writes the JSON file to the system temporary directory.</p>

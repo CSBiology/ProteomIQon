@@ -52,7 +52,7 @@
 <tr role="row">
 <td role="cell" data-label="Flag"><code>-p</code></td>
 <td role="cell" data-label="Meaning">JSON parameter file controlling filtering, transformations and aggregation.</td>
-<td role="cell" data-label="Comes from"><a href="https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/LabeledQuantificationParams.json">Default parameter file</a></td>
+<td role="cell" data-label="Comes from"><a href="https://github.com/CSBiology/ProteomIQon/blob/main/src/ProteomIQon/defaultParams/LabeledQuantificationParams.json">Default parameter file</a></td>
 </tr>
 </tbody>
 </table></div>
@@ -171,11 +171,11 @@
 <h3 id="default-parameter-files">Default parameter files</h3>
 <p>The repository provides <strong>five presets</strong>:</p>
 <ol>
-<li><a href="https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/LabeledQuantificationParams.json">LabeledQuantificationParams.json</a> — Runs the mandatory light/heavy and protein-group aggregation steps, using the mean for each series.</li>
-<li><a href="https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/LabeledQuantificationParams_withCorrFilter.json">LabeledQuantificationParams_withCorrFilter.json</a> — Adds a light/heavy correlation threshold of <code>0.9</code>.</li>
-<li><a href="https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/LabeledQuantificationParams_CorrFilter_ChargeAgg.json">LabeledQuantificationParams_CorrFilter_ChargeAgg.json</a> — Uses a correlation threshold of <code>0.0</code> and enables charge-state aggregation with the mean.</li>
-<li><a href="https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/LabeledQuantificationParams_CorrFilter_ChargeAgg_ModAgg.json">LabeledQuantificationParams_CorrFilter_ChargeAgg_ModAgg.json</a> — Uses a correlation threshold of <code>0.0</code> and enables both charge-state and modification aggregation with the mean.</li>
-<li><a href="https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/LabeledQuantificationParams_Transform_Filter_Sum.json">LabeledQuantificationParams_Transform_Filter_Sum.json</a> — Applies <code>Log2</code> to light, heavy and ratio in the first step, retains log2 ratios below <code>0.0</code>, and aggregates protein-level light and heavy values with <code>Sum</code> while ratios use <code>Mean</code>.</li>
+<li><a href="https://github.com/CSBiology/ProteomIQon/blob/main/src/ProteomIQon/defaultParams/LabeledQuantificationParams.json">LabeledQuantificationParams.json</a> — Runs the mandatory light/heavy and protein-group aggregation steps, using the mean for each series.</li>
+<li><a href="https://github.com/CSBiology/ProteomIQon/blob/main/src/ProteomIQon/defaultParams/LabeledQuantificationParams_withCorrFilter.json">LabeledQuantificationParams_withCorrFilter.json</a> — Adds a light/heavy correlation threshold of <code>0.9</code>.</li>
+<li><a href="https://github.com/CSBiology/ProteomIQon/blob/main/src/ProteomIQon/defaultParams/LabeledQuantificationParams_CorrFilter_ChargeAgg.json">LabeledQuantificationParams_CorrFilter_ChargeAgg.json</a> — Uses a correlation threshold of <code>0.0</code> and enables charge-state aggregation with the mean.</li>
+<li><a href="https://github.com/CSBiology/ProteomIQon/blob/main/src/ProteomIQon/defaultParams/LabeledQuantificationParams_CorrFilter_ChargeAgg_ModAgg.json">LabeledQuantificationParams_CorrFilter_ChargeAgg_ModAgg.json</a> — Uses a correlation threshold of <code>0.0</code> and enables both charge-state and modification aggregation with the mean.</li>
+<li><a href="https://github.com/CSBiology/ProteomIQon/blob/main/src/ProteomIQon/defaultParams/LabeledQuantificationParams_Transform_Filter_Sum.json">LabeledQuantificationParams_Transform_Filter_Sum.json</a> — Applies <code>Log2</code> to light, heavy and ratio in the first step, retains log2 ratios below <code>0.0</code>, and aggregates protein-level light and heavy values with <code>Sum</code> while ratios use <code>Mean</code>.</li>
 </ol>
 <p>All five linked presets specify an alignment Q-value threshold of <code>0.05</code>.</p>
 </div></details><details id="outputs" class="accordion tool-io-accordion tool-io-outputs"><summary class="accordion-header"><span class="accordion-icon" aria-hidden="true">OUT</span><span class="accordion-heading"><strong role="heading" aria-level="2">Outputs</strong><small>Generated data and log files</small></span><span class="accordion-chevron" aria-hidden="true"></span></summary><div class="accordion-content">
@@ -216,7 +216,7 @@
 </tr>
 </tbody>
 </table></div>
-<p><strong>Next step:</strong> <a href="/ProteomIQon/tools/ratio-lfq/">RatioLFQ</a> uses <code>LabeledQuant.txt</code> to derive comparable run-level intensities from the ratios.</p>
+<p><strong>Next step:</strong> <a href="/ProteomIQon/tools/ratio-lfq/">RatioLFQ</a> reads <code>GlobModAggregation.txt</code>, written without a transform, and computes a ratio and an intensity per protein group and run.</p>
 <h3 id="log-files">Log files</h3>
 <p>Two additional files are written to the output directory:</p>
 <div class="tool-io-table-scroll" tabindex="0" role="region" aria-label="Outputs table"><table class="responsive-table" role="table">

@@ -227,7 +227,7 @@
 </tr>
 </tbody>
 </table></div>
-<p>The default file is <a href="https://github.com/CSBiology/ProteomIQon/blob/dev/src/ProteomIQon/defaultParams/peptideSpectrumMatchingTIMsParams.json">peptideSpectrumMatchingTIMsParams.json</a>.</p>
+<p>The default file is <a href="https://github.com/CSBiology/ProteomIQon/blob/main/src/ProteomIQon/defaultParams/peptideSpectrumMatchingTIMsParams.json">peptideSpectrumMatchingTIMsParams.json</a>.</p>
 </div></details><details id="outputs" class="accordion tool-io-accordion tool-io-outputs"><summary class="accordion-header"><span class="accordion-icon" aria-hidden="true">OUT</span><span class="accordion-heading"><strong role="heading" aria-level="2">Outputs</strong><small>Generated data and log files</small></span><span class="accordion-chevron" aria-hidden="true"></span></summary><div class="accordion-content">
 <p>Every input run generates <code>&lt;run&gt;.psm</code> in the output directory, as a header-containing, tab-delimited file. Existing PSM files are overwritten. Its data record is <code>Dto.PeptideSpectrumMatchingResult</code>, shared with PeptideSpectrumMatching.</p>
 <p>The table contains 28 columns: 23 classic PSM columns and 5 TIMs-specific additions. <code>Label</code> is <code>1</code> for targets and <code>-1</code> for reversed decoys; <code>MissCleavages</code> is set to <code>-1</code> and recalculated by PSMStatistics.</p>
