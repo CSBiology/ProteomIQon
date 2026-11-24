@@ -8,7 +8,6 @@ open Dto
 open FSharp.Stats
 open BioFSharp.Mz.Quantification
 open BioFSharp.Mz
-open FSharpAux.IO.SchemaReader
 open Plotly.NET
 open BioFSharp
 open MzIO.Processing
@@ -52,9 +51,7 @@ module PSMBasedQuantification =
         logger.Trace (sprintf "outFilePath:%s" outFilePath)
         logger.Trace "Read scored PSMs"
         ///
-        let qpsms =
-            Csv.CsvReader<PSMStatisticsResult>(SchemaMode=Csv.Fill).ReadFile(scoredPSMs,'\t',false,1)
-            |> Array.ofSeq
+        let qpsms = readQpsm scoredPSMs
         logger.Trace "Read scored PSMs:finished"
         if Array.isEmpty qpsms then
             logger.Warn (sprintf "%s contains no PSMs, %s gets no quantifications." scoredPSMs outFilePath)
