@@ -1,0 +1,33 @@
+---
+import { phases } from '../../lib/phases';
+
+interface Props {
+	class?: string;
+}
+const { class: className } = Astro.props;
+
+const arrows =
+	"not-last:before:absolute not-last:before:top-1/2 not-last:before:-right-[26px] not-last:before:h-0.5 not-last:before:w-[26px] not-last:before:-translate-y-1/2 not-last:before:bg-[#88b9dc] not-last:before:content-[''] " +
+	"not-last:after:absolute not-last:after:top-1/2 not-last:after:-right-[26px] not-last:after:-translate-y-1/2 not-last:after:border-y-[5px] not-last:after:border-l-[7px] not-last:after:border-y-transparent not-last:after:border-l-[#88b9dc] not-last:after:content-['']";
+---
+
+<div class:list={['pipeline-flow-scroll overflow-x-auto pt-[3px] pb-[9px]', className]}>
+	<div class="pipeline-flow mx-auto grid w-[min(1300px,100%)] min-w-[980px] grid-cols-[repeat(var(--stage-count),minmax(0,1fr))] gap-[26px] max-md:min-w-[900px]" style={`--stage-count: ${phases.length}`} role="list" aria-label="ProteomIQon processing stages">
+		{phases.map((phase) => (
+			<div class:list={['pipeline-flow-item relative min-w-0', arrows]} role="listitem">
+				<div class="pipeline-stage min-h-[124px] rounded-lg border-2 px-[15px] pt-4 pb-[15px] text-navy">
+					<span class="block font-mono text-[.68rem] tracking-[.08em] text-[#3f7398]">{phase.number}</span>
+					<strong class="mt-3.5 mb-2 block text-[clamp(.9rem,1.05vw,1rem)] leading-[1.15] text-navy">{phase.label}</strong>
+					<small class="block text-[clamp(.65rem,.78vw,.74rem)] leading-normal text-steel">{phase.detail}</small>
+				</div>
+			</div>
+		))}
+	</div>
+</div>
+
+<style>
+	.pipeline-stage {
+		border-color: color-mix(in srgb, var(--sky) 38%, white);
+		background-color: color-mix(in srgb, var(--sky) 12%, white);
+	}
+</style>

@@ -1,0 +1,167 @@
+---
+const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
+const snapshotPath = `${base}structures/ferredoxin.molx`;
+---
+
+<div class="molecule-scene" data-snapshot={snapshotPath} role="group" aria-label="3D ferredoxin model. Drag to rotate.">
+	<div class="molecule-canvas"></div>
+</div>
+
+<link
+	rel="stylesheet"
+	href="https://cdn.jsdelivr.net/npm/molstar@5.13.0/build/viewer/molstar.min.css"
+/>
+
+<script
+	is:inline
+	src="https://cdn.jsdelivr.net/npm/molstar@5.13.0/build/viewer/molstar.min.js"
+/>
+
+<script is:inline>
+	(async () => {
+		const scenes = document.querySelectorAll('.molecule-scene');
+
+		for (const container of scenes) {
+			if (container.dataset.initialized) continue;
+			container.dataset.initialized = 'true';
+
+			try {
+				if (!window.molstar?.Viewer?.create) {
+					throw new Error('Mol* viewer script did not load.');
+				}
+
+				const target = container.querySelector('.molecule-canvas');
+				const snapshotUrl = container.dataset.snapshot;
+				if (!target || !snapshotUrl) throw new Error('Missing Mol* viewer target or snapshot URL.');
+				const siteBackground = getComputedStyle(container).getPropertyValue('--paper').trim() || '#f3efe6';
+				const siteBackgroundColor = Number.parseInt(siteBackground.replace('#', ''), 16);
+
+				const viewer = await window.molstar.Viewer.create(target, {
+					layoutIsExpanded: false,
+					layoutShowControls: false,
+					layoutShowRemoteState: false,
+					layoutShowSequence: false,
+					layoutShowLog: false,
+					layoutShowLeftPanel: false,
+					collapseLeftPanel: true,
+					collapseRightPanel: true,
+					viewportShowReset: false,
+					viewportShowScreenshotControls: false,
+					viewportShowControls: false,
+					viewportShowExpand: false,
+					viewportShowToggleFullscreen: false,
+					viewportShowSettings: false,
+					viewportShowAnimation: false,
+					viewportShowTrajectoryControls: false,
+					viewportShowSelectionMode: false,
+					viewportFocusBehavior: 'disabled',
+					viewportBackgroundColor: siteBackground,
+				});
+
+				await viewer.loadSnapshotFromUrl(snapshotUrl, 'molx');
+
+				const canvas3d = viewer.plugin.canvas3d;
+				canvas3d?.setProps({
+					transparentBackground: false,
+					checkeredTransparentBackground: false,
+					renderer: {
+						...canvas3d.props.renderer,
+						backgroundColor: siteBackgroundColor,
+					},
+					camera: {
+						...canvas3d.props.camera,
+						helper: {
+							...canvas3d.props.camera.helper,
+							axes: { name: 'off', params: {} },
+						},
+					},
+					trackball: {
+						...canvas3d.props.trackball,
+						animate: { name: 'off' },
+						zoomSpeed: 0,
+						panSpeed: 0,
+					},
+				});
+			} catch (error) {
+				console.error('Could not initialize the ferredoxin viewer:', error);
+			}
+		}
+	})();
+</script>
+
+<style>
+	.molecule-scene {
+		position: relative;
+		width: 100%;
+		height: 100%;
+		contain: layout paint;
+		background: var(--paper);
+	}
+
+	.molecule-scene :global(.msp-highlight-toast-wrapper) {
+		right: 10px !important;
+	}
+
+	.molecule-canvas {
+		width: 100%;
+		height: 100%;
+		background: var(--paper);
+		pointer-events: auto;
+	}
+
+	.molecule-scene :global(.msp-plugin),
+	.molecule-scene :global(.msp-layout-standard),
+	.molecule-scene :global(.msp-layout-main),
+	.molecule-scene :global(.msp-viewport),
+	.molecule-scene :global(.msp-canvas) {
+		background: var(--paper) !important;
+	}
+
+	.molecule-scene :global(.msp-layout-standard) {
+		border: 0 !important;
+	}
+
+	.molecule-scene :global(canvas) {
+		background-color: var(--paper) !important;
+		background-image: none !important;
+	}
+
+	.molecule-scene :global(.msp-highlight-info),
+	.molecule-scene :global(.msp-hover-box-body) {
+		background: color-mix(in srgb, var(--paper) 72%, transparent) !important;
+		opacity: 1 !important;
+	}
+
+	.molecule-scene :global(.msp-highlight-info) {
+		text-align: right;
+		backdrop-filter: blur(2px);
+	}
+
+	.molecule-scene :global(.msp-highlight-info)::after {
+		display: block;
+		max-width: min(360px, 70vw);
+		margin-top: 3px;
+		font-size: .72rem;
+		line-height: 1.4;
+		text-align: right;
+		white-space: pre-line;
+		overflow-wrap: anywhere;
+		content: "Margaret Oakley Dayhoff, the “mother of bioinformatics,” provided the first computer-based evidence for the molecular evolution of proteins in 1966, based on her studies of ferredoxin.\AVisualization using Mol* https://molstar.org/";
+	}
+
+	.molecule-scene :global(.msp-layout-top),
+	.molecule-scene :global(.msp-layout-bottom),
+	.molecule-scene :global(.msp-layout-left),
+	.molecule-scene :global(.msp-layout-right),
+	.molecule-scene :global(.msp-viewport-controls),
+	.molecule-scene :global(.msp-viewport-controls-panel),
+	.molecule-scene :global(.msp-viewport-controls-buttons),
+	.molecule-scene :global(.msp-viewport-top-left-controls),
+	.molecule-scene :global(.msp-animation-viewport-controls),
+	.molecule-scene :global(.msp-state-snapshot-viewport-controls),
+	.molecule-scene :global(.msp-selection-viewport-controls),
+	.molecule-scene :global(.msp-traj-controls) {
+		display: none !important;
+	}
+
+</style>

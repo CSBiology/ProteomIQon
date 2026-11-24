@@ -1,0 +1,364 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { getPhase, phases } from '../../lib/phases';
+import { getSortedTools, toolHref } from '../../lib/tools';
+import { breakCamelCase } from '../../lib/text';
+import { workflowEdges, workflowNodes } from '../../lib/tool-network-layout';
+
+const tools = new Map((await getSortedTools()).map((tool) => [tool.id, tool]));
+const mobilityOnlyNodes = new Set(workflowNodes.filter((node) => node.mobilityOnly).map((node) => node.id));
+const nodes = workflowNodes.map(({ id, tool, variant, position: [x, y] }) => {
+	const standard = tools.get(tool);
+	const alternative = variant ? tools.get(variant) : undefined;
+	if (!standard || (variant && !alternative)) {
+		throw new Error(`Missing tool documentation for workflow node ${id}.`);
+	}
+	const phase = getPhase(standard.data.phase);
+	return {
+		id,
+		phase: phase.id,
+		style: `left: ${x}%; top: ${y}%; --tool-accent: var(--color-${phase.tone})`,
+		faces: alternative ? [standard, alternative] : [standard],
+	};
+});
+---
+
+<Layout title="Tools · ProteomIQon" description="Browse the ProteomIQon tools by processing stage.">
+	<section class="tool-directory" aria-labelledby="directory-title">
+		<header class="network-heading">
+			<h1 id="directory-title">Explore the Toolchain.</h1>
+			<label class="workflow-mode">
+				<span>Ion Mobility</span>
+				<input class="sr-only" type="checkbox" role="switch" aria-controls="tool-workflow" />
+				<span class="mode-switch" aria-hidden="true"></span>
+			</label>
+		</header>
+
+		<div class="network-scroll" tabindex="0" role="region" aria-label="Interactive tool workflow">
+			<div class="tool-network" id="tool-workflow">
+				<svg class="category-regions" aria-hidden="true">
+					{phases.map((phase) => (
+						<g class="category-region" data-phase={phase.id} style={`--category-tone: var(--color-${phase.tone})`}>
+							<path class="category-fill" />
+							<text class="category-label" x="0" y="0">
+								{phase.label.includes(' ') ? phase.label.split(' ').map((word, index) => (
+									<tspan x="0" dy={index ? '1.18em' : undefined}>{word}</tspan>
+								)) : phase.label}
+							</text>
+						</g>
+					))}
+				</svg>
+
+				<svg class="workflow-edges" aria-hidden="true">
+					<defs>
+						<marker id="tool-direction" viewBox="0 0 7 6" refX="7" refY="3" markerWidth="7" markerHeight="6" markerUnits="userSpaceOnUse" orient="auto">
+							<path d="M 0 0 L 7 3 L 0 6 Z" fill="context-stroke" />
+						</marker>
+					</defs>
+					{workflowEdges.map(([from, to]) => (
+						<path class="workflow-edge" data-from={from} data-to={to} data-mobility-only={mobilityOnlyNodes.has(from) || mobilityOnlyNodes.has(to) || undefined} marker-end="url(#tool-direction)" />
+					))}
+				</svg>
+
+				{nodes.map(({ id, phase, style, faces }) => (
+					<div class="tool-node" data-node={id} data-phase={phase} data-mobility-only={mobilityOnlyNodes.has(id) || undefined} style={style}>
+						{faces.map((tool, index) => (
+							<a class="tool-face" href={toolHref(tool.id)} data-variant={index > 0 || undefined} inert={index > 0}>
+								<span class="tool-label">{breakCamelCase(tool.data.name).map((part, index) => (
+									<Fragment>{index > 0 && <wbr />}{part}</Fragment>
+								))}</span>
+							</a>
+						))}
+					</div>
+				))}
+			</div>
+		</div>
+	</section>
+</Layout>
+
+<script>
+	import { connectToolCircles } from '../../lib/tool-network-layout';
+	import { layoutCategoryRegions } from '../../lib/tool-network-regions';
+
+	const graph = document.querySelector<HTMLElement>('.tool-network');
+	if (graph) initializeGraph(graph);
+
+	function initializeGraph(graph: HTMLElement) {
+		const nodes = [...graph.querySelectorAll<HTMLElement>('.tool-node')];
+		const edges = [...graph.querySelectorAll<SVGPathElement>('.workflow-edge')];
+		const regions = [...graph.querySelectorAll<SVGGElement>('.category-region')].map((element) => ({
+			element,
+			nodeIds: nodes.filter((node) => node.dataset.phase === element.dataset.phase).map((node) => node.dataset.node),
+			fill: element.querySelector<SVGPathElement>('.category-fill')!,
+			label: element.querySelector<SVGTextElement>('.category-label')!,
+		}));
+		const mobility = graph.closest('.tool-directory')?.querySelector<HTMLInputElement>('.workflow-mode input');
+		const pairs = nodes.flatMap((node) => {
+			const variant = node.querySelector<HTMLAnchorElement>('.tool-face[data-variant]');
+			return variant ? [{ standard: node.querySelector<HTMLAnchorElement>('.tool-face:not([data-variant])')!, variant }] : [];
+		});
+		let hovered: HTMLElement | undefined;
+		let focused: HTMLElement | undefined;
+
+		function updateMode() {
+			const showMobility = mobility?.checked ?? false;
+			graph.toggleAttribute('data-ion-mobility', showMobility);
+			for (const { standard, variant } of pairs) {
+				standard.inert = showMobility;
+				variant.inert = !showMobility;
+			}
+		}
+
+		mobility?.addEventListener('change', updateMode);
+		updateMode();
+
+		function highlight() {
+			const active = hovered ?? focused;
+			const id = active?.dataset.node;
+			graph.toggleAttribute('data-emphasis', !!active);
+			for (const node of nodes) node.toggleAttribute('data-highlighted', node === active);
+			for (const region of regions) {
+				region.element.toggleAttribute('data-highlighted', active?.dataset.phase === region.element.dataset.phase);
+			}
+			for (const edge of edges) {
+				edge.toggleAttribute('data-highlighted', !!id && (id === edge.dataset.from || id === edge.dataset.to));
+			}
+		}
+
+		for (const node of nodes) {
+			node.addEventListener('pointerenter', (event) => {
+				if (event.pointerType !== 'touch') {
+					hovered = node;
+					highlight();
+				}
+			});
+			node.addEventListener('pointerleave', () => {
+				if (hovered === node) {
+					hovered = undefined;
+					highlight();
+				}
+			});
+			node.addEventListener('focusin', () => {
+				focused = node;
+				highlight();
+			});
+			node.addEventListener('focusout', (event) => {
+				const next = event.relatedTarget;
+				if (focused === node && (!(next instanceof Node) || !node.contains(next))) {
+					focused = undefined;
+					highlight();
+				}
+			});
+
+		}
+
+		function layout() {
+			const circles = new Map(nodes.map((node) => {
+				const style = getComputedStyle(node);
+				return [node.dataset.node, { x: parseFloat(style.left), y: parseFloat(style.top), radius: node.offsetWidth / 2 }];
+			}));
+
+			const width = graph.clientWidth;
+			const height = graph.clientHeight;
+			const segments = edges.map((edge) => {
+				const from = circles.get(edge.dataset.from)!;
+				const to = circles.get(edge.dataset.to)!;
+				edge.setAttribute('d', connectToolCircles(from, to));
+				return [from, to] as [typeof from, typeof to];
+			});
+			const groupGeometry = regions.map(({ label, nodeIds }) => {
+				const bounds = label.getBBox();
+				return {
+					circles: nodeIds.map((id) => circles.get(id)!),
+					label: { width: bounds.width, height: bounds.height },
+					bounds,
+				};
+			});
+			const categoryGeometry = layoutCategoryRegions({ width, height }, groupGeometry, segments);
+			for (const [index, { element, fill, label }] of regions.entries()) {
+				const { path, labelPosition } = categoryGeometry[index];
+				fill.setAttribute('d', path);
+				if (labelPosition) {
+					const previous = groupGeometry[index].bounds;
+					const x = String(Number(label.getAttribute('x')) + labelPosition.x - previous.x);
+					label.setAttribute('x', x);
+					for (const line of label.querySelectorAll('tspan')) line.setAttribute('x', x);
+					label.setAttribute('y', String(Number(label.getAttribute('y')) + labelPosition.y - previous.y));
+				}
+				label.style.visibility = labelPosition ? 'visible' : 'hidden';
+				element.setAttribute('data-ready', '');
+			}
+
+		}
+
+		new ResizeObserver(layout).observe(graph);
+		document.fonts.ready.then(layout);
+		layout();
+	}
+</script>
+
+<style>
+	.tool-directory { padding: clamp(14px, 3vh, 34px) 0 22px; }
+
+	.network-heading {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 6px 20px;
+	}
+
+	.network-heading > h1 {
+		margin: 10px 0 12px;
+		color: var(--navy);
+		font-size: clamp(2.35rem, 5.4vw, 4.7rem);
+	}
+
+	.workflow-mode {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		min-height: 44px;
+		margin-inline-start: auto;
+		color: var(--navy);
+		font-size: .875rem;
+		font-weight: 600;
+		cursor: pointer;
+	}
+
+	.mode-switch {
+		position: relative;
+		inline-size: 46px;
+		block-size: 26px;
+		border: 1px solid var(--line);
+		border-radius: 999px;
+		background: color-mix(in srgb, var(--slate) 7%, var(--paper));
+		transition: background-color 200ms ease;
+	}
+
+	.mode-switch::before {
+		content: '';
+		position: absolute;
+		inset: 3px auto auto 3px;
+		inline-size: 18px;
+		block-size: 18px;
+		border: 1px solid var(--slate);
+		border-radius: 50%;
+		background: var(--paper);
+		pointer-events: none;
+		transition: transform 200ms ease;
+	}
+
+	.workflow-mode input:checked + .mode-switch {
+		background: color-mix(in srgb, var(--color-teal) 42%, var(--paper));
+	}
+	.workflow-mode input:checked + .mode-switch::before { transform: translateX(20px); }
+	.workflow-mode input:focus-visible + .mode-switch { outline: 2px solid var(--navy); outline-offset: 3px; }
+
+	.network-scroll {
+		position: relative;
+		left: 50%;
+		width: min(1720px, calc(100vw - clamp(36px, 4vw, 72px)));
+		transform: translateX(-50%);
+		overflow-x: auto;
+		overscroll-behavior-inline: contain;
+	}
+
+	.tool-network {
+		--node-size: clamp(114px, 7.55cqw, 128px);
+		--map-line: color-mix(in srgb, var(--slate) 60%, var(--paper));
+		position: relative;
+		isolation: isolate;
+		container-type: inline-size;
+		min-inline-size: 1320px;
+		block-size: clamp(555px, 67vh, 640px);
+	}
+
+	[data-mobility-only] { visibility: hidden; }
+	.tool-network[data-ion-mobility] [data-mobility-only] { visibility: visible; }
+	.tool-node[data-mobility-only] { transition-property: none; }
+
+	.category-regions, .workflow-edges {
+		position: absolute;
+		inset: 0;
+		pointer-events: none;
+	}
+
+	.category-regions { width: 100%; height: 100%; }
+	.category-region:not([data-ready]) { visibility: hidden; }
+
+	.category-fill {
+		fill: var(--category-tone);
+		fill-opacity: .055;
+		pointer-events: visibleFill;
+		transition: fill-opacity 300ms ease;
+	}
+
+	.category-region:is(:hover, [data-highlighted]) .category-fill { fill-opacity: .095; }
+
+	.category-label {
+		fill: color-mix(in srgb, var(--category-tone) 48%, var(--navy));
+		font-size: 12px;
+		font-weight: 500;
+		letter-spacing: .055em;
+		text-transform: uppercase;
+	}
+
+	.workflow-edges { width: 100%; height: 100%; }
+
+	.workflow-edge {
+		fill: none;
+		stroke: var(--map-line);
+		stroke-width: 1.5px;
+		stroke-linecap: round;
+		transition: stroke 200ms ease, opacity 200ms ease;
+	}
+
+	.tool-network[data-emphasis] .workflow-edge:not([data-highlighted]) { opacity: .45; }
+	.workflow-edge[data-highlighted] { stroke: var(--slate); }
+
+	.tool-node {
+		position: absolute;
+		inline-size: var(--node-size);
+		block-size: var(--node-size);
+		transform: translate(-50%, -50%);
+	}
+
+	.tool-face {
+		display: grid;
+		place-items: center;
+		position: absolute;
+		inset: 0;
+		border: 3px solid var(--tool-accent);
+		border-radius: 50%;
+		background: linear-gradient(145deg, var(--paper) 20%, color-mix(in srgb, var(--tool-accent) var(--tint, 10%), var(--paper)));
+		color: var(--navy);
+		text-decoration: none;
+		text-align: center;
+		transition: box-shadow 200ms ease;
+	}
+
+	.tool-face[data-variant] { --tint: 17%; }
+	.tool-face[inert] { display: none; }
+
+	.tool-node[data-highlighted] .tool-face {
+		box-shadow: 0 0 0 3px color-mix(in srgb, var(--tool-accent) 24%, transparent);
+	}
+
+	.tool-face:focus-visible {
+		outline: 2px solid var(--navy);
+		outline-offset: 3px;
+	}
+
+	.tool-label {
+		max-width: 7.35em;
+		font-size: .8rem;
+		font-weight: 600;
+		line-height: 1.2;
+		text-wrap: balance;
+		overflow-wrap: anywhere;
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.mode-switch, .mode-switch::before, .category-fill, .tool-face, .workflow-edge { transition: none; }
+	}
+</style>

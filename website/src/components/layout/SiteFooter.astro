@@ -1,0 +1,36 @@
+---
+import InstitutionLogos from './InstitutionLogos.astro';
+
+interface Props {
+	class?: string;
+}
+const { class: className } = Astro.props;
+---
+
+<footer class:list={['site-bottom mx-auto w-[min(1180px,calc(100%-48px))] border-t border-line pt-[22px] pb-[34px] text-xs max-md:w-[min(100%-32px,640px)]', className]}>
+	<InstitutionLogos />
+	<a class="footer-github text-red! no-underline" href="https://github.com/CSBiology/ProteomIQon/">View the project on GitHub ↗</a>
+</footer>
+
+<style>
+	.site-bottom {
+		display: grid;
+		grid-template-columns: minmax(98px, 1fr) auto minmax(0, 1fr);
+		align-items: center;
+		gap: 12px clamp(8px, 2vw, 20px);
+	}
+
+	.site-bottom > :global(.institution-logos) { display: contents; }
+	.site-bottom :global(.rptu-logo) { justify-self: start; }
+	.site-bottom :global(.csb-logo) { justify-self: center; }
+
+	.footer-github {
+		justify-self: end;
+		min-width: 0;
+		text-align: right;
+	}
+
+	@media (max-width: 315px) {
+		.footer-github { grid-column: 1 / -1; }
+	}
+</style>
