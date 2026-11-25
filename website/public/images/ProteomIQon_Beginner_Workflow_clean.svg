@@ -1,0 +1,207 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="2025" viewBox="0 0 1200 2025" role="img" aria-labelledby="title desc">
+<title id="title">ProteomIQon — Beginner workflow</title>
+<desc id="desc">A workflow from mzML spectra and Chlamydomonas FASTA reference sequences to peptide identification, protein inference and protein-level quantification. Solid arrows represent primary data flow; dashed arrows show secondary input dependencies.</desc>
+<defs>
+  <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#F9FAFE"/><stop offset="100%" stop-color="#F2F6FB"/></linearGradient>
+  <linearGradient id="headAccent" x1="0" x2="1" y1="0" y2="0"><stop offset="0%" stop-color="#4779C7"/><stop offset="44%" stop-color="#218F98"/><stop offset="100%" stop-color="#56A579"/></linearGradient>
+  <filter id="cardShadow" x="-15%" y="-20%" width="130%" height="150%"><feDropShadow dx="0" dy="3" stdDeviation="7" flood-color="#1B3455" flood-opacity="0.075"/></filter>
+  <marker id="mainArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M1 1 L9 5 L1 9 Z" fill="#7C8CA8"/></marker>
+  <marker id="softArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M1 1 L9 5 L1 9 Z" fill="#ACB5C8"/></marker>
+  <style><![CDATA[
+    text{font-family:Inter,'Segoe UI',Arial,sans-serif;}
+    .dark{fill:#1C2941} .muted{fill:#66758F}
+    .tool-name{fill:#26314A;font-size:23px;font-weight:650;letter-spacing:-.6px}
+    .kicker{font-size:12px;font-weight:760;letter-spacing:1.18px}
+    .filename{fill:#36435E;font-size:18px;font-weight:625;letter-spacing:-.18px}
+    .section{fill:#60708C;font-size:14px;font-weight:770;letter-spacing:1.9px}
+    .main-edge{fill:none;stroke:#7C8CA8;stroke-width:2.7;stroke-linecap:round;stroke-linejoin:round;marker-end:url(#mainArrow)}
+    .soft-edge{fill:none;stroke:#ADB8CA;stroke-width:2.05;stroke-dasharray:6 9;stroke-linecap:round;stroke-linejoin:round;marker-end:url(#softArrow);opacity:.80}
+    .hint{fill:#74829C;font-size:14px;font-weight:550;letter-spacing:.15px}
+    .caption{fill:#65748F;font-size:13px;font-weight:590;letter-spacing:.8px}
+  ]]></style>
+</defs>
+<rect width="1200" height="2025" fill="url(#bg)"/>
+<g transform="translate(0,-155)">
+<!-- Input track backgrounds -->
+<rect x="81" y="238" width="383" height="277" rx="22" fill="#F0F4FC" stroke="#E4EAF5"/>
+<rect x="736" y="238" width="383" height="277" rx="22" fill="#EFF8F8" stroke="#E0F0F0"/>
+
+<g><rect x="100" y="191" width="34" height="30" rx="9" fill="#E4EAF4"/>
+    <text x="117" y="211.5" text-anchor="middle" font-size="13.5" font-weight="770" fill="#526788">01</text>
+    <text class="section" x="148" y="211.5">PREPARE THE INPUTS</text></g>
+<g><rect x="100" y="528" width="34" height="30" rx="9" fill="#E4EAF4"/>
+    <text x="117" y="548.5" text-anchor="middle" font-size="13.5" font-weight="770" fill="#526788">02</text>
+    <text class="section" x="148" y="548.5">PEPTIDE IDENTIFICATION</text></g>
+<g><rect x="100" y="981" width="34" height="30" rx="9" fill="#E4EAF4"/>
+    <text x="117" y="1001.5" text-anchor="middle" font-size="13.5" font-weight="770" fill="#526788">03</text>
+    <text class="section" x="148" y="1001.5">QUANTIFY IONS &amp; INFER PROTEINS</text></g>
+<g><rect x="100" y="1273" width="34" height="30" rx="9" fill="#E4EAF4"/>
+    <text x="117" y="1293.5" text-anchor="middle" font-size="13.5" font-weight="770" fill="#526788">04</text>
+    <text class="section" x="148" y="1293.5">COMBINE THE EVIDENCE</text></g>
+<g><rect x="100" y="1519" width="34" height="30" rx="9" fill="#E4EAF4"/>
+    <text x="117" y="1539.5" text-anchor="middle" font-size="13.5" font-weight="770" fill="#526788">05</text>
+    <text class="section" x="148" y="1539.5">PROTEIN-LEVEL QUANTIFICATION</text></g>
+<g aria-label="Primary flow arrows">
+<path class="main-edge" d="M273 301 V339"/>
+<path class="main-edge" d="M927 301 V339"/>
+<path class="main-edge" d="M273 425 V463"/>
+<path class="main-edge" d="M927 425 V463"/>
+<path class="main-edge" d="M273 507 C273 544 492 540 514 576"/>
+<path class="main-edge" d="M927 507 C927 544 708 540 686 576"/>
+<path class="main-edge" d="M600 662 V697"/>
+<path class="main-edge" d="M600 741 V779"/>
+<path class="main-edge" d="M600 865 V900"/>
+<path class="main-edge" d="M600 944 V1015 H310 V1035"/>
+<path class="main-edge" d="M600 944 V1015 H890 V1035"/>
+<path class="main-edge" d="M310 1127 V1166"/>
+<path class="main-edge" d="M890 1127 V1166"/>
+<path class="main-edge" d="M310 1210 C310 1271 494 1262 494 1320"/>
+<path class="main-edge" d="M890 1210 C890 1271 706 1262 706 1320"/>
+<path class="main-edge" d="M600 1412 V1452"/>
+<path class="main-edge" d="M600 1496 V1570"/>
+<path class="main-edge" d="M600 1658 V1702"/>
+<path class="main-edge" d="M600 1746 V1810"/>
+<path class="main-edge" d="M600 1898 V1940"/>
+</g>
+<g aria-label="Secondary dependencies">
+<!-- The mzlite file is also needed for peptide ion quantification -->
+<path class="soft-edge" d="M153 485 H63 V1081 H100"/>
+<!-- The peptide DB is also read during protein inference -->
+<path class="soft-edge" d="M1047 483 H1136 V1081 H1100"/>
+<!-- The peptide DB also contributes to PSM-based quantification -->
+<path class="soft-edge" d="M1047 498 H1160 V1250 H82 V1111 H100"/>
+</g>
+<g aria-label="File: sample.mzML">
+     <rect x="100" y="255" width="346" height="46" rx="23.0" fill="#F9FBFF" stroke="#C9D4E5" stroke-width="1.5"/>
+     <g transform="translate(118,268.5)" stroke="#8191AA" fill="none" stroke-width="1.55" stroke-linejoin="round" stroke-linecap="round"><path d="M2 1 H12 L18 7 V19 H2 Z"/><path d="M12 1 V7 H18"/><path d="M6 11 H14 M6 14 H13"/></g>
+     <text class="filename" x="149" y="284.0">sample.mzML</text>
+    </g>
+<g aria-label="File: Chlamydomonas FASTA">
+     <rect x="754" y="255" width="346" height="46" rx="23.0" fill="#F9FBFF" stroke="#C9D4E5" stroke-width="1.5"/>
+     <g transform="translate(772,268.5)" stroke="#8191AA" fill="none" stroke-width="1.55" stroke-linejoin="round" stroke-linecap="round"><path d="M2 1 H12 L18 7 V19 H2 Z"/><path d="M12 1 V7 H18"/><path d="M6 11 H14 M6 14 H13"/></g>
+     <text class="filename" x="803" y="284.0">Chlamydomonas FASTA</text>
+    </g>
+<g aria-label="MzMLToMzLite">
+        <rect x="100" y="339" width="346" height="86" rx="17" fill="#FFFFFF" stroke="#E0E6EF" stroke-width="1.5" filter="url(#cardShadow)"/>
+        <path d="M117 341 V423" stroke="#5474BF" stroke-width="6" stroke-linecap="round"/>
+        <circle cx="139" cy="364" r="3.7" fill="#5474BF"/>
+        <text class="kicker" x="152" y="368.2" fill="#5474BF">SPECTRA CONVERSION</text>
+        <text class="tool-name" x="136" y="400" style="font-size:23px">MzMLToMzLite</text>
+        </g>
+<g aria-label="PeptideDB">
+        <rect x="754" y="339" width="346" height="86" rx="17" fill="#FFFFFF" stroke="#E0E6EF" stroke-width="1.5" filter="url(#cardShadow)"/>
+        <path d="M771 341 V423" stroke="#168E94" stroke-width="6" stroke-linecap="round"/>
+        <circle cx="793" cy="364" r="3.7" fill="#168E94"/>
+        <text class="kicker" x="806" y="368.2" fill="#168E94">REFERENCE DATABASE</text>
+        <text class="tool-name" x="790" y="400" style="font-size:23px">PeptideDB</text>
+        </g>
+<g aria-label="File: sample.mzlite">
+     <rect x="153" y="463" width="240" height="44" rx="22.0" fill="#F9FBFF" stroke="#C9D4E5" stroke-width="1.5"/>
+     <g transform="translate(171,475.5)" stroke="#8191AA" fill="none" stroke-width="1.55" stroke-linejoin="round" stroke-linecap="round"><path d="M2 1 H12 L18 7 V19 H2 Z"/><path d="M12 1 V7 H18"/><path d="M6 11 H14 M6 14 H13"/></g>
+     <text class="filename" x="202" y="491.0">sample.mzlite</text>
+    </g>
+<g aria-label="File: Chlamy.db">
+     <rect x="807" y="463" width="240" height="44" rx="22.0" fill="#F9FBFF" stroke="#C9D4E5" stroke-width="1.5"/>
+     <g transform="translate(825,475.5)" stroke="#8191AA" fill="none" stroke-width="1.55" stroke-linejoin="round" stroke-linecap="round"><path d="M2 1 H12 L18 7 V19 H2 Z"/><path d="M12 1 V7 H18"/><path d="M6 11 H14 M6 14 H13"/></g>
+     <text class="filename" x="856" y="491.0">Chlamy.db</text>
+    </g>
+<g aria-label="PeptideSpectrumMatching">
+        <rect x="380" y="576" width="440" height="86" rx="17" fill="#FFFFFF" stroke="#E0E6EF" stroke-width="1.5" filter="url(#cardShadow)"/>
+        <path d="M397 578 V660" stroke="#C96669" stroke-width="6" stroke-linecap="round"/>
+        <circle cx="419" cy="601" r="3.7" fill="#C96669"/>
+        <text class="kicker" x="432" y="605.2" fill="#C96669">PEPTIDE IDENTIFICATION</text>
+        <text class="tool-name" x="416" y="637" style="font-size:23px">PeptideSpectrumMatching</text>
+        </g>
+<g aria-label="File: sample.psm">
+     <rect x="482" y="697" width="236" height="44" rx="22.0" fill="#F9FBFF" stroke="#C9D4E5" stroke-width="1.5"/>
+     <g transform="translate(500,709.5)" stroke="#8191AA" fill="none" stroke-width="1.55" stroke-linejoin="round" stroke-linecap="round"><path d="M2 1 H12 L18 7 V19 H2 Z"/><path d="M12 1 V7 H18"/><path d="M6 11 H14 M6 14 H13"/></g>
+     <text class="filename" x="531" y="725.0">sample.psm</text>
+    </g>
+<g aria-label="PSMStatistics">
+        <rect x="380" y="779" width="440" height="86" rx="17" fill="#FFFFFF" stroke="#E0E6EF" stroke-width="1.5" filter="url(#cardShadow)"/>
+        <path d="M397 781 V863" stroke="#C96669" stroke-width="6" stroke-linecap="round"/>
+        <circle cx="419" cy="804" r="3.7" fill="#C96669"/>
+        <text class="kicker" x="432" y="808.2" fill="#C96669">STATISTICAL VALIDATION</text>
+        <text class="tool-name" x="416" y="840" style="font-size:23px">PSMStatistics</text>
+        </g>
+<g aria-label="File: sample.qpsm">
+     <rect x="482" y="900" width="236" height="44" rx="22.0" fill="#F9FBFF" stroke="#C9D4E5" stroke-width="1.5"/>
+     <g transform="translate(500,912.5)" stroke="#8191AA" fill="none" stroke-width="1.55" stroke-linejoin="round" stroke-linecap="round"><path d="M2 1 H12 L18 7 V19 H2 Z"/><path d="M12 1 V7 H18"/><path d="M6 11 H14 M6 14 H13"/></g>
+     <text class="filename" x="531" y="928.0">sample.qpsm</text>
+    </g>
+<g aria-label="PSMBasedQuantification">
+        <rect x="100" y="1035" width="420" height="92" rx="17" fill="#FFFFFF" stroke="#E0E6EF" stroke-width="1.5" filter="url(#cardShadow)"/>
+        <path d="M117 1037 V1125" stroke="#329575" stroke-width="6" stroke-linecap="round"/>
+        <circle cx="139" cy="1060" r="3.7" fill="#329575"/>
+        <text class="kicker" x="152" y="1064.2" fill="#329575">PEPTIDE ION QUANTIFICATION</text>
+        <text class="tool-name" x="136" y="1096" style="font-size:22.5px">PSMBasedQuantification</text>
+        </g>
+<g aria-label="ProteinInference">
+        <rect x="680" y="1035" width="420" height="92" rx="17" fill="#FFFFFF" stroke="#E0E6EF" stroke-width="1.5" filter="url(#cardShadow)"/>
+        <path d="M697 1037 V1125" stroke="#168E94" stroke-width="6" stroke-linecap="round"/>
+        <circle cx="719" cy="1060" r="3.7" fill="#168E94"/>
+        <text class="kicker" x="732" y="1064.2" fill="#168E94">PROTEIN-LEVEL EVIDENCE</text>
+        <text class="tool-name" x="716" y="1096" style="font-size:23px">ProteinInference</text>
+        </g>
+<g aria-label="File: sample.quant">
+     <rect x="189" y="1166" width="242" height="44" rx="22.0" fill="#F9FBFF" stroke="#C9D4E5" stroke-width="1.5"/>
+     <g transform="translate(207,1178.5)" stroke="#8191AA" fill="none" stroke-width="1.55" stroke-linejoin="round" stroke-linecap="round"><path d="M2 1 H12 L18 7 V19 H2 Z"/><path d="M12 1 V7 H18"/><path d="M6 11 H14 M6 14 H13"/></g>
+     <text class="filename" x="238" y="1194.0">sample.quant</text>
+    </g>
+<g aria-label="File: sample.prot">
+     <rect x="769" y="1166" width="242" height="44" rx="22.0" fill="#F9FBFF" stroke="#C9D4E5" stroke-width="1.5"/>
+     <g transform="translate(787,1178.5)" stroke="#8191AA" fill="none" stroke-width="1.55" stroke-linejoin="round" stroke-linecap="round"><path d="M2 1 H12 L18 7 V19 H2 Z"/><path d="M12 1 V7 H18"/><path d="M6 11 H14 M6 14 H13"/></g>
+     <text class="filename" x="818" y="1194.0">sample.prot</text>
+    </g>
+<text class="hint" x="310" y="1238" text-anchor="middle">Peptide ion quantities</text>
+<text class="hint" x="890" y="1238" text-anchor="middle">Protein groups</text>
+<g aria-label="JoinQuantPepIonsWithProteins">
+        <rect x="380" y="1320" width="440" height="92" rx="17" fill="#FFFFFF" stroke="#E0E6EF" stroke-width="1.5" filter="url(#cardShadow)"/>
+        <path d="M397 1322 V1410" stroke="#43869A" stroke-width="6" stroke-linecap="round"/>
+        <circle cx="419" cy="1345" r="3.7" fill="#43869A"/>
+        <text class="kicker" x="432" y="1349.2" fill="#43869A">QUANTIFICATION JOIN</text>
+        <text class="tool-name" x="416" y="1381" style="font-size:22.6px">JoinQuantPepIonsWithProteins</text>
+        </g>
+<g aria-label="File: sample.quantAndProt">
+     <rect x="470" y="1452" width="260" height="44" rx="22.0" fill="#F9FBFF" stroke="#C9D4E5" stroke-width="1.5"/>
+     <g transform="translate(488,1464.5)" stroke="#8191AA" fill="none" stroke-width="1.55" stroke-linejoin="round" stroke-linecap="round"><path d="M2 1 H12 L18 7 V19 H2 Z"/><path d="M12 1 V7 H18"/><path d="M6 11 H14 M6 14 H13"/></g>
+     <text class="filename" x="519" y="1480.0">sample.quantAndProt</text>
+    </g>
+<g aria-label="LabeledProteinQuantification">
+        <rect x="380" y="1570" width="440" height="88" rx="17" fill="#FFFFFF" stroke="#E0E6EF" stroke-width="1.5" filter="url(#cardShadow)"/>
+        <path d="M397 1572 V1656" stroke="#C96669" stroke-width="6" stroke-linecap="round"/>
+        <circle cx="419" cy="1595" r="3.7" fill="#C96669"/>
+        <text class="kicker" x="432" y="1599.2" fill="#C96669">LABELED PROTEIN QUANTIFICATION</text>
+        <text class="tool-name" x="416" y="1631" style="font-size:22.5px">LabeledProteinQuantification</text>
+        </g>
+<g aria-label="File: LabeledQuant.txt">
+     <rect x="470" y="1702" width="260" height="44" rx="22.0" fill="#F9FBFF" stroke="#C9D4E5" stroke-width="1.5"/>
+     <g transform="translate(488,1714.5)" stroke="#8191AA" fill="none" stroke-width="1.55" stroke-linejoin="round" stroke-linecap="round"><path d="M2 1 H12 L18 7 V19 H2 Z"/><path d="M12 1 V7 H18"/><path d="M6 11 H14 M6 14 H13"/></g>
+     <text class="filename" x="519" y="1730.0">LabeledQuant.txt</text>
+    </g>
+<g aria-label="RatioLFQ">
+        <rect x="380" y="1810" width="440" height="88" rx="17" fill="#FFFFFF" stroke="#E0E6EF" stroke-width="1.5" filter="url(#cardShadow)"/>
+        <path d="M397 1812 V1896" stroke="#329575" stroke-width="6" stroke-linecap="round"/>
+        <circle cx="419" cy="1835" r="3.7" fill="#329575"/>
+        <text class="kicker" x="432" y="1839.2" fill="#329575">RATIO-BASED QUANTIFICATION</text>
+        <text class="tool-name" x="416" y="1871" style="font-size:23px">RatioLFQ</text>
+        </g>
+<g aria-label="File: LabeledQuant_LFQ.txt">
+     <rect x="470" y="1940" width="260" height="44" rx="22.0" fill="#F9FBFF" stroke="#C9D4E5" stroke-width="1.5"/>
+     <g transform="translate(488,1952.5)" stroke="#8191AA" fill="none" stroke-width="1.55" stroke-linejoin="round" stroke-linecap="round"><path d="M2 1 H12 L18 7 V19 H2 Z"/><path d="M12 1 V7 H18"/><path d="M6 11 H14 M6 14 H13"/></g>
+     <text class="filename" x="519" y="1968.0">LabeledQuant_LFQ.txt</text>
+    </g>
+<text x="600" y="2009" text-anchor="middle" font-size="14" font-weight="700" letter-spacing=".55" fill="#5B6A85">COMPARABLE PROTEIN INTENSITIES</text>
+<!-- Footer -->
+<path d="M100 2057 H1100" stroke="#DCE4EE" stroke-width="2"/>
+<text x="100" y="2086" font-size="13.2" font-weight="750" fill="#62738E" letter-spacing="1.3">LEGEND</text>
+<rect x="100" y="2107" width="65" height="27" rx="13.5" fill="#F9FBFF" stroke="#C9D4E5" stroke-width="1.5"/>
+<text x="177" y="2126" font-size="14" font-weight="560" fill="#66758E">Input or intermediate file</text>
+<rect x="447" y="2105" width="56" height="31" rx="9" fill="#FFF" stroke="#D5DDE9" stroke-width="1.5"/>
+<path d="M458 2111 V2130" stroke="#418E92" stroke-width="5" stroke-linecap="round"/>
+<text x="518" y="2126" font-size="14" font-weight="560" fill="#66758E">ProteomIQon tool</text>
+<path d="M770 2120 H843" stroke="#ADB8CA" stroke-width="2.2" stroke-dasharray="6 8" marker-end="url(#softArrow)"/>
+<text x="855" y="2126" font-size="14" font-weight="560" fill="#66758E">Secondary dependency</text>
+
+</g>
+</svg>

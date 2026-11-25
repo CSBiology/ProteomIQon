@@ -19,10 +19,12 @@
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@xyflow/react": "^12.12.0",
-    "astro": "^7.3.8",
     "katex": "^0.19.1",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "tailwindcss": "^4.3.4"
+  },
+  "devDependencies": {
+    "astro": "^7.4.13"
   }
 }
