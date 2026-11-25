@@ -1,0 +1,309 @@
+.beginner-tutorial {
+	--beginner-blue: var(--navy);
+	--beginner-pink: var(--red);
+	--beginner-turquoise: var(--teal);
+	width: min(1180px, 100%);
+	margin: 0 auto;
+	padding-bottom: 88px;
+}
+
+.beginner-tutorial-hero {
+	display: block;
+	padding: 72px 0 64px;
+	border-bottom: 1px solid var(--line);
+}
+
+.beginner-tutorial-controls > span,
+.beginner-tutorial-progress-head,
+.beginner-tutorial-toc > summary {
+	font: .68rem var(--mono);
+	letter-spacing: .12em;
+	text-transform: uppercase;
+}
+
+.beginner-tutorial-hero h1 {
+	max-width: 760px;
+	margin: 0 0 18px;
+	font-size: clamp(3rem, 6vw, 5.4rem);
+}
+
+.beginner-tutorial-intro {
+	max-width: 680px;
+	margin: 0;
+	color: var(--slate);
+	font-size: 1.12rem;
+	line-height: 1.75;
+}
+
+.beginner-tutorial-layout {
+	display: grid;
+	grid-template-columns: minmax(190px, 232px) minmax(0, 760px);
+	gap: clamp(34px, 7vw, 90px);
+	align-items: start;
+	padding-top: 40px;
+}
+
+.beginner-tutorial-sidebar {
+	position: sticky;
+	top: 20px;
+	align-self: start;
+	min-width: 0;
+}
+
+.beginner-tutorial-progress-head {
+	display: flex;
+	justify-content: space-between;
+	gap: 12px;
+	color: var(--slate);
+	font-size: .62rem;
+	letter-spacing: .08em;
+}
+
+.beginner-tutorial-progress-head strong { color: var(--beginner-blue); font-weight: 600; }
+
+.beginner-tutorial-progress {
+	height: 4px;
+	margin: 10px 0 24px;
+	background: color-mix(in srgb, var(--line) 62%, var(--paper));
+	overflow: hidden;
+}
+
+.beginner-tutorial-progress span {
+	display: block;
+	height: 100%;
+	width: 0;
+	background: var(--beginner-turquoise);
+	transition: width .18s ease;
+}
+
+.beginner-tutorial-toc > summary {
+	margin-bottom: 11px;
+	color: var(--beginner-blue);
+	cursor: pointer;
+	list-style: none;
+}
+
+.beginner-tutorial-toc > summary::-webkit-details-marker { display: none; }
+.beginner-tutorial-toc > summary::after { content: '⌄'; margin-left: 8px; color: var(--beginner-pink); }
+.beginner-tutorial-toc[open] > summary::after { content: '⌃'; }
+
+.beginner-tutorial-toc nav { max-height: calc(100vh - 150px); overflow-y: auto; padding-right: 8px; }
+.beginner-tutorial-toc ol { margin: 0; padding: 0; list-style: none; }
+.beginner-tutorial-toc li { margin: 0; }
+.beginner-tutorial-toc > nav > ol > li { border-left: 1px solid var(--line); }
+
+.beginner-tutorial-toc a {
+	display: grid;
+	grid-template-columns: 24px minmax(0, 1fr);
+	gap: 7px;
+	padding: 8px 8px 8px 10px;
+	color: var(--slate);
+	font-size: .78rem;
+	line-height: 1.35;
+	text-decoration: none;
+	transition: color .16s ease, background-color .16s ease, border-color .16s ease;
+}
+
+.beginner-tutorial-toc > nav > ol > li > a { border-left: 2px solid transparent; margin-left: -1px; }
+.beginner-tutorial-toc a:hover,
+.beginner-tutorial-toc a:focus-visible,
+.beginner-tutorial-toc a.is-active { color: var(--beginner-blue); background: color-mix(in srgb, var(--beginner-turquoise) 10%, transparent); }
+.beginner-tutorial-toc > nav > ol > li > a.is-active { border-left-color: var(--beginner-pink); }
+.tutorial-nav-number { color: var(--beginner-pink); font-family: var(--mono); font-size: .68rem; }
+.beginner-tutorial-toc ol ol { padding: 2px 0 7px 31px; }
+.beginner-tutorial-toc ol ol a { display: block; padding: 4px 7px; font-size: .7rem; }
+
+.beginner-tutorial-backlink {
+	display: inline-block;
+	margin-top: 24px;
+	color: var(--beginner-pink);
+	font-size: .78rem;
+	font-weight: 600;
+	text-decoration: none;
+}
+
+.beginner-tutorial-backlink:hover,
+.beginner-tutorial-backlink:focus-visible { text-decoration: underline; }
+
+.beginner-tutorial-controls {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 18px;
+	margin-bottom: 28px;
+	padding-bottom: 14px;
+	border-bottom: 1px solid var(--line);
+	color: var(--slate);
+}
+
+.beginner-tutorial-controls div { display: flex; gap: 8px; flex-wrap: wrap; }
+.beginner-tutorial-controls button,
+.beginner-next-chapter {
+	padding: 7px 11px;
+	border: 1px solid color-mix(in srgb, var(--beginner-turquoise) 55%, var(--line));
+	border-radius: 999px;
+	background: transparent;
+	color: var(--beginner-blue);
+	font-size: .74rem;
+	cursor: pointer;
+	transition: background-color .16s ease, border-color .16s ease, color .16s ease;
+}
+
+.beginner-tutorial-controls button:hover,
+.beginner-tutorial-controls button:focus-visible,
+.beginner-next-chapter:hover,
+.beginner-next-chapter:focus-visible { border-color: var(--beginner-pink); background: color-mix(in srgb, var(--beginner-pink) 9%, transparent); }
+
+.beginner-tutorial-content {
+	font-size: 1.02rem;
+	line-height: 1.72;
+}
+
+.beginner-tutorial-content > :first-child { margin-top: 0; }
+.beginner-tutorial-content h2,
+.beginner-tutorial-content h3,
+.beginner-tutorial-content h4 { color: var(--beginner-blue); scroll-margin-top: 24px; }
+.beginner-tutorial-content h2 { font-size: clamp(1.8rem, 3vw, 2.35rem); }
+.beginner-tutorial-content h3 { font-size: clamp(1.25rem, 2vw, 1.52rem); }
+.beginner-tutorial-content a { color: var(--beginner-pink); }
+.beginner-tutorial-content code { border-radius: 4px; background: color-mix(in srgb, var(--beginner-turquoise) 12%, var(--paper)); color: var(--beginner-blue); }
+.beginner-tutorial-content img { max-width: 100%; height: auto; }
+.beginner-tutorial-content table { width: 100%; min-width: 620px; border-collapse: collapse; }
+.beginner-tutorial-content th { color: var(--beginner-blue); font-size: .78rem; letter-spacing: .04em; text-align: left; text-transform: uppercase; }
+.beginner-tutorial-content th,
+.beginner-tutorial-content td { padding: 12px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.beginner-tutorial-content blockquote { border-left-color: var(--beginner-turquoise); background: color-mix(in srgb, var(--beginner-turquoise) 9%, transparent); }
+.beginner-tutorial-content hr { border-color: var(--line); }
+
+.beginner-chapter {
+	margin: 0 0 28px;
+	scroll-margin-top: 24px;
+}
+
+.beginner-chapter-header {
+	position: relative;
+	margin: 0 -12px;
+	padding: 0 12px;
+}
+
+.beginner-chapter-header h2 { margin: 0; }
+.beginner-chapter-toggle {
+	display: grid;
+	grid-template-columns: 48px minmax(0, 1fr) 20px;
+	align-items: center;
+	gap: 14px;
+	width: 100%;
+	padding: 17px 16px;
+	border: 1px solid color-mix(in srgb, var(--beginner-turquoise) 38%, var(--line));
+	border-radius: 12px;
+	background: color-mix(in srgb, var(--beginner-turquoise) 9%, var(--paper));
+	color: var(--beginner-blue);
+	text-align: left;
+	cursor: pointer;
+	transition: border-color .18s ease, background-color .18s ease, transform .18s ease;
+}
+
+.beginner-chapter-toggle:hover,
+.beginner-chapter-toggle:focus-visible { border-color: var(--beginner-pink); background: color-mix(in srgb, var(--beginner-turquoise) 14%, var(--paper)); }
+.beginner-chapter-number { color: var(--beginner-blue); font: 600 .86rem var(--mono); }
+.beginner-chapter-title { font-size: clamp(1.2rem, 2.5vw, 1.55rem); line-height: 1.2; }
+.beginner-chapter-chevron { position: relative; width: 12px; height: 12px; border-right: 2px solid var(--beginner-pink); border-bottom: 2px solid var(--beginner-pink); transform: rotate(45deg) translateY(-3px); transition: transform .18s ease; }
+.beginner-chapter.is-expanded .beginner-chapter-chevron { transform: rotate(225deg) translate(-2px, -1px); }
+
+.beginner-chapter-body {
+	padding: 16px 12px 8px;
+}
+
+.beginner-chapter.is-expanded .beginner-chapter-body { display: block; }
+.beginner-chapter:not(.is-expanded) .beginner-chapter-body { display: none; }
+.beginner-next-chapter { margin-top: 18px; }
+
+.beginner-knowledge-check {
+	margin: 22px 0;
+	padding: 0 0 4px;
+	border-left: 3px solid var(--beginner-turquoise);
+	background: color-mix(in srgb, var(--beginner-turquoise) 8%, transparent);
+}
+
+.beginner-knowledge-check summary {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	margin: 12px 14px 4px;
+	padding: 7px 12px;
+	border: 1px solid color-mix(in srgb, var(--beginner-pink) 50%, var(--line));
+	border-radius: 999px;
+	background: var(--paper);
+	color: var(--beginner-blue);
+	font-size: .8rem;
+	font-weight: 600;
+	cursor: pointer;
+	list-style: none;
+}
+
+.beginner-knowledge-check summary::-webkit-details-marker { display: none; }
+.beginner-knowledge-check summary::before { content: '↻'; color: var(--beginner-pink); }
+.beginner-knowledge-check[open] summary::before { transform: rotate(180deg); }
+.beginner-knowledge-check > :not(summary) { margin-right: 16px; margin-left: 16px; }
+.beginner-knowledge-check > p:last-child { margin-bottom: 14px; }
+
+.beginner-scientific-figure {
+	margin: 28px 0;
+	padding: 18px;
+	border: 1px solid color-mix(in srgb, var(--beginner-turquoise) 36%, var(--line));
+	border-left: 4px solid var(--beginner-turquoise);
+	background: color-mix(in srgb, var(--beginner-turquoise) 5%, var(--paper));
+}
+
+.beginner-scientific-figure-caption { display: grid; gap: 4px; margin-bottom: 12px; color: var(--slate); font-size: .84rem; }
+.beginner-scientific-figure-caption strong { color: var(--beginner-blue); font-size: 1rem; }
+.beginner-scientific-figure-scroll { overflow-x: auto; }
+.beginner-scientific-figure svg { display: block; width: min(100%, 760px); min-width: 620px; margin: 0 auto; }
+.beginner-scientific-figure .figure-axis { stroke: var(--beginner-blue); stroke-width: 2; }
+.beginner-scientific-figure .figure-axis-label,
+.beginner-scientific-figure .figure-annotation { fill: var(--beginner-blue); font: 14px var(--body); }
+.beginner-scientific-figure .figure-annotation { fill: var(--beginner-pink); font-weight: 600; }
+.beginner-scientific-figure .chromatogram-area { fill: url(#chromatogram-area); }
+.beginner-scientific-figure .chromatogram-curve { fill: none; stroke: var(--beginner-blue); stroke-width: 4; }
+.beginner-scientific-figure .chromatogram-apex-guide { stroke: var(--beginner-pink); stroke-dasharray: 6 6; stroke-width: 2; }
+.beginner-scientific-figure .chromatogram-apex { fill: var(--beginner-pink); }
+.beginner-scientific-figure-note { margin: 10px 0 0; color: var(--slate); font-size: .76rem; font-style: italic; }
+.beginner-scientific-figure .protein-connector { stroke: var(--beginner-blue); stroke-width: 3; }
+.beginner-scientific-figure .protein-connector-shared { stroke: var(--beginner-pink); }
+.beginner-scientific-figure .protein-node { fill: color-mix(in srgb, var(--beginner-blue) 10%, var(--paper)); stroke: var(--beginner-blue); stroke-width: 2; }
+.beginner-scientific-figure .protein-node-label,
+.beginner-scientific-figure .peptide-label { fill: var(--beginner-blue); font: 600 15px var(--body); }
+.beginner-scientific-figure .peptide-pill { fill: color-mix(in srgb, var(--beginner-turquoise) 14%, var(--paper)); stroke: var(--beginner-turquoise); stroke-width: 2; }
+.beginner-scientific-figure .peptide-shared { fill: color-mix(in srgb, var(--beginner-pink) 10%, var(--paper)); stroke: var(--beginner-pink); }
+
+@media (max-width: 900px) {
+	.beginner-tutorial-hero { padding-top: 52px; }
+	.beginner-tutorial-layout { grid-template-columns: 1fr; gap: 30px; }
+	.beginner-tutorial-sidebar { position: sticky; top: 8px; z-index: 5; padding: 13px 15px; border: 1px solid var(--line); background: color-mix(in srgb, var(--paper) 94%, transparent); backdrop-filter: blur(12px); }
+	.beginner-tutorial-toc nav { max-height: 34vh; }
+	.beginner-tutorial-backlink { margin-top: 14px; }
+}
+
+@media (min-width: 901px) {
+	.beginner-tutorial-toc > summary { display: none; }
+}
+
+@media (max-width: 600px) {
+	.beginner-tutorial { padding-bottom: 56px; }
+	.beginner-tutorial-hero { padding: 42px 0 42px; }
+	.beginner-tutorial-hero h1 { font-size: clamp(2.7rem, 13vw, 4rem); }
+	.beginner-tutorial-intro { font-size: 1rem; }
+	.beginner-tutorial-controls { display: block; }
+	.beginner-tutorial-controls div { margin-top: 12px; }
+	.beginner-chapter-toggle { grid-template-columns: 36px minmax(0, 1fr) 16px; gap: 10px; padding: 14px 12px; }
+	.beginner-chapter-header { margin-right: -5px; margin-left: -5px; padding-inline: 5px; }
+	.beginner-chapter-body { padding-inline: 4px; }
+	.beginner-scientific-figure { margin-inline: -4px; padding: 12px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.beginner-tutorial-progress span,
+	.beginner-chapter-chevron,
+	.beginner-tutorial-controls button,
+	.beginner-next-chapter { transition: none; }
+}

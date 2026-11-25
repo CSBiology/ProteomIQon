@@ -1,0 +1,233 @@
+---
+import '../../styles/beginner-tutorial.css';
+import { withBase } from '../../lib/site';
+
+interface Props {
+	title: string;
+	intro: string;
+}
+
+const { title, intro } = Astro.props;
+---
+
+<div class="beginner-tutorial" data-beginner-tutorial>
+	<section class="beginner-tutorial-hero" aria-labelledby="beginner-tutorial-title">
+		<div>
+			<h1 id="beginner-tutorial-title">{title}</h1>
+			<p class="beginner-tutorial-intro">{intro}</p>
+		</div>
+	</section>
+
+	<div class="beginner-tutorial-layout">
+		<aside class="beginner-tutorial-sidebar" aria-label="Beginner Tutorial navigation">
+			<div class="beginner-tutorial-progress-head">
+				<span>Reading progress</span>
+				<strong data-tutorial-progress>0%</strong>
+			</div>
+			<div class="beginner-tutorial-progress" aria-hidden="true"><span data-tutorial-progress-bar></span></div>
+			<details class="beginner-tutorial-toc" open>
+				<summary>On this page</summary>
+				<nav aria-label="Tutorial chapters">
+					<ol data-tutorial-nav></ol>
+				</nav>
+			</details>
+			<a class="beginner-tutorial-backlink" href={withBase('/guide/getting-started/')}>← Back to Getting started</a>
+		</aside>
+
+		<div class="beginner-tutorial-reading">
+			<div class="beginner-tutorial-controls" aria-label="Reading controls">
+				<span>Progressive reading</span>
+				<div>
+					<button type="button" data-expand-all>Expand all</button>
+					<button type="button" data-collapse-all>Collapse all</button>
+				</div>
+			</div>
+			<article class="beginner-tutorial-content prose max-w-none" data-tutorial-content>
+				<slot />
+			</article>
+		</div>
+	</div>
+</div>
+
+<script is:inline>
+	(() => {
+		const root = document.querySelector('[data-beginner-tutorial]');
+		if (!root) return;
+
+		const content = root.querySelector('[data-tutorial-content]');
+		const nav = root.querySelector('[data-tutorial-nav]');
+		const progressLabel = root.querySelector('[data-tutorial-progress]');
+		const progressBar = root.querySelector('[data-tutorial-progress-bar]');
+		if (!content || !nav) return;
+
+		const slugify = (value) => value
+			.toLowerCase()
+			.normalize('NFKD')
+			.replace(/[\u0300-\u036f]/g, '')
+			.replace(/[^a-z0-9]+/g, '-')
+			.replace(/^-|-$/g, '');
+
+		const allHeadings = [...content.querySelectorAll('h2')];
+		const firstChapter = allHeadings.findIndex((heading) => /^\d+\./.test(heading.textContent.trim()));
+		const chapterHeadings = firstChapter < 0 ? [] : allHeadings.slice(firstChapter);
+		const chapters = [];
+
+		chapterHeadings.forEach((heading, index) => {
+			const nextHeading = chapterHeadings[index + 1];
+			const fullTitle = heading.textContent.trim();
+			const numberMatch = fullTitle.match(/^(\d+)\.\s*(.*)$/);
+			const number = numberMatch ? numberMatch[1].padStart(2, '0') : '•';
+			const titleText = numberMatch ? numberMatch[2] : fullTitle;
+			const originalHeadingId = heading.id || slugify(fullTitle);
+			const section = document.createElement('section');
+			section.className = 'beginner-chapter';
+			section.id = `chapter-${slugify(fullTitle)}`;
+			section.dataset.chapter = '';
+
+			const header = document.createElement('header');
+			header.className = 'beginner-chapter-header';
+			const headingElement = document.createElement('h2');
+			headingElement.id = originalHeadingId;
+			const toggle = document.createElement('button');
+			toggle.type = 'button';
+			toggle.className = 'beginner-chapter-toggle';
+			toggle.setAttribute('aria-controls', `${section.id}-body`);
+			toggle.innerHTML = `<span class="beginner-chapter-number">${number}</span><span class="beginner-chapter-title"></span><span class="beginner-chapter-chevron" aria-hidden="true"></span>`;
+			toggle.querySelector('.beginner-chapter-title').textContent = titleText;
+			headingElement.append(toggle);
+			header.append(headingElement);
+
+			const body = document.createElement('div');
+			body.className = 'beginner-chapter-body';
+			body.id = `${section.id}-body`;
+
+			let node = heading.nextElementSibling;
+			while (node && node !== nextHeading) {
+				const nextNode = node.nextElementSibling;
+				body.append(node);
+				node = nextNode;
+			}
+
+			heading.replaceWith(section);
+			section.append(header, body);
+
+			const record = { section, body, toggle, titleText };
+			chapters.push(record);
+			toggle.addEventListener('click', () => setExpanded(record, !section.classList.contains('is-expanded')));
+		});
+
+		const subsectionIdCounts = new Map();
+		chapters.forEach((record, index) => {
+			if (index === 0) setExpanded(record, true);
+			else setExpanded(record, false);
+
+			const next = chapters[index + 1];
+			if (next) {
+				const nextControl = document.createElement('button');
+				nextControl.type = 'button';
+				nextControl.className = 'beginner-next-chapter';
+				nextControl.textContent = `Next chapter: ${next.titleText}`;
+				nextControl.addEventListener('click', () => navigateTo(next.section, true));
+				record.body.append(nextControl);
+			}
+
+			record.body.querySelectorAll('h3').forEach((heading) => {
+				const baseId = heading.id || slugify(heading.textContent.trim());
+				const count = subsectionIdCounts.get(baseId) || 0;
+				subsectionIdCounts.set(baseId, count + 1);
+				heading.id = count ? `${baseId}-${count + 1}` : baseId;
+			});
+
+			const item = document.createElement('li');
+			const link = document.createElement('a');
+			link.href = `#${record.section.id}`;
+			link.innerHTML = `<span class="tutorial-nav-number">${index + 1}</span><span class="tutorial-nav-title"></span>`;
+			link.querySelector('.tutorial-nav-title').textContent = record.titleText;
+			link.addEventListener('click', (event) => {
+				event.preventDefault();
+				navigateTo(record.section, true);
+			});
+			item.append(link);
+
+			const subsections = [...record.body.querySelectorAll(':scope > h3')];
+			if (subsections.length) {
+				const subList = document.createElement('ol');
+				subsections.forEach((heading) => {
+					const subItem = document.createElement('li');
+					const subLink = document.createElement('a');
+					subLink.href = `#${heading.id}`;
+					subLink.textContent = heading.textContent.trim();
+					subLink.addEventListener('click', (event) => {
+						event.preventDefault();
+						navigateTo(heading, true);
+					});
+					subItem.append(subLink);
+					subList.append(subItem);
+				});
+				item.append(subList);
+			}
+			nav.append(item);
+		});
+
+		const knowledgeChecks = [...content.querySelectorAll('details')];
+		knowledgeChecks.forEach((details) => {
+			details.classList.add('beginner-knowledge-check');
+			const summary = details.querySelector('summary');
+			if (!summary) return;
+			const original = summary.textContent.trim().toLowerCase();
+			const answerText = original.includes('answer') ? 'Reveal answer' : 'Reveal explanation';
+			const updateSummary = () => { summary.textContent = details.open ? 'Hide answer' : answerText; };
+			updateSummary();
+			details.addEventListener('toggle', updateSummary);
+		});
+
+		function setExpanded(record, expanded) {
+			record.section.classList.toggle('is-expanded', expanded);
+			record.toggle.setAttribute('aria-expanded', String(expanded));
+		}
+
+		function navigateTo(target, updateUrl) {
+			const section = target.closest('[data-chapter]');
+			if (section) {
+				const record = chapters.find((entry) => entry.section === section);
+				if (record) setExpanded(record, true);
+			}
+			if (updateUrl && target.id) history.replaceState(null, '', `#${target.id}`);
+			requestAnimationFrame(() => target.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+		}
+
+		function setActiveChapter() {
+			const marker = window.scrollY + 150;
+			let active = chapters[0];
+			chapters.forEach((record) => {
+				if (record.section.getBoundingClientRect().top + window.scrollY <= marker) active = record;
+			});
+			nav.querySelectorAll('a').forEach((link) => link.classList.remove('is-active'));
+			const activeLink = nav.querySelector(`a[href="#${active.section.id}"]`);
+			if (activeLink) activeLink.classList.add('is-active');
+		}
+
+		function updateProgress() {
+			const max = document.documentElement.scrollHeight - window.innerHeight;
+			const percent = max > 0 ? Math.min(100, Math.max(0, Math.round((window.scrollY / max) * 100))) : 0;
+			if (progressLabel) progressLabel.textContent = `${percent}%`;
+			if (progressBar) progressBar.style.width = `${percent}%`;
+			setActiveChapter();
+		}
+
+		let frame;
+		window.addEventListener('scroll', () => {
+			if (frame) return;
+			frame = window.requestAnimationFrame(() => { frame = undefined; updateProgress(); });
+		}, { passive: true });
+
+		root.querySelector('[data-expand-all]')?.addEventListener('click', () => chapters.forEach((record) => setExpanded(record, true)));
+		root.querySelector('[data-collapse-all]')?.addEventListener('click', () => chapters.forEach((record) => setExpanded(record, false)));
+
+		updateProgress();
+		if (window.location.hash) {
+			const target = document.getElementById(decodeURIComponent(window.location.hash.slice(1)));
+			if (target) navigateTo(target, false);
+		}
+	})();
+</script>

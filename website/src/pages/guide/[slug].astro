@@ -5,7 +5,9 @@ import Layout from '../../layouts/Layout.astro';
 
 export async function getStaticPaths() {
 	const guides = await getCollection('guides');
-	return guides.map((entry) => ({ params: { slug: entry.id }, props: { entry } }));
+	return guides
+		.filter((entry) => entry.id !== 'beginner-tutorial')
+		.map((entry) => ({ params: { slug: entry.id }, props: { entry } }));
 }
 
 const { entry } = Astro.props;

@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 310" role="img" aria-labelledby="title desc">
+  <title id="title">Schematic total ion chromatogram</title>
+  <desc id="desc">A schematic signal trace with several peaks plotted against retention time.</desc>
+  <rect width="860" height="310" rx="18" fill="#f3efe6"/>
+  <g fill="none" stroke="#042c58" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M88 244V42M88 244H794" stroke-width="3"/>
+    <path d="M88 244 C132 244 150 241 170 225 C196 204 207 132 231 122 C253 112 261 214 282 231 C306 251 327 240 350 226 C378 210 387 88 416 73 C448 56 463 215 491 232 C517 248 538 242 564 234 C594 224 605 156 632 148 C658 140 666 216 686 230 C713 248 739 242 794 242" stroke="#042c58" stroke-width="5"/>
+    <path d="M88 244H794" stroke="#77b6ba" stroke-width="9" opacity=".22"/>
+  </g>
+  <g fill="#042c58" font-family="IBM Plex Sans, Segoe UI, sans-serif" font-size="17">
+    <text x="34" y="150" transform="rotate(-90 34 150)" text-anchor="middle">Signal intensity</text>
+    <text x="441" y="286" text-anchor="middle">Retention time</text>
+  </g>
+  <g fill="#e31b4c" font-family="IBM Plex Sans, Segoe UI, sans-serif" font-size="15" font-weight="600">
+    <text x="420" y="49">ion signal</text>
+  </g>
+</svg>

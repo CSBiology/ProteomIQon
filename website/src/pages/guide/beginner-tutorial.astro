@@ -1,0 +1,20 @@
+---
+import { getEntry, render } from 'astro:content';
+import Layout from '../../layouts/Layout.astro';
+import BeginnerTutorial from '../../components/tutorial/BeginnerTutorial.astro';
+
+const entry = await getEntry('guides', 'beginner-tutorial');
+
+if (!entry) {
+	throw new Error('The Beginner Tutorial content entry could not be found.');
+}
+
+const { Content } = await render(entry);
+const { title, intro, description } = entry.data;
+---
+
+<Layout title={`${title} · ProteomIQon`} description={description}>
+	<BeginnerTutorial title={title} intro={intro}>
+		<Content />
+	</BeginnerTutorial>
+</Layout>
